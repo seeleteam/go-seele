@@ -18,7 +18,7 @@ func (v *VBitVec) Init(_bitLen uint) bool {
 	if v.BitLen != 0 {
 		panic("VBitVec.Init pacnic")
 	}
-
+	//TODO
 	v.BitLen, v.bufLen = _bitLen, _bitLen>>3
 	if _bitLen&7 != 0 {
 		v.bufLen++
