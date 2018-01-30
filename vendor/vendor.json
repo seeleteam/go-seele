@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "YdWmkLgfIqoZgQA0bWB71jCizpc=",
+			"path": "github.com/aristanetworks/goarista/monotime",
+			"revision": "bdff49616af24181f3b83535ed73127c615ba55a",
+			"revisionTime": "2018-01-24T01:13:10Z"
+		}
+	],
+	"rootPath": "github.com/seeleteam/go-seele"
+}
