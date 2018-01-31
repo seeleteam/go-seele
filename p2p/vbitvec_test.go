@@ -10,7 +10,6 @@ func Test_abc(t *testing.T) {
 	t.Logf("abc from t")
 	v := new(VBitVec)
 	v.Init(32)
-	//v.LogBitmap()
 }
 
 func Test_has1fecBit(t *testing.T) {
@@ -24,5 +23,4 @@ func Test_has1fecBit(t *testing.T) {
 	v2.SetBit(1, false)
 	ret := v1.has1fecBit(v2)
 	fmt.Println("Test_has1fecBit ret=", ret)
-	//return ret
 }

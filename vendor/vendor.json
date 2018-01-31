@@ -7,6 +7,18 @@
 			"path": "github.com/aristanetworks/goarista/monotime",
 			"revision": "bdff49616af24181f3b83535ed73127c615ba55a",
 			"revisionTime": "2018-01-24T01:13:10Z"
+		},
+		{
+			"checksumSHA1": "k0AFFj8B5/xCAw1+mF85+p8pJ1U=",
+			"path": "github.com/ethereum/go-ethereum/rlp",
+			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
+			"revisionTime": "2018-01-16T16:23:41Z"
+		},
+		{
+			"checksumSHA1": "8vvFgopRwoiUmNLiV5t8RBO4pBo=",
+			"path": "gopkg.in/check.v1",
+			"revision": "20d25e2804050c1cd24a7eea1e7a6447dd0e74ec",
+			"revisionTime": "2016-12-08T18:13:25Z"
 		}
 	],
 	"rootPath": "github.com/seeleteam/go-seele"

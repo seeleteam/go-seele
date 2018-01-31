@@ -1,11 +1,8 @@
 package p2p
 
-//"container/list"
 import "fmt"
 
-//"fmt"
-
-//VBitVec bitmap friendly for fechelper
+//VBitVec bitmap friendly for FEC helper
 type VBitVec struct {
 	BitLen  uint
 	bufLen  uint
@@ -18,11 +15,13 @@ func (v *VBitVec) Init(_bitLen uint) bool {
 	if v.BitLen != 0 {
 		panic("VBitVec.Init pacnic")
 	}
+
 	//TODO
 	v.BitLen, v.bufLen = _bitLen, _bitLen>>3
 	if _bitLen&7 != 0 {
 		v.bufLen++
 	}
+
 	v.pBuf = make([]byte, v.bufLen)
 	return true
 }
@@ -33,6 +32,7 @@ func (v *VBitVec) Attatch(p []byte, _bitLen uint, flag byte) {
 	if _bitLen&7 != 0 {
 		v.bufLen++
 	}
+
 	v.pBuf = p
 }
 
@@ -50,6 +50,7 @@ func (v *VBitVec) SetBit(idx uint, val bool) bool {
 	} else {
 		v.pBuf[indx] &^= 1 << (7 - bitIndx)
 	}
+
 	return val
 }
 
@@ -64,6 +65,7 @@ func (v *VBitVec) GetFlagBit(idx uint) bool {
 	if idx > 8 {
 		return false
 	}
+
 	return ((v.ExtFlag >> (7 - idx)) & 1) != 0
 }
 
@@ -84,9 +86,11 @@ func (v *VBitVec) BitXor(c1 *VBitVec, c2 *VBitVec) bool {
 	if (v.BitLen != c1.BitLen) || (c1.BitLen != c2.BitLen) {
 		panic("cannot xor")
 	}
+
 	for i := uint(0); i < v.bufLen; i++ {
 		v.pBuf[i] = (c1.pBuf[i]) ^ (c2.pBuf[i])
 	}
+
 	return true
 }
 
@@ -95,9 +99,11 @@ func (v *VBitVec) BitXor1(c1 *VBitVec) bool {
 	if v.BitLen != c1.BitLen {
 		panic("cannot xor")
 	}
+
 	for i := uint(0); i < v.bufLen; i++ {
 		v.pBuf[i] = (v.pBuf[i]) ^ (c1.pBuf[i])
 	}
+
 	return true
 }
 
@@ -110,10 +116,12 @@ func (v *VBitVec) has1fecBit(s *VBitVec) bool {
 		for ; ch > 0; diffCnt++ {
 			ch &= (ch - 1)
 		}
+
 		if diffCnt >= 2 {
 			return false
 		}
 	}
+
 	return diffCnt == 1
 }
 
@@ -132,6 +140,7 @@ func (v *VBitVec) getBitsCnt(len uint) uint {
 			trueCnt++
 		}
 	}
+
 	return trueCnt
 }
 
@@ -142,6 +151,7 @@ func (v *VBitVec) GetBitmapString() (str string) {
 		str = str + fmt.Sprintf("%02X ", v.pBuf[i])
 		//fmt.Print("%X ", (uint)(v.pBuf[i]))
 	}
+
 	//fmt.Println("|")
 	return str
 }
