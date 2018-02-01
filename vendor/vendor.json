@@ -9,6 +9,18 @@
 			"revisionTime": "2018-01-24T01:13:10Z"
 		},
 		{
+			"checksumSHA1": "Zda1/QlYkX6WzOntMLWdPF0pfg4=",
+			"path": "github.com/ethereum/go-ethereum/common/math",
+			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
+			"revisionTime": "2018-01-16T16:23:41Z"
+		},
+		{
+			"checksumSHA1": "2IDUXFD4PB+RpZ2UXLvGwU7qihk=",
+			"path": "github.com/ethereum/go-ethereum/crypto/randentropy",
+			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
+			"revisionTime": "2018-01-16T16:23:41Z"
+		},
+		{
 			"checksumSHA1": "k0AFFj8B5/xCAw1+mF85+p8pJ1U=",
 			"path": "github.com/ethereum/go-ethereum/rlp",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
