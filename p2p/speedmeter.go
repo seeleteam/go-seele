@@ -18,16 +18,18 @@ type speedMeterSubItem struct {
 //SpeedMeter compute bandwidth
 type SpeedMeter struct {
 	itemArr     []speedMeterSubItem
-	preFeedTick uint32
-	step        uint32
-	itemsNum    uint32
+	preFeedTick uint64
+	step        uint64
+	itemsNum    uint
 	mutex       sync.Mutex
 }
 
-//NewSpeedMeter create SpeedMeter
-func NewSpeedMeter(step uint32, items uint32) (s *SpeedMeter) {
+//NewSpeedMeter create SpeedMeter.
+// _step should be ms. for example: _step=100 items=10; _step=50 items=20.
+// _step * items = a period.
+func NewSpeedMeter(_step uint64, items uint) (s *SpeedMeter) {
 	s = new(SpeedMeter)
-	s.step, s.itemsNum = step, items
+	s.step, s.itemsNum = _step, items
 	s.itemArr = make([]speedMeterSubItem, items)
 	return s
 }
@@ -58,6 +60,7 @@ func (s *SpeedMeter) GetRate() uint {
 	} else {
 		firstAmount = s.itemArr[curIdx+1].amount
 	}
+
 	return curAmount - firstAmount
 }
 
@@ -71,6 +74,7 @@ func (s *SpeedMeter) paveToTick(cur uint64) {
 		if tick == s.preFeedTick {
 			break
 		}
+
 		idx := uint((tick / s.step)) % s.itemsNum
 		s.itemArr[idx].tick, s.itemArr[idx].amount = tick, preAmount
 	}

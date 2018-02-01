@@ -6,7 +6,7 @@ package p2p
 
 import "fmt"
 
-//FECHelper helper class for fec
+//FECHelper helper class for FEC
 type FECHelper struct {
 	canVec         [255]*VBitVec
 	bitLen, fecLen uint
