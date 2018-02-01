@@ -25,11 +25,11 @@ type SpeedMeter struct {
 }
 
 //NewSpeedMeter create SpeedMeter.
-// _step should be ms. for example: _step=100 items=10; _step=50 items=20.
-// _step * items = a period.
-func NewSpeedMeter(_step uint64, items uint) (s *SpeedMeter) {
+// step should be ms. for example: step=100 items=10; step=50 items=20.
+// step * items = a period.
+func NewSpeedMeter(step uint64, items uint) (s *SpeedMeter) {
 	s = new(SpeedMeter)
-	s.step, s.itemsNum = _step, items
+	s.step, s.itemsNum = step, items
 	s.itemArr = make([]speedMeterSubItem, items)
 	return s
 }

@@ -93,7 +93,6 @@ func (v *VBitVec) BitXor(c1 *VBitVec, c2 *VBitVec) bool {
 	for i := uint(0); i < v.bufLen; i++ {
 		v.pBuf[i] = (c1.pBuf[i]) ^ (c2.pBuf[i])
 	}
-
 	return true
 }
 
