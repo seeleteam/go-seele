@@ -34,7 +34,7 @@ func NewSpeedMeter(step uint64, items uint) (s *SpeedMeter) {
 	return s
 }
 
-//Feed cur is milliseconds
+//Feed called when bytes recved from network
 func (s *SpeedMeter) Feed(num uint) {
 	cur := monotime.Now() / 1000
 	s.mutex.Lock()

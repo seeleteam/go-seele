@@ -10,8 +10,10 @@ import (
 	"testing"
 )
 
-func Test_test1(t *testing.T) {
+func Test_tokenBucket(t *testing.T) {
 	tb := new(TokenBucket)
 	tb.Init(1024*1024, 1.01)
-	fmt.Println("hello")
+	//curT := tb.GetCurTokens()
+	tb.Consume(128 * 1024)
+	fmt.Println("tokenBucket. cur=", tb.GetCurTokens())
 }

@@ -4,32 +4,27 @@
  */
 package p2p
 
-import "fmt"
-
 //FECHelper helper class for FEC
 type FECHelper struct {
-	canVec         [255]*VBitVec
+	canVec         []*VBitVec //candidate vector
 	bitLen, fecLen uint
-	idx            uint
 }
 
+//createAndInsertByPattern create VBitVec by pattern, and append to canVec
 func (h *FECHelper) createAndInsertByPattern(ch byte, len uint, extFlag byte) {
 	p := new(VBitVec)
 	p.Init(h.bitLen)
 	p.InitPattern(ch, len)
 	p.ExtFlag = extFlag
-	h.canVec[h.idx] = p
-	h.idx++
+	h.canVec = append(h.canVec, p)
 }
 
+//createOne create one VBitVec, and append to canVec
 func (h *FECHelper) createOne(arr []int, arrLen int) {
 	var flag byte
 	for _, v := range arr {
 		flag = flag | (1 << (7 - uint(v)))
 	}
-
-	fmt.Print(arr)
-	fmt.Printf(",%d, %02X\r\n", arrLen, flag)
 
 	p := new(VBitVec)
 	p.Init(h.bitLen)
@@ -39,10 +34,10 @@ func (h *FECHelper) createOne(arr []int, arrLen int) {
 	}
 
 	p.ExtFlag = flag
-	h.canVec[h.idx] = p
-	h.idx++
+	h.canVec = append(h.canVec, p)
 }
 
+//selectNum create all VBitVec
 func (h *FECHelper) selectNum(pre []int, preLen int, arr []int, arrLen int, cnt int) {
 	if arrLen == cnt {
 		h.createOne(append(pre, arr...), preLen+arrLen)
@@ -75,6 +70,7 @@ func (h *FECHelper) Init(_bitLen uint) bool {
 	if _bitLen%8 != 0 {
 		panic("invalid paras, panic...")
 	}
+	h.canVec = make([]*VBitVec, 0, 255)
 	h.bitLen, h.fecLen = _bitLen, 8
 
 	h.createAndInsertByPattern(0x80, 1, 0x80)
@@ -85,7 +81,6 @@ func (h *FECHelper) Init(_bitLen uint) bool {
 	h.createAndInsertByPattern(0xba, 7, 0x04)
 	h.createAndInsertByPattern(0x6e, 7, 0x02)
 	h.createAndInsertByPattern(0xcd, 7, 0x01)
-	////modify
 	h.canVec[0].SetBit(14, false)
 	h.canVec[0].SetBit(12, false)
 
@@ -95,4 +90,30 @@ func (h *FECHelper) Init(_bitLen uint) bool {
 		h.selectNum(pre, 0, org, 8, i)
 	}
 	return true
+}
+
+//GetRecoverInfo get VBitVec that can recover
+func (h *FECHelper) GetRecoverInfo(pS *VBitVec) *VBitVec {
+	if pS.ExtFlag == 0 {
+		return nil
+	}
+	var pCur *VBitVec
+	var curBits uint
+	for _, p := range h.canVec {
+		if p.ExtFlag|pS.ExtFlag != pS.ExtFlag {
+			continue
+		}
+		if p.has1fecBit(pS) {
+			if pCur == nil {
+				pCur, curBits = p, p.getBitsCnt(pS.BitLen)
+				continue
+			}
+			cnt := p.getBitsCnt(pS.BitLen)
+			if cnt < curBits {
+				pCur = p
+				curBits = cnt
+			}
+		}
+	}
+	return pCur
 }

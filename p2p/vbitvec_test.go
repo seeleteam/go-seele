@@ -16,7 +16,7 @@ func Test_abc(t *testing.T) {
 	v.Init(32)
 }
 
-func Test_has1fecBit(t *testing.T) {
+func Test_VBitVec_check(t *testing.T) {
 	v1 := new(VBitVec)
 	v1.Init(64)
 	v2 := new(VBitVec)
@@ -26,5 +26,5 @@ func Test_has1fecBit(t *testing.T) {
 	v2.SetBit(0, false)
 	v2.SetBit(1, false)
 	ret := v1.has1fecBit(v2)
-	fmt.Println("Test_has1fecBit ret=", ret)
+	fmt.Println("VBitVec_check ret=", ret)
 }
