@@ -6,7 +6,7 @@ import (
     "log"
 )
 
-// Converts a int64 value into a byte array
+// Int2Bytes Converts a int64 value into a byte array
 func Int2Bytes(num int64) []byte {
     buff := new(bytes.Buffer)
     err := binary.Write(buff, binary.BigEndian, num)
