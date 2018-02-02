@@ -3,8 +3,8 @@ package pow
 // Worker is an PoW engine.
 type Worker interface {
     // Returns the current mining result of a PoW consensus engine.
-    Producer() string
+    Produce() string
 
-    // Verify whether the mining result is meet the requirement.
-    Validator() bool
+    // Verify whether the mining result meet the requirement.
+    Validate() bool
 }

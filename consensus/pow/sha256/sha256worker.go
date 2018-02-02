@@ -30,8 +30,8 @@ func (worker *Worker) PrepareData(nonce string) []byte {
     return data
 }
 
-// Producer Loop nonce to find the target value that meet the requirement.
-func (worker *Worker) Producer() string {
+// Produce Loop nonce to find the target value that meet the requirement.
+func (worker *Worker) Produce() string {
     var nonce int64
     var hash [32]byte
     var hashInt big.Int
@@ -51,8 +51,8 @@ func (worker *Worker) Producer() string {
     return strconv.FormatInt(nonce, 10)
 }
 
-// Validator Verify nonce to find the target value that meet the requirement.
-func (worker *Worker) Validator() bool {
+// Validate Verify nonce to find the target value that meet the requirement.
+func (worker *Worker) Validate() bool {
     var hashInt big.Int
 
     data := worker.PrepareData(worker.Nonce)
