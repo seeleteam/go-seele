@@ -2,7 +2,7 @@ package consensus
 
 import (
     "math/big"
-	"testing"
+    "testing"
 )
 
 func Test_SHA256Worker(t *testing.T) {
