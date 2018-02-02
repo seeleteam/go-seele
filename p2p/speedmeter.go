@@ -10,6 +10,7 @@ import (
 	"github.com/aristanetworks/goarista/monotime"
 )
 
+//speedMeterSubItem record amount in a step
 type speedMeterSubItem struct {
 	tick   uint64
 	amount uint
@@ -18,9 +19,9 @@ type speedMeterSubItem struct {
 //SpeedMeter compute bandwidth
 type SpeedMeter struct {
 	itemArr     []speedMeterSubItem
-	preFeedTick uint64
-	step        uint64
-	itemsNum    uint
+	preFeedTick uint64 //last feed tick
+	step        uint64 //
+	itemsNum    uint   //step num in a period
 	mutex       sync.Mutex
 }
 

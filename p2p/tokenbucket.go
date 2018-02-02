@@ -12,20 +12,19 @@ import (
 
 //TokenBucket for bucket limit rate
 type TokenBucket struct {
-	factor         float64
-	bytesPerSecond int64
-	maxTokens      int64
-	curTokens      int64
-	tokensPerMS    int64
-	reservedTokens int64
-	preTick        uint64
+	bytesPerSecond int64  //bandwidth
+	maxTokens      int64  //size of bucket
+	curTokens      int64  //
+	tokensPerMS    int64  //tokens produced every milliseconds
+	reservedTokens int64  //reserved tokens
+	preTick        uint64 //last tick producing tokens
 	mutex          sync.Mutex
 }
 
 //Init init TokenBucket, with bytesPerSecond and factor
-func (t *TokenBucket) Init(bytesPerSecond int64, factor float64) bool {
-	t.bytesPerSecond, t.factor = bytesPerSecond, factor
-	t.maxTokens = int64(float64(bytesPerSecond) * factor)
+func (t *TokenBucket) Init(bytesPerSecond int64) bool {
+	t.bytesPerSecond = bytesPerSecond
+	t.maxTokens = bytesPerSecond
 	t.tokensPerMS = bytesPerSecond / 1000
 	t.reservedTokens = bytesPerSecond / 10
 	t.curTokens = t.maxTokens
@@ -36,7 +35,7 @@ func (t *TokenBucket) Init(bytesPerSecond int64, factor float64) bool {
 //AdjustBW adjust bandwidth anytime
 func (t *TokenBucket) AdjustBW(bytesPerSecond int64) {
 	t.bytesPerSecond = bytesPerSecond
-	t.maxTokens = int64(float64(bytesPerSecond) * t.factor)
+	t.maxTokens = bytesPerSecond
 	t.tokensPerMS = bytesPerSecond / 1000
 	t.reservedTokens = bytesPerSecond / 10
 	if t.curTokens > t.maxTokens {
