@@ -1,4 +1,4 @@
-package consensus
+package sha256
 
 import (
     "bytes"

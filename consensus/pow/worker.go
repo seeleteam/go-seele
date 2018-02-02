@@ -1,4 +1,4 @@
-package consensus
+package pow
 
 // Worker is an PoW engine.
 type Worker interface {
