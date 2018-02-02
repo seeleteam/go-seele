@@ -1,3 +1,7 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 package p2p
 
 import "fmt"
@@ -16,7 +20,6 @@ func (v *VBitVec) Init(_bitLen uint) bool {
 		panic("VBitVec.Init pacnic")
 	}
 
-	//TODO
 	v.BitLen, v.bufLen = _bitLen, _bitLen>>3
 	if _bitLen&7 != 0 {
 		v.bufLen++
@@ -90,7 +93,6 @@ func (v *VBitVec) BitXor(c1 *VBitVec, c2 *VBitVec) bool {
 	for i := uint(0); i < v.bufLen; i++ {
 		v.pBuf[i] = (c1.pBuf[i]) ^ (c2.pBuf[i])
 	}
-
 	return true
 }
 
