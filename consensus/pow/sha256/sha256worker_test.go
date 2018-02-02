@@ -15,5 +15,6 @@ func Test_Worker(t *testing.T) {
     worker.Nonce = worker.Produce()
     if !worker.Validate() {
         t.Fail()
+        //test
     }
 }
