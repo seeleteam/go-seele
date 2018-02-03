@@ -27,16 +27,16 @@ func Test_MarshalData(t *testing.T) {
         t.Fail();
     }
 
-    // data included in dataNet
-    if !bytes.Equal(v1.dataNet[15:21], v1.data) {
-        fmt.Println("Test_MarshalData data:", v1.dataNet[15:21], v1.data)
+    // data is included in dataNet
+    if !bytes.Equal(v1.dataNet[13:19], v1.data) {
+        fmt.Println("Test_MarshalData dataNet:", v1.dataNet[13:19], v1.data)
         t.Fail();
     }
 
     // rest of dataNet must be 0
-    array1 := [1500]byte{}
-    if !bytes.Equal(v1.dataNet[21:], array1[21:]) {
-        fmt.Println("Test_MarshalData:", v1.dataNet[15:21], v1.data)
+    zeroArray := [1500]byte{}
+    if !bytes.Equal(v1.dataNet[19:], zeroArray[19:]) {
+        fmt.Println("Test_MarshalData:", v1.dataNet[19:])
         t.Fail();
     }
 }
@@ -50,19 +50,19 @@ func Test_ParseData(t *testing.T) {
 
     // meta info
     if v1.seq != v2.seq || v1.packType != v2.packType || v1.fecIdx != v2.fecIdx || v1.crc != v2.crc || v1.magic != v2.magic || 
-       v1.lastSeqSendTick != v2.lastSeqSendTick || v1.createTick != v2.createTick || v1.dataLen != v2.dataLen {
-        fmt.Println("Test_ParseData v1:", v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic, v1.lastSeqSendTick, v1.createTick, v1.dataLen)
-        fmt.Println("Test_ParseData v2:", v2.seq, v2.packType, v2.fecIdx, v2.crc, v2.magic, v2.lastSeqSendTick, v2.createTick, v2.dataLen)
+       v1.lastSeqSendTick != v2.lastSeqSendTick || v1.createTick != v2.createTick {
+        fmt.Println("Test_ParseData v1:", v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic, v1.lastSeqSendTick, v1.createTick)
+        fmt.Println("Test_ParseData v2:", v2.seq, v2.packType, v2.fecIdx, v2.crc, v2.magic, v2.lastSeqSendTick, v2.createTick)
         t.Fail();
     }
 
     // data
-    if !bytes.Equal(v1.data, v2.data) {
+    if !bytes.Equal(v1.data[:6], v2.data[:6]) {
         fmt.Println("Test_ParseData data:", v1.data, v2.data)
         t.Fail();
     }
 
-    // data
+    // dataNet
     if !bytes.Equal(v1.dataNet[:], v2.dataNet[:]) {
         fmt.Println("Test_ParseData dataNet:", v1.dataNet, v2.dataNet)
         t.Fail();
