@@ -27,7 +27,7 @@ type VBitVec struct {
     ExtFlag byte // flag for extra package
 }
 
-// Init Initialize VBitVec with bitLen
+// Init initializes VBitVec with bitLen
 func (v *VBitVec) Init(_bitLen uint) bool {
     if v.BitLen != 0 {
         panic("VBitVec.Init pacnic")
@@ -42,7 +42,7 @@ func (v *VBitVec) Init(_bitLen uint) bool {
     return true
 }
 
-// Attatch Initialize bitmap with memory block
+// Attatch initializes bitmap with memory block
 func (v *VBitVec) Attatch(p []byte, _bitLen uint, flag byte) {
     v.BitLen, v.bufLen, v.ExtFlag = _bitLen, _bitLen >> ShiftOffset, flag
     if _bitLen & MaxBitIndex != 0 {
@@ -52,13 +52,13 @@ func (v *VBitVec) Attatch(p []byte, _bitLen uint, flag byte) {
     v.pBuf = p
 }
 
-// Detach Clear VBitVec
+// Detach clears VBitVec
 func (v *VBitVec) Detach() {
     v.BitLen, v.bufLen, v.ExtFlag = 0, 0, 0
     v.pBuf = nil
 }
 
-// SetBit Set value by bit index
+// SetBit sets value by bit index
 func (v *VBitVec) SetBit(idx uint, val bool) {
     indx, bitIndx := idx >> ShiftOffset, idx & MaxBitIndex
     if val {
@@ -68,13 +68,13 @@ func (v *VBitVec) SetBit(idx uint, val bool) {
     }
 }
 
-// GetBit Get bit in pos
+// GetBit gets bit in pos
 func (v *VBitVec) GetBit(idx uint) bool {
     indx, bitIndx := idx >> ShiftOffset, idx & MaxBitIndex
     return ((v.pBuf[indx] >> (MaxBitIndex - bitIndx)) & 1) != 0
 }
 
-// GetFlagBit Get bit in pos of extflag
+// GetFlagBit gets bit in pos of extflag
 func (v *VBitVec) GetFlagBit(idx uint) bool {
     if idx > MaxBitLength {
         return false
@@ -83,7 +83,7 @@ func (v *VBitVec) GetFlagBit(idx uint) bool {
     return ((v.ExtFlag >> (MaxBitIndex - idx)) & 1) != 0
 }
 
-// InitPattern Initialize bitmap with pattern
+// InitPattern initializes bitmap with pattern
 func (v *VBitVec) InitPattern(flag byte, len uint) {
     for idx := uint(0); idx < v.BitLen; idx++ {
         flagIdx := idx % len
@@ -95,7 +95,7 @@ func (v *VBitVec) InitPattern(flag byte, len uint) {
     }
 }
 
-// BitXor Initialize bitmap with c1 ^ c2
+// BitXor initializes bitmap with c1 ^ c2
 func (v *VBitVec) BitXor(c1 *VBitVec, c2 *VBitVec) {
     if (v.BitLen != c1.BitLen) || (c1.BitLen != c2.BitLen) {
         panic("Failed to Xor")
@@ -106,7 +106,7 @@ func (v *VBitVec) BitXor(c1 *VBitVec, c2 *VBitVec) {
     }
 }
 
-// BitXor1 Xor with c1
+// BitXor1 calculates the xor value with c1
 func (v *VBitVec) BitXor1(c1 *VBitVec) {
     if v.BitLen != c1.BitLen {
         panic("cannot xor")
@@ -117,7 +117,7 @@ func (v *VBitVec) BitXor1(c1 *VBitVec) {
     }
 }
 
-// has1fecBit Check whether there is only 1 bit set in bitmap
+// has1fecBit checks whether there is only 1 bit set in bitmap
 func (v *VBitVec) has1fecBit(s *VBitVec) bool {
     diffCnt := uint(0)
     for i := uint(0); i < v.bufLen; i++ {
@@ -135,7 +135,7 @@ func (v *VBitVec) has1fecBit(s *VBitVec) bool {
     return diffCnt == 1
 }
 
-// getBitsCnt Calculate bit num
+// getBitsCnt calculates bit num
 func (v *VBitVec) getBitsCnt(len uint) uint {
     indx := len >> ShiftOffset
     trueCnt := uint(0)
@@ -154,7 +154,7 @@ func (v *VBitVec) getBitsCnt(len uint) uint {
     return trueCnt
 }
 
-// GetBitmapString for test
+// GetBitmapString gets bitmap string
 func (v *VBitVec) GetBitmapString() (str string) {
     for i := uint(0); i < v.bufLen; i++ {
         str = str + fmt.Sprintf("%02X ", v.pBuf[i])

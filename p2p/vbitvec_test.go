@@ -6,17 +6,9 @@ package p2p
 
 import (
     "bytes"
-    //"math"
     "fmt"
     "testing"
 )
-
-func Test_abc(t *testing.T) {
-    fmt.Println("abc")
-    t.Logf("abc from t")
-    v := new(VBitVec)
-    v.Init(32)
-}
 
 func Test_VBitVec_check(t *testing.T) {
     v1 := new(VBitVec)
@@ -137,7 +129,6 @@ func Test_SetAndGetBit(t *testing.T) {
     }
 }
 
-
 func Test_BitXor(t *testing.T) {
     v1 := new(VBitVec)
     v1.Init(64)
@@ -163,5 +154,4 @@ func Test_BitXor(t *testing.T) {
         fmt.Println("Detach pBuf:", v2.pBuf, v4.pBuf)
         t.Fail();
     }
-
 }
