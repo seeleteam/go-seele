@@ -1,17 +1,19 @@
 /**
-*  @file
+*  Package p2p
 *  @copyright defined in go-seele/LICENSE
  */
 package p2p
 
-import "encoding/binary"
+import  (
+    "encoding/binary"
+)
 
 const (
     //VPacketHeadLen head length in net-package
-    VPacketHeadLen uint = 13
+    VPacketHeadLen uint16 = 15
 )
 
-//VPacket package for vqic
+//VPacket package for QVIC
 type VPacket struct {
     seq                uint32
     packType           byte
@@ -21,9 +23,9 @@ type VPacket struct {
     lastSeqSendTick    uint16
     createTick         uint16
     data               []byte
-    dataLen            uint
-    isRecovered        int //0 for not ok; 1 for ok. for client: 1, recved ack; for server 1 ack sent;
-    isSendedToTun      int //only avalible for recver. 0 no; 1 , already write to tun
+    dataLen            uint16
+    isRecovered        int //1: ok; 0: others. for client, 1: recved ack; for server, 1: ack sent.
+    isSendedToTun      int //only avalible for recovering. 0: no; 1: already write to tun
     isSendedToPeer     bool
     sendTimes          int
     lastSendTickLocal  uint16
@@ -41,6 +43,7 @@ func (v *VPacket) MarshalData() {
     binary.BigEndian.PutUint16(b[7:9], v.magic)
     binary.BigEndian.PutUint16(b[9:11], v.lastSeqSendTick)
     binary.BigEndian.PutUint16(b[11:13], v.createTick)
+    binary.BigEndian.PutUint16(b[13:15], v.dataLen)
     copy(b[VPacketHeadLen:], v.data)
 }
 
@@ -54,8 +57,7 @@ func (v *VPacket) ParseData(packData []byte) {
     v.magic = binary.BigEndian.Uint16(b[7:9])
     v.lastSeqSendTick = binary.BigEndian.Uint16(b[9:11])
     v.createTick = binary.BigEndian.Uint16(b[11:13])
-
-    v.dataLen = uint(len(packData)) - VPacketHeadLen
+    v.dataLen = binary.BigEndian.Uint16(b[13:15])
     v.data = make([]byte, v.dataLen)
     copy(v.data, b[VPacketHeadLen:])
 }
