@@ -73,7 +73,7 @@ func createVPacket(data string) (v *VPacket) {
     v1 := new(VPacket)
     v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic = 101, 2, 4, 110, 120
     v1.data = []byte(data)
-    v1.dataLen = uint16(len(v1.data))
+    v1.dataLen = uint(len(v1.data))
 
     return v1;
 }

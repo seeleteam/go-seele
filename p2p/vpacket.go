@@ -10,7 +10,7 @@ import  (
 
 const (
     // VPacketHeadLen head length in net-package
-    VPacketHeadLen uint16 = 13
+    VPacketHeadLen uint = 13
 )
 
 // VPacket package for QVIC
@@ -23,7 +23,7 @@ type VPacket struct {
     lastSeqSendTick    uint16
     createTick         uint16
     data               []byte
-    dataLen            uint16
+    dataLen            uint
     isRecovered        int // 1: ok; 0: others. for client, 1: recved ack; for server, 1: ack sent.
     isSendedToTun      int // only avalible for recovering. 0: no; 1: already write to tun
     isSendedToPeer     bool
@@ -56,7 +56,7 @@ func (v *VPacket) ParseData(packData []byte) {
     v.magic = binary.BigEndian.Uint16(b[7:9])
     v.lastSeqSendTick = binary.BigEndian.Uint16(b[9:11])
     v.createTick = binary.BigEndian.Uint16(b[11:13])
-    v.dataLen = uint16(len(packData)) - VPacketHeadLen
+    v.dataLen = uint(len(packData)) - VPacketHeadLen
     v.data = make([]byte, v.dataLen)
     copy(v.data, b[VPacketHeadLen:])
 }
