@@ -14,36 +14,36 @@ import (
 
 var log *logrus.Logger
 
-// PanicLevel level, highest level of severity. Logs and then calls panic with the
+// Panic Level, highest level of severity. Logs and then calls panic with the
 // message passed to Debug, Info, ...
 func Panic(args ...interface{}) {
     log.Panicln(args)
 }
 
-// FatalLevel level. Logs and then calls `os.Exit(1)`. It will exit even if the
+// Fatal Level. Logs and then calls `os.Exit(1)`. It will exit even if the
 // logging level is set to Panic.
 func Fatal(args ...interface{})  {
     log.Fatal(args)
 }
 
-// ErrorLevel level. Logs. Used for errors that should definitely be noted.
+// Error Level. Logs. Used for errors that should definitely be noted.
 // Commonly used for hooks to send errors to an error tracking service.
 func Error(args ...interface{}) {
     log.Errorln(args)
 }
 
-// WarnLevel level. Non-critical entries that deserve eyes.
+// Warn Level. Non-critical entries that deserve eyes.
 func Warn(args ...interface{}) {
     log.Warn(args)
 }
 
-// InfoLevel level. General operational entries about what's going on inside the
+// Info Level. General operational entries about what's going on inside the
 // application.
 func Info(args ...interface{}) {
     log.Infoln(args)
 }
 
-// DebugLevel level. Usually only enabled when debugging. Very verbose logging.
+// Debug Level. Usually only enabled when debugging. Very verbose logging.
 func Debug(args ...interface{}) {
     log.Debugln(args)
 }
