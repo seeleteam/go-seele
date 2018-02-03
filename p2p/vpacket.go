@@ -1,17 +1,19 @@
 /**
-*  @file
+*  Package p2p
 *  @copyright defined in go-seele/LICENSE
  */
 package p2p
 
-import "encoding/binary"
+import  (
+    "encoding/binary"
+)
 
 const (
-    //VPacketHeadLen head length in net-package
+    // VPacketHeadLen head length in net-package
     VPacketHeadLen uint = 13
 )
 
-//VPacket package for vqic
+// VPacket package for QVIC
 type VPacket struct {
     seq                uint32
     packType           byte
@@ -22,8 +24,8 @@ type VPacket struct {
     createTick         uint16
     data               []byte
     dataLen            uint
-    isRecovered        int //0 for not ok; 1 for ok. for client: 1, recved ack; for server 1 ack sent;
-    isSendedToTun      int //only avalible for recver. 0 no; 1 , already write to tun
+    isRecovered        int // 1: ok; 0: others. for client, 1: recved ack; for server, 1: ack sent.
+    isSendedToTun      int // only avalible for recovering. 0: no; 1: already write to tun
     isSendedToPeer     bool
     sendTimes          int
     lastSendTickLocal  uint16
@@ -32,7 +34,7 @@ type VPacket struct {
     dataNet            [1500]byte
 }
 
-//MarshalData pack data to dataNet
+// MarshalData pack data to dataNet
 func (v *VPacket) MarshalData() {
     b := v.dataNet[0:]
     binary.BigEndian.PutUint32(b[:4], v.seq)
@@ -44,7 +46,7 @@ func (v *VPacket) MarshalData() {
     copy(b[VPacketHeadLen:], v.data)
 }
 
-//ParseData parse data from dataNet. packData contains udp-package recved from net
+// ParseData parse data from dataNet. packData contains udp-package recved from net
 func (v *VPacket) ParseData(packData []byte) {
     b := v.dataNet[0:]
     copy(b, packData)
@@ -54,26 +56,25 @@ func (v *VPacket) ParseData(packData []byte) {
     v.magic = binary.BigEndian.Uint16(b[7:9])
     v.lastSeqSendTick = binary.BigEndian.Uint16(b[9:11])
     v.createTick = binary.BigEndian.Uint16(b[11:13])
-
     v.dataLen = uint(len(packData)) - VPacketHeadLen
     v.data = make([]byte, v.dataLen)
     copy(v.data, b[VPacketHeadLen:])
 }
 
-//FECInfo record packages info of a bundle
+// FECInfo record packages info of a bundle
 type FECInfo struct {
     seq        uint32
     fecPackets [8]*VPacket
     fecFlag    byte
 }
 
-//NewFECInfo create new FECInfo class
+// NewFECInfo create new FECInfo class
 func NewFECInfo() (f *FECInfo) {
     f = new(FECInfo)
     return f
 }
 
-//Clear reset FECInfo
+// Clear reset FECInfo
 func (v *FECInfo) Clear() {
     if v.fecFlag == 0 {
         return
@@ -86,7 +87,7 @@ func (v *FECInfo) Clear() {
     v.fecFlag = 0
 }
 
-//VPacketItem package info for RecverMgr
+// VPacketItem package info for RecverMgr
 type VPacketItem struct {
     pFECInfo      *FECInfo
     p             *VPacket
