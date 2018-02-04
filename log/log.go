@@ -5,11 +5,11 @@
 package log
 
 import (
-    "fmt"
+    //"fmt"
     "github.com/sirupsen/logrus"
     "os"
-    "os/user"
-    "path/filepath"
+    //"os/user"
+    //"path/filepath"
 )
 
 var log *logrus.Logger
@@ -49,7 +49,7 @@ func Debug(args ...interface{}) {
 }
 
 func init()  {
-    usr, err := user.Current()
+   /* usr, err := user.Current()
     if err != nil {
         fmt.Println("can't get current user info. ", err)
         return
@@ -69,10 +69,11 @@ func init()  {
         fmt.Println("create log file failed. ", err)
         return
     }
-
+*/
     logrus.SetFormatter(&logrus.TextFormatter{})
 
     log = logrus.New()
-    log.Out = file
+    //log.Out = file //use std out for temp
+    log.Out = os.Stdout
     log.SetLevel(logrus.DebugLevel)
 }
