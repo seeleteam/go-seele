@@ -4,7 +4,7 @@
  */
 package p2p
 
-import  (
+import (
     "encoding/binary"
 )
 
