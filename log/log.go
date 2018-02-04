@@ -73,6 +73,7 @@ func init()  {
     logrus.SetFormatter(&logrus.TextFormatter{})
 
     log = logrus.New()
-    log.Out = file
+    //log.Out = file //use std out for temp
+    log.Out = os.Stdout
     log.SetLevel(logrus.DebugLevel)
 }
