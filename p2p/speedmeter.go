@@ -9,22 +9,27 @@ import (
     "github.com/aristanetworks/goarista/monotime"
 )
 
-//speedMeterSubItem record amount in a step
+const (
+    // MilliInSec milliseconds in one second
+    MilliInSec uint64 = 1000
+)
+
+// speedMeterSubItem records amount in a step
 type speedMeterSubItem struct {
     tick   uint64
     amount uint
 }
 
-//SpeedMeter compute bandwidth
+// SpeedMeter computes bandwidth
 type SpeedMeter struct {
     itemArr     []speedMeterSubItem
-    preFeedTick uint64 //last feed tick
+    preFeedTick uint64 // last feed tick
     step        uint64 //
-    itemsNum    uint   //step num in a period
+    itemsNum    uint   // step num in a period
     mutex       sync.Mutex
 }
 
-//NewSpeedMeter create SpeedMeter.
+// NewSpeedMeter creates SpeedMeter.
 // step should be ms. for example: step=100 items=10; step=50 items=20.
 // step * items = a period.
 func NewSpeedMeter(step uint64, items uint) (s *SpeedMeter) {
@@ -34,9 +39,9 @@ func NewSpeedMeter(step uint64, items uint) (s *SpeedMeter) {
     return s
 }
 
-//Feed called when bytes recved from network
+// Feed called when bytes received from network
 func (s *SpeedMeter) Feed(num uint) {
-    cur := monotime.Now() / 1000
+    cur := monotime.Now() / MilliInSec
     s.mutex.Lock()
     defer s.mutex.Unlock()
     s.paveToTick(cur)
@@ -45,9 +50,9 @@ func (s *SpeedMeter) Feed(num uint) {
     s.preFeedTick = cur - cur%s.step
 }
 
-//GetRate 
+// GetRate gets rate
 func (s *SpeedMeter) GetRate() uint {
-    cur := monotime.Now() / 1000
+    cur := monotime.Now() / MilliInSec
     s.mutex.Lock()
     defer s.mutex.Unlock()
     s.paveToTick(cur)
@@ -64,7 +69,7 @@ func (s *SpeedMeter) GetRate() uint {
     return curAmount - firstAmount
 }
 
-//paveToTick cur's milliseconds
+// paveToTick cur's milliseconds
 func (s *SpeedMeter) paveToTick(cur uint64) {
     preIdx := uint((s.preFeedTick / s.step)) % s.itemsNum
     preAmount := s.itemArr[preIdx].amount
