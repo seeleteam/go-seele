@@ -1,3 +1,8 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package pow
 
 // Worker is an PoW engine.
