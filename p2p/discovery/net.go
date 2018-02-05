@@ -13,7 +13,6 @@ import (
 
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // PingInfo ping info
@@ -50,9 +49,7 @@ func Listen(conn *net.UDPConn) {
 		buff := data[:n]
 
 		info := PingInfo{}
-		//err = common.Decoding(buff, &info)
-
-		err = rlp.DecodeBytes(buff, &info)
+		err = common.Decoding(buff, &info)
 
 		if err != nil {
 			log.Info(err)
