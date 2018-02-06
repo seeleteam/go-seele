@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/rlp"
-	"gopkg.in/check.v1"
+	"github.com/magiconair/properties/assert"
 )
 
 type Student struct {
@@ -22,18 +22,15 @@ type Student struct {
 	_age  uint
 }
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
-
-var _ = check.Suite(&Student{
+var s = &Student{
 	Name:  "s1",
 	NO:    123,
 	score: 100,
 	_age:  24,
-})
+}
 
 // test rlp correction
-func (s *Student) Test_RLP(c *check.C) {
+func Test_RLP(t *testing.T) {
 	buffer := bytes.Buffer{}
 	err := rlp.Encode(&buffer, &s)
 	if err != nil {
@@ -51,12 +48,12 @@ func (s *Student) Test_RLP(c *check.C) {
 
 	fmt.Printf("%v\n", nst)
 
-	c.Assert(s.Name, check.Equals, nst.Name)
-	c.Assert(s.NO, check.Equals, nst.NO)
+	assert.Equal(t, nst.Name, s.Name)
+	assert.Equal(t, nst.NO, s.NO)
 }
 
 // test gob effective
-func (s *Student) Test_Encoding(c *check.C) {
+func Test_Encoding(t *testing.T) {
 	data, err := Encoding(&s)
 	if err != nil {
 		fmt.Println(err)
@@ -71,7 +68,7 @@ func (s *Student) Test_Encoding(c *check.C) {
 }
 
 // test json effective
-func (s *Student) Test_Json(c *check.C) {
+func Test_Json(t *testing.T) {
 	buff, err := json.Marshal(&s)
 	if err != nil {
 		fmt.Println(err)
