@@ -9,6 +9,13 @@
 			"revisionTime": "2018-01-24T01:13:10Z"
 		},
 		{
+			"checksumSHA1": "Lps/+JqMRVlrXgO/+cazYcfsglg=",
+			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "be8372ae8ec5c6daaed3cc28ebf73c54b737c240",
+			"revisionTime": "2018-02-02T15:35:43Z"
+		},
+		{
 			"checksumSHA1": "Zda1/QlYkX6WzOntMLWdPF0pfg4=",
 			"path": "github.com/ethereum/go-ethereum/common/math",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
@@ -105,6 +112,12 @@
 			"revisionTime": "2017-10-31T21:05:36Z"
 		},
 		{
+			"checksumSHA1": "WtEzjODSs/UaFZBTuejMcCekY7Y=",
+			"path": "github.com/magiconair/properties/assert",
+			"revision": "49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934",
+			"revisionTime": "2017-10-31T21:05:36Z"
+		},
+		{
 			"checksumSHA1": "Gr3d0m9SkMFfiBgpVn/Wh12PBFI=",
 			"path": "github.com/mitchellh/go-homedir",
 			"revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
@@ -121,6 +134,13 @@
 			"path": "github.com/pelletier/go-toml",
 			"revision": "acdc4509485b587f5e675510c4f2c63e90ff68a8",
 			"revisionTime": "2018-01-18T22:54:55Z"
+		},
+		{
+			"checksumSHA1": "R3yk3OJzuq4MVfVGX5AhkkYv1ko=",
+			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "be8372ae8ec5c6daaed3cc28ebf73c54b737c240",
+			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
 			"checksumSHA1": "M2DUp/DFDbt//z8237GdM79+61s=",
@@ -169,6 +189,12 @@
 			"path": "github.com/spf13/viper",
 			"revision": "aafc9e6bc7b7bb53ddaa75a5ef49a17d6e654be5",
 			"revisionTime": "2017-11-29T09:51:06Z"
+		},
+		{
+			"checksumSHA1": "fygRczENWW2FPC+Th6W/fIZNiHM=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "be8372ae8ec5c6daaed3cc28ebf73c54b737c240",
+			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
 			"checksumSHA1": "6U7dCaxxIMjf5V02iWgyAwppczw=",
