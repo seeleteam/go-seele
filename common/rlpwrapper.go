@@ -14,7 +14,8 @@ import (
 
 // Decoding wrapper decode
 func Decoding(data []byte, value interface{}) error {
-	return rlp.DecodeBytes(data, value)
+	err := rlp.DecodeBytes(data, value)
+	return err
 }
 
 // Encoding wrapper encode
