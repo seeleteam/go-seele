@@ -28,9 +28,7 @@ func Test_Hash(t *testing.T) {
 
 func Test_StringHash(t *testing.T) {
 	str := "5aaeb6053f3e94c9b9a09f33669435e7"
-
 	hash := StringToHash(str)
-
 	res := hash.String()
 
 	assert.Equal(t, str, res)
