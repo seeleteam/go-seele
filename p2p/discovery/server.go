@@ -5,19 +5,17 @@
 package discovery
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"net"
 	"sync"
-	_ "sync"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	_ "github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 )
 
 func StartServer(port string) {
 	udp := getUDP(port)
-	log.Debug("nodeid:" + hexutil.Encode(udp.self.ID.Bytes()))
+	log.Debug("nodeid:" + common.BytesToHex(udp.self.ID.Bytes()))
 
 	udp.readLoop()
 }
@@ -48,7 +46,7 @@ func SendPing(port string, target string) {
 
 	go udp.readLoop()
 
-	log.Debug("nodeid: " + hexutil.Encode(udp.self.ID.Bytes()))
+	log.Debug("nodeid: " + common.BytesToHex(udp.self.ID.Bytes()))
 
 	addr, err := net.ResolveUDPAddr("udp", ":"+target)
 	if err != nil {

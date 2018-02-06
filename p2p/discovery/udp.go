@@ -7,7 +7,6 @@ package discovery
 import (
 	"net"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -73,7 +72,7 @@ func (u *udp) handlePingMsg(data []byte, target *net.UDPAddr) {
 		ID: u.self.ID,
 	}
 
-	log.Debug("ping received from: ", hexutil.Encode(msg.ID.Bytes()))
+	log.Debug("ping received from: ", common.BytesToHex(msg.ID.Bytes()))
 
 	u.sendPongMsg(&response, target)
 }
@@ -98,7 +97,7 @@ func (u *udp) handlePongMsg(data []byte, target *net.UDPAddr) {
 		return
 	}
 
-	log.Debug("pong received from: ", hexutil.Encode(msg.ID.Bytes()))
+	log.Debug("pong received from: ", common.BytesToHex(msg.ID.Bytes()))
 }
 
 func (u *udp) sendFindNodeMsg(msg *FindNode, target *net.UDPAddr) {

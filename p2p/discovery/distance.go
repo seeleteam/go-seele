@@ -40,7 +40,7 @@ func distcmp(target, a, b common.Hash) int {
 	return 0
 }
 
-// table of leading zero counts for bytes [0..255]
+// lzcount table of leading zero counts for bytes [0..255]
 var lzcount = [256]int{
 	8, 7, 6, 6, 5, 5, 5, 5,
 	4, 4, 4, 4, 4, 4, 4, 4,
