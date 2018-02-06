@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/seeleteam/go-seele/p2p/discovery"
 
 	"github.com/spf13/cobra"
@@ -34,7 +35,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
 
-		discovery.SendTest("9001", "9000")
+		discovery.SendPing("9001", "9000")
 	},
 }
 

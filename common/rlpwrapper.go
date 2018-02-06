@@ -6,7 +6,6 @@
 package common
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -16,9 +15,6 @@ import (
 // Decoding wrapper decode
 func Decoding(data []byte, value interface{}) error {
 	err := rlp.DecodeBytes(data, value)
-
-	fmt.Println(value)
-
 	return err
 }
 

@@ -6,13 +6,21 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"net"
+
+	"github.com/seeleteam/go-seele/common"
+)
+
+const (
+	alpha      = 3  // Kademlia concurrency factor
+	bucketSize = 16 // Kademlia bucket size
+	hashBits   = len(common.Hash{}) * 8
+	nBuckets   = hashBits + 1 // Number of buckets
 )
 
 type Table struct {
-	buckets []*bucket
-	count int	//total number of nodes
+	buckets  [nBuckets]*bucket
+	count    int   //total number of nodes
 	selfNode *Node //info of local node
 }
 
@@ -24,65 +32,43 @@ func NewTable(id NodeID, addr *net.UDPAddr) *Table {
 	selfNode := NewNode(id, addr)
 
 	table := &Table{
-		count: 0,
+		count:    0,
 		selfNode: selfNode,
 	}
 
 	return table
 }
 
-func AddNode(node *Node) {
+func (t *Table) AddNode(node *Node) {
+	dis := logdist(node.sha, t.selfNode.sha)
 
+	t.buckets[dis].AddNode(node)
 }
 
+// AddNode add node to bucket, if bucket is full, will remove an old one
+func (b *bucket) AddNode(node *Node) {
+	index := b.HasNode(node)
 
-// table of leading zero counts for bytes [0..255]
-var lzcount = [256]int{
-	8, 7, 6, 6, 5, 5, 5, 5,
-	4, 4, 4, 4, 4, 4, 4, 4,
-	3, 3, 3, 3, 3, 3, 3, 3,
-	3, 3, 3, 3, 3, 3, 3, 3,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	2, 2, 2, 2, 2, 2, 2, 2,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-}
-
-// logdist returns the logarithmic distance between a and b, log2(a ^ b).
-func logdist(a, b common.Hash) int {
-	lz := 0
-	for i := range a {
-		x := a[i] ^ b[i]
-		if x == 0 {
-			lz += 8
+	if index != -1 {
+		// do nothing for now
+		// TODO lru
+	} else {
+		if len(b.peers) < bucketSize {
+			b.peers = append(b.peers, node)
 		} else {
-			lz += lzcount[x]
-			break
+			copy(b.peers[:], b.peers[1:])
+			b.peers[len(b.peers)-1] = node
 		}
 	}
-	return len(a)*8 - lz
+}
+
+// HasNode check if the bucket already have this node, if so, return its index, otherwise, return -1
+func (b *bucket) HasNode(node *Node) int {
+	for index, n := range b.peers {
+		if n.sha == node.sha {
+			return index
+		}
+	}
+
+	return -1
 }

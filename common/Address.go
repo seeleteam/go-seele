@@ -5,10 +5,6 @@
 
 package common
 
-import (
-
-)
-
 const (
 	HashLength = 32
 )
@@ -29,4 +25,3 @@ func StringToAddress(s string) Hash {
 func (a *Hash) SetBytes(b []byte) {
 	copy(a[:], b)
 }
-

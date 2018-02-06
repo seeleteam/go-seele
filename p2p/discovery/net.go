@@ -11,8 +11,8 @@ import (
 	"strconv"
 	_ "time"
 
-	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 // PingInfo ping info
@@ -20,48 +20,40 @@ type PingInfo struct {
 	NodeID string
 }
 
-func ListenTest(port string)  {
-	conn := getUDPConn(port)
-	Listen(conn)
-}
-
-func SendTest(sourcePort string, targetPort string)  {
+func SendTest(sourcePort string, targetPort string) {
 	src := getAddr(sourcePort)
 	target := getAddr(targetPort)
 
 	Send(src, target)
 }
 
-
 func Listen(conn *net.UDPConn) {
 	defer conn.Close()
 	//for {
-		data := make([]byte, 100)
-		n, remoteAddr, err := conn.ReadFromUDP(data)
-		if err != nil {
-			log.Info(err)
-		}
+	data := make([]byte, 100)
+	n, remoteAddr, err := conn.ReadFromUDP(data)
+	if err != nil {
+		log.Info(err)
+	}
 
-		log.Info("ip:", remoteAddr.IP, "port:", remoteAddr.Port, "network:", remoteAddr.Network,
-			"zone:", remoteAddr.Zone)
-		log.Info("n:", n)
+	log.Info("ip:", remoteAddr.IP, "port:", remoteAddr.Port, "network:", remoteAddr.Network,
+		"zone:", remoteAddr.Zone)
+	log.Info("n:", n)
 
-		buff := data[:n]
+	buff := data[:n]
 
-		info := PingInfo{}
-		err = common.Decoding(buff, &info)
+	info := PingInfo{}
+	err = common.Decoding(buff, &info)
 
-		if err != nil {
-			log.Info(err)
-		}
+	if err != nil {
+		log.Info(err)
+	}
 
-		log.Info("nodeid:", info.NodeID)
+	log.Info("nodeid:", info.NodeID)
 	//}
 }
 
-func getUDPConn(port string) *net.UDPConn {
-	addr := getAddr(port)
-
+func getUDPConn(addr *net.UDPAddr) *net.UDPConn {
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		log.Info(err)
@@ -89,22 +81,22 @@ func Send(sourceAddr *net.UDPAddr, targeAddr *net.UDPAddr) {
 	}
 	defer conn.Close()
 
-	i := 12323;
+	i := 12323
 	//for {
-		info := PingInfo{NodeID: strconv.Itoa(i)}
+	info := PingInfo{NodeID: strconv.Itoa(i)}
 
-		buff, err:= common.Encoding(info)
-		if err != nil {
-			log.Info(err)
-		}
+	buff, err := common.Encoding(info)
+	if err != nil {
+		log.Info(err)
+	}
 
-		log.Info("send:", info.NodeID)
+	log.Info("send:", info.NodeID)
 
-		log.Info("buff length:", len(buff))
+	log.Info("buff length:", len(buff))
 
-		conn.Write(buff)
-		i++
+	conn.Write(buff)
+	i++
 
-		//time.Sleep(5 * time.Second)
+	//time.Sleep(5 * time.Second)
 	//}
 }

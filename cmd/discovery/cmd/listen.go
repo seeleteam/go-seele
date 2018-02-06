@@ -17,8 +17,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/spf13/cobra"
 )
 
 // listenCmd represents the listen command
@@ -34,7 +34,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("listen called")
 
-		discovery.ListenTest("9000")
+		discovery.StartServer("9000")
 	},
 }
 
