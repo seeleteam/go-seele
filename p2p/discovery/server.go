@@ -8,16 +8,26 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+)
+
+const (
+	PINGPONGINTERVER = 500 * time.Millisecond // sleep between ping pong
+	DISCOVERYINTERVER = 10 * time.Second // sleep between discovery
 )
 
 func StartServer(port string) {
 	udp := getUDP(port)
 	log.Debug("nodeid:" + common.BytesToHex(udp.self.ID.Bytes()))
 
-	udp.readLoop()
+	udp.StartServe()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
 }
 
 func getUDP(port string) *udp {
@@ -26,6 +36,7 @@ func getUDP(port string) *udp {
 		log.Fatal(err)
 	}
 
+	//TODO generate key for test
 	keypair, err := crypto.GenerateKey()
 	if err != nil {
 		log.Info(err)
@@ -41,26 +52,29 @@ func getUDP(port string) *udp {
 	return NewUDP(id, addr)
 }
 
-func SendPing(port string, target string) {
+func SendPing(port, id, targePort string) {
 	udp := getUDP(port)
-
-	go udp.readLoop()
 
 	log.Debug("nodeid: " + common.BytesToHex(udp.self.ID.Bytes()))
 
-	addr, err := net.ResolveUDPAddr("udp", ":"+target)
+	addr := getAddr(targePort)
+	byte, err := common.HexToBytes(id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	msg := &Ping{
-		ID: udp.self.ID,
+	nid, err := BytesTOID(byte)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	udp.sendPingMsg(msg, addr)
+	n := NewNodeWithAddr(nid, addr)
+	udp.table.addNode(n)
+	udp.db.add(n.sha, n)
+
+	udp.StartServe()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-
 	wg.Wait()
 }

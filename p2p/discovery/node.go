@@ -39,12 +39,20 @@ func (id *NodeID) Bytes() []byte {
 	return id[:]
 }
 
-func NewNode(id NodeID, addr *net.UDPAddr) *Node {
+func (id *NodeID) ToSha() common.Hash  {
+	return crypto.Keccak256Hash(id[:])
+}
+
+func NewNodeWithAddr(id NodeID, addr *net.UDPAddr) *Node {
+	return NewNode(id, addr.IP, uint16(addr.Port))
+}
+
+func NewNode(id NodeID, ip net.IP, port uint16) *Node {
 	return &Node{
 		ID:      id,
-		IP:      addr.IP,
-		UDPPort: uint16(addr.Port),
+		IP:      ip,
+		UDPPort: port,
 
-		sha: crypto.Keccak256Hash(id[:]),
+		sha: id.ToSha(),
 	}
 }
