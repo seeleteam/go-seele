@@ -10,18 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	PINGPONGINTERVER = 500 * time.Millisecond // sleep between ping pong
+	PINGPONGINTERVER = 10 * time.Second // sleep between ping pong
 	DISCOVERYINTERVER = 10 * time.Second // sleep between discovery
 )
 
-func StartServer(port string) {
-	udp := getUDP(port)
-	log.Debug("nodeid:" + common.BytesToHex(udp.self.ID.Bytes()))
+func StartServer(port, id string) {
+	udp := getUDP(port, HexToNodeID(id))
+	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
 
 	udp.StartServe()
 
@@ -30,45 +29,40 @@ func StartServer(port string) {
 	wg.Wait()
 }
 
-func getUDP(port string) *udp {
+func getUDP(port string, id NodeID) *udp {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	//TODO generate key for test
-	keypair, err := crypto.GenerateKey()
-	if err != nil {
-		log.Info(err)
-	}
-
-	buff := crypto.FromECDSAPub(&keypair.PublicKey)
-
-	id, err := BytesTOID(buff[1:])
-	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	return NewUDP(id, addr)
 }
 
-func SendPing(port, id, targePort string) {
-	udp := getUDP(port)
-
-	log.Debug("nodeid: " + common.BytesToHex(udp.self.ID.Bytes()))
-
-	addr := getAddr(targePort)
+func HexToNodeID(id string) NodeID  {
 	byte, err := common.HexToBytes(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	nid, err := BytesTOID(byte)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
-	n := NewNodeWithAddr(nid, addr)
+	return nid
+}
+
+func SendPing(port, id, targePort string) {
+	myid := getRandomNodeID()
+
+	udp := getUDP(port, myid)
+
+	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+
+	addr := getAddr(targePort)
+	tid := HexToNodeID(id)
+
+	n := NewNodeWithAddr(tid, addr)
 	udp.table.addNode(n)
 	udp.db.add(n.sha, n)
 

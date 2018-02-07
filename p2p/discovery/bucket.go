@@ -4,7 +4,9 @@
  */
 package discovery
 
-import ()
+import (
+	"github.com/seeleteam/go-seele/log"
+)
 
 const (
 	bucketSize = 16 // Kademlia bucket size
@@ -35,6 +37,8 @@ func (b *bucket) addNode(node *Node) {
 			b.peers[len(b.peers)-1] = node
 		}
 	}
+
+	log.Debug("bucket size: %d", len(b.peers))
 }
 
 // hasNode check if the bucket already have this node, if so, return its index, otherwise, return -1

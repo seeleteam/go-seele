@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -66,12 +67,18 @@ func (t *Table) findNodeResponse(target common.Hash) []*Node {
 func (t *Table) deleteNode(target common.Hash)  {
 	dis := logdist(t.selfNode.sha, target)
 
-	index := 0
+	index := -1
 	for i, n := range t.buckets[dis].peers {
 		if n.sha == target {
 			index = i
 			break
 		}
+	}
+
+	log.Debug("index: %d", index)
+	if index == -1 {
+		log.Info("don't find the to to delete\n")
+		return
 	}
 
 	t.buckets[dis].peers = append(t.buckets[dis].peers[:index], t.buckets[dis].peers[index+1:]...)
@@ -99,7 +106,7 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node  {
 
 
 // nodesByDistance is a list of nodes, ordered by
-// distance to target.
+// distance to to.
 type nodesByDistance struct {
 	entries []*Node
 	target  common.Hash

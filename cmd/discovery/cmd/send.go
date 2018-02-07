@@ -13,11 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	id *string
-	port *string
-)
-
 // sendCmd represents the send command
 var sendCmd = &cobra.Command{
 	Use:   "send",
@@ -32,7 +27,6 @@ to quickly create a Cobra application.`,
 		fmt.Println("send called")
 
 		fmt.Println(*id)
-		fmt.Println(*port)
 
 		discovery.SendPing("9001", *id, "9000")
 	},
@@ -40,11 +34,6 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
-
-	id = sendCmd.Flags().String("id", "", "node id")
-	port = sendCmd.Flags().String("port", "9000", "node port")
-
-	sendCmd.MarkFlagRequired("id")
 
 	// Here you will define your flags and configuration settings.
 

@@ -67,6 +67,7 @@ func NewUDP(id NodeID, addr *net.UDPAddr) *udp {
 
 		gotreply: make(chan reply, 1),
 		addpending: make(chan *pending, 1),
+		write: make(chan *send, 1),
 	}
 
 	return transport
@@ -75,7 +76,7 @@ func NewUDP(id NodeID, addr *net.UDPAddr) *udp {
 func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
 	encoding, err := common.Encoding(msg)
 	if err != nil {
-		log.Info(err)
+		log.Info(err.Error())
 		return
 	}
 
@@ -90,23 +91,26 @@ func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
 func sendMsg(buff []byte, source, target *net.UDPAddr) {
 	conn, err := net.DialUDP("udp", source, target)
 	if err != nil {
-		log.Info(err)
+		log.Info(err.Error())
 	}
 	defer conn.Close()
 
-	log.Debug("buff length:", len(buff))
+	//log.Debug("buff length:", len(buff))
 	n, err := conn.Write(buff)
 	if err != nil {
-		log.Info(err)
+		log.Info(err.Error())
 	}
 
-	log.Debug(n)
+	if n != len(buff) {
+		log.Error("send msg failed, expected length: %d, actuall length: %d", len(buff), n)
+	}
 }
 
 func (u *udp) sendLoop() {
 	for {
 		select {
 		case s := <- u.write:
+			//log.Debug("send msg to: %d", s.to.Port)
 			sendMsg(s.buff, u.localAddr, s.target)
 		}
 	}
@@ -116,28 +120,30 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
+		//log.Debug("msg type: %d", code)
 		switch code {
 		case PingMsg:
 			msg := &ping{}
 			err := common.Decoding(data[1:], &msg)
 			if err != nil {
-				log.Info(err)
+				log.Info(err.Error())
 				return
 			}
 
 			// response ping
+			msg.handle(u, from)
 		case PongMsg:
 			msg := &pong{}
 			err := common.Decoding(data[1:], &msg)
 			if err != nil {
-				log.Info(err)
+				log.Info(err.Error())
 				return
 			}
 
 			r := reply {
-				from: msg.ID,
+				from: msg.SelfID,
 				code: code,
-
+				addr:from,
 				data: msg,
 			}
 
@@ -147,23 +153,24 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			err := common.Decoding(data[1:], &msg)
 			if err != nil {
-				log.Info(err)
+				log.Info(err.Error())
 				return
 			}
 
 			//response find
+			msg.handle(u, from)
 		case NeighborsMsg:
 			msg := &neighbors{}
 			err := common.Decoding(data[1:], &msg)
 			if err != nil {
-				log.Info(err)
+				log.Info(err.Error())
 				return
 			}
 
 			r := reply {
-				from: msg.ID,
+				from: msg.SelfID,
 				code: code,
-
+				addr:from,
 				data: msg,
 			}
 
@@ -179,12 +186,10 @@ func (u *udp) readLoop() {
 		data := make([]byte, 1024)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
-			log.Info(err)
+			log.Info(err.Error())
 		}
 
-		log.Info("ip:", remoteAddr.IP, "port:", remoteAddr.Port, "network:", remoteAddr.Network,
-			"zone:", remoteAddr.Zone)
-		log.Info("n:", n)
+		//log.Info("get msg from: %d", remoteAddr.Port)
 
 		data = data[:n]
 		u.handleMsg(remoteAddr, data)
@@ -220,8 +225,12 @@ func (u *udp) loopReply() {
 	for {
 		select {
 		case r := <- u.gotreply:
+			//log.Debug("reply from code %d, %d", r.code, common.BytesToHex(r.from.Bytes()))
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
+
+				//log.Debug("pending %d %d", p.code, common.BytesToHex(p.from.Bytes()))
+
 				if p.from == r.from && p.code == r.code {
 					if p.callback(r.data, r.addr) {
 						pendingList.Remove(el)
@@ -249,14 +258,14 @@ func (u *udp) loopReply() {
 func getRandomNodeID() NodeID {
 	keypair, err := crypto.GenerateKey()
 	if err != nil {
-		log.Info(err)
+		log.Info(err.Error())
 	}
 
 	buff := crypto.FromECDSAPub(&keypair.PublicKey)
 
 	id, err := BytesTOID(buff[1:])
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	return id
@@ -276,17 +285,14 @@ func (u *udp) discovery() {
 
 func (u *udp) pingPongService()  {
 	for {
-		copyMap := make(map[common.Hash]*Node)
-		for key, value := range u.db.m {
-			copyMap[key] = value
-		}
+		copyMap := u.db.getCopy()
 
 		for _, value := range copyMap {
 			p := &ping{
 				Version: VERSION,
-				ID: u.self.ID,
+				SelfID:  u.self.ID,
 
-				target: value.ID,
+				to: value.ID,
 			}
 
 			addr := &net.UDPAddr{
