@@ -37,34 +37,32 @@ func Test_RLP(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	data := buffer.Bytes()
-	fmt.Println(len(data))
-
 	nst := Student{}
 	err = rlp.Decode(&buffer, &nst)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	fmt.Printf("%v\n", nst)
-
 	assert.Equal(t, nst.Name, s.Name)
 	assert.Equal(t, nst.NO, s.NO)
+	assert.Equal(t, nst.score, uint(0))
+	assert.Equal(t, nst._age, uint(0))
 }
 
-// test gob effective
-func Test_Encoding(t *testing.T) {
+// test rlp wrapper
+func Test_RLPWrapper(t *testing.T) {
 	data, err := Serialize(&s)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	fmt.Println(len(data))
-
 	nst := Student{}
 	err = Deserialize(data, &nst)
 
-	fmt.Printf("%v\n", nst)
+	assert.Equal(t, nst.Name, s.Name)
+	assert.Equal(t, nst.NO, s.NO)
+	assert.Equal(t, nst.score, uint(0))
+	assert.Equal(t, nst._age, uint(0))
 }
 
 // test json effective
