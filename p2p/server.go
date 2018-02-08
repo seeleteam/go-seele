@@ -60,10 +60,11 @@ type Config struct {
 	// Use common.MakeName to create a name that follows existing conventions.
 	Name string `toml:"-"`
 
+	MyNodeID string
 	// Static nodes are used as pre-configured connections which are always
 	// maintained and re-connected on disconnects.
 	StaticNodes []*discovery.Node
-
+	KadPort     string
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
@@ -82,7 +83,7 @@ type Server struct {
 	lock    sync.Mutex // protects running
 	running bool
 
-	ntab     discovery.Table
+	kadDB    *discovery.Database
 	listener net.Listener
 
 	//ourHandshake *protoHandshake
@@ -101,7 +102,6 @@ type Server struct {
 	loopWG  sync.WaitGroup // loop, listenLoop
 	//	peerFeed      event.Feed
 
-	kadPort string
 	// peers map[*Peer]bool
 	peers map[discovery.NodeID]*Peer
 }
@@ -134,17 +134,10 @@ func (srv *Server) Start() (err error) {
 	//srv.peerOpDone = make(chan struct{})
 
 	// node table
+	//fmt.Println("srv.kadDB 9001")
 
-	/*ntab, err := discover.ListenUDP(srv.PrivateKey, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
-	if err != nil {
-		return err
-	}
-
-	srv.ntab = ntab*/
-	//	dynPeers := (srv.MaxPeers + 1) / 2
-	srv.kadPort = "9001"
-	discovery.StartServer(srv.kadPort)
-
+	srv.kadDB = discovery.StartServerTest(srv.KadPort, srv.MyNodeID, srv.StaticNodes)
+	fmt.Println("srv.kadDB", srv.kadDB)
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -169,10 +162,13 @@ func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	peers := srv.peers
 
+	checkTimer := time.NewTimer(3 * time.Second)
 running:
 	for {
 		srv.scheduleTasks()
 		select {
+		case <-checkTimer.C:
+			checkTimer.Reset(3 * time.Second)
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
@@ -222,8 +218,9 @@ running:
 //scheduleTasks
 func (srv *Server) scheduleTasks() {
 	// TODO select nodes from ntab to connect
-	fmt.Println("scheduleTasks called...")
-	for _, node := range srv.StaticNodes {
+	nodeMap := srv.kadDB.GetCopy()
+	fmt.Println("scheduleTasks called...", nodeMap)
+	/*for _, node := range srv.StaticNodes {
 		_, ok := srv.peers[node.ID]
 		if ok {
 			continue
@@ -238,7 +235,7 @@ func (srv *Server) scheduleTasks() {
 			continue
 		}
 		go srv.setupConn(conn, outboundConn, node)
-	}
+	}*/
 }
 
 func (srv *Server) startListening() error {
@@ -323,7 +320,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		},
 	}
 	//buffer := new(bytes.Buffer)
-	buffer, err := common.Encoding(&caps)
+	buffer, err := common.Serialize(&caps)
 	if err != nil {
 		fd.Close()
 		return err
@@ -343,7 +340,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}
 
 	var remoteCaps []Cap
-	if err := common.Decoding(msgRecv.payload, &remoteCaps); err != nil {
+	if err := common.Deserialize(msgRecv.payload, &remoteCaps); err != nil {
 		fd.Close()
 		return err
 	}
@@ -362,9 +359,9 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	// TODO get Node from ntab, according nodeID
 	if flags == inboundConn {
-		nodeID1, _ := discovery.BytesTOID([]byte("1234567890123456789012345678901234567890123456789012345678901235"))
+		nodeID1, _ := discovery.BytesToID([]byte("1234567890123456789012345678901234567890123456789012345678901235"))
 		addr1, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
-		peer.node = discovery.NewNode(nodeID1, addr1)
+		peer.node = discovery.NewNodeWithAddr(nodeID1, addr1)
 	}
 	fmt.Println("srv.addpeer <- peer", peer)
 	go func() {

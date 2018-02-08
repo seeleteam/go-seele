@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -24,7 +24,7 @@ type udp struct {
 	table *Table
 
 	localAddr *net.UDPAddr
-	db        *database
+	db        *Database
 
 	gotreply   chan reply
 	addpending chan *pending
@@ -286,7 +286,7 @@ func (u *udp) discovery() {
 
 func (u *udp) pingPongService() {
 	for {
-		copyMap := u.db.getCopy()
+		copyMap := u.db.GetCopy()
 
 		for _, value := range copyMap {
 			p := &ping{

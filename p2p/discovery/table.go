@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	alpha      = 3  // Kademlia concurrency factor
+	alpha              = 3 // Kademlia concurrency factor
 	responseNodeNumber = 5 //TODO with this number for test
-	hashBits   = len(common.Hash{}) * 8
-	nBuckets   = hashBits + 1 // Number of buckets
+	hashBits           = len(common.Hash{}) * 8
+	nBuckets           = hashBits + 1 // Number of buckets
 )
 
 type Table struct {
@@ -41,14 +41,14 @@ func NewTable(id NodeID, addr *net.UDPAddr) *Table {
 	return table
 }
 
-func (t *Table) addNode(node *Node) {
+func (t *Table) AddNode(node *Node) {
 	dis := logdist(node.sha, t.selfNode.sha)
 
 	t.buckets[dis].addNode(node)
 }
 
-func (t *Table) updateNode(node *Node)  {
-	t.addNode(node)
+func (t *Table) updateNode(node *Node) {
+	t.AddNode(node)
 }
 
 func (t *Table) findNodeResponse(target common.Hash) []*Node {
@@ -64,7 +64,7 @@ func (t *Table) findNodeResponse(target common.Hash) []*Node {
 	return minDis
 }
 
-func (t *Table) deleteNode(target common.Hash)  {
+func (t *Table) deleteNode(target common.Hash) {
 	dis := logdist(t.selfNode.sha, target)
 
 	index := -1
@@ -88,11 +88,11 @@ func (t *Table) findNodeForRequest(target common.Hash) []*Node {
 	return t.findMinDisNodes(target, alpha)
 }
 
-func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node  {
+func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node {
 	result := nodesByDistance{
-		target: target,
+		target:   target,
 		maxElems: number,
-		entries: make([]*Node, 0),
+		entries:  make([]*Node, 0),
 	}
 
 	for _, b := range t.buckets {
@@ -104,12 +104,11 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node  {
 	return result.entries
 }
 
-
 // nodesByDistance is a list of nodes, ordered by
 // distance to to.
 type nodesByDistance struct {
-	entries []*Node
-	target  common.Hash
+	entries  []*Node
+	target   common.Hash
 	maxElems int
 }
 

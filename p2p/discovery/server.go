@@ -27,6 +27,18 @@ func StartServer(port, id string) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wg.Wait()
+
+}
+
+func StartServerTest(port, id string, nodeArr []*Node) (db *Database) {
+	udp := getUDP(port, HexToNodeID(id))
+	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+	for _, node := range nodeArr {
+		udp.table.AddNode(node)
+	}
+
+	udp.StartServe()
+	return udp.db
 }
 
 func getUDP(port string, id NodeID) *udp {
@@ -63,7 +75,7 @@ func SendPing(port, id, targePort string) {
 	tid := HexToNodeID(id)
 
 	n := NewNodeWithAddr(tid, addr)
-	udp.table.addNode(n)
+	udp.table.AddNode(n)
 	udp.db.add(n.sha, n)
 
 	udp.StartServe()

@@ -17,16 +17,6 @@ import (
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
-const (
-// devp2p message codes
-/*	handshakeMsg = 0x00
-	discMsg      = 0x01
-	pingMsg      = 0x02
-	pongMsg      = 0x03
-	getPeersMsg  = 0x04
-	peersMsg     = 0x05*/
-)
-
 type Peer struct {
 	fd       net.Conn
 	node     *discovery.Node

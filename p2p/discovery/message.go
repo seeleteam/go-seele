@@ -119,7 +119,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	log.Debug("received find node request from: %s", common.BytesToHex(m.SelfID.Bytes()))
 
 	node := NewNodeWithAddr(m.SelfID, from)
-	t.table.addNode(node)
+	t.table.AddNode(node)
 	t.db.add(node.sha, node)
 
 	// response find node request
@@ -167,7 +167,7 @@ func (m *findNode) send(t *udp, to *net.UDPAddr) {
 				}
 
 				node := n.ToNode()
-				t.table.addNode(node)
+				t.table.AddNode(node)
 				t.db.add(node.sha, node)
 			}
 
