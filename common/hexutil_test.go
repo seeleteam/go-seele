@@ -16,7 +16,7 @@ func Test_Hex(t *testing.T) {
 
 	bytes, err := HexToBytes(str)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	res := BytesToHex(bytes)

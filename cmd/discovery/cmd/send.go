@@ -25,8 +25,9 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
+		fmt.Println(*id)
 
-		discovery.SendPing("9001", "9000")
+		discovery.SendPing("9001", *id, "9000")
 	},
 }
 

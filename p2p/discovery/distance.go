@@ -24,8 +24,8 @@ func logdist(a, b common.Hash) int {
 	return len(a)*8 - lz
 }
 
-// distcmp compares the distances a->target and b->target.
-// Returns -1 if a is closer to target, 1 if b is closer to target
+// distcmp compares the distances a->to and b->to.
+// Returns -1 if a is closer to to, 1 if b is closer to to
 // and 0 if they are equal.
 func distcmp(target, a, b common.Hash) int {
 	for i := range target {
