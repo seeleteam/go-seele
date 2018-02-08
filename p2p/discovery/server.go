@@ -5,62 +5,70 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"net"
 	"sync"
+	"time"
 
-	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
 
-func StartServer(port string) {
-	udp := getUDP(port)
-	log.Debug("nodeid:" + common.BytesToHex(udp.self.ID.Bytes()))
+const (
+	PINGPONGINTERVAL  = 10 * time.Second // sleep between ping pong
+	DISCOVERYINTERVAL = 10 * time.Second // sleep between discovery
+)
 
-	udp.readLoop()
+func StartServer(port, id string) {
+	udp := getUDP(port, HexToNodeID(id))
+	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+
+	udp.StartServe()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
 }
 
-func getUDP(port string) *udp {
+func getUDP(port string, id NodeID) *udp {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	keypair, err := crypto.GenerateKey()
-	if err != nil {
-		log.Info(err)
-	}
-
-	buff := crypto.FromECDSAPub(&keypair.PublicKey)
-
-	id, err := BytesTOID(buff[1:])
-	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	return NewUDP(id, addr)
 }
 
-func SendPing(port string, target string) {
-	udp := getUDP(port)
-
-	go udp.readLoop()
-
-	log.Debug("nodeid: " + common.BytesToHex(udp.self.ID.Bytes()))
-
-	addr, err := net.ResolveUDPAddr("udp", ":"+target)
+func HexToNodeID(id string) NodeID {
+	byte, err := common.HexToBytes(id)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
-	msg := &Ping{
-		ID: udp.self.ID,
+	nid, err := BytesToID(byte)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
-	udp.sendPingMsg(msg, addr)
+	return nid
+}
+
+func SendPing(port, id, targePort string) {
+	myid := getRandomNodeID()
+
+	udp := getUDP(port, myid)
+
+	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+
+	addr := getAddr(targePort)
+	tid := HexToNodeID(id)
+
+	n := NewNodeWithAddr(tid, addr)
+	udp.table.addNode(n)
+	udp.db.add(n.sha, n)
+
+	udp.StartServe()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-
 	wg.Wait()
 }
