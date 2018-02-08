@@ -54,7 +54,7 @@ func Test_RLP(t *testing.T) {
 
 // test gob effective
 func Test_Encoding(t *testing.T) {
-	data, err := Encoding(&s)
+	data, err := Serialize(&s)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -62,7 +62,7 @@ func Test_Encoding(t *testing.T) {
 	fmt.Println(len(data))
 
 	nst := Student{}
-	err = Decoding(data, &nst)
+	err = Deserialize(data, &nst)
 
 	fmt.Printf("%v\n", nst)
 }

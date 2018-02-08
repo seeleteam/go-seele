@@ -1,2 +1,5 @@
 language: go
-script: go test ./...
+script: 
+    - go test ./...
+    - go build cmd\discovery\main.go
+
