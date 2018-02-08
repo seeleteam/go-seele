@@ -5,8 +5,9 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"sync"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 type database struct {
@@ -21,7 +22,7 @@ func NewDatabase() *database {
 	}
 }
 
-func (db *database) add(id common.Hash, value *Node)  {
+func (db *database) add(id common.Hash, value *Node) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	db.m[id] = value
@@ -33,7 +34,7 @@ func (db *database) find(id common.Hash) *Node {
 	return db.m[id]
 }
 
-func (db *database) delete(id common.Hash)  {
+func (db *database) delete(id common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	delete(db.m, id)

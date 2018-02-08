@@ -8,8 +8,6 @@ package common
 import (
 	"testing"
 
-	"github.com/seeleteam/go-seele/log"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,8 +19,6 @@ func Test_Hash(t *testing.T) {
 	var exp Hash
 	exp[0] = 21
 
-	log.Info(hash)
-	log.Info(exp)
 	assert.Equal(t, exp, hash)
 }
 

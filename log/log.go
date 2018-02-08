@@ -72,7 +72,7 @@ func init() {
 	       return
 	   }
 	*/
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.SetFormatter(&logrus.TextFormatter{})
 
 	log = logrus.New()
 	//log.Out = file //use std out for temp

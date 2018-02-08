@@ -6,8 +6,9 @@ package discovery
 
 import (
 	"net"
-	"github.com/seeleteam/go-seele/log"
+
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 type MsgType uint8
@@ -80,7 +81,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 		return
 	}
 
-	resp := &pong {
+	resp := &pong{
 		SelfID: t.self.ID,
 	}
 
@@ -90,7 +91,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 func (m *ping) send(t *udp, to *net.UDPAddr) {
 	log.Debug("send ping msg to: %s", common.BytesToHex(m.to.Bytes()))
 
-	p := &pending {
+	p := &pending{
 		from: m.to,
 		code: PongMsg,
 
@@ -141,7 +142,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	t.sendMsg(NeighborsMsg, response, from)
 }
 
-func (m *findNode) send(t *udp, to *net.UDPAddr)  {
+func (m *findNode) send(t *udp, to *net.UDPAddr) {
 	log.Debug("send find msg to: %s", common.BytesToHex(m.to.Bytes()))
 
 	p := &pending{
@@ -199,7 +200,7 @@ func sendFindNodeRequest(u *udp, nodes []*Node, target NodeID) {
 		}
 
 		addr := &net.UDPAddr{
-			IP: n.IP,
+			IP:   n.IP,
 			Port: int(n.UDPPort),
 		}
 

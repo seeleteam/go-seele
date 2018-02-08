@@ -6,16 +6,16 @@ package discovery
 
 import (
 	"container/list"
-	"github.com/seeleteam/go-seele/crypto"
 	"net"
 	"time"
 
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	responseTimeout = 500 * time.Millisecond
+	responseTimeout = 2 * time.Second
 )
 
 type udp struct {
@@ -24,11 +24,11 @@ type udp struct {
 	table *Table
 
 	localAddr *net.UDPAddr
-	db *database
+	db        *database
 
 	gotreply   chan reply
 	addpending chan *pending
-	write chan *send
+	write      chan *send
 }
 
 type pending struct {
@@ -43,7 +43,7 @@ type pending struct {
 }
 
 type send struct {
-	buff []byte
+	buff   []byte
 	target *net.UDPAddr
 }
 
@@ -65,9 +65,9 @@ func NewUDP(id NodeID, addr *net.UDPAddr) *udp {
 
 		db: NewDatabase(),
 
-		gotreply: make(chan reply, 1),
+		gotreply:   make(chan reply, 1),
 		addpending: make(chan *pending, 1),
-		write: make(chan *send, 1),
+		write:      make(chan *send, 1),
 	}
 
 	return transport
@@ -82,8 +82,8 @@ func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
 
 	buff := generateBuff(t, encoding)
 	s := &send{
-		buff:buff,
-		target:target,
+		buff:   buff,
+		target: target,
 	}
 	u.write <- s
 }
@@ -109,7 +109,7 @@ func sendMsg(buff []byte, source, target *net.UDPAddr) {
 func (u *udp) sendLoop() {
 	for {
 		select {
-		case s := <- u.write:
+		case s := <-u.write:
 			//log.Debug("send msg to: %d", s.to.Port)
 			sendMsg(s.buff, u.localAddr, s.target)
 		}
@@ -140,10 +140,10 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				return
 			}
 
-			r := reply {
+			r := reply{
 				from: msg.SelfID,
 				code: code,
-				addr:from,
+				addr: from,
 				data: msg,
 			}
 
@@ -167,14 +167,16 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				return
 			}
 
-			r := reply {
+			r := reply{
 				from: msg.SelfID,
 				code: code,
-				addr:from,
+				addr: from,
 				data: msg,
 			}
 
 			u.gotreply <- r
+		default:
+			log.Error("unknown code %d", code)
 		}
 	} else {
 		log.Info("wrong length")
@@ -202,7 +204,7 @@ func (u *udp) loopReply() {
 	var timeout *time.Timer
 	defer timeout.Stop()
 
-	resetTimer := func () {
+	resetTimer := func() {
 		minTime := responseTimeout
 		now := time.Now()
 		for el := pendingList.Front(); el != nil; el = el.Next() {
@@ -224,7 +226,7 @@ func (u *udp) loopReply() {
 
 	for {
 		select {
-		case r := <- u.gotreply:
+		case r := <-u.gotreply:
 			//log.Debug("reply from code %d, %d", r.code, common.BytesToHex(r.from.Bytes()))
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
@@ -238,10 +240,10 @@ func (u *udp) loopReply() {
 					}
 				}
 			}
-		case p := <- u.addpending:
+		case p := <-u.addpending:
 			p.deadline = time.Now().Add(responseTimeout)
 			pendingList.PushBack(p)
-		case <- timeout.C:
+		case <-timeout.C:
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
@@ -263,14 +265,13 @@ func getRandomNodeID() NodeID {
 
 	buff := crypto.FromECDSAPub(&keypair.PublicKey)
 
-	id, err := BytesTOID(buff[1:])
+	id, err := BytesToID(buff[1:])
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	return id
 }
-
 
 func (u *udp) discovery() {
 	for {
@@ -279,11 +280,11 @@ func (u *udp) discovery() {
 		nodes := u.table.findNodeForRequest(id.ToSha())
 		sendFindNodeRequest(u, nodes, id)
 
-		time.Sleep(DISCOVERYINTERVER)
+		time.Sleep(DISCOVERYINTERVAL)
 	}
 }
 
-func (u *udp) pingPongService()  {
+func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.getCopy()
 
@@ -296,13 +297,13 @@ func (u *udp) pingPongService()  {
 			}
 
 			addr := &net.UDPAddr{
-				IP: value.IP,
+				IP:   value.IP,
 				Port: int(value.UDPPort),
 			}
 
 			p.send(u, addr)
 
-			time.Sleep(PINGPONGINTERVER)
+			time.Sleep(PINGPONGINTERVAL)
 		}
 	}
 }

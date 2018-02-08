@@ -5,17 +5,17 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	PINGPONGINTERVER = 10 * time.Second // sleep between ping pong
-	DISCOVERYINTERVER = 10 * time.Second // sleep between discovery
+	PINGPONGINTERVAL  = 10 * time.Second // sleep between ping pong
+	DISCOVERYINTERVAL = 10 * time.Second // sleep between discovery
 )
 
 func StartServer(port, id string) {
@@ -38,13 +38,13 @@ func getUDP(port string, id NodeID) *udp {
 	return NewUDP(id, addr)
 }
 
-func HexToNodeID(id string) NodeID  {
+func HexToNodeID(id string) NodeID {
 	byte, err := common.HexToBytes(id)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	nid, err := BytesTOID(byte)
+	nid, err := BytesToID(byte)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

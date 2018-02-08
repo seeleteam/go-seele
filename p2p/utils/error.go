@@ -4,8 +4,6 @@
  */
 package utils
 
-import ()
-
 // IsTemporaryError checks whether the given error should be considered temporary.
 func IsTemporaryError(err error) bool {
 	tempErr, ok := err.(interface {

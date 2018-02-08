@@ -25,8 +25,8 @@ const nodeIDBits = 512 // the length of the public key
 
 type NodeID [nodeIDBits / 8]byte // we use public key as node id
 
-// BytesTOID converts a byte slice to a NodeID
-func BytesTOID(b []byte) (NodeID, error) {
+// BytesToID converts a byte slice to a NodeID
+func BytesToID(b []byte) (NodeID, error) {
 	var id NodeID
 	if len(b) != len(id) {
 		return id, fmt.Errorf("wrong length, want %d bytes", len(id))
@@ -39,7 +39,7 @@ func (id *NodeID) Bytes() []byte {
 	return id[:]
 }
 
-func (id *NodeID) ToSha() common.Hash  {
+func (id *NodeID) ToSha() common.Hash {
 	return crypto.Keccak256Hash(id[:])
 }
 
