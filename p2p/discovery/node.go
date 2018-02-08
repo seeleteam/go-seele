@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log"
 )
 
 type Node struct {
@@ -18,7 +19,9 @@ type Node struct {
 	IP      net.IP
 	UDPPort uint16
 
-	sha common.Hash // node id for Kademila, which is generated from public key
+	// node id for Kademila, which is generated from public key
+	// better to get it with getSha()
+	sha *common.Hash
 }
 
 const nodeIDBits = 512 // the length of the public key
@@ -39,8 +42,24 @@ func (id *NodeID) Bytes() []byte {
 	return id[:]
 }
 
-func (id *NodeID) ToSha() common.Hash {
-	return crypto.Keccak256Hash(id[:])
+func (id *NodeID) ToSha() *common.Hash {
+	hash := crypto.Keccak256Hash(id[:])
+	return &hash
+}
+
+func (n *Node) getUDPAddr() *net.UDPAddr {
+	return &net.UDPAddr{
+		IP:n.IP,
+		Port: int(n.UDPPort),
+	}
+}
+
+func (n *Node) getSha() *common.Hash {
+	if n.sha == nil || len(n.sha) == 0 {
+		n.sha = n.ID.ToSha()
+	}
+
+	return n.sha
 }
 
 func NewNodeWithAddr(id NodeID, addr *net.UDPAddr) *Node {
@@ -52,7 +71,22 @@ func NewNode(id NodeID, ip net.IP, port uint16) *Node {
 		ID:      id,
 		IP:      ip,
 		UDPPort: port,
-
-		sha: id.ToSha(),
 	}
 }
+
+func getRandomNodeID() NodeID {
+	keypair, err := crypto.GenerateKey()
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	buff := crypto.FromECDSAPub(&keypair.PublicKey)
+
+	id, err := BytesToID(buff[1:])
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return id
+}
+

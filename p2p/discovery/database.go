@@ -22,10 +22,11 @@ func NewDatabase() *database {
 	}
 }
 
-func (db *database) add(id common.Hash, value *Node) {
+func (db *database) add(value *Node) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
-	db.m[id] = value
+	sha := value.getSha()
+	db.m[*sha] = value
 }
 
 func (db *database) find(id common.Hash) *Node {
@@ -34,10 +35,10 @@ func (db *database) find(id common.Hash) *Node {
 	return db.m[id]
 }
 
-func (db *database) delete(id common.Hash) {
+func (db *database) delete(id *common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
-	delete(db.m, id)
+	delete(db.m, *id)
 }
 
 func (db *database) getCopy() map[common.Hash]*Node {
