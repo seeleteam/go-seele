@@ -12,12 +12,12 @@ import (
 // rlp is an effective serialize and deserialize function with no schema
 // we use it as our network byte array converter
 
-// Decoding wrapper decode
-func Decoding(data []byte, value interface{}) error {
+// Deserialize wrapper decode
+func Deserialize(data []byte, value interface{}) error {
 	return rlp.DecodeBytes(data, value)
 }
 
-// Encoding wrapper encode
-func Encoding(in interface{}) ([]byte, error) {
+// Serialize wrapper encode
+func Serialize(in interface{}) ([]byte, error) {
 	return rlp.EncodeToBytes(in)
 }

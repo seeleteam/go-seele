@@ -74,7 +74,7 @@ func NewUDP(id NodeID, addr *net.UDPAddr) *udp {
 }
 
 func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
-	encoding, err := common.Encoding(msg)
+	encoding, err := common.Serialize(msg)
 	if err != nil {
 		log.Info(err.Error())
 		return
@@ -124,7 +124,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 		switch code {
 		case PingMsg:
 			msg := &ping{}
-			err := common.Decoding(data[1:], &msg)
+			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
 				log.Info(err.Error())
 				return
@@ -134,7 +134,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			msg.handle(u, from)
 		case PongMsg:
 			msg := &pong{}
-			err := common.Decoding(data[1:], &msg)
+			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
 				log.Info(err.Error())
 				return
@@ -151,7 +151,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 		case FindNodeMsg:
 			msg := &findNode{}
 
-			err := common.Decoding(data[1:], &msg)
+			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
 				log.Info(err.Error())
 				return
@@ -161,7 +161,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			msg.handle(u, from)
 		case NeighborsMsg:
 			msg := &neighbors{}
-			err := common.Decoding(data[1:], &msg)
+			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
 				log.Info(err.Error())
 				return
