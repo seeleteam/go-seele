@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	alpha      = 1  // Kademlia concurrency factor
+	alpha              = 1 // Kademlia concurrency factor
 	responseNodeNumber = 5 //TODO with this number for test
-	hashBits   = len(common.Hash{}) * 8
-	nBuckets   = hashBits + 1 // Number of buckets
+	hashBits           = len(common.Hash{}) * 8
+	nBuckets           = hashBits + 1 // Number of buckets
 )
 
 type Table struct {
@@ -43,15 +43,10 @@ func newTable(id NodeID, addr *net.UDPAddr) *Table {
 func (t *Table) addNode(node *Node) {
 	dis := logdist(t.selfNode.getSha(), node.getSha())
 
-	//log.Debug("%s", hexutil.BytesToHex(t.selfNode.getSha().Bytes()))
-	//log.Debug("%s", hexutil.BytesToHex(node.getSha().Bytes()))
-
-	//log.Debug("add node dis:%d, size %d", dis, len(t.buckets[dis].peers))
-
 	t.buckets[dis].addNode(node)
 }
 
-func (t *Table) updateNode(node *Node)  {
+func (t *Table) updateNode(node *Node) {
 	t.addNode(node)
 }
 
@@ -59,17 +54,23 @@ func (t *Table) updateNode(node *Node)  {
 func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
 
+	//log.Debug("find node number:%d", len(nodes))
+
 	minDis := []*Node{}
 	for _, e := range nodes {
 		if distcmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
+			//log.Debug("add node: %s", hexutil.BytesToHex(e.ID.Bytes()))
+
 			minDis = append(minDis, e)
+		} else {
+			//log.Debug("skip node:%s", hexutil.BytesToHex(e.ID.Bytes()))
 		}
 	}
 
 	return minDis
 }
 
-func (t *Table) deleteNode(target *common.Hash)  {
+func (t *Table) deleteNode(target *common.Hash) {
 	dis := logdist(t.selfNode.getSha(), target)
 
 	//log.Debug("%s", hexutil.BytesToHex(t.selfNode.getSha().Bytes()))
@@ -84,11 +85,11 @@ func (t *Table) findNodeForRequest(target *common.Hash) []*Node {
 	return t.findMinDisNodes(target, alpha)
 }
 
-func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node  {
+func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node {
 	result := nodesByDistance{
-		target: target,
+		target:   target,
 		maxElems: number,
-		entries: make([]*Node, 0),
+		entries:  make([]*Node, 0),
 	}
 
 	for _, b := range t.buckets {
@@ -100,12 +101,11 @@ func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node  {
 	return result.entries
 }
 
-
 // nodesByDistance is a list of nodes, ordered by
 // distance to to.
 type nodesByDistance struct {
-	entries []*Node
-	target  *common.Hash
+	entries  []*Node
+	target   *common.Hash
 	maxElems int
 }
 

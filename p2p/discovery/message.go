@@ -74,7 +74,7 @@ func generateBuff(code msgType, encoding []byte) []byte {
 
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
-	log.Debug("received ping from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
+	//log.Debug("received ping from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
 
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
@@ -89,7 +89,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 }
 
 func (m *ping) send(t *udp) {
-	log.Debug("send ping msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
+	//log.Debug("send ping msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
 	p := &pending{
 		from: m.to,
@@ -100,7 +100,7 @@ func (m *ping) send(t *udp) {
 			n := NewNodeWithAddr(r.SelfID, addr)
 			t.table.updateNode(n)
 
-			log.Debug("received pong msg: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
+			//log.Debug("received pong msg: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
 
 			return true
 		},
@@ -121,7 +121,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from)
 	t.addNode(node)
 
-	nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), m.SelfID.ToSha())
+	nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), t.self.getSha())
 
 	rpcs := make([]*rpcNode, len(nodes))
 	for index, n := range nodes {
@@ -156,8 +156,12 @@ func (m *findNode) send(t *udp) {
 				return true
 			}
 
+			log.Debug("find %d nodes", len(r.Nodes))
+
 			found := false
 			for _, n := range r.Nodes {
+				log.Debug("received node: %s", hexutil.BytesToHex(n.SelfID.Bytes()))
+
 				if n.SelfID == m.QueryID {
 					found = true
 				}

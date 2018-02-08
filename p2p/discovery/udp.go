@@ -10,14 +10,15 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
 	responseTimeout = 10 * time.Second
 
-	pingpongInterval  = 20 * time.Second // sleep between ping pong
-	discoveryInterval = 600 * time.Second // sleep between discovery
+	pingpongInterval  = 10 * time.Second // sleep between ping pong
+	discoveryInterval = 15 * time.Second // sleep between discovery
 )
 
 type udp struct {
@@ -54,7 +55,7 @@ type reply struct {
 	from *Node
 	code msgType
 
-	err bool	// got error when send msg
+	err bool // got error when send msg
 
 	data interface{}
 }
@@ -95,7 +96,7 @@ func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 func sendMsg(buff []byte, source, to *net.UDPAddr) bool {
 	conn, err := net.DialUDP("udp", source, to)
 	if err != nil {
-		log.Info(err.Error())
+		log.Info("connect to %d failed: %s", to.Port, err.Error())
 		return false
 	}
 	defer conn.Close()
@@ -103,7 +104,7 @@ func sendMsg(buff []byte, source, to *net.UDPAddr) bool {
 	//log.Debug("buff length:", len(buff))
 	n, err := conn.Write(buff)
 	if err != nil {
-		log.Info(err.Error())
+		log.Info("send msg failed:%s", err.Error())
 		return false
 	}
 
@@ -125,7 +126,7 @@ func (u *udp) sendLoop() {
 				r := &reply{
 					from: s.to,
 					code: s.code,
-					err: true,
+					err:  true,
 				}
 
 				u.gotReply <- r
@@ -162,7 +163,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				from: NewNodeWithAddr(msg.SelfID, from),
 				code: code,
 				data: msg,
-				err:false,
+				err:  false,
 			}
 
 			u.gotReply <- r
@@ -189,7 +190,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				from: NewNodeWithAddr(msg.SelfID, from),
 				code: code,
 				data: msg,
-				err:false,
+				err:  false,
 			}
 
 			u.gotReply <- r
@@ -284,6 +285,8 @@ func (u *udp) discovery() {
 		id := getRandomNodeID()
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
+
+		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
 		sendFindNodeRequest(u, nodes, id)
 
 		time.Sleep(discoveryInterval)
@@ -318,9 +321,11 @@ func (u *udp) StartServe() {
 }
 
 func (u *udp) addNode(n *Node) {
-	if n.ID == u.self.ID {
+	if n == nil || n.ID == u.self.ID {
 		return
 	}
+
+	log.Info("add node, total nodes:%d", u.db.size())
 
 	u.table.addNode(n)
 	u.db.add(n)
@@ -331,6 +336,8 @@ func (u *udp) deleteNode(sha *common.Hash) {
 	if *sha == *selfSha {
 		return
 	}
+
+	log.Info("delete node, total nodes:%d", u.db.size())
 
 	u.table.deleteNode(sha)
 	u.db.delete(sha)

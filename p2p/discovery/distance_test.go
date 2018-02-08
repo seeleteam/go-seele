@@ -5,11 +5,12 @@
 package discovery
 
 import (
+	"testing"
+
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
-	"testing"
 )
 
 func Test_Dic(t *testing.T) {
@@ -28,7 +29,7 @@ func Test_Dic(t *testing.T) {
 	log.Debug("%d, %d, %d", log1, log2, log4)
 }
 
-func getHash(s string) *common.Hash  {
+func getHash(s string) *common.Hash {
 	var h common.Hash
 	buff, _ := hexutil.HexToBytes(s)
 	h.SetBytes(buff)

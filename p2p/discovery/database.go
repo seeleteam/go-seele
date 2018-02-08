@@ -41,6 +41,15 @@ func (db *database) delete(id *common.Hash) {
 	delete(db.m, *id)
 }
 
+func (db *database) size() int {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	size := len(db.m)
+
+	return size
+}
+
 func (db *database) getCopy() map[common.Hash]*Node {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()

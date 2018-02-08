@@ -39,6 +39,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
+		log.Error("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -46,8 +47,6 @@ func (b *bucket) addNode(node *Node) {
 			b.peers[len(b.peers)-1] = node
 		}
 	}
-
-	b.printNodeList()
 }
 
 // hasNode check if the bucket already have this node, if so, return its index, otherwise, return -1
@@ -77,14 +76,13 @@ func (b *bucket) deleteNode(target *common.Hash) {
 	}
 
 	if index == -1 {
-		log.Panic("don't find the node to delete\n")
-		b.printNodeList()
+		log.Error("don't find the node to delete\n")
 		return
 	}
 
-	b.peers = append(b.peers[:index], b.peers[index+1:]...)
+	log.Error("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
 
-	b.printNodeList()
+	b.peers = append(b.peers[:index], b.peers[index+1:]...)
 }
 
 func (b *bucket) size() int {
