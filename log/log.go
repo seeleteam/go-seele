@@ -7,6 +7,7 @@ package log
 
 import (
 	//"fmt"
+	"fmt"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,8 @@ import (
 )
 
 var log *logrus.Logger
+
+var logMap map[string]*logrus.Logger
 
 // Panic Level, highest level of severity. Logs and then calls panic with the
 // message passed to Debug, Info, ...
@@ -78,4 +81,27 @@ func init() {
 	//log.Out = file //use std out for temp
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
+}
+
+// GetLogger get logrus.Logger object accoring to logName
+// each module can have it's own logger
+func GetLogger(logName string, bConsole bool) *logrus.Logger {
+	curLog, ok := logMap[logName]
+	if ok {
+		return curLog
+	}
+	curLog = logrus.New()
+	if bConsole {
+		log.Out = os.Stdout
+	} else {
+		logFileName := logName + ".log"
+		file, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Println("create log file failed. ", err)
+			return nil
+		}
+		log.Out = file
+	}
+	log.SetLevel(logrus.DebugLevel)
+	return curLog
 }
