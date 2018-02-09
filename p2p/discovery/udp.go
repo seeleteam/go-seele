@@ -2,6 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
@@ -325,10 +326,9 @@ func (u *udp) addNode(n *Node) {
 		return
 	}
 
-	log.Info("add node, total nodes:%d", u.db.size())
-
 	u.table.addNode(n)
 	u.db.add(n)
+	log.Info("add node, total nodes:%d", u.db.size())
 }
 
 func (u *udp) deleteNode(sha *common.Hash) {
@@ -337,8 +337,7 @@ func (u *udp) deleteNode(sha *common.Hash) {
 		return
 	}
 
-	log.Info("delete node, total nodes:%d", u.db.size())
-
 	u.table.deleteNode(sha)
 	u.db.delete(sha)
+	log.Info("delete node, total nodes:%d", u.db.size())
 }

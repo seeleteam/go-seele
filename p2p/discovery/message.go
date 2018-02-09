@@ -2,13 +2,14 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
 	"net"
 
-	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/log"
+	_ "github.com/seeleteam/go-seele/common/hexutil"
+	_ "github.com/seeleteam/go-seele/log"
 )
 
 type msgType uint8
@@ -117,8 +118,7 @@ func (m *ping) send(t *udp) {
 
 // handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	log.Debug("received find node request from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
-
+	//log.Debug("received find node request from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
 	node := NewNodeWithAddr(m.SelfID, from)
 	t.addNode(node)
 
@@ -143,7 +143,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 
 // send send find node message and handle callback
 func (m *findNode) send(t *udp) {
-	log.Debug("send find msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
+	//log.Debug("send find msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
 	p := &pending{
 		from: m.to,
@@ -152,17 +152,16 @@ func (m *findNode) send(t *udp) {
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*neighbors)
 
-			log.Debug("received neighbors msg from: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
-
+			//log.Debug("received neighbors msg from: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
 			if r.Nodes == nil || len(r.Nodes) == 0 {
 				return true
 			}
 
-			log.Debug("find %d nodes", len(r.Nodes))
+			//log.Debug("find %d nodes", len(r.Nodes))
 
 			found := false
 			for _, n := range r.Nodes {
-				log.Debug("received node: %s", hexutil.BytesToHex(n.SelfID.Bytes()))
+				//log.Debug("received node: %s", hexutil.BytesToHex(n.SelfID.Bytes()))
 
 				if n.SelfID == m.QueryID {
 					found = true
