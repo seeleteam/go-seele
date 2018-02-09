@@ -5,19 +5,18 @@
 package discovery
 
 import (
-	"github.com/magiconair/properties/assert"
 	"net"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 func Test_Bucket(t *testing.T) {
 	b := bucket{}
 
 	n := getNode("9000")
-
 	b.addNode(n)
 	assert.Equal(t, b.size(), 1)
-
 	assert.Equal(t, b.hasNode(n), 0)
 
 	b.addNode(n)
@@ -37,13 +36,11 @@ func Test_Bucket(t *testing.T) {
 
 	b.deleteNode(n2.getSha())
 	assert.Equal(t, b.size(), 0)
-
-
 }
 
-func getNode(port string) *Node  {
+func getNode(port string) *Node {
 	id := getRandomNodeID()
-	addr, _ := net.ResolveUDPAddr("udp", ":" + port)
+	addr, _ := net.ResolveUDPAddr("udp", ":"+port)
 	n := NewNode(id, addr.IP, uint16(addr.Port))
 
 	return n

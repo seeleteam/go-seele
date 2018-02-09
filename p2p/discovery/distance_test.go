@@ -43,10 +43,8 @@ func Test_Cmp(t *testing.T) {
 	h3 := getHash("0x3d7c5dad1d99e0fce26ecefdd8904f304d979ff424ad666832544b72851e4b52")
 
 	a := distcmp(h1, h2, h3)
-	log.Debug("%d", a)
+
 	assert.Equal(t, a, -1)
-
 	assert.Equal(t, distcmp(h1, h3, h2), 1)
-
 	assert.Equal(t, distcmp(h1, h2, h2), 0)
 }

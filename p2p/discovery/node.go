@@ -14,6 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
+// Node the node that contains its public key and network address
 type Node struct {
 	ID      NodeID //public key actually
 	IP      net.IP
@@ -24,9 +25,12 @@ type Node struct {
 	sha *common.Hash
 }
 
-const nodeIDBits = 512 // the length of the public key
+const (
+	nodeIDBits = 512 // the length of the public key
+)
 
-type NodeID [nodeIDBits / 8]byte // we use public key as node id
+// NodeID we use public key as node id
+type NodeID [nodeIDBits / 8]byte
 
 // BytesToID converts a byte slice to a NodeID
 func BytesToID(b []byte) (NodeID, error) {
@@ -38,10 +42,12 @@ func BytesToID(b []byte) (NodeID, error) {
 	return id, nil
 }
 
+// Bytes get the actual bytes
 func (id *NodeID) Bytes() []byte {
 	return id[:]
 }
 
+// ToSha get the node hash
 func (id *NodeID) ToSha() *common.Hash {
 	hash := crypto.Keccak256Hash(id[:])
 	return &hash
@@ -49,7 +55,7 @@ func (id *NodeID) ToSha() *common.Hash {
 
 func (n *Node) getUDPAddr() *net.UDPAddr {
 	return &net.UDPAddr{
-		IP:n.IP,
+		IP:   n.IP,
 		Port: int(n.UDPPort),
 	}
 }
@@ -62,10 +68,12 @@ func (n *Node) getSha() *common.Hash {
 	return n.sha
 }
 
+// NewNodeWithAddr new node with id and network address
 func NewNodeWithAddr(id NodeID, addr *net.UDPAddr) *Node {
 	return NewNode(id, addr.IP, uint16(addr.Port))
 }
 
+// NewNode new node with its value
 func NewNode(id NodeID, ip net.IP, port uint16) *Node {
 	return &Node{
 		ID:      id,
@@ -89,4 +97,3 @@ func getRandomNodeID() NodeID {
 
 	return id
 }
-

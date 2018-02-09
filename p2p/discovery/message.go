@@ -7,8 +7,8 @@ package discovery
 import (
 	"net"
 
-	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/log"
 )
 
 type msgType uint8
@@ -38,9 +38,9 @@ type pong struct {
 
 type findNode struct {
 	SelfID  NodeID
-	QueryID NodeID
+	QueryID NodeID // the ID we want to query in Kademila
 
-	to *Node
+	to *Node // the node that send request to
 }
 
 type neighbors struct {
@@ -88,6 +88,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	t.sendMsg(pongMsgType, resp, NewNodeWithAddr(m.SelfID, from))
 }
 
+// send send ping message and handle callback
 func (m *ping) send(t *udp) {
 	//log.Debug("send ping msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
@@ -140,6 +141,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	t.sendMsg(neighborsMsgType, response, NewNodeWithAddr(m.SelfID, from))
 }
 
+// send send find node message and handle callback
 func (m *findNode) send(t *udp) {
 	log.Debug("send find msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
@@ -170,6 +172,7 @@ func (m *findNode) send(t *udp) {
 				t.addNode(node)
 			}
 
+			// if not found, will find the node that is more closer than last one
 			if !found {
 				nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), m.SelfID.ToSha())
 				sendFindNodeRequest(t, nodes, m.QueryID)

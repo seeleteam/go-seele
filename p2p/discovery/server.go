@@ -8,18 +8,17 @@ import (
 	"net"
 	"sync"
 
-	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/log"
 )
 
-func StartServer(port, id string) {
+func StartService(port, id string) {
 	var nodeid NodeID
 	if id == "" {
 		nodeid = getRandomNodeID()
 	} else {
 		nodeid = hexToNodeID(id)
 	}
-
 
 	udp := getUDP(port, nodeid)
 	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))

@@ -5,10 +5,11 @@
 package discovery
 
 import (
+	"sync"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
-	"sync"
 )
 
 const (
@@ -17,14 +18,13 @@ const (
 
 type bucket struct {
 	peers []*Node
-
-	lock sync.Mutex	//used for peers change
+	lock  sync.Mutex //used for peers change
 }
 
-func NewBuckets() *bucket {
+func newBuckets() *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
-		lock: sync.Mutex{},
+		lock:  sync.Mutex{},
 	}
 }
 
@@ -39,7 +39,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
-		log.Error("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
+		log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -76,11 +76,11 @@ func (b *bucket) deleteNode(target *common.Hash) {
 	}
 
 	if index == -1 {
-		log.Error("don't find the node to delete\n")
+		log.Error("Failed to find the node to delete\n")
 		return
 	}
 
-	log.Error("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
+	log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
 
 	b.peers = append(b.peers[:index], b.peers[index+1:]...)
 }

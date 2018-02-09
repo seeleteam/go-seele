@@ -25,6 +25,7 @@ func NewDatabase() *database {
 func (db *database) add(value *Node) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
+
 	sha := value.getSha()
 	db.m[*sha] = value
 }
@@ -32,12 +33,14 @@ func (db *database) add(value *Node) {
 func (db *database) find(id common.Hash) *Node {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
+
 	return db.m[id]
 }
 
 func (db *database) delete(id *common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
+
 	delete(db.m, *id)
 }
 
@@ -45,9 +48,7 @@ func (db *database) size() int {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	size := len(db.m)
-
-	return size
+	return len(db.m)
 }
 
 func (db *database) getCopy() map[common.Hash]*Node {

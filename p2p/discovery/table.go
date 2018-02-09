@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	alpha              = 1 // Kademlia concurrency factor
+	alpha              = 3 // Kademlia concurrency factor
 	responseNodeNumber = 5 //TODO with this number for test
 	hashBits           = len(common.Hash{}) * 8
 	nBuckets           = hashBits + 1 // Number of buckets
@@ -34,7 +34,7 @@ func newTable(id NodeID, addr *net.UDPAddr) *Table {
 	}
 
 	for i := 0; i < nBuckets; i++ {
-		table.buckets[i] = NewBuckets()
+		table.buckets[i] = newBuckets()
 	}
 
 	return table
@@ -50,17 +50,14 @@ func (t *Table) updateNode(node *Node) {
 	t.addNode(node)
 }
 
-// findNodeWithTarget find node that distance of target is less than measure with target
+// findNodeWithTarget find nodes that distance of target is less than measure with target
 func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
-
-	//log.Debug("find node number:%d", len(nodes))
 
 	minDis := []*Node{}
 	for _, e := range nodes {
 		if distcmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
 			//log.Debug("add node: %s", hexutil.BytesToHex(e.ID.Bytes()))
-
 			minDis = append(minDis, e)
 		} else {
 			//log.Debug("skip node:%s", hexutil.BytesToHex(e.ID.Bytes()))
@@ -72,10 +69,6 @@ func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []
 
 func (t *Table) deleteNode(target *common.Hash) {
 	dis := logdist(t.selfNode.getSha(), target)
-
-	//log.Debug("%s", hexutil.BytesToHex(t.selfNode.getSha().Bytes()))
-	//log.Debug("%s", hexutil.BytesToHex(target.Bytes()))
-	//log.Debug("delete node dis:%d, size:%d", dis, len(t.buckets[dis].peers))
 
 	t.buckets[dis].deleteNode(target)
 }
