@@ -41,14 +41,14 @@ func NewTable(id NodeID, addr *net.UDPAddr) *Table {
 	return table
 }
 
-func (t *Table) AddNode(node *Node) {
+func (t *Table) addNode(node *Node) {
 	dis := logdist(node.sha, t.selfNode.sha)
 
 	t.buckets[dis].addNode(node)
 }
 
 func (t *Table) updateNode(node *Node) {
-	t.AddNode(node)
+	t.addNode(node)
 }
 
 func (t *Table) findNodeResponse(target common.Hash) []*Node {

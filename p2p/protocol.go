@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	baseProtoCode uint   = 8
-	ctlProtoCode  uint16 = 1
+	baseProtoCode uint   = 8 //start protoCode used by higher level
+	ctlProtoCode  uint16 = 1 //control protoCode. For example, handshake ping pong message etc
 
 	ctlMsgProtoHandshake uint16 = 10
 	ctlMsgDiscCode       uint16 = 4
@@ -19,35 +19,30 @@ const (
 	ctlMsgPongCode       uint16 = 4
 )
 
-//Protocol base class
+//Protocol base class for high level transfer protocol.
 type Protocol struct {
-	// Protocol represents a P2P subprotocol implementation.
 	// Name should contain the official protocol name,
 	// often a three-letter word.
-	Name string //see dwn gss
+	Name string
 
 	// Version should contain the version number of the protocol.
 	Version uint
-
+	// AddPeerCh a peer joins protocol, SubProtocol should handle the channel
 	AddPeerCh chan *Peer
+
+	// DelPeerCh a peer leaves protocol
 	DelPeerCh chan *Peer
+
+	// ReadMsgCh a whole Message has recved, SubProtocol can handle as quickly as possible
 	ReadMsgCh chan *Message
 }
 
+// ProtocolInterface high level protocol should implement this interface
 type ProtocolInterface interface {
 	Run()
 	GetBaseProtocol() *Protocol
 }
 
-/*
-func (p *Protocol) Start() {
-	addPeerCh = make(chan *Peer)
-	delPeerCh = make(chan *Peer)
-	readMsgCh = make(chan *Message)
-	go p.Run()
-	return
-}
-*/
 func (p *Protocol) cap() Cap {
 	return Cap{p.Name, p.Version}
 }
@@ -58,12 +53,6 @@ type Cap struct {
 	Version uint
 }
 
-/*
-// RlpData for RlpData
-func (cap Cap) RlpData() interface{} {
-	return []interface{}{cap.Name, cap.Version}
-}
-*/
 func (cap Cap) String() string {
 	return fmt.Sprintf("%s/%d", cap.Name, cap.Version)
 }

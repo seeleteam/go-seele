@@ -16,27 +16,23 @@ import (
 
 	"github.com/aristanetworks/goarista/monotime"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/sirupsen/logrus"
 	//"github.com/ethereum/go-ethereum/p2p/discover"
 )
 
 const (
-	defaultDialTimeout = 15 * time.Second
-
 	// Maximum number of concurrently handshaking inbound connections.
 	maxAcceptConns = 50
 
-	// Maximum number of concurrently dialing outbound connections.
-	maxActiveDialTasks = 16
+	defaultDialTimeout = 15 * time.Second
 
 	// Maximum time allowed for reading a complete message.
-	// This is effectively the amount of time a connection can be idle.
 	frameReadTimeout = 30 * time.Second
 
 	// Maximum amount of time allowed for writing a complete message.
 	frameWriteTimeout = 20 * time.Second
-
-	pingInterval = 3 * time.Second // should be 15
 
 	inboundConn  = 1
 	outboundConn = 2
@@ -44,34 +40,24 @@ const (
 
 // Config holds Server options.
 type Config struct {
-	// This field must be set to a valid secp256k1 private key.
-	//PrivateKey *ecdsa.PrivateKey `toml:"-"`
-
-	// MaxPeers is the maximum number of peers that can be
-	// connected. It must be greater than zero.
-	MaxPeers int
+	// Use common.MakeName to create a name that follows existing conventions.
+	Name string `toml:"-"`
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
 	MaxPendingPeers int `toml:",omitempty"`
 
-	// Name sets the node name of this server.
-	// Use common.MakeName to create a name that follows existing conventions.
-	Name string `toml:"-"`
-
 	MyNodeID string
-	// Static nodes are used as pre-configured connections which are always
-	// maintained and re-connected on disconnects.
+	// pre-configured nodes.
 	StaticNodes []*discovery.Node
-	KadPort     string
-	// Protocols should contain the protocols supported
-	// by the server. Matching protocols are launched for
-	// each peer.
+
+	KadPort string // udp port for Kad network
+
+	// Protocols should contain the protocols supported by the server.
 	Protocols []ProtocolInterface `toml:"-"`
 
-	// If ListenAddr is set to a non-nil address, the server
-	// will listen for incoming connections.
+	// p2p.server will listen for incoming tcp connections.
 	ListenAddr string
 }
 
@@ -86,58 +72,36 @@ type Server struct {
 	kadDB    *discovery.Database
 	listener net.Listener
 
-	//ourHandshake *protoHandshake
-	//lastLookup time.Time
-
-	// These are for Peers, PeerCount (and nothing else).
-	//peerOp     chan peerOpFunc
-	//peerOpDone chan struct{}
-
 	quit chan struct{}
-	//addstatic     chan *discover.Node
-	//removestatic  chan *discover.Node
-	//posthandshake chan *conn
+
 	addpeer chan *Peer
 	delpeer chan *Peer
 	loopWG  sync.WaitGroup // loop, listenLoop
-	//	peerFeed      event.Feed
 
-	// peers map[*Peer]bool
 	peers map[discovery.NodeID]*Peer
+	myLog *logrus.Logger
 }
 
 // Start starts running the server.
-// Servers can not be re-used after stopping.
 func (srv *Server) Start() (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
 		return errors.New("server already running")
 	}
+	srv.myLog = log.GetLogger("p2p", true)
+	if srv.myLog == nil {
+		return errors.New("p2p Create logger error")
+	}
 	srv.running = true
 	srv.peers = make(map[discovery.NodeID]*Peer)
 
-	//log.Info("Starting P2P networking")
-
-	// static fields
-	/*if srv.PrivateKey == nil {
-		return fmt.Errorf("Server.PrivateKey must be set to a non-nil key")
-	}*/
-
+	srv.myLog.Infof("Starting P2P networking...")
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
-	//srv.posthandshake = make(chan *conn)
-	//srv.addstatic = make(chan *discover.Node)
-	//	srv.removestatic = make(chan *discover.Node)
-	//	srv.peerOp = make(chan peerOpFunc)
-	//srv.peerOpDone = make(chan struct{})
 
-	// node table
-	//fmt.Println("srv.kadDB 9001")
-
-	srv.kadDB = discovery.StartServerTest(srv.KadPort, srv.MyNodeID, srv.StaticNodes)
-	fmt.Println("srv.kadDB", srv.kadDB)
+	srv.kadDB = discovery.StartServerFat(srv.KadPort, srv.MyNodeID, srv.StaticNodes)
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -146,11 +110,12 @@ func (srv *Server) Start() (err error) {
 		go func() {
 			srv.loopWG.Add(1)
 			proto.Run()
-			//fmt.Println(proto.GetBaseProtocol())
+			close(proto.GetBaseProtocol().AddPeerCh)
+			close(proto.GetBaseProtocol().DelPeerCh)
+			close(proto.GetBaseProtocol().ReadMsgCh)
 			srv.loopWG.Done()
 		}()
 	}
-	fmt.Println("Start running...")
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
@@ -161,56 +126,44 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	peers := srv.peers
-
-	checkTimer := time.NewTimer(3 * time.Second)
+	srv.myLog.Infof("p2p start running...")
+	checkTimer := time.NewTimer(10 * time.Second)
 running:
 	for {
 		srv.scheduleTasks()
 		select {
 		case <-checkTimer.C:
-			checkTimer.Reset(3 * time.Second)
+			checkTimer.Reset(10 * time.Second)
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case c := <-srv.addpeer:
-			fmt.Println("<-srv.addpeer", c)
+			srv.myLog.Infof("server.run  <-srv.addpeer, %s", c)
 			_, ok := peers[c.node.ID]
 			if ok {
-				// already connected
-				c.Disconnect(10)
+				// node already connected, need close this connection
+				c.Disconnect(discAlreadyConnected)
 			} else {
 				peers[c.node.ID] = c
 			}
-
 		case pd := <-srv.delpeer:
-			// A peer disconnected.
-			//d := (mclock.Now() - pd.created) / 1000
-			//Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "err", pd.err)
 			curPeer, ok := peers[pd.node.ID]
 			if ok && curPeer == pd {
-				fmt.Println("p2p.server run. delpeer recved. peer match. remove peer", pd)
+				srv.myLog.Infof("server.run delpeer recved. peer match. remove peer. %s", pd)
 				delete(peers, pd.node.ID)
 			} else {
-				fmt.Println("p2p.server run. delpeer recved. peer not match")
+				srv.myLog.Infof("server.run delpeer recved. peer not match")
 			}
 		}
 	}
 
-	//Trace("P2P networking is spinning down")
-
-	// Terminate discovery. If there is a running lookup it will terminate soon.
-	/*if srv.ntab != nil {
-		srv.ntab.Close()
-	}*/
-
 	// Disconnect all peers.
 	for _, p := range peers {
-		p.Disconnect(10)
+		p.Disconnect(discServerQuit)
 	}
 
 	for len(peers) > 0 {
 		p := <-srv.delpeer
-		//Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
 		delete(peers, p.node.ID)
 	}
 }
@@ -256,8 +209,7 @@ type tempError interface {
 	Temporary() bool
 }
 
-// listenLoop runs in its own goroutine and accepts
-// inbound connections.
+// listenLoop runs in its own goroutine and accepts inbound connections.
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
 	// If all slots are taken, no further connections are accepted.
@@ -273,7 +225,6 @@ func (srv *Server) listenLoop() {
 	for {
 		// Wait for a handshake slot before accepting.
 		<-slots
-
 		var (
 			fd  net.Conn
 			err error
@@ -281,15 +232,13 @@ func (srv *Server) listenLoop() {
 		for {
 			fd, err = srv.listener.Accept()
 			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
-				//Debug("Temporary read error", "err", err)
 				continue
 			} else if err != nil {
-				//Debug("Read error", "err", err)
+				srv.myLog.Errorf("p2p.listenLoop accept err. %s", err)
 				return
 			}
 			break
 		}
-		fmt.Println("srv.listener.Accept ok")
 		go func() {
 			srv.setupConn(fd, inboundConn, nil)
 			slots <- struct{}{}
@@ -297,7 +246,7 @@ func (srv *Server) listenLoop() {
 	}
 }
 
-// setupConn todo handshake.
+// setupConn TODO add encypt-handshake.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	peer := &Peer{
 		fd:       fd,
@@ -306,6 +255,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		closed:   make(chan struct{}),
 		protoMap: make(map[uint16]*Protocol),
 		capMap:   make(map[string]uint16),
+		myLog:    srv.myLog,
 		node:     dialDest,
 	}
 
@@ -319,7 +269,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			msgCode: ctlMsgProtoHandshake,
 		},
 	}
-	//buffer := new(bytes.Buffer)
+
 	buffer, err := common.Serialize(&caps)
 	if err != nil {
 		fd.Close()
@@ -328,12 +278,9 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	hsMsg.payload = make([]byte, len(buffer))
 	copy(hsMsg.payload, buffer)
 	hsMsg.size = uint32(len(hsMsg.payload))
-	fmt.Println("setupConn before sendRawMsg", hsMsg)
-	//hsMsg.payload, hsMsg.size = buffer.Bytes(), uint32(buffer.Len())
 	peer.sendRawMsg(hsMsg)
 
 	msgRecv, err := peer.recvRawMsg()
-	fmt.Println("setupConn after recvRawMsg", msgRecv)
 	if err != nil {
 		fd.Close()
 		return err
@@ -363,7 +310,8 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		addr1, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
 		peer.node = discovery.NewNodeWithAddr(nodeID1, addr1)
 	}
-	fmt.Println("srv.addpeer <- peer", peer)
+
+	srv.myLog.Infof("p2p.setupConn conn handshaked. peer=%s", peer)
 	go func() {
 		srv.loopWG.Add(1)
 		srv.addpeer <- peer

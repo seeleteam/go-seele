@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-// Message
+// Message exposed for high level layer to call
 type Message struct {
-	msgCode    uint16
+	msgCode    uint16 // message code, defined in each protocol
 	size       uint32 // size of the paylod
 	payload    []byte
 	ReceivedAt time.Time
-	CurPeer    *Peer
+	CurPeer    *Peer // peer that handle this message
 }
 
-// msg
+// msg wrapped Message, used in p2p layer
 type msg struct {
 	Message
 	protoCode uint16

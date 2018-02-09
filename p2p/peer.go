@@ -15,33 +15,42 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/sirupsen/logrus"
 )
 
+const (
+	pingInterval         = 3 * time.Second // ping interval for peer tcp connection. Should be 15
+	discAlreadyConnected = 10              // node already has connection
+	discServerQuit       = 11              // p2p.server need quit, all peers should quit as it can
+)
+
+// Peer represents a connected remote node.
 type Peer struct {
-	fd       net.Conn
-	node     *discovery.Node
-	created  uint64
+	fd       net.Conn        // tcp connection
+	node     *discovery.Node // remote peer that this peer connects
+	created  uint64          // Peer create time, nanosecond
 	err      error
 	closed   chan struct{}
 	disc     chan uint
 	protoMap map[uint16]*Protocol // protoCode=>proto
-	capMap   map[string]uint16    //cap of protocol => protoCode
+	capMap   map[string]uint16    // cap of protocol => protoCode
 
 	wMutex sync.Mutex // for conn write
 	wg     sync.WaitGroup
+	myLog  *logrus.Logger
 }
 
 func (p *Peer) run() {
 	// add peer to protocols
-	for _, proto := range p.protoMap {
-		proto.AddPeerCh <- p
-	}
 	var (
 		writeErr = make(chan error, 1)
 		readErr  = make(chan error, 1)
-		//reason   uint // sent to the peer
-		err error
+		err      error
 	)
+	for _, proto := range p.protoMap {
+		proto.AddPeerCh <- p
+	}
+
 	p.wg.Add(2)
 	go p.readLoop(readErr)
 	go p.pingLoop()
@@ -54,25 +63,27 @@ loop:
 			// A write finished. Allow the next write to start if
 			// there was no error.
 			if err != nil {
-				//reason = DiscNetworkError
+				p.err = err
 				break loop
 			}
 		case err = <-readErr:
 			p.err = err
 			break loop
-		//case err = <-p.disc:
 		case <-p.disc:
+			p.err = errors.New("disc error recved")
 			break loop
 		}
 	}
 
 	close(p.closed)
 	p.fd.Close()
+	close(p.disc)
 	p.wg.Wait()
-	// del peer from protocols
+	// send delpeer message for each protocols
 	for _, proto := range p.protoMap {
 		proto.DelPeerCh <- p
 	}
+	p.myLog.Infof("p2p.peer.run quit. err=%s", p.err)
 }
 
 func (p *Peer) pingLoop() {
@@ -82,7 +93,7 @@ func (p *Peer) pingLoop() {
 	for {
 		select {
 		case <-ping.C:
-			p.sendCtlMsg(3)
+			p.sendCtlMsg(ctlMsgPingCode)
 			ping.Reset(pingInterval)
 		case <-p.closed:
 			return
@@ -114,7 +125,6 @@ func (p *Peer) handle(msgRecv *msg) error {
 		case <-p.closed:
 			return io.EOF
 		}
-		return nil
 	}
 
 	if msgRecv.protoCode != 1 {
@@ -125,9 +135,6 @@ func (p *Peer) handle(msgRecv *msg) error {
 	case msgRecv.msgCode == ctlMsgPingCode:
 		go p.sendCtlMsg(ctlMsgPongCode)
 	case msgRecv.msgCode == ctlMsgDiscCode:
-		//var reason [1]DiscReason
-
-		//rlp.Decode(msg.Payload, &reason)
 		return fmt.Errorf("error=%d", ctlMsgDiscCode)
 	}
 	return nil
@@ -148,7 +155,7 @@ func (p *Peer) SendMsg(proto *Protocol, msgSend *Message) error {
 
 func (p *Peer) sendCtlMsg(msgCode uint16) error {
 	hsMsg := &msg{
-		protoCode: 1,
+		protoCode: ctlProtoCode,
 		Message: Message{
 			msgCode: msgCode,
 		},
@@ -168,7 +175,6 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 	p.fd.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
 
 	_, err := p.fd.Write(b)
-	//fmt.Println("sendRawMsg,head", sendLen)
 	if err != nil {
 		return err
 	}
@@ -176,20 +182,18 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("sendRawMsg protoCode:%d msgCode:%d \r\n", msgSend.protoCode, msgSend.msgCode)
+	p.myLog.Debugf("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
 	return nil
 }
 
 func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	headbuf := make([]byte, 8)
 	p.fd.SetReadDeadline(time.Now().Add(frameReadTimeout))
-	//readLen, err := p.fd.Read(headbuf)
 	_, err1 := io.ReadFull(p.fd, headbuf)
 
 	if err1 != nil {
 		return nil, err1
 	}
-	//fmt.Println("recvRawMsg head", readLen)
 	msgRecv = &msg{
 		protoCode: binary.BigEndian.Uint16(headbuf[4:6]),
 		Message: Message{
@@ -204,7 +208,7 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	}
 	msgRecv.ReceivedAt = time.Now()
 	msgRecv.CurPeer = p
-	fmt.Printf("recvRawMsg protoCode:%d msgCode:%d \r\n", msgRecv.protoCode, msgRecv.msgCode)
+	p.myLog.Debugf("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
 	return msgRecv, nil
 }
 

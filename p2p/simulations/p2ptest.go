@@ -10,6 +10,12 @@ import (
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
+// this package shows how to use p2p network in a higher level
+// 1. Create SubProtocol inherits p2p.Protocol
+// 2. Implements two functions (Run GetBaseProtocol)
+// 3. In function Run, handle three channel
+// 4. Append SubProtocols to p2p.server.Protocols
+
 type myProtocol struct {
 	p2p.Protocol
 	proto int
@@ -44,7 +50,6 @@ func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 }
 
 func main() {
-
 	my1 := &myProtocol{
 		Protocol: p2p.Protocol{
 			Name: "test",
@@ -59,19 +64,20 @@ func main() {
 	var intFaceL []p2p.ProtocolInterface
 
 	intFaceL = append(intFaceL, my1)
-	fmt.Println(my1.proto)
+	//	fmt.Println(my1.proto)
 
 	node29 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901201"
 	node01 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901200"
-	slice29, _ := common.HexToBytes(node29)
-	fmt.Println(slice29)
-	nodeID29, _ := discovery.BytesToID(slice29)
-	addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
-	nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
 
 	myType := 1
 	//var myServer p2p.Server
 	if myType == 1 {
+		slice29, _ := common.HexToBytes(node29)
+		fmt.Println(slice29)
+		nodeID29, _ := discovery.BytesToID(slice29)
+		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
+		nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
+
 		myServer := &p2p.Server{
 			Config: p2p.Config{
 				Name:       "test11",
@@ -98,7 +104,4 @@ func main() {
 	}
 
 	time.Sleep(600 * time.Second)
-	fmt.Println(nodeObj29)
-	//fmt.Println("main stopped...", time.Second, intFaceL[0].GetBaseProtocol().Name)
-	//intFaceL[0].Run()
 }
