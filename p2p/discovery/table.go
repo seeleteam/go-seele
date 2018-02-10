@@ -41,7 +41,7 @@ func newTable(id NodeID, addr *net.UDPAddr) *Table {
 }
 
 func (t *Table) addNode(node *Node) {
-	dis := logdist(t.selfNode.getSha(), node.getSha())
+	dis := logDist(t.selfNode.getSha(), node.getSha())
 
 	t.buckets[dis].addNode(node)
 }
@@ -56,7 +56,7 @@ func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []
 
 	minDis := []*Node{}
 	for _, e := range nodes {
-		if distcmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
+		if distCmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
 			//log.Debug("add node: %s", hexutil.BytesToHex(e.ID.Bytes()))
 			minDis = append(minDis, e)
 		} else {
@@ -68,7 +68,7 @@ func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []
 }
 
 func (t *Table) deleteNode(target *common.Hash) {
-	dis := logdist(t.selfNode.getSha(), target)
+	dis := logDist(t.selfNode.getSha(), target)
 
 	t.buckets[dis].deleteNode(target)
 }
@@ -105,7 +105,7 @@ type nodesByDistance struct {
 // push adds the given node to the list, keeping the total size below maxElems.
 func (h *nodesByDistance) push(n *Node) {
 	ix := sort.Search(len(h.entries), func(i int) bool {
-		return distcmp(h.target, h.entries[i].getSha(), n.getSha()) > 0
+		return distCmp(h.target, h.entries[i].getSha(), n.getSha()) > 0
 	})
 	if len(h.entries) < h.maxElems {
 		h.entries = append(h.entries, n)

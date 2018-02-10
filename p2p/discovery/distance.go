@@ -9,9 +9,9 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-// logdist returns the logarithmic distance between a and b, log2(a ^ b).
+// logDist returns the logarithmic distance between a and b, log2(a ^ b).
 // return value is [0, 256]
-func logdist(a, b *common.Hash) int {
+func logDist(a, b *common.Hash) int {
 	lz := 0
 	for i := range a {
 		x := a[i] ^ b[i]
@@ -25,10 +25,10 @@ func logdist(a, b *common.Hash) int {
 	return len(a)*8 - lz
 }
 
-// distcmp compares the distances a->to and b->to.
+// distCmp compares the distances a->to and b->to.
 // Returns -1 if a is closer to target, 1 if b is closer to target
 // and 0 if they are equal.
-func distcmp(target, a, b *common.Hash) int {
+func distCmp(target, a, b *common.Hash) int {
 	for i := range target {
 		da := a[i] ^ target[i]
 		db := b[i] ^ target[i]
