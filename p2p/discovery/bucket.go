@@ -2,9 +2,14 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
+	"sync"
+
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -14,11 +19,13 @@ const (
 
 type bucket struct {
 	peers []*Node
+	lock  sync.Mutex //used for peers change
 }
 
-func NewBuckets() *bucket {
+func newBuckets() *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
+		lock:  sync.Mutex{},
 	}
 }
 
@@ -30,6 +37,10 @@ func (b *bucket) addNode(node *Node) {
 		// do nothing for now
 		// TODO lru
 	} else {
+		b.lock.Lock()
+		defer b.lock.Unlock()
+
+		log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -37,17 +48,56 @@ func (b *bucket) addNode(node *Node) {
 			b.peers[len(b.peers)-1] = node
 		}
 	}
-
-	log.Debug("bucket size: %d", len(b.peers))
 }
 
 // hasNode check if the bucket already have this node, if so, return its index, otherwise, return -1
 func (b *bucket) hasNode(node *Node) int {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	for index, n := range b.peers {
-		if n.sha == node.sha {
+		if n.ID == node.ID {
 			return index
 		}
 	}
 
 	return -1
+}
+
+func (b *bucket) deleteNode(target *common.Hash) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	index := -1
+	for i, n := range b.peers {
+		sha := n.ID.ToSha()
+		if *sha == *target {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		log.Error("Failed to find the node to delete\n")
+		return
+	}
+
+	log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
+
+	b.peers = append(b.peers[:index], b.peers[index+1:]...)
+}
+
+func (b *bucket) size() int {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return len(b.peers)
+}
+
+// printNodeList only use for debug test
+func (b *bucket) printNodeList() {
+	log.Debug("bucket size %d", len(b.peers))
+
+	for _, n := range b.peers {
+		log.Debug("%s", hexutil.BytesToHex(n.ID.Bytes()))
+	}
 }
