@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package common
+package hexutil
 
 import (
 	"encoding/hex"
@@ -56,3 +56,4 @@ func mapError(err error) error {
 	}
 	return err
 }
+

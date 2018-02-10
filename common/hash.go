@@ -2,7 +2,6 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
-
 package common
 
 const (
@@ -30,10 +29,12 @@ func (a *Hash) SetBytes(b []byte) {
 	copy(a[:], b)
 }
 
+// Bytes return its actual bits
 func (a *Hash) Bytes() []byte {
 	return a[:]
 }
 
+// String to string
 func (a *Hash) String() string {
 	return string(a[:])
 }
