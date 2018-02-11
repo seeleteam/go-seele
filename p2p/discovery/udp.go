@@ -62,7 +62,7 @@ type reply struct {
 	data interface{}
 }
 
-func newUDP(id NodeID, addr *net.UDPAddr) *udp {
+func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 	transport := &udp{
 		conn:      getUDPConn(addr),
 		table:     newTable(id, addr),
@@ -124,7 +124,7 @@ func (u *udp) sendLoop() {
 		select {
 		case s := <-u.writer:
 			//log.Debug("send msg to: %d", s.to.Port)
-			success := sendMsg(s.buff, u.localAddr, s.to.getUDPAddr())
+			success := sendMsg(s.buff, u.localAddr, s.to.GetUDPAddr())
 			if !success {
 				r := &reply{
 					from: s.to,
@@ -258,7 +258,7 @@ func (u *udp) loopReply() {
 						p.errorCallBack()
 						pendingList.Remove(el)
 					} else {
-						if p.callback(r.data, r.from.getUDPAddr()) {
+						if p.callback(r.data, r.from.GetUDPAddr()) {
 							pendingList.Remove(el)
 						}
 					}
@@ -285,12 +285,16 @@ func (u *udp) loopReply() {
 
 func (u *udp) discovery() {
 	for {
-		id := getRandomNodeID()
+		id, err := common.GenerateRandomAddress()
+		if err != nil {
+			log.Error(err.Error())
+			continue
+		}
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
 
 		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
-		sendFindNodeRequest(u, nodes, id)
+		sendFindNodeRequest(u, nodes, *id)
 
 		time.Sleep(discoveryInterval)
 	}

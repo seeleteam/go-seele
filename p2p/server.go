@@ -79,7 +79,7 @@ type Server struct {
 	delpeer chan *Peer
 	loopWG  sync.WaitGroup // loop, listenLoop
 
-	peers map[discovery.NodeID]*Peer
+	peers map[common.Address]*Peer
 	log   *log.SeeleLog
 }
 
@@ -95,7 +95,7 @@ func (srv *Server) Start() (err error) {
 		return errors.New("p2p Create logger error")
 	}
 	srv.running = true
-	srv.peers = make(map[discovery.NodeID]*Peer)
+	srv.peers = make(map[common.Address]*Peer)
 
 	srv.log.Info("Starting P2P networking...")
 	srv.quit = make(chan struct{})
@@ -290,11 +290,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	myNounce := r.Uint32()
 	handshakeMsg := &protoHandShake{caps: caps, nounce: myNounce}
-	nodeID, err := discovery.BytesToID([]byte(srv.MyNodeID))
-	if err != nil {
-		fd.Close()
-		return err
-	}
+	nodeID := common.HexToAddress(srv.MyNodeID)
 	copy(handshakeMsg.nodeID[0:], nodeID[0:])
 
 	// Serialize should handle big- little- endian?

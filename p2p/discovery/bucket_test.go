@@ -9,6 +9,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/seeleteam/go-seele/common"
+
 	"github.com/magiconair/properties/assert"
 )
 
@@ -24,7 +26,7 @@ func Test_Bucket(t *testing.T) {
 	assert.Equal(t, b.size(), 1)
 
 	// copy node of n
-	n3 := NewNode(n.ID, n.IP, n.UDPPort)
+	n3 := NewNode(n.ID, n.IP, int(n.UDPPort))
 	b.addNode(n3)
 	assert.Equal(t, b.size(), 1)
 
@@ -40,9 +42,13 @@ func Test_Bucket(t *testing.T) {
 }
 
 func getNode(port string) *Node {
-	id := getRandomNodeID()
+	id, err := common.GenerateRandomAddress()
+	if err != nil {
+		panic(err)
+	}
+
 	addr, _ := net.ResolveUDPAddr("udp", ":"+port)
-	n := NewNode(id, addr.IP, uint16(addr.Port))
+	n := NewNode(*id, addr.IP, addr.Port)
 
 	return n
 }

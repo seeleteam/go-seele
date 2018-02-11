@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
@@ -72,9 +72,9 @@ func main() {
 	myType := 1
 	//var myServer p2p.Server
 	if myType == 1 {
-		slice29, _ := hexutil.HexToBytes(node29)
-		fmt.Println(slice29)
-		nodeID29, _ := discovery.BytesToID(slice29)
+		//slice29, _ := hexutil.HexToBytes(node29)
+		//fmt.Println(slice29)
+		nodeID29 := common.HexToAddress(node29)
 		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
 		nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
 
