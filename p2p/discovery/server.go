@@ -2,25 +2,27 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
 	"net"
 	"sync"
-	"time"
 
-	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
 )
 
-const (
-	PINGPONGINTERVAL  = 10 * time.Second // sleep between ping pong
-	DISCOVERYINTERVAL = 10 * time.Second // sleep between discovery
-)
+func StartService(port, id string) {
+	var nodeid NodeID
+	if id == "" {
+		nodeid = getRandomNodeID()
+	} else {
+		nodeid = hexToNodeID(id)
+	}
 
-func StartServer(port, id string) {
-	udp := getUDP(port, HexToNodeID(id))
-	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+	udp := getUDP(port, nodeid)
+	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
 
 	udp.StartServe()
 
@@ -47,11 +49,11 @@ func getUDP(port string, id NodeID) *udp {
 		log.Fatal(err.Error())
 	}
 
-	return NewUDP(id, addr)
+	return newUDP(id, addr)
 }
 
-func HexToNodeID(id string) NodeID {
-	byte, err := common.HexToBytes(id)
+func hexToNodeID(id string) NodeID {
+	byte, err := hexutil.HexToBytes(id)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -69,14 +71,13 @@ func SendPing(port, id, targePort string) {
 
 	udp := getUDP(port, myid)
 
-	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
 
 	addr := getAddr(targePort)
-	tid := HexToNodeID(id)
+	tid := hexToNodeID(id)
 
 	n := NewNodeWithAddr(tid, addr)
-	udp.table.addNode(n)
-	udp.db.add(n.sha, n)
+	udp.addNode(n)
 
 	udp.StartServe()
 
