@@ -26,7 +26,7 @@ const (
 
 // Peer represents a connected remote node.
 type Peer struct {
-	fd       net.Conn        // tcp connection
+	conn     net.Conn        // tcp connection
 	node     *discovery.Node // remote peer that this peer connects
 	created  uint64          // Peer create time, nanosecond
 	err      error
@@ -76,7 +76,7 @@ loop:
 	}
 
 	close(p.closed)
-	p.fd.Close()
+	p.conn.Close()
 	close(p.disc)
 	p.wg.Wait()
 	// send delpeer message for each protocols
@@ -172,13 +172,13 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 	binary.BigEndian.PutUint32(b[:4], msgSend.size)
 	binary.BigEndian.PutUint16(b[4:6], msgSend.protoCode)
 	binary.BigEndian.PutUint16(b[6:8], msgSend.msgCode)
-	p.fd.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
+	p.conn.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
 
-	_, err := p.fd.Write(b)
+	_, err := p.conn.Write(b)
 	if err != nil {
 		return err
 	}
-	_, err = p.fd.Write(msgSend.payload)
+	_, err = p.conn.Write(msgSend.payload)
 	if err != nil {
 		return err
 	}
@@ -188,8 +188,8 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 
 func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	headbuf := make([]byte, 8)
-	p.fd.SetReadDeadline(time.Now().Add(frameReadTimeout))
-	_, err1 := io.ReadFull(p.fd, headbuf)
+	p.conn.SetReadDeadline(time.Now().Add(frameReadTimeout))
+	_, err1 := io.ReadFull(p.conn, headbuf)
 
 	if err1 != nil {
 		return nil, err1
@@ -203,7 +203,7 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	}
 
 	msgRecv.payload = make([]byte, msgRecv.size)
-	if _, err := io.ReadFull(p.fd, msgRecv.payload); err != nil {
+	if _, err := io.ReadFull(p.conn, msgRecv.payload); err != nil {
 		return nil, err
 	}
 	msgRecv.ReceivedAt = time.Now()

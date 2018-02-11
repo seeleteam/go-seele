@@ -171,8 +171,23 @@ running:
 func (srv *Server) scheduleTasks() {
 	// TODO select nodes from ntab to connect
 	nodeMap := srv.kadDB.GetCopy()
-	fmt.Println("scheduleTasks called...", nodeMap)
-
+	srv.log.Info("scheduleTasks called... [%s]", nodeMap)
+	for _, node := range nodeMap {
+		_, ok := srv.peers[node.ID]
+		if ok {
+			continue
+		}
+		//TODO UDPPort==> TCPPort
+		addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
+		conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
+		if err != nil {
+			if conn != nil {
+				conn.Close()
+			}
+			continue
+		}
+		go srv.setupConn(conn, outboundConn, node)
+	}
 	/*for _, node := range srv.StaticNodes {
 		_, ok := srv.peers[node.ID]
 		if ok {
@@ -249,7 +264,7 @@ func (srv *Server) listenLoop() {
 // setupConn TODO add encypt-handshake.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	peer := &Peer{
-		fd:       fd,
+		conn:     fd,
 		created:  monotime.Now(),
 		disc:     make(chan uint),
 		closed:   make(chan struct{}),
@@ -270,7 +285,9 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		},
 	}
 
+	//buffer, err := common.Serialize({"Caps": &caps, "NodeID": srv.MyNodeID})
 	buffer, err := common.Serialize(&caps)
+
 	if err != nil {
 		fd.Close()
 		return err
@@ -305,6 +322,8 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}
 
 	// TODO get Node from ntab, according nodeID
+	//nodeMap := srv.kadDB.GetCopy()
+
 	if flags == inboundConn {
 		nodeID1, _ := discovery.BytesToID([]byte("1234567890123456789012345678901234567890123456789012345678901235"))
 		addr1, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")

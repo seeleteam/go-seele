@@ -29,13 +29,13 @@ func StartService(port, id string) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wg.Wait()
-
 }
 
+// StartServerFat used by p2p.Server to start discovery service
 func StartServerFat(port, id string, nodeArr []*Node) (db *Database) {
 	udp := getUDP(port, hexToNodeID(id))
 	for _, node := range nodeArr {
-		udp.table.addNode(node)
+		udp.addNode(node)
 	}
 
 	udp.StartServe()

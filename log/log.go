@@ -6,16 +6,14 @@
 package log
 
 import (
-	//"fmt"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/sirupsen/logrus"
-	//"os/user"
-	//"path/filepath"
 )
 
-//SeeleLog wrapped log class
+// SeeleLog wrapped log class
 type SeeleLog struct {
 	log *logrus.Logger
 }
@@ -23,6 +21,7 @@ type SeeleLog struct {
 var log *logrus.Logger
 
 var logMap map[string]*SeeleLog
+var getLogMutex sync.Mutex
 
 // Panic Level, highest level of severity. Logs and then calls panic with the
 // message passed to Debug, Info, ...
@@ -122,20 +121,11 @@ func init() {
 	log.SetLevel(logrus.DebugLevel)
 }
 
-func newSeeleLog(logName string, bConsole bool) (wrapLog *SeeleLog) {
-	logrus.SetFormatter(&logrus.TextFormatter{})
-	log := logrus.New()
-	log.Out = os.Stdout
-	log.SetLevel(logrus.DebugLevel)
-	wrapLog = &SeeleLog{
-		log: log,
-	}
-	return wrapLog
-}
-
 // GetLogger get logrus.Logger object accoring to logName
 // each module can have it's own logger
 func GetLogger(logName string, bConsole bool) *SeeleLog {
+	getLogMutex.Lock()
+	defer getLogMutex.Unlock()
 	if logMap == nil {
 		logMap = make(map[string]*SeeleLog)
 	}

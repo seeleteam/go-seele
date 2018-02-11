@@ -7,6 +7,15 @@ package p2p
 
 import (
 	"time"
+
+	"github.com/seeleteam/go-seele/p2p/discovery"
+)
+
+const (
+	ctlMsgProtoHandshake uint16 = 10
+	ctlMsgDiscCode       uint16 = 4
+	ctlMsgPingCode       uint16 = 3
+	ctlMsgPongCode       uint16 = 4
 )
 
 // Message exposed for high level layer to call
@@ -22,4 +31,10 @@ type Message struct {
 type msg struct {
 	Message
 	protoCode uint16
+}
+
+type protoHandShake struct {
+	caps   []Cap
+	nodeId discovery.NodeID
+	nounce uint32 //
 }
