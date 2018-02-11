@@ -9,9 +9,9 @@ import (
 	"net"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/common"
 )
 
 func StartService(id common.Address, addr *net.UDPAddr) {
@@ -47,7 +47,7 @@ func hexToAddress(id string) common.Address {
 	return nid
 }
 
-func SendPing(myId common.Address, myAddr *net.UDPAddr, id common.Address,  targeAddr *net.UDPAddr) {
+func SendPing(myId common.Address, myAddr *net.UDPAddr, id common.Address, targeAddr *net.UDPAddr) {
 	udp := newUDP(myId, myAddr)
 
 	n := NewNodeWithAddr(id, targeAddr)

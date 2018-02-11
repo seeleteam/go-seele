@@ -7,8 +7,9 @@ package discovery
 
 import (
 	"encoding/hex"
-	"github.com/magiconair/properties/assert"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 func Test_NodeId(t *testing.T) {

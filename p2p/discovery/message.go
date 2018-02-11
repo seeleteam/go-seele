@@ -9,8 +9,6 @@ import (
 	"net"
 
 	"github.com/seeleteam/go-seele/common"
-	_ "github.com/seeleteam/go-seele/common/hexutil"
-	_ "github.com/seeleteam/go-seele/log"
 )
 
 type msgType uint8

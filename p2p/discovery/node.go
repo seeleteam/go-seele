@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	invalidNodeError string = "invalid node"
-	nodeHeaderError  string = "node id should start with snode://"
+	invalidNodeError = "invalid node"
+	nodeHeaderError  = "node id should start with snode://"
 
-	nodeHeader string = "snode://"
+	nodeHeader = "snode://"
 )
 
 // Node the node that contains its public key and network address
@@ -49,7 +49,7 @@ func NewNodeWithAddr(id common.Address, addr *net.UDPAddr) *Node {
 
 func NewNodeFromString(id string) (*Node, error) {
 	if !strings.HasPrefix(id, nodeHeader) {
-		return nil,errors.New(nodeHeaderError)
+		return nil, errors.New(nodeHeaderError)
 	}
 
 	// cut prefix header
@@ -67,12 +67,12 @@ func NewNodeFromString(id string) (*Node, error) {
 
 	publicKey, err := common.NewAddress(address)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", idSplit[1])
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	node := NewNodeWithAddr(publicKey, addr)
@@ -95,5 +95,5 @@ func (n *Node) getSha() *common.Hash {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf(nodeHeader + "%s@%s", hex.EncodeToString(n.ID.Bytes()), n.GetUDPAddr().String())
+	return fmt.Sprintf(nodeHeader+"%s@%s", hex.EncodeToString(n.ID.Bytes()), n.GetUDPAddr().String())
 }

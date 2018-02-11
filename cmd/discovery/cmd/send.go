@@ -7,16 +7,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
 	"net"
 
-	"github.com/seeleteam/go-seele/p2p/discovery"
-
 	"github.com/spf13/cobra"
+
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
-var
-(
+var (
 	addr          *string
 	bootstrapNode *string
 )
@@ -58,7 +57,6 @@ to quickly create a Cobra application.`,
 		discovery.SendPing(*myId, myAddr, nodeId.ID, nodeId.GetUDPAddr())
 	},
 }
-
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
