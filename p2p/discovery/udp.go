@@ -61,7 +61,7 @@ type reply struct {
 	data interface{}
 }
 
-func newUDP(id NodeID, addr *net.UDPAddr) *udp {
+func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 	transport := &udp{
 		conn:      getUDPConn(addr),
 		table:     newTable(id, addr),

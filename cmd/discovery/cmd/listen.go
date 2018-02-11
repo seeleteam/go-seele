@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/seeleteam/go-seele/cmd/utils"
 
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
@@ -25,6 +26,10 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("listen called")
 
+		// use a fixed id for test
+		id := "snode://c03ff3c956d0a320b153a097c3d04efa488d43d7d7e05a44791492c9979ff558f9956c0a6b0c414783476f02ad8557349d35ba9373dadfa9a7a44fd88328189f@:9000"
+
+		node := utils.NewNodeId(id)
 		discovery.StartService("9000", *id)
 	},
 }

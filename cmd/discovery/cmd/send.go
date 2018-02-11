@@ -7,17 +7,20 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/cmd/utils"
 
 	"github.com/spf13/cobra"
 )
 
 var
 (
-	myport *string
-	targetid *string
-	targetport *string
+	port          *string
+	bootstrapNode *string
 )
 
 // sendCmd represents the send command
@@ -32,18 +35,39 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
-		fmt.Println(*id)
 
-		discovery.SendPing(*myport, *targetid, *targetport)
+		nodeId, err := utils.NewNodeId(*bootstrapNode)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		discovery.SendPing(*port, nodeId.Address, nodeId.GetUDPAddr())
 	},
 }
+
+func getRandomNodeID() common.Address {
+	keypair, err := crypto.GenerateKey()
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	buff := crypto.FromECDSAPub(&keypair.PublicKey)
+
+	id, err := common.NewAddress(buff[1:])
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return id
+}
+
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
 
-	myport = sendCmd.Flags().String("myport", "9001", "my port")
-	targetid = sendCmd.Flags().String("targetid", "", "target id")
-	targetport = sendCmd.Flags().String("targetport", "9000", "target port")
+	port = sendCmd.Flags().String("port", "9001", "my port")
+	bootstrapNode = sendCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
 
 	// Here you will define your flags and configuration settings.
 

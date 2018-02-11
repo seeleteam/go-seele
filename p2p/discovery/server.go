@@ -11,17 +11,11 @@ import (
 
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/common"
 )
 
-func StartService(port, id string) {
-	var nodeid NodeID
-	if id == "" {
-		nodeid = getRandomNodeID()
-	} else {
-		nodeid = hexToNodeID(id)
-	}
-
-	udp := getUDP(port, nodeid)
+func StartService(id common.Address, addr *net.UDPAddr) {
+	udp := newUDP(id, addr)
 	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
 
 	udp.StartServe()
@@ -31,7 +25,7 @@ func StartService(port, id string) {
 	wg.Wait()
 }
 
-func getUDP(port string, id NodeID) *udp {
+func getUDP(port string, id common.Address) *udp {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -40,13 +34,13 @@ func getUDP(port string, id NodeID) *udp {
 	return newUDP(id, addr)
 }
 
-func hexToNodeID(id string) NodeID {
+func hexToAddress(id string) common.Address {
 	byte, err := hexutil.HexToBytes(id)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	nid, err := BytesToID(byte)
+	nid, err := common.NewAddress(byte)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -54,17 +48,13 @@ func hexToNodeID(id string) NodeID {
 	return nid
 }
 
-func SendPing(port, id, targePort string) {
+func SendPing(port string, id common.Address,  targeAddr *net.UDPAddr) {
 	myid := getRandomNodeID()
-
 	udp := getUDP(port, myid)
 
 	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
 
-	addr := getAddr(targePort)
-	tid := hexToNodeID(id)
-
-	n := NewNodeWithAddr(tid, addr)
+	n := NewNodeWithAddr(id, targeAddr)
 	udp.addNode(n)
 
 	udp.StartServe()

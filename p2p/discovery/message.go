@@ -8,6 +8,7 @@ package discovery
 import (
 	"net"
 
+	"github.com/seeleteam/go-seele/common"
 	_ "github.com/seeleteam/go-seele/common/hexutil"
 	_ "github.com/seeleteam/go-seele/log"
 )
@@ -28,29 +29,29 @@ const (
 
 type ping struct {
 	Version uint // TODO add version check
-	SelfID  NodeID
+	SelfID  common.Address
 
 	to *Node
 }
 
 type pong struct {
-	SelfID NodeID
+	SelfID common.Address
 }
 
 type findNode struct {
-	SelfID  NodeID
-	QueryID NodeID // the ID we want to query in Kademila
+	SelfID  common.Address
+	QueryID common.Address // the ID we want to query in Kademila
 
 	to *Node // the node that send request to
 }
 
 type neighbors struct {
-	SelfID NodeID
+	SelfID common.Address
 	Nodes  []*rpcNode
 }
 
 type rpcNode struct {
-	SelfID  NodeID
+	SelfID  common.Address
 	IP      net.IP
 	UDPPort uint16
 }
@@ -188,7 +189,7 @@ func (m *findNode) send(t *udp) {
 	t.sendMsg(findNodeMsgType, m, m.to)
 }
 
-func sendFindNodeRequest(u *udp, nodes []*Node, target NodeID) {
+func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
 	if nodes == nil || len(nodes) == 0 {
 		return
 	}
