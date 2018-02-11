@@ -221,7 +221,8 @@ func (u *udp) readLoop() {
 func (u *udp) loopReply() {
 	pendingList := list.New()
 
-	var timeout *time.Timer
+	var timeout = time.NewTimer(0)
+	<- timeout.C
 	defer timeout.Stop()
 
 	resetTimer := func() {
@@ -238,12 +239,17 @@ func (u *udp) loopReply() {
 			}
 		}
 
-		timeout = time.NewTimer(minTime)
+		// if there is no pending request, stop timer
+		if pendingList.Len() == 0 {
+			timeout.Stop()
+		} else {
+			timeout.Reset(minTime)
+		}
 	}
 
-	resetTimer()
-
 	for {
+		resetTimer()
+
 		select {
 		case r := <-u.gotReply:
 			log.Debug("reply from code %d", r.code)
