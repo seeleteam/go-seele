@@ -78,7 +78,7 @@ type Server struct {
 	loopWG  sync.WaitGroup // loop, listenLoop
 
 	peers map[discovery.NodeID]*Peer
-	myLog *log.SeeleLog
+	log   *log.SeeleLog
 }
 
 // Start starts running the server.
@@ -88,14 +88,14 @@ func (srv *Server) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.myLog = log.GetLogger("p2p", true)
-	if srv.myLog == nil {
+	srv.log = log.GetLogger("p2p", true)
+	if srv.log == nil {
 		return errors.New("p2p Create logger error")
 	}
 	srv.running = true
 	srv.peers = make(map[discovery.NodeID]*Peer)
 
-	srv.myLog.Infof("Starting P2P networking...")
+	srv.log.Info("Starting P2P networking...")
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
@@ -125,7 +125,7 @@ func (srv *Server) Start() (err error) {
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	peers := srv.peers
-	srv.myLog.Infof("p2p start running...")
+	srv.log.Info("p2p start running...")
 	checkTimer := time.NewTimer(10 * time.Second)
 running:
 	for {
@@ -137,7 +137,7 @@ running:
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case c := <-srv.addpeer:
-			srv.myLog.Infof("server.run  <-srv.addpeer, %s", c)
+			srv.log.Info("server.run  <-srv.addpeer, %s", c)
 			_, ok := peers[c.node.ID]
 			if ok {
 				// node already connected, need close this connection
@@ -148,10 +148,10 @@ running:
 		case pd := <-srv.delpeer:
 			curPeer, ok := peers[pd.node.ID]
 			if ok && curPeer == pd {
-				srv.myLog.Infof("server.run delpeer recved. peer match. remove peer. %s", pd)
+				srv.log.Info("server.run delpeer recved. peer match. remove peer. %s", pd)
 				delete(peers, pd.node.ID)
 			} else {
-				srv.myLog.Infof("server.run delpeer recved. peer not match")
+				srv.log.Info("server.run delpeer recved. peer not match")
 			}
 		}
 	}
@@ -172,6 +172,7 @@ func (srv *Server) scheduleTasks() {
 	// TODO select nodes from ntab to connect
 	nodeMap := srv.kadDB.GetCopy()
 	fmt.Println("scheduleTasks called...", nodeMap)
+
 	/*for _, node := range srv.StaticNodes {
 		_, ok := srv.peers[node.ID]
 		if ok {
@@ -233,7 +234,7 @@ func (srv *Server) listenLoop() {
 			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
 				continue
 			} else if err != nil {
-				srv.myLog.Errorf("p2p.listenLoop accept err. %s", err)
+				srv.log.Error("p2p.listenLoop accept err. %s", err)
 				return
 			}
 			break
@@ -254,7 +255,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		closed:   make(chan struct{}),
 		protoMap: make(map[uint16]*Protocol),
 		capMap:   make(map[string]uint16),
-		myLog:    srv.myLog,
+		log:      srv.log,
 		node:     dialDest,
 	}
 
@@ -310,7 +311,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		peer.node = discovery.NewNodeWithAddr(nodeID1, addr1)
 	}
 
-	srv.myLog.Infof("p2p.setupConn conn handshaked. peer=%s", peer)
+	srv.log.Info("p2p.setupConn conn handshaked. peer=%s", peer)
 	go func() {
 		srv.loopWG.Add(1)
 		srv.addpeer <- peer

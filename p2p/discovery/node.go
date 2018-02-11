@@ -16,9 +16,9 @@ import (
 
 // Node the node that contains its public key and network address
 type Node struct {
-	ID      NodeID //public key actually
-	IP      net.IP
-	UDPPort uint16
+	ID               NodeID //public key actually
+	IP               net.IP
+	UDPPort, TCPPort uint16
 
 	// node id for Kademila, which is generated from public key
 	// better to get it with getSha()

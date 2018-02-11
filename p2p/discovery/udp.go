@@ -33,6 +33,7 @@ type udp struct {
 	gotReply   chan *reply
 	addPending chan *pending
 	writer     chan *send
+	log        *log.SeeleLog
 }
 
 type pending struct {
@@ -73,6 +74,7 @@ func newUDP(id NodeID, addr *net.UDPAddr) *udp {
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
 		writer:     make(chan *send, 1),
+		log:        log.GetLogger("discovery", true),
 	}
 
 	return transport

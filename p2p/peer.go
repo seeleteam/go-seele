@@ -37,7 +37,7 @@ type Peer struct {
 
 	wMutex sync.Mutex // for conn write
 	wg     sync.WaitGroup
-	myLog  *log.SeeleLog
+	log    *log.SeeleLog
 }
 
 func (p *Peer) run() {
@@ -83,7 +83,7 @@ loop:
 	for _, proto := range p.protoMap {
 		proto.DelPeerCh <- p
 	}
-	p.myLog.Infof("p2p.peer.run quit. err=%s", p.err)
+	p.log.Info("p2p.peer.run quit. err=%s", p.err)
 }
 
 func (p *Peer) pingLoop() {
@@ -182,7 +182,7 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 	if err != nil {
 		return err
 	}
-	p.myLog.Debugf("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
+	p.log.Debug("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
 	return nil
 }
 
@@ -208,7 +208,7 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	}
 	msgRecv.ReceivedAt = time.Now()
 	msgRecv.CurPeer = p
-	p.myLog.Debugf("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
+	p.log.Debug("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
 	return msgRecv, nil
 }
 
