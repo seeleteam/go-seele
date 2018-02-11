@@ -36,7 +36,6 @@ func (id *Address) Bytes() []byte {
 // ToSha get the node hash
 func (id *Address) ToSha() *Hash {
 	data := crypto.Keccak256Hash(id[:])
-
 	h := BytesToHash(data)
 	return &h
 }

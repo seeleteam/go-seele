@@ -222,7 +222,7 @@ func (u *udp) loopReply() {
 	pendingList := list.New()
 
 	var timeout = time.NewTimer(0)
-	<- timeout.C
+	<-timeout.C
 	defer timeout.Stop()
 
 	resetTimer := func() {
@@ -299,7 +299,9 @@ func (u *udp) discovery() {
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
 
+		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
 		sendFindNodeRequest(u, nodes, *id)
+
 		time.Sleep(discoveryInterval)
 	}
 }

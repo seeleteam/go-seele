@@ -9,15 +9,14 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/spf13/cobra"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/spf13/cobra"
 )
 
 var (
-	addr          *string
-	bootstrapNode *string
+	addr          *string //node addr
+	bootstrapNode *string //bootstrap node id
 )
 
 // sendCmd represents the send command

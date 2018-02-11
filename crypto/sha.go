@@ -2,6 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package crypto
 
 import (
@@ -20,7 +21,7 @@ func Keccak256Hash(data ...[]byte) []byte {
 		d.Write(b)
 	}
 
-	h := make([]byte, hashLength)
+	h := make([]byte, 32)
 	d.Sum(h[:0])
 	return h
 }
