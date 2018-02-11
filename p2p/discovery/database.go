@@ -23,7 +23,7 @@ func NewDatabase() *Database {
 	}
 }
 
-func (db *database) add(value *Node) {
+func (db *Database) add(value *Node) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -38,14 +38,14 @@ func (db *Database) find(id common.Hash) *Node {
 	return db.m[id]
 }
 
-func (db *database) delete(id *common.Hash) {
+func (db *Database) delete(id *common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	delete(db.m, *id)
 }
 
-func (db *database) size() int {
+func (db *Database) size() int {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 

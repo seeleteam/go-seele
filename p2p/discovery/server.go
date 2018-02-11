@@ -33,8 +33,7 @@ func StartService(port, id string) {
 }
 
 func StartServerFat(port, id string, nodeArr []*Node) (db *Database) {
-	udp := getUDP(port, HexToNodeID(id))
-	log.Debug("nodeid: %s", common.BytesToHex(udp.self.ID.Bytes()))
+	udp := getUDP(port, hexToNodeID(id))
 	for _, node := range nodeArr {
 		udp.table.addNode(node)
 	}

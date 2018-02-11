@@ -18,7 +18,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	"github.com/sirupsen/logrus"
 	//"github.com/ethereum/go-ethereum/p2p/discover"
 )
 
@@ -79,7 +78,7 @@ type Server struct {
 	loopWG  sync.WaitGroup // loop, listenLoop
 
 	peers map[discovery.NodeID]*Peer
-	myLog *logrus.Logger
+	myLog *log.SeeleLog
 }
 
 // Start starts running the server.

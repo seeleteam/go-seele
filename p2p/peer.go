@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -37,7 +37,7 @@ type Peer struct {
 
 	wMutex sync.Mutex // for conn write
 	wg     sync.WaitGroup
-	myLog  *logrus.Logger
+	myLog  *log.SeeleLog
 }
 
 func (p *Peer) run() {

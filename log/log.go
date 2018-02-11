@@ -15,9 +15,13 @@ import (
 	//"path/filepath"
 )
 
+type SeeleLog struct{
+	logrus.Logger
+}
+
 var log *logrus.Logger
 
-var logMap map[string]*logrus.Logger
+var logMap map[string]*SeeleLog
 
 // Panic Level, highest level of severity. Logs and then calls panic with the
 // message passed to Debug, Info, ...
@@ -85,12 +89,15 @@ func init() {
 
 // GetLogger get logrus.Logger object accoring to logName
 // each module can have it's own logger
-func GetLogger(logName string, bConsole bool) *logrus.Logger {
+func GetLogger(logName string, bConsole bool) *SeeleLog {
+	if logMap == nil{
+		logMap = make(map[string]*SeeleLog)
+	}
 	curLog, ok := logMap[logName]
 	if ok {
 		return curLog
 	}
-	curLog = logrus.New()
+	curLog = new(SeeleLog)
 	if bConsole {
 		log.Out = os.Stdout
 	} else {

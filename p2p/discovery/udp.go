@@ -27,7 +27,7 @@ type udp struct {
 	self  *Node
 	table *Table
 
-	db        *database
+	db        *Database
 	localAddr *net.UDPAddr
 
 	gotReply   chan *reply
