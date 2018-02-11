@@ -6,6 +6,7 @@
 package discovery
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"net"
 	"testing"
 
@@ -40,9 +41,13 @@ func Test_Bucket(t *testing.T) {
 }
 
 func getNode(port string) *Node {
-	id := getRandomNodeID()
+	id, err := common.GenerateRandomAddress()
+	if err != nil {
+		panic(err)
+	}
+
 	addr, _ := net.ResolveUDPAddr("udp", ":"+port)
-	n := NewNode(id, addr.IP, uint16(addr.Port))
+	n := NewNode(*id, addr.IP, addr.Port)
 
 	return n
 }
