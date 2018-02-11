@@ -252,7 +252,6 @@ func (u *udp) loopReply() {
 
 		select {
 		case r := <-u.gotReply:
-			log.Debug("reply from code %d", r.code)
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
@@ -270,11 +269,9 @@ func (u *udp) loopReply() {
 				}
 			}
 		case p := <-u.addPending:
-			log.Debug("add pending code %d", p.code)
 			p.deadline = time.Now().Add(responseTimeout)
 			pendingList.PushBack(p)
 		case <-timeout.C:
-			log.Debug("got timer %d", pendingList.Len())
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
@@ -299,7 +296,7 @@ func (u *udp) discovery() {
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
 
-		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
+		//log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
 		sendFindNodeRequest(u, nodes, *id)
 
 		time.Sleep(discoveryInterval)

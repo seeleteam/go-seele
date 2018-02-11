@@ -21,7 +21,7 @@ func Keccak256Hash(data ...[]byte) []byte {
 		d.Write(b)
 	}
 
-	h := make([]byte, 32)
+	h := make([]byte, hashLength)
 	d.Sum(h[:0])
 	return h
 }
