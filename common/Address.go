@@ -40,3 +40,20 @@ func (id *Address) ToSha() *Hash {
 	return &h
 }
 
+
+func GenerateRandomAddress() (*Address, error) {
+	keypair, err := crypto.GenerateKey()
+	if err != nil {
+		return nil ,err
+	}
+
+	buff := crypto.FromECDSAPub(&keypair.PublicKey)
+
+	id, err := NewAddress(buff[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, err
+}
+

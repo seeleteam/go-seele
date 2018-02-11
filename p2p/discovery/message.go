@@ -57,7 +57,7 @@ type rpcNode struct {
 }
 
 func (r *rpcNode) ToNode() *Node {
-	return NewNode(r.SelfID, r.IP, r.UDPPort)
+	return NewNode(r.SelfID, r.IP, int(r.UDPPort))
 }
 
 func byteToMsgType(byte byte) msgType {
@@ -130,7 +130,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 		rpcs[index] = &rpcNode{
 			SelfID:  n.ID,
 			IP:      n.IP,
-			UDPPort: n.UDPPort,
+			UDPPort: uint16(n.UDPPort),
 		}
 	}
 

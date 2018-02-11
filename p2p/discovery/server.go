@@ -16,7 +16,6 @@ import (
 
 func StartService(id common.Address, addr *net.UDPAddr) {
 	udp := newUDP(id, addr)
-	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
 
 	udp.StartServe()
 
@@ -48,11 +47,8 @@ func hexToAddress(id string) common.Address {
 	return nid
 }
 
-func SendPing(port string, id common.Address,  targeAddr *net.UDPAddr) {
-	myid := getRandomNodeID()
-	udp := getUDP(port, myid)
-
-	log.Debug("nodeid: %s", hexutil.BytesToHex(udp.self.ID.Bytes()))
+func SendPing(myId common.Address, myAddr *net.UDPAddr, id common.Address,  targeAddr *net.UDPAddr) {
+	udp := newUDP(myId, myAddr)
 
 	n := NewNodeWithAddr(id, targeAddr)
 	udp.addNode(n)

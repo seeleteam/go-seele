@@ -8,18 +8,16 @@ package cmd
 import (
 	"fmt"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/log"
+	"net"
 
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	"github.com/seeleteam/go-seele/cmd/utils"
 
 	"github.com/spf13/cobra"
 )
 
 var
 (
-	port          *string
+	addr          *string
 	bootstrapNode *string
 )
 
@@ -36,37 +34,36 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
 
-		nodeId, err := utils.NewNodeId(*bootstrapNode)
+		nodeId, err := discovery.NewNodeFromString(*bootstrapNode)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		discovery.SendPing(*port, nodeId.Address, nodeId.GetUDPAddr())
+		myAddr, err := net.ResolveUDPAddr("udp", *addr)
+		if err != nil {
+			fmt.Println("invalid address", err.Error())
+			return
+		}
+
+		myId, err := common.GenerateRandomAddress()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		mynode := discovery.NewNodeWithAddr(*myId, myAddr)
+		fmt.Println(mynode.String())
+
+		discovery.SendPing(*myId, myAddr, nodeId.ID, nodeId.GetUDPAddr())
 	},
-}
-
-func getRandomNodeID() common.Address {
-	keypair, err := crypto.GenerateKey()
-	if err != nil {
-		log.Info(err.Error())
-	}
-
-	buff := crypto.FromECDSAPub(&keypair.PublicKey)
-
-	id, err := common.NewAddress(buff[1:])
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return id
 }
 
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
 
-	port = sendCmd.Flags().String("port", "9001", "my port")
+	addr = sendCmd.Flags().StringP("addr", "a", ":9001", "node addr")
 	bootstrapNode = sendCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
 
 	// Here you will define your flags and configuration settings.
