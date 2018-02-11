@@ -6,53 +6,94 @@
 package discovery
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
+var (
+	invalidNodeError = "invalid node"
+	nodeHeaderError  = "node id should start with snode://"
+
+	nodeHeader = "snode://"
+)
+
+// Node the node that contains its public key and network address
 type Node struct {
-	ID      NodeID //public key actually
+	ID      common.Address //public key actually
 	IP      net.IP
-	UDPPort uint16
+	UDPPort int
 
-	sha common.Hash // node id for Kademila, which is generated from public key
+	// node id for Kademila, which is generated from public key
+	// better to get it with getSha()
+	sha *common.Hash
 }
 
-const nodeIDBits = 512 // the length of the public key
-
-type NodeID [nodeIDBits / 8]byte // we use public key as node id
-
-// BytesToID converts a byte slice to a NodeID
-func BytesToID(b []byte) (NodeID, error) {
-	var id NodeID
-	if len(b) != len(id) {
-		return id, fmt.Errorf("wrong length, want %d bytes", len(id))
-	}
-	copy(id[:], b)
-	return id, nil
-}
-
-func (id *NodeID) Bytes() []byte {
-	return id[:]
-}
-
-func (id *NodeID) ToSha() common.Hash {
-	return crypto.Keccak256Hash(id[:])
-}
-
-func NewNodeWithAddr(id NodeID, addr *net.UDPAddr) *Node {
-	return NewNode(id, addr.IP, uint16(addr.Port))
-}
-
-func NewNode(id NodeID, ip net.IP, port uint16) *Node {
+// NewNode new node with its value
+func NewNode(id common.Address, ip net.IP, port int) *Node {
 	return &Node{
 		ID:      id,
 		IP:      ip,
 		UDPPort: port,
-
-		sha: id.ToSha(),
 	}
+}
+
+// NewNodeWithAddr new node with id and network address
+func NewNodeWithAddr(id common.Address, addr *net.UDPAddr) *Node {
+	return NewNode(id, addr.IP, addr.Port)
+}
+
+func NewNodeFromString(id string) (*Node, error) {
+	if !strings.HasPrefix(id, nodeHeader) {
+		return nil, errors.New(nodeHeaderError)
+	}
+
+	// cut prefix header
+	id = id[len(nodeHeader):]
+
+	idSplit := strings.Split(id, "@")
+	if len(idSplit) != 2 {
+		return nil, errors.New(invalidNodeError)
+	}
+
+	address, err := hex.DecodeString(idSplit[0])
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := common.NewAddress(address)
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := net.ResolveUDPAddr("udp", idSplit[1])
+	if err != nil {
+		return nil, err
+	}
+
+	node := NewNodeWithAddr(publicKey, addr)
+	return node, nil
+}
+
+func (n *Node) GetUDPAddr() *net.UDPAddr {
+	return &net.UDPAddr{
+		IP:   n.IP,
+		Port: int(n.UDPPort),
+	}
+}
+
+func (n *Node) getSha() *common.Hash {
+	if n.sha == nil || len(n.sha) == 0 {
+		n.sha = n.ID.ToSha()
+	}
+
+	return n.sha
+}
+
+func (n *Node) String() string {
+	return fmt.Sprintf(nodeHeader+"%s@%s", hex.EncodeToString(n.ID.Bytes()), n.GetUDPAddr().String())
 }

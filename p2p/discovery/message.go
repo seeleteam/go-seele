@@ -2,82 +2,82 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
 	"net"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/log"
 )
 
-type MsgType uint8
+type msgType uint8
 
 const (
 	// add msg type flag at the first byte of the message
-	PingMsg      MsgType = 1
-	PongMsg      MsgType = 2
-	FindNodeMsg  MsgType = 3
-	NeighborsMsg MsgType = 5
+	pingMsgType      msgType = 1
+	pongMsgType      msgType = 2
+	findNodeMsgType  msgType = 3
+	neighborsMsgType msgType = 5
 )
 
 const (
-	VERSION uint = 1
+	discoveryProtocolVersion uint = 1
 )
 
 type ping struct {
 	Version uint // TODO add version check
-	SelfID  NodeID
+	SelfID  common.Address
 
-	to NodeID
+	to *Node
 }
 
 type pong struct {
-	SelfID NodeID
+	SelfID common.Address
 }
 
 type findNode struct {
-	SelfID  NodeID
-	QueryID NodeID
+	SelfID  common.Address
+	QueryID common.Address // the ID we want to query in Kademila
 
-	to NodeID
+	to *Node // the node that send request to
 }
 
 type neighbors struct {
-	SelfID NodeID
+	SelfID common.Address
 	Nodes  []*rpcNode
 }
 
 type rpcNode struct {
-	SelfID  NodeID
+	SelfID  common.Address
 	IP      net.IP
 	UDPPort uint16
 }
 
 func (r *rpcNode) ToNode() *Node {
-	return NewNode(r.SelfID, r.IP, r.UDPPort)
+	return NewNode(r.SelfID, r.IP, int(r.UDPPort))
 }
 
-func byteToMsgType(byte byte) MsgType {
-	return MsgType(uint8(byte))
+func byteToMsgType(byte byte) msgType {
+	return msgType(uint8(byte))
 }
 
-func msgTypeToByte(t MsgType) byte {
+func msgTypeToByte(t msgType) byte {
 	return byte(t)
 }
 
-func generateBuff(code MsgType, encoding []byte) []byte {
+func generateBuff(code msgType, encoding []byte) []byte {
 	buff := []byte{msgTypeToByte(code)}
 
 	return append(buff, encoding...)
 }
 
-// handle send ping msg and add pending
+// handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
-	log.Debug("received ping from: %s", common.BytesToHex(m.SelfID.Bytes()))
+	//log.Debug("received ping from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
 
 	// response with pong
-	if m.Version != VERSION {
+	if m.Version != discoveryProtocolVersion {
 		return
 	}
 
@@ -85,52 +85,50 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 		SelfID: t.self.ID,
 	}
 
-	t.sendMsg(PongMsg, resp, from)
+	t.sendMsg(pongMsgType, resp, NewNodeWithAddr(m.SelfID, from))
 }
 
-func (m *ping) send(t *udp, to *net.UDPAddr) {
-	log.Debug("send ping msg to: %s", common.BytesToHex(m.to.Bytes()))
+// send send ping message and handle callback
+func (m *ping) send(t *udp) {
+	//log.Debug("send ping msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
 	p := &pending{
 		from: m.to,
-		code: PongMsg,
+		code: pongMsgType,
 
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*pong)
 			n := NewNodeWithAddr(r.SelfID, addr)
 			t.table.updateNode(n)
 
-			log.Debug("received pong msg: %s", common.BytesToHex(r.SelfID.Bytes()))
+			//log.Debug("received pong msg: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
 
 			return true
 		},
 		errorCallBack: func() { // delete this node when ping timeout, TODO add time limit
-			sha := m.to.ToSha()
-			t.table.deleteNode(sha)
-			t.db.delete(sha)
+			sha := m.to.ID.ToSha()
+			t.deleteNode(sha)
 		},
 	}
 
-	t.addpending <- p
-	t.sendMsg(PingMsg, m, to)
+	t.addPending <- p
+	t.sendMsg(pingMsgType, m, m.to)
 }
 
+// handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	log.Debug("received find node request from: %s", common.BytesToHex(m.SelfID.Bytes()))
-
+	//log.Debug("received find node request from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
 	node := NewNodeWithAddr(m.SelfID, from)
-	t.table.addNode(node)
-	t.db.add(node.sha, node)
+	t.addNode(node)
 
-	// response find node request
-	nodes := t.table.findNodeResponse(m.to.ToSha())
+	nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), t.self.getSha())
 
 	rpcs := make([]*rpcNode, len(nodes))
 	for index, n := range nodes {
 		rpcs[index] = &rpcNode{
 			SelfID:  n.ID,
 			IP:      n.IP,
-			UDPPort: n.UDPPort,
+			UDPPort: uint16(n.UDPPort),
 		}
 	}
 
@@ -139,41 +137,43 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 		SelfID: t.self.ID,
 	}
 
-	t.sendMsg(NeighborsMsg, response, from)
+	t.sendMsg(neighborsMsgType, response, NewNodeWithAddr(m.SelfID, from))
 }
 
-func (m *findNode) send(t *udp, to *net.UDPAddr) {
-	log.Debug("send find msg to: %s", common.BytesToHex(m.to.Bytes()))
+// send send find node message and handle callback
+func (m *findNode) send(t *udp) {
+	//log.Debug("send find msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
 
 	p := &pending{
 		from: m.to,
-		code: NeighborsMsg,
+		code: neighborsMsgType,
 
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
-			log.Debug("received neighbors")
-
 			r := resp.(*neighbors)
 
-			log.Debug("received neighbors msg from: %s", common.BytesToHex(r.SelfID.Bytes()))
-
+			//log.Debug("received neighbors msg from: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
 			if r.Nodes == nil || len(r.Nodes) == 0 {
 				return true
 			}
 
+			//log.Debug("find %d nodes", len(r.Nodes))
+
 			found := false
 			for _, n := range r.Nodes {
-				if n.SelfID == m.to {
+				//log.Debug("received node: %s", hexutil.BytesToHex(n.SelfID.Bytes()))
+
+				if n.SelfID == m.QueryID {
 					found = true
 				}
 
 				node := n.ToNode()
-				t.table.addNode(node)
-				t.db.add(node.sha, node)
+				t.addNode(node)
 			}
 
+			// if not found, will find the node that is more closer than last one
 			if !found {
-				nodes := t.table.findNodeForRequest(m.to.ToSha())
-				sendFindNodeRequest(t, nodes, m.to)
+				nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), m.SelfID.ToSha())
+				sendFindNodeRequest(t, nodes, m.QueryID)
 			}
 
 			return true
@@ -183,11 +183,11 @@ func (m *findNode) send(t *udp, to *net.UDPAddr) {
 		},
 	}
 
-	t.addpending <- p
-	t.sendMsg(FindNodeMsg, m, to)
+	t.addPending <- p
+	t.sendMsg(findNodeMsgType, m, m.to)
 }
 
-func sendFindNodeRequest(u *udp, nodes []*Node, target NodeID) {
+func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
 	if nodes == nil || len(nodes) == 0 {
 		return
 	}
@@ -196,14 +196,9 @@ func sendFindNodeRequest(u *udp, nodes []*Node, target NodeID) {
 		f := &findNode{
 			SelfID:  u.self.ID,
 			QueryID: target,
-			to:      n.ID,
+			to:      n,
 		}
 
-		addr := &net.UDPAddr{
-			IP:   n.IP,
-			Port: int(n.UDPPort),
-		}
-
-		f.send(u, addr)
+		f.send(u)
 	}
 }

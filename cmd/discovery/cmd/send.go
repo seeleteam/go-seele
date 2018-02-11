@@ -7,10 +7,16 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-
 	"github.com/spf13/cobra"
+)
+
+var (
+	addr          *string //node addr
+	bootstrapNode *string //bootstrap node id
 )
 
 // sendCmd represents the send command
@@ -25,14 +31,37 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("send called")
-		fmt.Println(*id)
 
-		discovery.SendPing("9001", *id, "9000")
+		nodeId, err := discovery.NewNodeFromString(*bootstrapNode)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		myAddr, err := net.ResolveUDPAddr("udp", *addr)
+		if err != nil {
+			fmt.Println("invalid address", err.Error())
+			return
+		}
+
+		myId, err := common.GenerateRandomAddress()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		mynode := discovery.NewNodeWithAddr(*myId, myAddr)
+		fmt.Println(mynode.String())
+
+		discovery.SendPing(*myId, myAddr, nodeId.ID, nodeId.GetUDPAddr())
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
+
+	addr = sendCmd.Flags().StringP("addr", "a", ":9001", "node addr")
+	bootstrapNode = sendCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
 
 	// Here you will define your flags and configuration settings.
 

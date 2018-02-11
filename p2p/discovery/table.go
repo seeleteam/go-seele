@@ -10,14 +10,13 @@ import (
 	"sort"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	alpha      = 3  // Kademlia concurrency factor
+	alpha              = 3 // Kademlia concurrency factor
 	responseNodeNumber = 5 //TODO with this number for test
-	hashBits   = len(common.Hash{}) * 8
-	nBuckets   = hashBits + 1 // Number of buckets
+	hashBits           = len(common.Hash{}) * 8
+	nBuckets           = hashBits + 1 // Number of buckets
 )
 
 type Table struct {
@@ -26,7 +25,7 @@ type Table struct {
 	selfNode *Node //info of local node
 }
 
-func NewTable(id NodeID, addr *net.UDPAddr) *Table {
+func newTable(id common.Address, addr *net.UDPAddr) *Table {
 	selfNode := NewNodeWithAddr(id, addr)
 
 	table := &Table{
@@ -35,64 +34,55 @@ func NewTable(id NodeID, addr *net.UDPAddr) *Table {
 	}
 
 	for i := 0; i < nBuckets; i++ {
-		table.buckets[i] = NewBuckets()
+		table.buckets[i] = newBuckets()
 	}
 
 	return table
 }
 
 func (t *Table) addNode(node *Node) {
-	dis := logdist(node.sha, t.selfNode.sha)
+	dis := logDist(t.selfNode.getSha(), node.getSha())
 
 	t.buckets[dis].addNode(node)
 }
 
-func (t *Table) updateNode(node *Node)  {
+func (t *Table) updateNode(node *Node) {
 	t.addNode(node)
 }
 
-func (t *Table) findNodeResponse(target common.Hash) []*Node {
+// findNodeWithTarget find nodes that distance of target is less than measure with target
+func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
 
 	minDis := []*Node{}
 	for _, e := range nodes {
-		if distcmp(target, t.selfNode.sha, e.sha) > 0 {
+		if distCmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
+			//log.Debug("add node: %s", hexutil.BytesToHex(e.ID.Bytes()))
 			minDis = append(minDis, e)
+		} else {
+			//log.Debug("skip node:%s", hexutil.BytesToHex(e.ID.Bytes()))
 		}
 	}
 
 	return minDis
 }
 
-func (t *Table) deleteNode(target common.Hash)  {
-	dis := logdist(t.selfNode.sha, target)
+func (t *Table) deleteNode(target *common.Hash) {
+	dis := logDist(t.selfNode.getSha(), target)
 
-	index := -1
-	for i, n := range t.buckets[dis].peers {
-		if n.sha == target {
-			index = i
-			break
-		}
-	}
-
-	log.Debug("index: %d", index)
-	if index == -1 {
-		log.Info("don't find the to to delete\n")
-		return
-	}
-
-	t.buckets[dis].peers = append(t.buckets[dis].peers[:index], t.buckets[dis].peers[index+1:]...)
+	t.buckets[dis].deleteNode(target)
 }
 
-func (t *Table) findNodeForRequest(target common.Hash) []*Node {
+// findNodeForRequest calls when start find node, find the initialize nodes
+func (t *Table) findNodeForRequest(target *common.Hash) []*Node {
 	return t.findMinDisNodes(target, alpha)
 }
 
-func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node  {
+func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node {
 	result := nodesByDistance{
-		target: target,
+		target:   target,
 		maxElems: number,
-		entries: make([]*Node, 0),
+		entries:  make([]*Node, 0),
 	}
 
 	for _, b := range t.buckets {
@@ -104,19 +94,18 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node  {
 	return result.entries
 }
 
-
 // nodesByDistance is a list of nodes, ordered by
 // distance to to.
 type nodesByDistance struct {
-	entries []*Node
-	target  common.Hash
+	entries  []*Node
+	target   *common.Hash
 	maxElems int
 }
 
 // push adds the given node to the list, keeping the total size below maxElems.
 func (h *nodesByDistance) push(n *Node) {
 	ix := sort.Search(len(h.entries), func(i int) bool {
-		return distcmp(h.target, h.entries[i].sha, n.sha) > 0
+		return distCmp(h.target, h.entries[i].getSha(), n.getSha()) > 0
 	})
 	if len(h.entries) < h.maxElems {
 		h.entries = append(h.entries, n)

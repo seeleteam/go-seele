@@ -2,6 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package discovery
 
 import (
@@ -9,13 +10,16 @@ import (
 	"net"
 	"time"
 
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	responseTimeout = 2 * time.Second
+	responseTimeout = 10 * time.Second
+
+	pingpongInterval  = 10 * time.Second // sleep between ping pong
+	discoveryInterval = 15 * time.Second // sleep between discovery
 )
 
 type udp struct {
@@ -23,17 +27,17 @@ type udp struct {
 	self  *Node
 	table *Table
 
-	localAddr *net.UDPAddr
 	db        *database
+	localAddr *net.UDPAddr
 
-	gotreply   chan reply
-	addpending chan *pending
-	write      chan *send
+	gotReply   chan *reply
+	addPending chan *pending
+	writer     chan *send
 }
 
 type pending struct {
-	from NodeID
-	code MsgType
+	from *Node
+	code msgType
 
 	deadline time.Time
 
@@ -43,37 +47,38 @@ type pending struct {
 }
 
 type send struct {
-	buff   []byte
-	target *net.UDPAddr
+	buff []byte
+	to   *Node
+	code msgType
 }
 
 type reply struct {
-	from NodeID
-	code MsgType
+	from *Node
+	code msgType
 
-	addr *net.UDPAddr
+	err bool // got error when send msg
 
 	data interface{}
 }
 
-func NewUDP(id NodeID, addr *net.UDPAddr) *udp {
+func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 	transport := &udp{
 		conn:      getUDPConn(addr),
-		table:     NewTable(id, addr),
+		table:     newTable(id, addr),
 		self:      NewNodeWithAddr(id, addr),
 		localAddr: addr,
 
 		db: NewDatabase(),
 
-		gotreply:   make(chan reply, 1),
-		addpending: make(chan *pending, 1),
-		write:      make(chan *send, 1),
+		gotReply:   make(chan *reply, 1),
+		addPending: make(chan *pending, 1),
+		writer:     make(chan *send, 1),
 	}
 
 	return transport
 }
 
-func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
+func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 	encoding, err := common.Serialize(msg)
 	if err != nil {
 		log.Info(err.Error())
@@ -82,36 +87,51 @@ func (u *udp) sendMsg(t MsgType, msg interface{}, target *net.UDPAddr) {
 
 	buff := generateBuff(t, encoding)
 	s := &send{
-		buff:   buff,
-		target: target,
+		buff: buff,
+		to:   to,
+		code: t,
 	}
-	u.write <- s
+	u.writer <- s
 }
 
-func sendMsg(buff []byte, source, target *net.UDPAddr) {
-	conn, err := net.DialUDP("udp", source, target)
+func sendMsg(buff []byte, source, to *net.UDPAddr) bool {
+	conn, err := net.DialUDP("udp", source, to)
 	if err != nil {
-		log.Info(err.Error())
+		log.Info("connect to %d failed: %s", to.Port, err.Error())
+		return false
 	}
 	defer conn.Close()
 
 	//log.Debug("buff length:", len(buff))
 	n, err := conn.Write(buff)
 	if err != nil {
-		log.Info(err.Error())
+		log.Info("send msg failed:%s", err.Error())
+		return false
 	}
 
 	if n != len(buff) {
 		log.Error("send msg failed, expected length: %d, actuall length: %d", len(buff), n)
+		return false
 	}
+
+	return true
 }
 
 func (u *udp) sendLoop() {
 	for {
 		select {
-		case s := <-u.write:
+		case s := <-u.writer:
 			//log.Debug("send msg to: %d", s.to.Port)
-			sendMsg(s.buff, u.localAddr, s.target)
+			success := sendMsg(s.buff, u.localAddr, s.to.GetUDPAddr())
+			if !success {
+				r := &reply{
+					from: s.to,
+					code: s.code,
+					err:  true,
+				}
+
+				u.gotReply <- r
+			}
 		}
 	}
 }
@@ -122,7 +142,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 		//log.Debug("msg type: %d", code)
 		switch code {
-		case PingMsg:
+		case pingMsgType:
 			msg := &ping{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
@@ -132,7 +152,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			// response ping
 			msg.handle(u, from)
-		case PongMsg:
+		case pongMsgType:
 			msg := &pong{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
@@ -140,15 +160,15 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				return
 			}
 
-			r := reply{
-				from: msg.SelfID,
+			r := &reply{
+				from: NewNodeWithAddr(msg.SelfID, from),
 				code: code,
-				addr: from,
 				data: msg,
+				err:  false,
 			}
 
-			u.gotreply <- r
-		case FindNodeMsg:
+			u.gotReply <- r
+		case findNodeMsgType:
 			msg := &findNode{}
 
 			err := common.Deserialize(data[1:], &msg)
@@ -159,7 +179,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			//response find
 			msg.handle(u, from)
-		case NeighborsMsg:
+		case neighborsMsgType:
 			msg := &neighbors{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
@@ -167,14 +187,14 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				return
 			}
 
-			r := reply{
-				from: msg.SelfID,
+			r := &reply{
+				from: NewNodeWithAddr(msg.SelfID, from),
 				code: code,
-				addr: from,
 				data: msg,
+				err:  false,
 			}
 
-			u.gotreply <- r
+			u.gotReply <- r
 		default:
 			log.Error("unknown code %d", code)
 		}
@@ -226,21 +246,25 @@ func (u *udp) loopReply() {
 
 	for {
 		select {
-		case r := <-u.gotreply:
+		case r := <-u.gotReply:
 			//log.Debug("reply from code %d, %d", r.code, common.BytesToHex(r.from.Bytes()))
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
-				//log.Debug("pending %d %d", p.code, common.BytesToHex(p.from.Bytes()))
-
-				if p.from == r.from && p.code == r.code {
-					if p.callback(r.data, r.addr) {
+				if p.from.ID == r.from.ID && p.code == r.code {
+					if r.err {
+						p.errorCallBack()
 						pendingList.Remove(el)
-						break
+					} else {
+						if p.callback(r.data, r.from.GetUDPAddr()) {
+							pendingList.Remove(el)
+						}
 					}
+
+					break
 				}
 			}
-		case p := <-u.addpending:
+		case p := <-u.addPending:
 			p.deadline = time.Now().Add(responseTimeout)
 			pendingList.PushBack(p)
 		case <-timeout.C:
@@ -257,30 +281,20 @@ func (u *udp) loopReply() {
 	}
 }
 
-func getRandomNodeID() NodeID {
-	keypair, err := crypto.GenerateKey()
-	if err != nil {
-		log.Info(err.Error())
-	}
-
-	buff := crypto.FromECDSAPub(&keypair.PublicKey)
-
-	id, err := BytesToID(buff[1:])
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return id
-}
-
 func (u *udp) discovery() {
 	for {
-		id := getRandomNodeID()
+		id, err := common.GenerateRandomAddress()
+		if err != nil {
+			log.Error(err.Error())
+			continue
+		}
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
-		sendFindNodeRequest(u, nodes, id)
 
-		time.Sleep(DISCOVERYINTERVAL)
+		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
+		sendFindNodeRequest(u, nodes, *id)
+
+		time.Sleep(discoveryInterval)
 	}
 }
 
@@ -290,20 +304,15 @@ func (u *udp) pingPongService() {
 
 		for _, value := range copyMap {
 			p := &ping{
-				Version: VERSION,
+				Version: discoveryProtocolVersion,
 				SelfID:  u.self.ID,
 
-				to: value.ID,
+				to: value,
 			}
 
-			addr := &net.UDPAddr{
-				IP:   value.IP,
-				Port: int(value.UDPPort),
-			}
+			p.send(u)
 
-			p.send(u, addr)
-
-			time.Sleep(PINGPONGINTERVAL)
+			time.Sleep(pingpongInterval)
 		}
 	}
 }
@@ -314,4 +323,25 @@ func (u *udp) StartServe() {
 	go u.discovery()
 	go u.pingPongService()
 	go u.sendLoop()
+}
+
+func (u *udp) addNode(n *Node) {
+	if n == nil || n.ID == u.self.ID {
+		return
+	}
+
+	u.table.addNode(n)
+	u.db.add(n)
+	log.Info("add node, total nodes:%d", u.db.size())
+}
+
+func (u *udp) deleteNode(sha *common.Hash) {
+	selfSha := u.self.getSha()
+	if *sha == *selfSha {
+		return
+	}
+
+	u.table.deleteNode(sha)
+	u.db.delete(sha)
+	log.Info("delete node, total nodes:%d", u.db.size())
 }
