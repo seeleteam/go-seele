@@ -33,8 +33,10 @@ type msg struct {
 	protoCode uint16
 }
 
+// protoHandShake handshake message for two peer to exchage base information
+// TODO add public key or other information for encryption?
 type protoHandShake struct {
 	caps   []Cap
-	nodeId discovery.NodeID
+	nodeID discovery.NodeID
 	nounce uint32 //
 }

@@ -8,8 +8,10 @@ package p2p
 import (
 	//"crypto/ecdsa"
 
+	"bytes"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -171,7 +173,7 @@ running:
 func (srv *Server) scheduleTasks() {
 	// TODO select nodes from ntab to connect
 	nodeMap := srv.kadDB.GetCopy()
-	srv.log.Info("scheduleTasks called... [%s]", nodeMap)
+	srv.log.Info("scheduleTasks called... [%d]", len(nodeMap))
 	for _, node := range nodeMap {
 		_, ok := srv.peers[node.ID]
 		if ok {
@@ -278,38 +280,49 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.GetBaseProtocol().cap())
 	}
-	hsMsg := &msg{
+	wrapMsg := &msg{
 		protoCode: ctlProtoCode,
 		Message: Message{
 			msgCode: ctlMsgProtoHandshake,
 		},
 	}
 
-	//buffer, err := common.Serialize({"Caps": &caps, "NodeID": srv.MyNodeID})
-	buffer, err := common.Serialize(&caps)
-
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	myNounce := r.Uint32()
+	handshakeMsg := &protoHandShake{caps: caps, nounce: myNounce}
+	nodeID, err := discovery.BytesToID([]byte(srv.MyNodeID))
 	if err != nil {
 		fd.Close()
 		return err
 	}
-	hsMsg.payload = make([]byte, len(buffer))
-	copy(hsMsg.payload, buffer)
-	hsMsg.size = uint32(len(hsMsg.payload))
-	peer.sendRawMsg(hsMsg)
+	copy(handshakeMsg.nodeID[0:], nodeID[0:])
 
-	msgRecv, err := peer.recvRawMsg()
+	// Serialize should handle big- little- endian?
+	buffer, err := common.Serialize(handshakeMsg)
+	if err != nil {
+		fd.Close()
+		return err
+	}
+	wrapMsg.payload = make([]byte, len(buffer))
+	copy(wrapMsg.payload, buffer)
+	wrapMsg.size = uint32(len(wrapMsg.payload))
+	peer.sendRawMsg(wrapMsg)
+
+	recvWrapMsg, err := peer.recvRawMsg()
 	if err != nil {
 		fd.Close()
 		return err
 	}
 
-	var remoteCaps []Cap
-	if err := common.Deserialize(msgRecv.payload, &remoteCaps); err != nil {
+	var recvMsg protoHandShake
+	if err := common.Deserialize(recvWrapMsg.payload, recvMsg); err != nil {
 		fd.Close()
 		return err
 	}
 
-	//TODO need merge caps
+	peerCaps, peerNodeID, peerNounce := recvMsg.caps, recvMsg.nodeID, recvMsg.nounce
+	// TODO need merge caps and order by cap name, make sure having the same order at each end
+	// TODO compute a secret key by myNounce and peerNounce
 	protoCode := uint16(baseProtoCode)
 	for _, proto := range srv.Protocols {
 		peer.protoMap[protoCode] = proto.GetBaseProtocol()
@@ -321,16 +334,21 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		protoCode++
 	}
 
-	// TODO get Node from ntab, according nodeID
-	//nodeMap := srv.kadDB.GetCopy()
-
+	var peerNode *discovery.Node
 	if flags == inboundConn {
-		nodeID1, _ := discovery.BytesToID([]byte("1234567890123456789012345678901234567890123456789012345678901235"))
-		addr1, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
-		peer.node = discovery.NewNodeWithAddr(nodeID1, addr1)
+		nodeMap := srv.kadDB.GetCopy()
+		for _, node := range nodeMap {
+			if bytes.Equal(node.ID[0:], peerNodeID[0:]) {
+				peerNode = node
+				break
+			}
+		}
 	}
-
-	srv.log.Info("p2p.setupConn conn handshaked. peer=%s", peer)
+	if peerNode == nil {
+		return errors.New("Not found nodeID in discovery database!")
+	}
+	peer.node = peerNode
+	srv.log.Info("p2p.setupConn conn handshaked. peer=%s peerNounce=%u peerCaps=%s", peer, peerNounce, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
 		srv.addpeer <- peer
