@@ -31,13 +31,14 @@ var (
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "discovery command for find node and detect node",
+	Long: `usage example:
+    discovery start 
+        start a server, it will generate a node id randomly. The default address is 127.0.0.1:9000
+    discovery start -i snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000
+        start a server and specific node id.
+    discovery start -b snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000 -a "127.0.0.1:9001"
+        start a server with a bootstrap node and specific its binding address.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 
@@ -86,7 +87,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(startCmd)
 
-	addr = startCmd.Flags().StringP("addr", "a", ":9000", "node addr")
+	addr = startCmd.Flags().StringP("addr", "a", "127.0.0.1:9000", "node addr")
 	bootstrapNode = startCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
 
 	// Here you will define your flags and configuration settings.
