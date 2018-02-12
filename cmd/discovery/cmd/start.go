@@ -43,7 +43,7 @@ to quickly create a Cobra application.`,
 
 		var bootstrap *discovery.Node
 		bootstrap = nil
-		if *bootstrapNode == "" {
+		if *bootstrapNode != "" {
 			n, err := discovery.NewNodeFromString(*bootstrapNode)
 			if err != nil {
 				fmt.Println(err)
@@ -86,7 +86,7 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(startCmd)
 
-	addr = startCmd.Flags().StringP("addr", "a", ":9001", "node addr")
+	addr = startCmd.Flags().StringP("addr", "a", ":9000", "node addr")
 	bootstrapNode = startCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
 
 	// Here you will define your flags and configuration settings.
