@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
+	_ "github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
 	responseTimeout = 10 * time.Second
 
-	pingpongInterval  = 10 * time.Second // sleep between ping pong
-	discoveryInterval = 15 * time.Second // sleep between discovery
+	pingpongInterval  = 15 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval = 20 * time.Second // sleep between discovery, must big than response time out
 )
 
 type udp struct {
@@ -94,16 +94,9 @@ func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 	u.writer <- s
 }
 
-func sendMsg(buff []byte, source, to *net.UDPAddr) bool {
-	conn, err := net.DialUDP("udp", source, to)
-	if err != nil {
-		log.Info("connect to %d failed: %s", to.Port, err.Error())
-		return false
-	}
-	defer conn.Close()
-
+func sendMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
 	//log.Debug("buff length:", len(buff))
-	n, err := conn.Write(buff)
+	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
 		log.Info("send msg failed:%s", err.Error())
 		return false
@@ -122,7 +115,7 @@ func (u *udp) sendLoop() {
 		select {
 		case s := <-u.writer:
 			//log.Debug("send msg to: %d", s.to.Port)
-			success := sendMsg(s.buff, u.localAddr, s.to.GetUDPAddr())
+			success := sendMsg(s.buff, u.conn, s.to.GetUDPAddr())
 			if !success {
 				r := &reply{
 					from: s.to,
@@ -221,7 +214,8 @@ func (u *udp) readLoop() {
 func (u *udp) loopReply() {
 	pendingList := list.New()
 
-	var timeout *time.Timer
+	var timeout = time.NewTimer(0)
+	<-timeout.C
 	defer timeout.Stop()
 
 	resetTimer := func() {
@@ -231,7 +225,6 @@ func (u *udp) loopReply() {
 			p := el.Value.(*pending)
 			duration := p.deadline.Sub(now)
 			if duration < 0 {
-				pendingList.Remove(el)
 			} else {
 				if duration < minTime {
 					minTime = duration
@@ -239,15 +232,19 @@ func (u *udp) loopReply() {
 			}
 		}
 
-		timeout = time.NewTimer(minTime)
+		// if there is no pending request, stop timer
+		if pendingList.Len() == 0 {
+			timeout.Stop()
+		} else {
+			timeout.Reset(minTime)
+		}
 	}
 
-	resetTimer()
-
 	for {
+		resetTimer()
+
 		select {
 		case r := <-u.gotReply:
-			//log.Debug("reply from code %d, %d", r.code, common.BytesToHex(r.from.Bytes()))
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
@@ -271,6 +268,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
+					log.Debug("time out %d", p.code)
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}
@@ -291,7 +289,7 @@ func (u *udp) discovery() {
 
 		nodes := u.table.findNodeForRequest(id.ToSha())
 
-		log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
+		//log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
 		sendFindNodeRequest(u, nodes, *id)
 
 		time.Sleep(discoveryInterval)
@@ -311,7 +309,6 @@ func (u *udp) pingPongService() {
 			}
 
 			p.send(u)
-
 			time.Sleep(pingpongInterval)
 		}
 	}
@@ -332,7 +329,7 @@ func (u *udp) addNode(n *Node) {
 
 	u.table.addNode(n)
 	u.db.add(n)
-	log.Info("add node, total nodes:%d", u.db.size())
+	//log.Info("add node, total nodes:%d", u.db.size())
 }
 
 func (u *udp) deleteNode(sha *common.Hash) {
