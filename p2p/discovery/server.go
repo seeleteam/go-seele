@@ -6,26 +6,18 @@
 package discovery
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/log"
 )
 
-func StartService(id common.Address, addr *net.UDPAddr) {
-	udp := newUDP(id, addr)
-
-	udp.StartServe()
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
-}
-
 // StartServerFat used by p2p.Server to start discovery service
-func StartServerFat(port, id string, nodeArr []*Node) (db *Database) {
-	udp := getUDP(port, common.HexToAddress(id))
+func StartServerFat(port string, id string, nodeArr []*Node) (db *Database) {
+	myId := common.HexToAddress(id)
+	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%s", port))
+	udp := newUDP(myId, addr)
 	for _, node := range nodeArr {
 		udp.addNode(node)
 	}
@@ -34,36 +26,12 @@ func StartServerFat(port, id string, nodeArr []*Node) (db *Database) {
 	return udp.db
 }
 
-func getUDP(port string, id common.Address) *udp {
-	addr, err := net.ResolveUDPAddr("udp", ":"+port)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return newUDP(id, addr)
-}
-
-/*
-func hexToAddress(id string) common.Address {
-	byte, err := hexutil.HexToBytes(id)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	nid, err := common.NewAddress(byte)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return nid
-}
-*/
-
-func SendPing(myId common.Address, myAddr *net.UDPAddr, id common.Address, targeAddr *net.UDPAddr) {
+func StartService(myId common.Address, myAddr *net.UDPAddr, bootstrap *Node) {
 	udp := newUDP(myId, myAddr)
 
-	n := NewNodeWithAddr(id, targeAddr)
-	udp.addNode(n)
+	if bootstrap != nil {
+		udp.addNode(bootstrap)
+	}
 
 	udp.StartServe()
 
