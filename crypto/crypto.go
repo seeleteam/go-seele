@@ -9,9 +9,35 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
+	"github.com/seeleteam/go-seele/log"
 )
+
+// Signature is a wrapper for signed message and signer public key.
+type Signature struct {
+	pubKey *ecdsa.PublicKey
+	r      *big.Int
+	s      *big.Int
+}
+
+// NewSignature sign the specified hash with private key and returns a signature.
+// Panics if failed to sign hash.
+func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
+	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash)
+	if err != nil {
+		log.Panic("Failed to sign hash, private key = %+v, hash = %v, error = %v", privKey, hash, err.Error())
+	}
+
+	return &Signature{&privKey.PublicKey, r, s}
+}
+
+// Verify verifies the signature against the specified hash.
+// Return true if signature is valid, otherwise false.
+func (sig *Signature) Verify(hash []byte) bool {
+	return ecdsa.Verify(sig.pubKey, hash, sig.r, sig.s)
+}
 
 func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(S256(), rand.Reader)
