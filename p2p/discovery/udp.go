@@ -94,16 +94,9 @@ func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 	u.writer <- s
 }
 
-func sendMsg(buff []byte, source, to *net.UDPAddr) bool {
-	conn, err := net.DialUDP("udp", source, to)
-	if err != nil {
-		log.Info("connect to %d failed: %s", to.Port, err.Error())
-		return false
-	}
-	defer conn.Close()
-
+func sendMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
 	//log.Debug("buff length:", len(buff))
-	n, err := conn.Write(buff)
+	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
 		log.Info("send msg failed:%s", err.Error())
 		return false
@@ -122,7 +115,7 @@ func (u *udp) sendLoop() {
 		select {
 		case s := <-u.writer:
 			//log.Debug("send msg to: %d", s.to.Port)
-			success := sendMsg(s.buff, u.localAddr, s.to.GetUDPAddr())
+			success := sendMsg(s.buff, u.conn, s.to.GetUDPAddr())
 			if !success {
 				r := &reply{
 					from: s.to,
