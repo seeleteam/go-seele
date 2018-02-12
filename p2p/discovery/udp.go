@@ -27,12 +27,13 @@ type udp struct {
 	self  *Node
 	table *Table
 
-	db        *database
+	db        *Database
 	localAddr *net.UDPAddr
 
 	gotReply   chan *reply
 	addPending chan *pending
 	writer     chan *send
+	log        *log.SeeleLog
 }
 
 type pending struct {
@@ -73,6 +74,7 @@ func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
 		writer:     make(chan *send, 1),
+		log:        log.GetLogger("discovery", true),
 	}
 
 	return transport
@@ -298,7 +300,7 @@ func (u *udp) discovery() {
 
 func (u *udp) pingPongService() {
 	for {
-		copyMap := u.db.getCopy()
+		copyMap := u.db.GetCopy()
 
 		for _, value := range copyMap {
 			p := &ping{

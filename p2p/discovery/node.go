@@ -15,6 +15,9 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
+// NodeID compatible with previous defination
+type NodeID common.Address
+
 var (
 	invalidNodeError = "invalid node"
 	nodeHeaderError  = "node id should start with snode://"
@@ -24,9 +27,9 @@ var (
 
 // Node the node that contains its public key and network address
 type Node struct {
-	ID      common.Address //public key actually
-	IP      net.IP
-	UDPPort int
+	ID               common.Address //public key actually
+	IP               net.IP
+	UDPPort, TCPPort int
 
 	// node id for Kademila, which is generated from public key
 	// better to get it with getSha()
