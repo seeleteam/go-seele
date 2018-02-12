@@ -16,10 +16,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/p2p/discovery"
 	"net"
 
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +79,7 @@ to quickly create a Cobra application.`,
 			mynode = n
 		}
 
-		discovery.SendPing(mynode.ID, mynode.GetUDPAddr(), bootstrap)
+		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap)
 	},
 }
 

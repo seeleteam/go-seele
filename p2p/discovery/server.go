@@ -12,7 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-func SendPing(myId common.Address, myAddr *net.UDPAddr, bootstrap *Node) {
+func StartService(myId common.Address, myAddr *net.UDPAddr, bootstrap *Node) {
 	udp := newUDP(myId, myAddr)
 
 	if bootstrap != nil {
