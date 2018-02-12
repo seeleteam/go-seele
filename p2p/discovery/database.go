@@ -11,19 +11,19 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-type database struct {
+type Database struct {
 	m map[common.Hash]*Node // TODO use memory for temp, will use level db later
 
 	mutex sync.Mutex
 }
 
-func NewDatabase() *database {
-	return &database{
+func NewDatabase() *Database {
+	return &Database{
 		m: make(map[common.Hash]*Node),
 	}
 }
 
-func (db *database) add(value *Node) {
+func (db *Database) add(value *Node) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -31,28 +31,28 @@ func (db *database) add(value *Node) {
 	db.m[*sha] = value
 }
 
-func (db *database) find(id common.Hash) *Node {
+func (db *Database) find(id common.Hash) *Node {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	return db.m[id]
 }
 
-func (db *database) delete(id *common.Hash) {
+func (db *Database) delete(id *common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	delete(db.m, *id)
 }
 
-func (db *database) size() int {
+func (db *Database) size() int {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	return len(db.m)
 }
 
-func (db *database) getCopy() map[common.Hash]*Node {
+func (db *Database) GetCopy() map[common.Hash]*Node {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 

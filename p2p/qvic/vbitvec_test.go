@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package p2p
+package qvic
 
 import (
 	"bytes"

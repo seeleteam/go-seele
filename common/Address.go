@@ -7,7 +7,9 @@ package common
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
@@ -54,4 +56,18 @@ func GenerateRandomAddress() (*Address, error) {
 	}
 
 	return &id, err
+}
+
+func HexToAddress(id string) Address {
+	byte, err := hexutil.HexToBytes(id)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	nid, err := NewAddress(byte)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return nid
 }
