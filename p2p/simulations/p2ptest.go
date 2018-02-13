@@ -19,26 +19,33 @@ import (
 type myProtocol struct {
 	p2p.Protocol
 	proto int
+	peers map[*p2p.Peer]bool
 }
 
 func (p *myProtocol) Run() {
 	fmt.Println("myProtocol Running...", p.proto)
+	p.peers = make(map[*p2p.Peer]bool)
 	//	var peer *p2p.Peer
 	//	var message *p2p.Message
 	ping := time.NewTimer(5 * time.Second)
-loop:
+
 	for {
 		select {
 		case peer := <-p.AddPeerCh:
-			fmt.Println("myProtocol new peer", peer)
+
+			p.peers[peer] = true
+			fmt.Println("myProtocol add new peer. peers=", len(p.peers))
 		case peer := <-p.DelPeerCh:
-			fmt.Println("myProtocol del peer", peer)
+			fmt.Println("myProtocol del peer")
+			// need del from peers
+			delete(p.peers, peer)
+			fmt.Println("myProtocol del peer. peers=", len(p.peers))
 		case message := <-p.ReadMsgCh:
 			fmt.Println("myProtocol readmsg", message)
-			break loop
 		case <-ping.C:
 			//p.SendM
-			//fmt.Println("myProtocol ping.C")
+			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
+			p.sendMyMessage()
 			ping.Reset(3 * time.Second)
 		}
 	}
@@ -47,6 +54,12 @@ loop:
 func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 	//fmt.Println("myProtocol Running...")
 	return &(p.Protocol)
+}
+
+func (p *myProtocol) sendMyMessage() {
+	for peer, _ := range p.peers {
+		peer.SendMsg(&p.Protocol, 100, []interface{}{"Hello", "world"})
+	}
 }
 
 func main() {
@@ -62,7 +75,6 @@ func main() {
 	}
 
 	var intFaceL []p2p.ProtocolInterface
-
 	intFaceL = append(intFaceL, my1)
 	//	fmt.Println(my1.proto)
 
@@ -75,14 +87,14 @@ func main() {
 		//slice29, _ := hexutil.HexToBytes(node29)
 		//fmt.Println(slice29)
 		nodeID29 := common.HexToAddress(node29)
-		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
+		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39008")
 		nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
 
 		myServer := &p2p.Server{
 			Config: p2p.Config{
 				Name:       "test11",
-				ListenAddr: "0.0.0.0:39009",
-				KadPort:    "39009",
+				ListenAddr: "0.0.0.0:39008",
+				KadPort:    "39008",
 				MyNodeID:   node01,
 			},
 		}
@@ -94,8 +106,8 @@ func main() {
 		myServer := &p2p.Server{
 			Config: p2p.Config{
 				Name:       "test29",
-				ListenAddr: "0.0.0.0:39009",
-				KadPort:    "39009",
+				ListenAddr: "0.0.0.0:39008",
+				KadPort:    "39008",
 				MyNodeID:   node29,
 			},
 		}
