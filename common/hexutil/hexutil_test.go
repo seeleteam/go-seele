@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
-	"github.com/seeleteam/go-seele/log"
 )
 
 func Test_Hex(t *testing.T) {
@@ -16,7 +15,7 @@ func Test_Hex(t *testing.T) {
 
 	bytes, err := HexToBytes(str)
 	if err != nil {
-		log.Fatal(err.Error())
+		t.Error(err.Error())
 	}
 
 	res := BytesToHex(bytes)
