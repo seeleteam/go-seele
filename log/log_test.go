@@ -10,10 +10,11 @@ import (
 )
 
 func Test_Log(t *testing.T) {
-	Debug("debug msg")
-	Info("info msg")
-	Warn("warn msg")
-	Error("error msg")
+	lg := GetLogger("test", true)
+	lg.Debug("debug msg")
+	lg.Info("info msg")
+	lg.Warn("warn msg")
+	lg.Error("error msg")
 	//Fatal("fatal msg")
 	//panic("panic msg")
 }

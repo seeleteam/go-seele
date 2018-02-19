@@ -102,7 +102,13 @@ func (srv *Server) Start() (err error) {
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
 
-	srv.kadDB = discovery.StartServerFat(srv.KadPort, srv.MyNodeID, srv.StaticNodes)
+	addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%s", srv.KadPort))
+	if err != nil {
+		return err
+	}
+
+	myId := common.HexToAddress(srv.MyNodeID)
+	srv.kadDB = discovery.StartService(myId, addr, srv.StaticNodes)
 	if err := srv.startListening(); err != nil {
 		return err
 	}

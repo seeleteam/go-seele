@@ -10,7 +10,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -31,7 +30,7 @@ func newBuckets() *bucket {
 
 // addNode add node to bucket, if bucket is full, will remove an old one
 func (b *bucket) addNode(node *Node) {
-	index := b.hasNode(node)
+	index := b.findNode(node)
 
 	if index != -1 {
 		// do nothing for now
@@ -50,8 +49,8 @@ func (b *bucket) addNode(node *Node) {
 	}
 }
 
-// hasNode check if the bucket already have this node, if so, return its index, otherwise, return -1
-func (b *bucket) hasNode(node *Node) int {
+// findNode check if the bucket already have this node, if so, return its index, otherwise, return -1
+func (b *bucket) findNode(node *Node) int {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	for index, n := range b.peers {

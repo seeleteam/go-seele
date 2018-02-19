@@ -25,12 +25,17 @@ func (operator *Operator) Register(code []byte) {
 func (operator *Operator) sendTx(toAddr string, txType int, payload []byte) {
 	hash := crypto.Keccak256Hash(payload)
 
+	sig, err := crypto.NewSignature(operator.privKey, hash)
+	if err != nil {
+		log.Error(err.Error())
+	}
+
 	tx := &Transaction{
 		from:    Address(operator.privKey),
 		to:      toAddr,
 		txType:  txType,
 		payload: payload,
-		sig:     crypto.NewSignature(operator.privKey, hash),
+		sig:     sig,
 	}
 
 	TxServ.SendTransaction(tx)

@@ -5,10 +5,10 @@
 package hexutil
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
-	"github.com/seeleteam/go-seele/log"
 )
 
 func Test_Hex(t *testing.T) {
@@ -16,7 +16,7 @@ func Test_Hex(t *testing.T) {
 
 	bytes, err := HexToBytes(str)
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Println(err.Error())
 	}
 
 	res := BytesToHex(bytes)
