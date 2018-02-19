@@ -18,13 +18,13 @@ const (
 
 type bucket struct {
 	peers []*Node
-	lock  sync.Mutex //used for peers change
+	lock  sync.RWMutex //used for peers change
 }
 
 func newBuckets() *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
-		lock:  sync.Mutex{},
+		lock:  sync.RWMutex{},
 	}
 }
 
@@ -51,8 +51,8 @@ func (b *bucket) addNode(node *Node) {
 
 // findNode check if the bucket already have this node, if so, return its index, otherwise, return -1
 func (b *bucket) findNode(node *Node) int {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	for index, n := range b.peers {
 		if n.ID == node.ID {
 			return index
@@ -86,8 +86,8 @@ func (b *bucket) deleteNode(target *common.Hash) {
 }
 
 func (b *bucket) size() int {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
 	return len(b.peers)
 }
