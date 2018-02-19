@@ -24,13 +24,13 @@ type Signature struct {
 
 // NewSignature sign the specified hash with private key and returns a signature.
 // Panics if failed to sign hash.
-func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) (*Signature, error) {
+func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
 	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to sign hash, private key = %+v, hash = %v, error = %v", privKey, hash, err.Error())
+		panic(fmt.Errorf("Failed to sign hash, private key = %+v, hash = %v, error = %v", privKey, hash, err.Error()))
 	}
 
-	return &Signature{&privKey.PublicKey, r, s}, nil
+	return &Signature{&privKey.PublicKey, r, s}
 }
 
 // Verify verifies the signature against the specified hash.

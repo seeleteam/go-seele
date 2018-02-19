@@ -5,7 +5,6 @@
 package hexutil
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -16,7 +15,7 @@ func Test_Hex(t *testing.T) {
 
 	bytes, err := HexToBytes(str)
 	if err != nil {
-		fmt.Println(err.Error())
+		t.Error(err.Error())
 	}
 
 	res := BytesToHex(bytes)

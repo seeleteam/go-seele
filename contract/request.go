@@ -25,11 +25,7 @@ func (operator *Operator) Register(code []byte) {
 func (operator *Operator) sendTx(toAddr string, txType int, payload []byte) {
 	hash := crypto.Keccak256Hash(payload)
 
-	sig, err := crypto.NewSignature(operator.privKey, hash)
-	if err != nil {
-		log.Error(err.Error())
-	}
-
+	sig := crypto.NewSignature(operator.privKey, hash)
 	tx := &Transaction{
 		from:    Address(operator.privKey),
 		to:      toAddr,
