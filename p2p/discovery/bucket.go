@@ -10,7 +10,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -19,19 +18,19 @@ const (
 
 type bucket struct {
 	peers []*Node
-	lock  sync.Mutex //used for peers change
+	lock  sync.RWMutex //used for peers change
 }
 
 func newBuckets() *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
-		lock:  sync.Mutex{},
+		lock:  sync.RWMutex{},
 	}
 }
 
 // addNode add node to bucket, if bucket is full, will remove an old one
 func (b *bucket) addNode(node *Node) {
-	index := b.hasNode(node)
+	index := b.findNode(node)
 
 	if index != -1 {
 		// do nothing for now
@@ -50,10 +49,10 @@ func (b *bucket) addNode(node *Node) {
 	}
 }
 
-// hasNode check if the bucket already have this node, if so, return its index, otherwise, return -1
-func (b *bucket) hasNode(node *Node) int {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+// findNode check if the bucket already have this node, if so, return its index, otherwise, return -1
+func (b *bucket) findNode(node *Node) int {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	for index, n := range b.peers {
 		if n.ID == node.ID {
 			return index
@@ -87,8 +86,8 @@ func (b *bucket) deleteNode(target *common.Hash) {
 }
 
 func (b *bucket) size() int {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
 	return len(b.peers)
 }

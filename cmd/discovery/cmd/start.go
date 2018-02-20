@@ -8,6 +8,7 @@ package cmd
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -33,8 +34,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 
-		var bootstrap *discovery.Node
-		bootstrap = nil
+		bootstrap := make([]*discovery.Node, 0)
 		if *bootstrapNode != "" {
 			n, err := discovery.NewNodeFromString(*bootstrapNode)
 			if err != nil {
@@ -42,7 +42,7 @@ var startCmd = &cobra.Command{
 				return
 			}
 
-			bootstrap = n
+			bootstrap = append(bootstrap, n)
 		}
 
 		var mynode *discovery.Node
@@ -72,6 +72,10 @@ var startCmd = &cobra.Command{
 		}
 
 		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		wg.Wait()
 	},
 }
 

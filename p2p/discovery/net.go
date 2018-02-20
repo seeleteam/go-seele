@@ -7,8 +7,6 @@ package discovery
 
 import (
 	"net"
-
-	"github.com/seeleteam/go-seele/log"
 )
 
 func getUDPConn(addr *net.UDPAddr) *net.UDPConn {

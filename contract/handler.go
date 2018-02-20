@@ -2,7 +2,6 @@ package contract
 
 import (
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/log"
 )
 
 // HandleTransaction handles smart contract transation.

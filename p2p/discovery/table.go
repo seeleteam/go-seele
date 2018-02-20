@@ -14,7 +14,7 @@ import (
 
 const (
 	alpha              = 3 // Kademlia concurrency factor
-	responseNodeNumber = 5 //TODO with this number for test
+	responseNodeNumber = 5 // TODO with this number for test
 	hashBits           = len(common.Hash{}) * 8
 	nBuckets           = hashBits + 1 // Number of buckets
 )
