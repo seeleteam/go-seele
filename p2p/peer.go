@@ -168,7 +168,7 @@ func (p *Peer) SendMsg(proto *Protocol, msgCode uint16, message interface{}) err
 	//fmt.Println("SendMsg called", msgCode)
 	payload, err := common.Serialize(message)
 	if err != nil {
-		return errors.New("SendMsg yet message is not valid")
+		return err
 	}
 	msgRaw := &msg{
 		protoCode: protoCode,

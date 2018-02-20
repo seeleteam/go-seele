@@ -9,7 +9,7 @@ import (
 	"net"
 )
 
-// connection TODO add band meter for connection
+// connection TODO add bandwidth meter for connection
 type connection struct {
 	fd net.Conn // tcp connection
 	//node *discovery.Node // remote peer that this peer connects
