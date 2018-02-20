@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -62,7 +63,33 @@ func (p *myProtocol) sendMyMessage() {
 	}
 }
 
+type Config struct {
+	P2PConfig    p2p.Config
+	RemoteNodeID string // optional. peer node
+	RemoteAddr   string // optional, format 182.87.223.29:39008
+}
+
 func main() {
+	var config *Config = new(Config)
+	_, err := toml.DecodeFile("test.toml", config)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// no config check
+	myServer := &p2p.Server{
+		Config: config.P2PConfig,
+	}
+
+	if config.RemoteNodeID == "" {
+		fmt.Println("No remote peer configed, so is a static peer")
+	} else {
+		nodeIDPeer := common.HexToAddress(config.RemoteNodeID)
+		addrPeer, _ := net.ResolveUDPAddr("udp4", config.RemoteAddr)
+		nodeObjPeer := discovery.NewNodeWithAddr(nodeIDPeer, addrPeer)
+		myServer.StaticNodes = append(myServer.StaticNodes, nodeObjPeer)
+	}
+
 	my1 := &myProtocol{
 		Protocol: p2p.Protocol{
 			Name: "test",
@@ -73,47 +100,10 @@ func main() {
 			ReadMsgCh: make(chan *p2p.Message),
 		},
 	}
-
-	var intFaceL []p2p.ProtocolInterface
-	intFaceL = append(intFaceL, my1)
-	//	fmt.Println(my1.proto)
-
-	node29 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901201"
-	node01 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901200"
-
-	myType := 1
-	//var myServer p2p.Server
-	if myType == 1 {
-		//slice29, _ := hexutil.HexToBytes(node29)
-		//fmt.Println(slice29)
-		nodeID29 := common.HexToAddress(node29)
-		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39008")
-		nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
-
-		myServer := &p2p.Server{
-			Config: p2p.Config{
-				Name:       "test11",
-				ListenAddr: "0.0.0.0:39008",
-				KadPort:    "39008",
-				MyNodeID:   node01,
-			},
-		}
-
-		myServer.StaticNodes = append(myServer.StaticNodes, nodeObj29)
-		myServer.Protocols = append(myServer.Protocols, my1)
-		myServer.Start()
-	} else {
-		myServer := &p2p.Server{
-			Config: p2p.Config{
-				Name:       "test29",
-				ListenAddr: "0.0.0.0:39008",
-				KadPort:    "39008",
-				MyNodeID:   node29,
-			},
-		}
-		myServer.Protocols = append(myServer.Protocols, my1)
-		myServer.Start()
+	myServer.Protocols = append(myServer.Protocols, my1)
+	myServer.Start()
+	for {
+		time.Sleep(10 * time.Second)
 	}
-
-	time.Sleep(600 * time.Second)
+	//time.Sleep(600 * time.Second)
 }

@@ -42,7 +42,7 @@ const (
 // Config holds Server options.
 type Config struct {
 	// Use common.MakeName to create a name that follows existing conventions.
-	Name string `toml:"-"`
+	Name string //`toml:"-"`
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -141,12 +141,14 @@ running:
 			break running
 		case c := <-srv.addpeer:
 			_, ok := peers[c.node.ID]
-			srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d", len(peers))
+
 			if ok {
 				// node already connected, need close this connection
+				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d. nodeid already connected", len(peers))
 				c.Disconnect(discAlreadyConnected)
 			} else {
 				peers[c.node.ID] = c
+				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
 			}
 		case pd := <-srv.delpeer:
 			curPeer, ok := peers[pd.node.ID]

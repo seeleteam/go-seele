@@ -165,7 +165,7 @@ func (p *Peer) SendMsg(proto *Protocol, msgCode uint16, message interface{}) err
 	if !ok {
 		return errors.New("Not Found protoCode")
 	}
-	fmt.Println("SendMsg called", msgCode)
+	//fmt.Println("SendMsg called", msgCode)
 	payload, err := common.Serialize(message)
 	if err != nil {
 		return errors.New("SendMsg yet message is not valid")
