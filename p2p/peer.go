@@ -10,10 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
@@ -26,7 +26,7 @@ const (
 
 // Peer represents a connected remote node.
 type Peer struct {
-	conn     net.Conn        // tcp connection
+	conn     *connection     // tcp connection
 	node     *discovery.Node // remote peer that this peer connects
 	created  uint64          // Peer create time, nanosecond
 	err      error
@@ -40,6 +40,7 @@ type Peer struct {
 	log    *log.SeeleLog
 }
 
+// run assumes that SubProtocol will never quit, otherwise proto.DelPeerCh may be closed before peer.run quits?
 func (p *Peer) run() {
 	// add peer to protocols
 	var (
@@ -67,6 +68,7 @@ loop:
 				break loop
 			}
 		case err = <-readErr:
+			p.log.Info("p2p.peer.run read err? %s", err)
 			p.err = err
 			break loop
 		case <-p.disc:
@@ -75,15 +77,19 @@ loop:
 		}
 	}
 
-	close(p.closed)
-	p.conn.Close()
-	close(p.disc)
+	p.close()
 	p.wg.Wait()
 	// send delpeer message for each protocols
 	for _, proto := range p.protoMap {
 		proto.DelPeerCh <- p
 	}
 	p.log.Info("p2p.peer.run quit. err=%s", p.err)
+}
+
+func (p *Peer) close() {
+	close(p.closed)
+	p.conn.fd.Close()
+	close(p.disc)
 }
 
 func (p *Peer) pingLoop() {
@@ -119,8 +125,21 @@ func (p *Peer) readLoop(errc chan<- error) {
 func (p *Peer) handle(msgRecv *msg) error {
 	proto, ok := p.protoMap[msgRecv.protoCode]
 	if ok {
+		/*var dataMsg interface{}
+		if msgRecv.payload != nil {
+			if err := common.Deserialize(msgRecv.payload, dataMsg); err != nil {
+				p.log.Info("peer.handle err, %s", err)
+				return nil
+			}
+		}*/
+		msgTo := &Message{
+			MsgCode:    msgRecv.msgCode,
+			ReceivedAt: time.Now(),
+			CurPeer:    p,
+			Payload:    msgRecv.payload,
+		}
 		select {
-		case proto.ReadMsgCh <- &(msgRecv.Message):
+		case proto.ReadMsgCh <- msgTo:
 			return nil
 		case <-p.closed:
 			return io.EOF
@@ -134,21 +153,30 @@ func (p *Peer) handle(msgRecv *msg) error {
 	switch {
 	case msgRecv.msgCode == ctlMsgPingCode:
 		go p.sendCtlMsg(ctlMsgPongCode)
+	case msgRecv.msgCode == ctlMsgPongCode:
+		p.log.Debug("peer handle Ping msg.")
+		return nil
 	case msgRecv.msgCode == ctlMsgDiscCode:
 		return fmt.Errorf("error=%d", ctlMsgDiscCode)
 	}
 	return nil
 }
 
-// SendMsg called by protocols
-func (p *Peer) SendMsg(proto *Protocol, msgSend *Message) error {
+// SendMsg called by subProtocols, message can be any data type
+func (p *Peer) SendMsg(proto *Protocol, msgCode uint16, message interface{}) error {
 	protoCode, ok := p.capMap[proto.cap().String()]
 	if !ok {
 		return errors.New("Not Found protoCode")
 	}
+	payload, err := common.Serialize(message)
+	if err != nil {
+		return err
+	}
 	msgRaw := &msg{
 		protoCode: protoCode,
-		Message:   *msgSend,
+		msgCode:   msgCode,
+		size:      uint32(len(payload)),
+		payload:   payload,
 	}
 	return p.sendRawMsg(msgRaw)
 }
@@ -156,9 +184,7 @@ func (p *Peer) SendMsg(proto *Protocol, msgSend *Message) error {
 func (p *Peer) sendCtlMsg(msgCode uint16) error {
 	hsMsg := &msg{
 		protoCode: ctlProtoCode,
-		Message: Message{
-			msgCode: msgCode,
-		},
+		msgCode:   msgCode,
 	}
 	hsMsg.size = 0
 	p.sendRawMsg(hsMsg)
@@ -172,15 +198,20 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 	binary.BigEndian.PutUint32(b[:4], msgSend.size)
 	binary.BigEndian.PutUint16(b[4:6], msgSend.protoCode)
 	binary.BigEndian.PutUint16(b[6:8], msgSend.msgCode)
-	p.conn.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
+	p.conn.fd.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
 
-	_, err := p.conn.Write(b)
+	_, err := p.conn.fd.Write(b)
 	if err != nil {
+		p.log.Debug("sendRawMsg write err. %s", err)
 		return err
 	}
-	_, err = p.conn.Write(msgSend.payload)
-	if err != nil {
-		return err
+
+	if msgSend.size > 0 {
+		_, err = p.conn.fd.Write(msgSend.payload)
+		if err != nil {
+			p.log.Debug("sendRawMsg write payload err. %s", err)
+			return err
+		}
 	}
 	p.log.Debug("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
 	return nil
@@ -188,26 +219,22 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 
 func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	headbuf := make([]byte, 8)
-	p.conn.SetReadDeadline(time.Now().Add(frameReadTimeout))
-	_, err1 := io.ReadFull(p.conn, headbuf)
-
-	if err1 != nil {
-		return nil, err1
-	}
-	msgRecv = &msg{
-		protoCode: binary.BigEndian.Uint16(headbuf[4:6]),
-		Message: Message{
-			size:    binary.BigEndian.Uint32(headbuf[:4]),
-			msgCode: binary.BigEndian.Uint16(headbuf[6:8]),
-		},
-	}
-
-	msgRecv.payload = make([]byte, msgRecv.size)
-	if _, err := io.ReadFull(p.conn, msgRecv.payload); err != nil {
+	if err = p.conn.readFull(headbuf); err != nil {
 		return nil, err
 	}
-	msgRecv.ReceivedAt = time.Now()
-	msgRecv.CurPeer = p
+
+	msgRecv = &msg{
+		protoCode: binary.BigEndian.Uint16(headbuf[4:6]),
+		size:      binary.BigEndian.Uint32(headbuf[:4]),
+		msgCode:   binary.BigEndian.Uint16(headbuf[6:8]),
+	}
+	if msgRecv.size > 0 {
+		msgRecv.payload = make([]byte, msgRecv.size)
+		if err = p.conn.readFull(msgRecv.payload); err != nil {
+			return nil, err
+		}
+	}
+
 	p.log.Debug("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
 	return msgRecv, nil
 }

@@ -18,25 +18,26 @@ const (
 	ctlMsgPongCode       uint16 = 4
 )
 
-// Message exposed for high level layer to call
+// Message exposed for high level layer to receive
 type Message struct {
-	msgCode    uint16 // message code, defined in each protocol
-	size       uint32 // size of the paylod
-	payload    []byte
+	MsgCode    uint16 // message code, defined in each protocol
+	Payload    []byte
 	ReceivedAt time.Time
 	CurPeer    *Peer // peer that handle this message
 }
 
 // msg wrapped Message, used in p2p layer
 type msg struct {
-	Message
 	protoCode uint16
+	msgCode   uint16
+	size      uint32
+	payload   []byte
 }
 
-// protoHandShake handshake message for two peer to exchage base information
+// ProtoHandShake handshake message for two peer to exchage base information
 // TODO add public key or other information for encryption?
-type protoHandShake struct {
-	caps   []Cap
-	nodeID discovery.NodeID
-	nounce uint32 //
+type ProtoHandShake struct {
+	Caps   []Cap
+	NodeID discovery.NodeID
+	Nounce uint32 //
 }

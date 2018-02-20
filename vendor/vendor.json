@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "rcoUTEGR7KVr963l6P1rlMaYCzA=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "a368813c5e648fee92e5f6c30e3944ff9d5e8895",
+			"revisionTime": "2017-06-26T11:06:00Z"
+		},
+		{
 			"checksumSHA1": "YdWmkLgfIqoZgQA0bWB71jCizpc=",
 			"path": "github.com/aristanetworks/goarista/monotime",
 			"revision": "bdff49616af24181f3b83535ed73127c615ba55a",
