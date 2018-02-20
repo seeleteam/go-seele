@@ -153,6 +153,9 @@ func (p *Peer) handle(msgRecv *msg) error {
 	switch {
 	case msgRecv.msgCode == ctlMsgPingCode:
 		go p.sendCtlMsg(ctlMsgPongCode)
+	case msgRecv.msgCode == ctlMsgPongCode:
+		p.log.Debug("peer handle Ping msg.")
+		return nil
 	case msgRecv.msgCode == ctlMsgDiscCode:
 		return fmt.Errorf("error=%d", ctlMsgDiscCode)
 	}
@@ -165,7 +168,6 @@ func (p *Peer) SendMsg(proto *Protocol, msgCode uint16, message interface{}) err
 	if !ok {
 		return errors.New("Not Found protoCode")
 	}
-	//fmt.Println("SendMsg called", msgCode)
 	payload, err := common.Serialize(message)
 	if err != nil {
 		return err
@@ -200,12 +202,14 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 
 	_, err := p.conn.fd.Write(b)
 	if err != nil {
+		p.log.Debug("sendRawMsg write err. %s", err)
 		return err
 	}
 
 	if msgSend.size > 0 {
 		_, err = p.conn.fd.Write(msgSend.payload)
 		if err != nil {
+			p.log.Debug("sendRawMsg write payload err. %s", err)
 			return err
 		}
 	}
@@ -215,12 +219,10 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 
 func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	headbuf := make([]byte, 8)
-	p.conn.fd.SetReadDeadline(time.Now().Add(frameReadTimeout))
-	_, err1 := io.ReadFull(p.conn.fd, headbuf)
-
-	if err1 != nil {
-		return nil, err1
+	if err = p.conn.readFull(headbuf); err != nil {
+		return nil, err
 	}
+
 	msgRecv = &msg{
 		protoCode: binary.BigEndian.Uint16(headbuf[4:6]),
 		size:      binary.BigEndian.Uint32(headbuf[:4]),
@@ -228,12 +230,11 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 	}
 	if msgRecv.size > 0 {
 		msgRecv.payload = make([]byte, msgRecv.size)
-		if _, err := io.ReadFull(p.conn.fd, msgRecv.payload); err != nil {
+		if err = p.conn.readFull(msgRecv.payload); err != nil {
 			return nil, err
 		}
 	}
-	//	msgRecv.ReceivedAt = time.Now()
-	//	msgRecv.CurPeer = p
+
 	p.log.Debug("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
 	return msgRecv, nil
 }

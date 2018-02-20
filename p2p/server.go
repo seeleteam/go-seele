@@ -155,6 +155,7 @@ running:
 			} else {
 				peers[c.node.ID] = c
 				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
+				srv.log.Info("server.run  <-srv.addpeer ", c.node.ID)
 			}
 		case pd := <-srv.delpeer:
 			curPeer, ok := peers[pd.node.ID]
@@ -188,6 +189,10 @@ func (srv *Server) scheduleTasks() {
 		if ok {
 			continue
 		}
+		/*fmt.Println("\tscheduleTasks, curNode=", node.ID)
+		for _, p := range srv.peers {
+			fmt.Println("\tpeer's node = ", p.node.ID)
+		}*/
 		//TODO UDPPort==> TCPPort
 		addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
 		conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
@@ -267,6 +272,7 @@ func (srv *Server) listenLoop() {
 			break
 		}
 		go func() {
+			srv.log.Info("Accept new connection from, %s", fd.RemoteAddr())
 			srv.setupConn(fd, inboundConn, nil)
 			slots <- struct{}{}
 		}()
@@ -348,6 +354,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			peer.close()
 			return errors.New("not found nodeID in discovery database!")
 		}
+		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID)
 		peer.node = peerNode
 	}
 

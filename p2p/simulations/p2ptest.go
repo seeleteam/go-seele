@@ -19,12 +19,11 @@ import (
 
 type myProtocol struct {
 	p2p.Protocol
-	proto int
-	peers map[*p2p.Peer]bool
+	peers map[*p2p.Peer]bool // for test
 }
 
 func (p *myProtocol) Run() {
-	fmt.Println("myProtocol Running...", p.proto)
+	fmt.Println("myProtocol Running...")
 	p.peers = make(map[*p2p.Peer]bool)
 	//	var peer *p2p.Peer
 	//	var message *p2p.Message
