@@ -1,3 +1,3 @@
 discovery:
-	go build .\cmd\discovery
+	go build ./cmd/discovery
 	@echo "Done discovery building"
