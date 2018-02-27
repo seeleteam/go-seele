@@ -22,7 +22,7 @@ func Test_LevelDB(t *testing.T) {
 
 	defer os.RemoveAll(dir)
 
-	db, err := NewLeveDB(dir)
+	db, err := NewLevelDB(dir)
 	assert.Equal(t, err, nil)
 	defer db.Close()
 
