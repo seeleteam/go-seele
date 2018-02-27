@@ -27,7 +27,7 @@ func NewLevelDB(path string) (*levelDB, error)  {
 }
 
 // Close don't forget close db when not use
-func (db *levelDB) Close()  {
+func (db *levelDB) Close() {
 	db.db.Close()
 }
 
