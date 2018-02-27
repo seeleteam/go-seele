@@ -6,11 +6,12 @@
 package leveldb
 
 import (
-	"github.com/magiconair/properties/assert"
-	"github.com/syndtr/goleveldb/leveldb"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func Test_LevelDB(t *testing.T) {
@@ -25,6 +26,7 @@ func Test_LevelDB(t *testing.T) {
 	assert.Equal(t, err, nil)
 	defer db.Close()
 
+	// check insert and get
 	err = db.PutString("1", "2")
 	assert.Equal(t, err, nil)
 
