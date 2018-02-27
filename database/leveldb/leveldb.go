@@ -13,7 +13,7 @@ type levelDB struct{
 	db *leveldb.DB
 }
 
-func NewLeveDB(path string) (*levelDB, error)  {
+func NewLevelDB(path string) (*levelDB, error)  {
 	db, err := leveldb.OpenFile(path, nil)
 	if err != nil {
 		return nil, err
