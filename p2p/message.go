@@ -39,5 +39,4 @@ type msg struct {
 type ProtoHandShake struct {
 	Caps   []Cap
 	NodeID discovery.NodeID
-	Nounce uint32 //
 }
