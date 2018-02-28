@@ -149,7 +149,6 @@ func main() {
 	for {
 		time.Sleep(10 * time.Second)
 	}
-	//time.Sleep(600 * time.Second)
 }
 
 /*

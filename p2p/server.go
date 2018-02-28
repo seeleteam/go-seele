@@ -8,12 +8,10 @@ package p2p
 import (
 	"bytes"
 	"crypto/md5"
-	//"crypto/ecdsa"
 
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -28,7 +26,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	//"github.com/ethereum/go-ethereum/p2p/discover"
 )
 
 const (
@@ -126,10 +123,7 @@ func (srv *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
-
-	buff := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
-	srv.MyNodeID = "0x" + hex.EncodeToString(buff[1:])
-
+	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%s", srv.KadPort))
 	if err != nil {
 		return err
@@ -230,8 +224,9 @@ func (srv *Server) scheduleTasks() {
 			continue
 		}
 		go func() {
-			err := srv.setupConn(conn, outboundConn, node)
-			srv.log.Info("scheduleTasks. setupConn. %s", err)
+			if err := srv.setupConn(conn, outboundConn, node); err != nil {
+				srv.log.Info("scheduleTasks. setupConn called err returns. err=%s", err)
+			}
 		}()
 	}
 }
@@ -293,7 +288,7 @@ func (srv *Server) listenLoop() {
 	}
 }
 
-// setupConn. Confirm both side are valid peers, have protocols supported by each other
+// setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	peer := &Peer{
@@ -312,62 +307,10 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		caps = append(caps, proto.GetBaseProtocol().cap())
 	}
 
-	handshakeMsg := &ProtoHandShake{Caps: caps}
-	nodeID := common.HexToAddress(srv.MyNodeID)
-	copy(handshakeMsg.NodeID[0:], nodeID[0:])
-
-	var nounceCnt, nounceSvr uint64
-	var recvMsg *ProtoHandShake
-	if flags == outboundConn {
-		// Client side. Send msg first
-		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt, nounceSvr)
-		if err != nil {
-			peer.close()
-			return err
-		}
-
-		if err = peer.sendRawMsg(wrapMsg); err != nil {
-			peer.close()
-			return err
-		}
-
-		recvWrapMsg, err := peer.recvRawMsg()
-		if err != nil {
-			peer.close()
-			return err
-		}
-
-		recvMsg, _, nounceSvr, err = srv.unPackWrapHSMsg(recvWrapMsg)
-		if err != nil {
-			peer.close()
-			return err
-		}
-	} else {
-		// server side. Recv handshake msg first
-		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
-		recvWrapMsg, err := peer.recvRawMsg()
-		if err != nil {
-			peer.close()
-			return err
-		}
-
-		recvMsg, nounceCnt, _, err = srv.unPackWrapHSMsg(recvWrapMsg)
-		if err != nil {
-			peer.close()
-			return err
-		}
-
-		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
-		if err != nil {
-			peer.close()
-			return err
-		}
-
-		if err = peer.sendRawMsg(wrapMsg); err != nil {
-			peer.close()
-			return err
-		}
+	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
+	if err != nil {
+		peer.close()
+		return err
 	}
 
 	peerCaps, peerNodeID := recvMsg.Caps, recvMsg.NodeID
@@ -408,6 +351,58 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}()
 
 	return nil
+}
+
+// doHandShake Communicate each other
+func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+	handshakeMsg := &ProtoHandShake{Caps: caps}
+	nodeID := common.HexToAddress(srv.MyNodeID)
+	copy(handshakeMsg.NodeID[0:], nodeID[0:])
+
+	if flags == outboundConn {
+		// client side. Send msg first
+		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt, nounceSvr)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		if err = peer.sendRawMsg(wrapMsg); err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvWrapMsg, err := peer.recvRawMsg()
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvMsg, _, nounceSvr, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+	} else {
+		// server side. Recv handshake msg first
+		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
+		recvWrapMsg, err := peer.recvRawMsg()
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvMsg, nounceCnt, _, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		if err = peer.sendRawMsg(wrapMsg); err != nil {
+			return nil, 0, 0, err
+		}
+	}
+	return
 }
 
 // packWrapHSMsg compose the wrapped send msg.
@@ -461,7 +456,7 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 
 // unPackWrapHSMsg verify recved msg, and recover the handshake msg
 func (srv *Server) unPackWrapHSMsg(recvWrapMsg *msg) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
-	if recvWrapMsg.size < recvWrapMsg.size+4 {
+	if recvWrapMsg.size < hsExtraDataLen+4 {
 		err = errors.New("recved err msg")
 		return
 	}

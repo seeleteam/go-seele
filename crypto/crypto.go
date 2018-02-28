@@ -18,6 +18,10 @@ import (
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 )
 
+const (
+	ecdsaPublickKeyPrefix byte = 4
+)
+
 // Signature is a wrapper for signed message and signer public key.
 type Signature struct {
 	pubKey *ecdsa.PublicKey
@@ -46,20 +50,32 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(S256(), rand.Reader)
 }
 
-// ToECDSAPub create ecdsa.PublicKey object by byte array. If pub length equals 64, then need inserts one byte in front
+// ToECDSAPub create ecdsa.PublicKey object by byte array.
+// Pubkey length derived from ecdsa is 65, with constant prefix 4 in the first byte.
+// So if pubkey length equals 64, we insert one byte in front
 func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 	if len(pub) == 0 {
 		return nil
 	}
+
+	var pubNew []byte
+
 	if len(pub) == 65 {
-		x, y := elliptic.Unmarshal(S256(), pub)
-		return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
+		pubNew = pub
+	} else {
+		pubNew = make([]byte, 65)
+		pubNew[0] = ecdsaPublickKeyPrefix
+		copy(pubNew[1:], pub[0:])
 	}
-	pubNew := make([]byte, 65)
-	pubNew[0] = 4
-	copy(pubNew[1:], pub)
 	x, y := elliptic.Unmarshal(S256(), pubNew)
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
+}
+
+// PubkeyToString returns string of public key, prefix with 0x
+func PubkeyToString(pub *ecdsa.PublicKey) (pubStr string) {
+	buff := FromECDSAPub(pub)
+	pubStr = "0x" + hex.EncodeToString(buff[1:])
+	return
 }
 
 func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
