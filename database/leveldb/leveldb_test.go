@@ -34,8 +34,34 @@ func Test_LevelDB(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, value, "2")
 
+	// check whether key exists
+	exist, err := db.HasString("1")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, exist, true)
+
+	// check update and get
+	err = db.PutString("1", "3")
+	assert.Equal(t, err, nil)
+
+	value, err = db.GetString("1")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, value, "3")
+
+	// delete key
+	err = db.DeleteSring("1")
+	assert.Equal(t, err, nil)
+
 	// check not found
 	value, err = db.GetString("3")
 	assert.Equal(t, err, leveldb.ErrNotFound)
 	assert.Equal(t, value, "")
+
+	// empty set
+	exist, err = db.HasString("1")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, exist, false)
+
+	exist, err = db.HasString("3")
+	assert.Equal(t, err, nil)
+	assert.Equal(t, exist, false)
 }
