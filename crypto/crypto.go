@@ -9,9 +9,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 )
 
@@ -43,11 +46,19 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(S256(), rand.Reader)
 }
 
+// ToECDSAPub create ecdsa.PublicKey object by byte array. If pub length equals 64, then need inserts one byte in front
 func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 	if len(pub) == 0 {
 		return nil
 	}
-	x, y := elliptic.Unmarshal(S256(), pub)
+	if len(pub) == 65 {
+		x, y := elliptic.Unmarshal(S256(), pub)
+		return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
+	}
+	pubNew := make([]byte, 65)
+	pubNew[0] = 4
+	copy(pubNew[1:], pub)
+	x, y := elliptic.Unmarshal(S256(), pubNew)
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}
 }
 
@@ -61,4 +72,47 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 // S256 returns an instance of the secp256k1 curve.
 func S256() elliptic.Curve {
 	return secp256k1.S256()
+}
+
+// LoadECDSAFromString create ecdsa privatekey from string
+// ecStr should start with 0x or 0X
+func LoadECDSAFromString(ecStr string) (*ecdsa.PrivateKey, error) {
+	if len(ecStr) >= 2 && ecStr[0] == '0' && (ecStr[1] == 'x' || ecStr[1] == 'X') {
+		key, err := hex.DecodeString(ecStr[2:])
+		if err != nil {
+			return nil, err
+		}
+		return ToECDSA(key)
+	}
+	return nil, errors.New("Input string not a valid ecdsa string")
+}
+
+// ToECDSA creates a private key with the given D value.
+func ToECDSA(d []byte) (*ecdsa.PrivateKey, error) {
+	return toECDSA(d, true)
+}
+
+// toECDSA creates a private key with the given D value. The strict parameter
+// controls whether the key's length should be enforced at the curve size or
+// it can also accept legacy encodings (0 prefixes).
+func toECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = S256()
+	if strict && 8*len(d) != priv.Params().BitSize {
+		return nil, fmt.Errorf("invalid length, need %d bits", priv.Params().BitSize)
+	}
+	priv.D = new(big.Int).SetBytes(d)
+	priv.PublicKey.X, priv.PublicKey.Y = priv.PublicKey.Curve.ScalarBaseMult(d)
+	if priv.PublicKey.X == nil {
+		return nil, errors.New("invalid private key")
+	}
+	return priv, nil
+}
+
+// FromECDSA exports a private key into a binary dump.
+func FromECDSA(priv *ecdsa.PrivateKey) []byte {
+	if priv == nil {
+		return nil
+	}
+	return math.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
 }
