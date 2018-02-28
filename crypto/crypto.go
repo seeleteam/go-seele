@@ -15,6 +15,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 )
 
@@ -90,14 +91,10 @@ func S256() elliptic.Curve {
 	return secp256k1.S256()
 }
 
-func has0xPrefix(input string) bool {
-	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
-}
-
 // LoadECDSAFromString create ecdsa privatekey from string
 // ecStr should start with 0x or 0X
 func LoadECDSAFromString(ecStr string) (*ecdsa.PrivateKey, error) {
-	if !has0xPrefix(ecStr) {
+	if !hexutil.Has0xPrefix(ecStr) {
 		return nil, errors.New("Input string not a valid ecdsa string")
 	}
 	key, err := hex.DecodeString(ecStr[2:])
