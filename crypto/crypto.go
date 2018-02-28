@@ -90,17 +90,21 @@ func S256() elliptic.Curve {
 	return secp256k1.S256()
 }
 
+func has0xPrefix(input string) bool {
+	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+
 // LoadECDSAFromString create ecdsa privatekey from string
 // ecStr should start with 0x or 0X
 func LoadECDSAFromString(ecStr string) (*ecdsa.PrivateKey, error) {
-	if len(ecStr) >= 2 && ecStr[0] == '0' && (ecStr[1] == 'x' || ecStr[1] == 'X') {
-		key, err := hex.DecodeString(ecStr[2:])
-		if err != nil {
-			return nil, err
-		}
-		return ToECDSA(key)
+	if !has0xPrefix(ecStr) {
+		return nil, errors.New("Input string not a valid ecdsa string")
 	}
-	return nil, errors.New("Input string not a valid ecdsa string")
+	key, err := hex.DecodeString(ecStr[2:])
+	if err != nil {
+		return nil, err
+	}
+	return ToECDSA(key)
 }
 
 // ToECDSA creates a private key with the given D value.
