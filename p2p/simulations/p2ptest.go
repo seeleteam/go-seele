@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -18,27 +19,33 @@ import (
 
 type myProtocol struct {
 	p2p.Protocol
-	proto int
+	peers map[*p2p.Peer]bool // for test
 }
 
 func (p *myProtocol) Run() {
-	fmt.Println("myProtocol Running...", p.proto)
+	fmt.Println("myProtocol Running...")
+	p.peers = make(map[*p2p.Peer]bool)
 	//	var peer *p2p.Peer
 	//	var message *p2p.Message
 	ping := time.NewTimer(5 * time.Second)
-loop:
+
 	for {
 		select {
 		case peer := <-p.AddPeerCh:
-			fmt.Println("myProtocol new peer", peer)
+
+			p.peers[peer] = true
+			fmt.Println("myProtocol add new peer. peers=", len(p.peers))
 		case peer := <-p.DelPeerCh:
-			fmt.Println("myProtocol del peer", peer)
+			fmt.Println("myProtocol del peer")
+			// need del from peers
+			delete(p.peers, peer)
+			fmt.Println("myProtocol del peer. peers=", len(p.peers))
 		case message := <-p.ReadMsgCh:
 			fmt.Println("myProtocol readmsg", message)
-			break loop
 		case <-ping.C:
 			//p.SendM
-			//fmt.Println("myProtocol ping.C")
+			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
+			p.sendMyMessage()
 			ping.Reset(3 * time.Second)
 		}
 	}
@@ -49,7 +56,39 @@ func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 	return &(p.Protocol)
 }
 
+func (p *myProtocol) sendMyMessage() {
+	for peer, _ := range p.peers {
+		peer.SendMsg(&p.Protocol, 100, []interface{}{"Hello", "world"})
+	}
+}
+
+type Config struct {
+	P2PConfig    p2p.Config
+	RemoteNodeID string // optional. peer node
+	RemoteAddr   string // optional, format 182.87.223.29:39008
+}
+
 func main() {
+	var config *Config = new(Config)
+	_, err := toml.DecodeFile("test.toml", config)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// no config check
+	myServer := &p2p.Server{
+		Config: config.P2PConfig,
+	}
+
+	if config.RemoteNodeID == "" {
+		fmt.Println("No remote peer configed, so is a static peer")
+	} else {
+		nodeIDPeer := common.HexToAddress(config.RemoteNodeID)
+		addrPeer, _ := net.ResolveUDPAddr("udp4", config.RemoteAddr)
+		nodeObjPeer := discovery.NewNodeWithAddr(nodeIDPeer, addrPeer)
+		myServer.StaticNodes = append(myServer.StaticNodes, nodeObjPeer)
+	}
+
 	my1 := &myProtocol{
 		Protocol: p2p.Protocol{
 			Name: "test",
@@ -60,48 +99,10 @@ func main() {
 			ReadMsgCh: make(chan *p2p.Message),
 		},
 	}
-
-	var intFaceL []p2p.ProtocolInterface
-
-	intFaceL = append(intFaceL, my1)
-	//	fmt.Println(my1.proto)
-
-	node29 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901201"
-	node01 := "0x12345678901234567890123456789012345678901234567890123456789012341234567890123456789012345678901234567890123456789012345678901200"
-
-	myType := 1
-	//var myServer p2p.Server
-	if myType == 1 {
-		//slice29, _ := hexutil.HexToBytes(node29)
-		//fmt.Println(slice29)
-		nodeID29 := common.HexToAddress(node29)
-		addr29, _ := net.ResolveUDPAddr("udp4", "182.87.223.29:39009")
-		nodeObj29 := discovery.NewNodeWithAddr(nodeID29, addr29)
-
-		myServer := &p2p.Server{
-			Config: p2p.Config{
-				Name:       "test11",
-				ListenAddr: "0.0.0.0:39009",
-				KadPort:    "39009",
-				MyNodeID:   node01,
-			},
-		}
-
-		myServer.StaticNodes = append(myServer.StaticNodes, nodeObj29)
-		myServer.Protocols = append(myServer.Protocols, my1)
-		myServer.Start()
-	} else {
-		myServer := &p2p.Server{
-			Config: p2p.Config{
-				Name:       "test29",
-				ListenAddr: "0.0.0.0:39009",
-				KadPort:    "39009",
-				MyNodeID:   node29,
-			},
-		}
-		myServer.Protocols = append(myServer.Protocols, my1)
-		myServer.Start()
+	myServer.Protocols = append(myServer.Protocols, my1)
+	myServer.Start()
+	for {
+		time.Sleep(10 * time.Second)
 	}
-
-	time.Sleep(600 * time.Second)
+	//time.Sleep(600 * time.Second)
 }
