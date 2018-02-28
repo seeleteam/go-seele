@@ -48,3 +48,19 @@ func (db *levelDB) Put(key []byte, value []byte) error {
 func (db *levelDB) PutString(key string, value string) error {
 	return db.Put([]byte(key), []byte(value))
 }
+
+func (db *levelDB) Has(key []byte) (ret bool, err error) {
+	return db.db.Has(key, nil)
+}
+
+func (db *levelDB) HasString(key string) (ret bool, err error) {
+	return db.db.Has([]byte(key), nil)
+}
+
+func (db *levelDB) Delete(key []byte) error {
+	return db.db.Delete(key, nil)
+}
+
+func (db *levelDB) DeleteSring(key string) error {
+	return db.db.Delete([]byte(key), nil)
+}
