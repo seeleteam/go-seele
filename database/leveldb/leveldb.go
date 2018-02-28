@@ -54,7 +54,7 @@ func (db *levelDB) Has(key []byte) (ret bool, err error) {
 }
 
 func (db *levelDB) HasString(key string) (ret bool, err error) {
-	return db.db.Has([]byte(key), nil)
+	return db.Has([]byte(key))
 }
 
 func (db *levelDB) Delete(key []byte) error {
@@ -62,5 +62,5 @@ func (db *levelDB) Delete(key []byte) error {
 }
 
 func (db *levelDB) DeleteSring(key string) error {
-	return db.db.Delete([]byte(key), nil)
+	return db.Delete([]byte(key))
 }
