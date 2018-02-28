@@ -20,7 +20,6 @@ var (
 
 // Node is a container for registering services.
 type Node struct {
-	config       *Config
 	serverConfig p2p.Config
 	server       *p2p.Server
 
