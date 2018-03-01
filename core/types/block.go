@@ -2,6 +2,7 @@
 * @file
 * @copyright defined in go-seele/LICENSE
  */
+
 package types
 
 import (
@@ -34,12 +35,16 @@ func (header *BlockHeader) Clone() *BlockHeader {
 		clone.Height.Set(header.Height)
 	}
 
+	if clone.CreateTimestamp = new(big.Int); header.CreateTimestamp != nil {
+		clone.CreateTimestamp.Set(header.CreateTimestamp)
+	}
+
 	return &clone
 }
 
 // Block represents a block in the blockchain.
 type Block struct {
-	HeaderHash   common.Hash
+	HeaderHash   common.Hash // Hash on RLP encoded header bytes.
 	Header       *BlockHeader
 	Transactions []*Transaction
 }
@@ -63,7 +68,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	}
 
 	// Calculate the block header hash.
-	headerBytes := rlpEncode(block.Header)
+	headerBytes := common.SerializePanic(block.Header)
 	block.HeaderHash = common.BytesToHash(crypto.Keccak256Hash(headerBytes))
 
 	return block

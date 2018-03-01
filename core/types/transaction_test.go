@@ -2,6 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package types
 
 import (
@@ -87,7 +88,7 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 
 	// Change amount and update Hash in transaction.
 	tx.Data.Amount.SetInt64(200)
-	txDataBytes := rlpEncode(tx.Data)
+	txDataBytes := common.SerializePanic(tx.Data)
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
 	tx.Hash = common.BytesToHash(txDataHash)
 

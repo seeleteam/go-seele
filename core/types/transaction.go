@@ -2,6 +2,7 @@
 * @file
 * @copyright defined in go-seele/LICENSE
  */
+
 package types
 
 import (
@@ -10,7 +11,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -48,25 +48,15 @@ func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Tra
 		AccountNonce: nonce,
 	}
 
-	txDataBytes := rlpEncode(txData)
+	txDataBytes := common.SerializePanic(txData)
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
 
 	return &Transaction{common.BytesToHash(txDataHash), txData, nil}
 }
 
-// rlpEncode encodes the v using RLP and panics on error.
-func rlpEncode(v interface{}) []byte {
-	bytes, err := rlp.EncodeToBytes(v)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes
-}
-
 // Sign signs the transaction with private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
-	txDataBytes := rlpEncode(tx.Data)
+	txDataBytes := common.SerializePanic(tx.Data)
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
 
 	tx.Hash = common.BytesToHash(txDataHash)
@@ -80,7 +70,7 @@ func (tx *Transaction) Validate() error {
 		return errSigMissed
 	}
 
-	txDataBytes := rlpEncode(tx.Data)
+	txDataBytes := common.SerializePanic(tx.Data)
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
 	if !bytes.Equal(txDataHash, tx.Hash.Bytes()) {
 		return errHashMismatch
@@ -99,7 +89,7 @@ func txsTrieSum(txs []*Transaction) common.Hash {
 	txsBytes := make([][]byte, len(txs))
 
 	for i, tx := range txs {
-		txsBytes[i] = rlpEncode(tx.Data)
+		txsBytes[i] = common.SerializePanic(tx.Data)
 	}
 
 	return common.BytesToHash(crypto.Keccak256Hash(txsBytes...))
