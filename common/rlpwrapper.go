@@ -21,3 +21,14 @@ func Deserialize(data []byte, value interface{}) error {
 func Serialize(in interface{}) ([]byte, error) {
 	return rlp.EncodeToBytes(in)
 }
+
+// SerializePanic serialize the input data to byte array.
+// Panics on error, e.g. unsupported data type for RLP encoding.
+func SerializePanic(in interface{}) []byte {
+	bytes, err := Serialize(in)
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes
+}

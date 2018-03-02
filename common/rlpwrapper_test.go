@@ -76,3 +76,18 @@ func Test_Json(t *testing.T) {
 
 	fmt.Println(string(buff))
 }
+
+// Panics when serialize unsupported data.
+func Test_SerializePanic(t *testing.T) {
+	type student struct {
+		Score int64
+	}
+
+	_, expectedErr := Serialize(&student{1})
+
+	defer func() {
+		assert.Equal(t, recover(), expectedErr)
+	}()
+
+	SerializePanic(&student{1})
+}
