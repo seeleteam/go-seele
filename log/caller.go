@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	depth = 9
+	depth = 9 // Once log invocation stack changed, depth need to change as well.
 )
 
-// CallerHook  a caller hook of logrus
+// CallerHook a caller hook of logrus
 type CallerHook struct {
 }
 
@@ -25,20 +25,14 @@ func (hook *CallerHook) Fire(entry *logrus.Entry) error {
 
 // Levels returns support levels
 func (hook *CallerHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-		logrus.DebugLevel,
-	}
+	return logrus.AllLevels
 }
 
 func (hook *CallerHook) caller() string {
 	if _, file, line, ok := runtime.Caller(depth); ok {
 		return strings.Join([]string{filepath.Base(file), strconv.Itoa(line)}, ":")
 	}
+
 	// not sure what the convention should be here
 	return ""
 }
