@@ -15,7 +15,7 @@ import (
 )
 
 func Test_Put(t *testing.T) {
-	// Init levelDB
+	// Init LevelDB
 	dir := prepareDbFolder("", "leveldbtest")
 	defer os.RemoveAll(dir)
 	db := newDbInstance(dir)
@@ -31,7 +31,7 @@ func Test_Put(t *testing.T) {
 }
 
 func Test_Has(t *testing.T) {
-	// Init levelDB
+	// Init LevelDB
 	dir := prepareDbFolder("", "leveldbtest")
 	defer os.RemoveAll(dir)
 	db := newDbInstance(dir)
@@ -45,7 +45,7 @@ func Test_Has(t *testing.T) {
 }
 
 func Test_Update(t *testing.T) {
-	// Init levelDB
+	// Init LevelDB
 	dir := prepareDbFolder("", "leveldbtest")
 	defer os.RemoveAll(dir)
 	db := newDbInstance(dir)
@@ -64,7 +64,7 @@ func Test_Update(t *testing.T) {
 }
 
 func Test_Delete(t *testing.T) {
-	// Init levelDB
+	// Init LevelDB
 	dir := prepareDbFolder("", "leveldbtest")
 	defer os.RemoveAll(dir)
 	db := newDbInstance(dir)
@@ -99,7 +99,7 @@ func prepareDbFolder(pathRoot string, subDir string) string {
 	return dir
 }
 
-func newDbInstance(dbPath string) *levelDB {
+func newDbInstance(dbPath string) *LevelDB {
 	db, err := NewLevelDB(dbPath)
 	if err != nil {
 		panic(err)
