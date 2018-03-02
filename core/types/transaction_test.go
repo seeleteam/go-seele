@@ -18,7 +18,7 @@ import (
 func randomAddress(t *testing.T) common.Address {
 	address, err := common.GenerateRandomAddress()
 	if err != nil {
-		t.Errorf("Failed to generate random address, error = %s", err.Error())
+		t.Fatalf("Failed to generate random address, error = %s", err.Error())
 	}
 
 	return *address
@@ -27,7 +27,7 @@ func randomAddress(t *testing.T) common.Address {
 func randomKey(t *testing.T) *ecdsa.PrivateKey {
 	privKey, err := crypto.GenerateKey()
 	if err != nil {
-		t.Errorf("Failed to generate ECDSA private key, error = %s", err.Error())
+		t.Fatalf("Failed to generate ECDSA private key, error = %s", err.Error())
 	}
 
 	return privKey
@@ -45,7 +45,7 @@ func Test_Transaction_Sign(t *testing.T) {
 	tx := newTestTx(t, 100, 38)
 
 	if tx.Signature == nil {
-		t.Error("The signature is nil after Sign.")
+		t.Fatal("The signature is nil after Sign.")
 	}
 
 	assert.Equal(t, tx.Signature.Verify(tx.Hash.Bytes()), true)
