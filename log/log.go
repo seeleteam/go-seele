@@ -84,7 +84,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.Out = file
 	}
 	log.SetLevel(logrus.DebugLevel)
-	log.AddHook(&CallerHook{}) //add caller hook to print caller's file & line
+	log.AddHook(&CallerHook{}) // add caller hook to print caller's file & line number
 	curLog = &SeeleLog{
 		log: log,
 	}
