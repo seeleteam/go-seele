@@ -6,21 +6,26 @@
 package p2p
 
 import (
-	//"crypto/ecdsa"
-
 	"bytes"
+	"crypto/md5"
+
+	"crypto/ecdsa"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/aristanetworks/goarista/monotime"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/crypto/ecies"
+	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	//"github.com/ethereum/go-ethereum/p2p/discover"
 )
 
 const (
@@ -37,23 +42,35 @@ const (
 
 	inboundConn  = 1
 	outboundConn = 2
+
+	// In transfering handshake msg, length of extra data
+	hsExtraDataLen = 32
 )
 
 // Config holds Server options.
 type Config struct {
-	// Use common.MakeName to create a name that follows existing conventions.
+	// Name node's name
 	Name string //`toml:"-"`
+
+	// ECDSAKey dumped string of Node's ecdsa.PrivateKey
+	ECDSAKey string
+
+	// PrivateKey Node's ecdsa.PrivateKey
+	PrivateKey *ecdsa.PrivateKey
+
+	// MyNodeID public key extracted from PrivateKey, so need not load from config
+	MyNodeID string `toml:"-"`
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
 	MaxPendingPeers int `toml:",omitempty"`
 
-	MyNodeID string
 	// pre-configured nodes.
 	StaticNodes []*discovery.Node
 
-	KadPort string // udp port for Kad network
+	// KadPort udp port for Kad network
+	KadPort string
 
 	// Protocols should contain the protocols supported by the server.
 	Protocols []ProtocolInterface `toml:"-"`
@@ -102,13 +119,17 @@ func (srv *Server) Start() (err error) {
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
 
+	srv.PrivateKey, err = crypto.LoadECDSAFromString(srv.ECDSAKey)
+	if err != nil {
+		return err
+	}
+	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%s", srv.KadPort))
 	if err != nil {
 		return err
 	}
-
-	myId := common.HexToAddress(srv.MyNodeID)
-	srv.kadDB = discovery.StartService(myId, addr, srv.StaticNodes)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s][%s]", srv.MyNodeID, addr)
+	srv.kadDB = discovery.StartService(common.HexToAddress(srv.MyNodeID), addr, srv.StaticNodes)
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -126,7 +147,6 @@ func (srv *Server) Start() (err error) {
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
-
 	return nil
 }
 
@@ -203,24 +223,12 @@ func (srv *Server) scheduleTasks() {
 			}
 			continue
 		}
-		go srv.setupConn(conn, outboundConn, node)
-	}
-	/*for _, node := range srv.StaticNodes {
-		_, ok := srv.peers[node.ID]
-		if ok {
-			continue
-		}
-		//TODO UDPPort==> TCPPort
-		addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
-		conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
-		if err != nil {
-			if conn != nil {
-				conn.Close()
+		go func() {
+			if err := srv.setupConn(conn, outboundConn, node); err != nil {
+				srv.log.Info("scheduleTasks. setupConn called err returns. err=%s", err)
 			}
-			continue
-		}
-		go srv.setupConn(conn, outboundConn, node)
-	}*/
+		}()
+	}
 }
 
 func (srv *Server) startListening() error {
@@ -273,13 +281,15 @@ func (srv *Server) listenLoop() {
 		}
 		go func() {
 			srv.log.Info("Accept new connection from, %s", fd.RemoteAddr())
-			srv.setupConn(fd, inboundConn, nil)
+			err := srv.setupConn(fd, inboundConn, nil)
+			srv.log.Info("setupConn err, %s", err)
 			slots <- struct{}{}
 		}()
 	}
 }
 
-// setupConn TODO add encypt-handshake.
+// setupConn Confirm both side are valid peers, have sub-protocols supported by each other
+// Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	peer := &Peer{
 		conn:     &connection{fd: fd},
@@ -296,43 +306,16 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.GetBaseProtocol().cap())
 	}
-	wrapMsg := &msg{
-		protoCode: ctlProtoCode,
-		msgCode:   ctlMsgProtoHandshake,
-	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	myNounce := r.Uint32()
-	handshakeMsg := &ProtoHandShake{Caps: caps, Nounce: myNounce}
-	nodeID := common.HexToAddress(srv.MyNodeID)
-	copy(handshakeMsg.NodeID[0:], nodeID[0:])
-
-	// Serialize should handle big- little- endian?
-	buffer, err := common.Serialize(handshakeMsg)
-	if err != nil {
-		peer.close()
-		return err
-	}
-	wrapMsg.payload = make([]byte, len(buffer))
-	copy(wrapMsg.payload, buffer)
-	wrapMsg.size = uint32(len(wrapMsg.payload))
-	peer.sendRawMsg(wrapMsg)
-
-	recvWrapMsg, err := peer.recvRawMsg()
+	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
 		peer.close()
 		return err
 	}
 
-	recvMsg := &ProtoHandShake{}
-	if err := common.Deserialize(recvWrapMsg.payload, recvMsg); err != nil {
-		peer.close()
-		return err
-	}
-
-	peerCaps, peerNodeID, peerNounce := recvMsg.Caps, recvMsg.NodeID, recvMsg.Nounce
+	peerCaps, peerNodeID := recvMsg.Caps, recvMsg.NodeID
 	// TODO need merge caps and order by cap name, make sure having the same order at each end
-	// TODO compute a secret key by myNounce and peerNounce
+	// TODO compute a secret key by nounceCnt, nounceSvr
 	protoCode := uint16(baseProtoCode)
 	for _, proto := range srv.Protocols {
 		peer.protoMap[protoCode] = proto.GetBaseProtocol()
@@ -358,7 +341,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		peer.node = peerNode
 	}
 
-	srv.log.Info("p2p.setupConn conn handshaked.  peerNounce=%d peerCaps=%s", int(peerNounce), peerCaps)
+	srv.log.Info("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
 		srv.addpeer <- peer
@@ -366,5 +349,156 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		srv.delpeer <- peer
 		srv.loopWG.Done()
 	}()
+
 	return nil
+}
+
+// doHandShake Communicate each other
+func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+	handshakeMsg := &ProtoHandShake{Caps: caps}
+	nodeID := common.HexToAddress(srv.MyNodeID)
+	copy(handshakeMsg.NodeID[0:], nodeID[0:])
+
+	if flags == outboundConn {
+		// client side. Send msg first
+		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt, nounceSvr)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		if err = peer.sendRawMsg(wrapMsg); err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvWrapMsg, err := peer.recvRawMsg()
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvMsg, _, nounceSvr, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+	} else {
+		// server side. Recv handshake msg first
+		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
+		recvWrapMsg, err := peer.recvRawMsg()
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		recvMsg, nounceCnt, _, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		if err = peer.sendRawMsg(wrapMsg); err != nil {
+			return nil, 0, 0, err
+		}
+	}
+	return
+}
+
+// packWrapHSMsg compose the wrapped send msg.
+// A 32 byte ExtraData is used for verification process.
+func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64, nounceSvr uint64) (*msg, error) {
+	// Serialize should handle big-endian
+	hdmsgRLP, err := common.Serialize(handshakeMsg)
+	if err != nil {
+		return nil, err
+	}
+	wrapMsg := &msg{
+		protoCode: ctlProtoCode,
+		msgCode:   ctlMsgProtoHandshake,
+	}
+	md5Inst := md5.New()
+	if _, err := md5Inst.Write(hdmsgRLP); err != nil {
+		return nil, err
+	}
+	extBuf := make([]byte, hsExtraDataLen)
+	// first 16 bytes, contains md5sum of hdmsgRLP;
+	// then 8 bytes for client side nounce; 8 bytes for server side nounce
+	copy(extBuf, md5Inst.Sum(nil))
+	binary.BigEndian.PutUint64(extBuf[16:], nounceCnt)
+	binary.BigEndian.PutUint64(extBuf[24:], nounceSvr)
+
+	// 1. Sign with local privateKey first
+	priKeyLocal := math.PaddedBigBytes(srv.PrivateKey.D, 32)
+	sig, err := secp256k1.Sign(extBuf, priKeyLocal)
+	if err != nil {
+		return nil, err
+	}
+	// 2. Encrypt with peer publicKey
+	pubObj := crypto.ToECDSAPub(peerNodeID[0:])
+	remotePub := ecies.ImportECDSAPublic(pubObj)
+
+	encOrg := make([]byte, hsExtraDataLen+len(sig))
+	copy(encOrg, extBuf)
+	copy(encOrg[hsExtraDataLen:], sig)
+	enc, err := ecies.Encrypt(rand.Reader, remotePub, encOrg, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	// Format of wrapMsg payload, [handshake's rlp body, encoded extra data, length of encoded extra data]
+	wrapMsg.size = uint32(len(hdmsgRLP) + len(enc) + 4)
+	wrapMsg.payload = make([]byte, wrapMsg.size)
+	copy(wrapMsg.payload, hdmsgRLP)
+	copy(wrapMsg.payload[len(hdmsgRLP):], enc)
+	binary.BigEndian.PutUint32(wrapMsg.payload[len(hdmsgRLP)+len(enc):], uint32(len(enc)))
+	return wrapMsg, nil
+}
+
+// unPackWrapHSMsg verify recved msg, and recover the handshake msg
+func (srv *Server) unPackWrapHSMsg(recvWrapMsg *msg) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+	if recvWrapMsg.size < hsExtraDataLen+4 {
+		err = errors.New("recved err msg")
+		return
+	}
+	extraEncLen := binary.BigEndian.Uint32(recvWrapMsg.payload[recvWrapMsg.size-4:])
+	recvHSMsgLen := recvWrapMsg.size - extraEncLen - 4
+	nounceCnt = binary.BigEndian.Uint64(recvWrapMsg.payload[recvHSMsgLen+16:])
+	nounceSvr = binary.BigEndian.Uint64(recvWrapMsg.payload[recvHSMsgLen+24:])
+	recvEnc := recvWrapMsg.payload[recvHSMsgLen : recvWrapMsg.size-4]
+
+	recvMsg = &ProtoHandShake{}
+	if err = common.Deserialize(recvWrapMsg.payload[:recvHSMsgLen], recvMsg); err != nil {
+		return
+	}
+
+	// Decrypt with local private key, make sure it is sended to local
+	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
+	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
+	if err != nil {
+		return
+	}
+
+	// Verify peer public key, make sure it is sended from correct peer
+	recvPubkey, err := secp256k1.RecoverPubkey(encOrg[0:hsExtraDataLen], encOrg[hsExtraDataLen:])
+	if err != nil {
+		return
+	}
+
+	if !bytes.Equal(recvMsg.NodeID[0:], recvPubkey[1:]) {
+		err = errors.New("unPackWrapHSMsg: recvPubkey not match")
+		return
+	}
+
+	// Verify recvMsg's payload md5sum to prevent modification
+	md5Inst := md5.New()
+	if _, err = md5Inst.Write(recvWrapMsg.payload[:recvHSMsgLen]); err != nil {
+		return
+	}
+
+	if !bytes.Equal(md5Inst.Sum(nil), encOrg[:16]) {
+		err = errors.New("unPackWrapHSMsg: recved md5sum not match!")
+		return
+	}
+	srv.log.Info("unPackWrapHSMsg: verify OK!")
+	return
 }
