@@ -6,9 +6,9 @@
 package seele
 
 import (
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // SeeleService implements full node service.
