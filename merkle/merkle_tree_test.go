@@ -146,7 +146,7 @@ var table = []struct {
 	},
 }
 
-func TestNewTree(t *testing.T) {
+func Test_NewTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -159,7 +159,7 @@ func TestNewTree(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_MerkleRoot(t *testing.T) {
+func Test_MerkleTree_MerkleRoot(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -171,7 +171,7 @@ func TestMerkleTree_MerkleRoot(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_RebuildTree(t *testing.T) {
+func Test_MerkleTree_RebuildTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -187,7 +187,7 @@ func TestMerkleTree_RebuildTree(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_RebuildTreeWith(t *testing.T) {
+func Test_MerkleTree_RebuildTreeWith(t *testing.T) {
 	for i := 0; i < len(table)-1; i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -203,7 +203,7 @@ func TestMerkleTree_RebuildTreeWith(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_VerifyTree(t *testing.T) {
+func Test_MerkleTree_VerifyTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -222,7 +222,7 @@ func TestMerkleTree_VerifyTree(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_VerifyContent(t *testing.T) {
+func Test_MerkleTree_VerifyContent(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
@@ -262,7 +262,7 @@ func TestMerkleTree_VerifyContent(t *testing.T) {
 	}
 }
 
-func TestMerkleTree_String(t *testing.T) {
+func Test_MerkleTree_String(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
