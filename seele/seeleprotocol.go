@@ -10,7 +10,7 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
-// SeeleProtocol
+// SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
 	maxPeers int
@@ -28,7 +28,7 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 			DelPeerCh: make(chan *p2p.Peer),
 			ReadMsgCh: make(chan *p2p.Message),
 		},
-		log:   s.log,
+		log:   log,
 		peers: make(map[*p2p.Peer]bool),
 	}
 	return s, nil
@@ -37,6 +37,7 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 // Run implements p2p.Protocol, called in p2p.Server.Start function
 func (p *SeeleProtocol) Run() {
 	p.log.Info("SeeleProtocol started...")
+
 	for {
 		select {
 		case peer := <-p.AddPeerCh:
@@ -44,7 +45,7 @@ func (p *SeeleProtocol) Run() {
 		case peer := <-p.DelPeerCh:
 			delete(p.peers, peer)
 		case message := <-p.ReadMsgCh:
-			p.log.Info("SeeleProtocol readmsg [%s]", message)
+			p.log.Debug("SeeleProtocol readmsg. MsgCode[%d]", message.MsgCode)
 		}
 	}
 }
@@ -55,6 +56,7 @@ func (p SeeleProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 }
 
 func (p *SeeleProtocol) handleMsg(msg *p2p.Message) error {
+	//TODO add handle msg
 	return nil
 }
 
