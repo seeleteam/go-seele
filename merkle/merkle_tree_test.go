@@ -1,28 +1,29 @@
-// Copyright 2017 Cameron Bergoon
-// Licensed under the MIT License, see LICENCE file for details.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package merkle
 
 import (
 	"bytes"
-	_ "fmt"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
-//TestContent implements the Content interface provided by merkletree and represents the content stored in the tree.
+// TestContent implements the Content interface provided by merkletree and represents the content stored in the tree.
 type TestContent struct {
 	x string
 }
 
-//CalculateHash hashes the values of a TestContent
+// CalculateHash hashes the values of a TestContent
 func (t TestContent) CalculateHash() []byte {
 	return hash(t.x)
 }
 
-//Equals tests for equality of two Contents
+// Equals tests for equality of two Contents
 func (t TestContent) Equals(other Content) bool {
 	return t.x == other.(TestContent).x
 }
@@ -149,14 +150,8 @@ func TestNewTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
-
-		//for _, v := range tree.MerkleRoot() {
-		//	fmt.Print(v)
-		//	fmt.Print(", ")
-		//}
-		//fmt.Println("")
 
 		if bytes.Compare(tree.MerkleRoot(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
@@ -168,7 +163,7 @@ func TestMerkleTree_MerkleRoot(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		if bytes.Compare(tree.MerkleRoot(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
@@ -180,11 +175,11 @@ func TestMerkleTree_RebuildTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		err = tree.RebuildTree()
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		if bytes.Compare(tree.MerkleRoot(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
@@ -196,11 +191,11 @@ func TestMerkleTree_RebuildTreeWith(t *testing.T) {
 	for i := 0; i < len(table)-1; i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		err = tree.RebuildTreeWith(table[i+1].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		if bytes.Compare(tree.MerkleRoot(), table[i+1].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i+1].expectedHash, tree.MerkleRoot())
@@ -212,7 +207,7 @@ func TestMerkleTree_VerifyTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		v1 := tree.VerifyTree()
 		if v1 != true {
@@ -231,7 +226,7 @@ func TestMerkleTree_VerifyContent(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		if len(table[i].contents) > 0 {
 			v := tree.VerifyContent(tree.MerkleRoot(), table[i].contents[0])
@@ -271,7 +266,7 @@ func TestMerkleTree_String(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Error("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error:  ", err)
 		}
 		if tree.String() == "" {
 			t.Error("error: expected not empty string")

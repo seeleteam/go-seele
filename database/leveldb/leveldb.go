@@ -7,6 +7,7 @@ package leveldb
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 type LevelDB struct {
@@ -15,7 +16,13 @@ type LevelDB struct {
 
 func NewLevelDB(path string) (*LevelDB, error) {
 	db, err := leveldb.OpenFile(path, nil)
-	if err != nil {
+
+	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
+		db, err = leveldb.RecoverFile(path, nil)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		return nil, err
 	}
 
