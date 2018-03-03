@@ -39,6 +39,7 @@ func NewServer() *Server {
 		rpc.Server{},
 	}
 
+	// register a default service which will provide meta information about the RPC service.
 	rpcService := &RPCService{server}
 	server.RegisterName(MetadataApi, rpcService)
 
