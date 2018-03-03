@@ -6,15 +6,9 @@
 package seele
 
 import (
-<<<<<<< HEAD
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
-=======
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/p2p"
->>>>>>> Add seele service framework
 )
 
 // SeeleService implements full node service.
