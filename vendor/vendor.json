@@ -317,6 +317,12 @@
 			"revisionTime": "2017-12-24T20:31:28Z"
 		},
 		{
+			"checksumSHA1": "+BbKHnYUZdGT+9M5bnsBrQxo6H0=",
+			"path": "gopkg.in/fatih/set.v0",
+			"revision": "168a5d71ba0669ae06888225478d73a113f1687e",
+			"revisionTime": "2018-01-31T06:27:33Z"
+		},
+		{
 			"checksumSHA1": "4OooZWILCvVDJXFO2CuO9GPUj9U=",
 			"path": "gopkg.in/yaml.v2",
 			"revision": "d670f9405373e636a5a2765eea47fac0c9bc91a4",

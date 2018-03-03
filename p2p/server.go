@@ -29,6 +29,9 @@ import (
 )
 
 const (
+	// Maximun number of peers that can be connected
+	defaultMaxPeers = 30
+
 	// Maximum number of concurrently handshaking inbound connections.
 	maxAcceptConns = 50
 
@@ -60,6 +63,9 @@ type Config struct {
 
 	// MyNodeID public key extracted from PrivateKey, so need not load from config
 	MyNodeID string `toml:"-"`
+
+	// MaxPeers max number of peers that can be connected
+	MaxPeers int
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -111,6 +117,11 @@ func (srv *Server) Start() (err error) {
 	if srv.log == nil {
 		return errors.New("p2p Create logger error")
 	}
+
+	if srv.MaxPeers == 0 {
+		srv.MaxPeers = defaultMaxPeers
+	}
+
 	srv.running = true
 	srv.peers = make(map[common.Address]*Peer)
 
@@ -166,21 +177,21 @@ running:
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case c := <-srv.addpeer:
-			_, ok := peers[c.node.ID]
+			_, ok := peers[c.Node.ID]
 
 			if ok {
 				// node already connected, need close this connection
 				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d. nodeid already connected", len(peers))
 				c.Disconnect(discAlreadyConnected)
 			} else {
-				peers[c.node.ID] = c
+				peers[c.Node.ID] = c
 				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
-				srv.log.Info("server.run  <-srv.addpeer ", c.node.ID)
+				srv.log.Info("server.run  <-srv.addpeer ", c.Node.ID)
 			}
 		case pd := <-srv.delpeer:
-			curPeer, ok := peers[pd.node.ID]
+			curPeer, ok := peers[pd.Node.ID]
 			if ok && curPeer == pd {
-				delete(peers, pd.node.ID)
+				delete(peers, pd.Node.ID)
 				srv.log.Info("server.run delpeer recved. peer match. remove peer. peers num=%d", len(peers))
 			} else {
 				srv.log.Info("server.run delpeer recved. peer not match")
@@ -195,7 +206,7 @@ running:
 
 	for len(peers) > 0 {
 		p := <-srv.delpeer
-		delete(peers, p.node.ID)
+		delete(peers, p.Node.ID)
 	}
 }
 
@@ -299,7 +310,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		protoMap: make(map[uint16]*Protocol),
 		capMap:   make(map[string]uint16),
 		log:      srv.log,
-		node:     dialDest,
+		Node:     dialDest,
 	}
 
 	var caps []Cap
@@ -338,7 +349,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			return errors.New("not found nodeID in discovery database!")
 		}
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID)
-		peer.node = peerNode
+		peer.Node = peerNode
 	}
 
 	srv.log.Info("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
