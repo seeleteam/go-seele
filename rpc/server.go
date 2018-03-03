@@ -9,14 +9,15 @@ import (
 	"net/rpc"
 )
 
-const MetadataApi = "rpc"
+// MetadataAPI is a default service for RegisterName.
+const MetadataAPI = "rpc"
 
 // Server represents a RPC server
 type Server struct {
 	rpc.Server
 }
 
-// API is a collection of methods for the RPC interface
+// API is a collection of methods for the RPC interface.
 type API struct {
 	// namespace of service
 	Namespace string
@@ -41,7 +42,7 @@ func NewServer() *Server {
 
 	// register a default service which will provide meta information about the RPC service.
 	rpcService := &RPCService{server}
-	server.RegisterName(MetadataApi, rpcService)
+	server.RegisterName(MetadataAPI, rpcService)
 
 	return server
 }

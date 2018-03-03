@@ -28,7 +28,7 @@ func (s *Service) InvalidFunc2() (string, string) {
 	return "", ""
 }
 
-func TestServerRegisterName(t *testing.T) {
+func Test_ServerRegisterName(t *testing.T) {
 	server := NewServer()
 	service := new(Service)
 
