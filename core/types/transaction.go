@@ -44,8 +44,12 @@ func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Tra
 	txData := &TransactionData{
 		From:         from,
 		To:           &to,
-		Amount:       big.NewInt(amount.Int64()),
+		Amount:       new(big.Int),
 		AccountNonce: nonce,
+	}
+
+	if amount != nil {
+		txData.Amount.Set(amount)
 	}
 
 	txDataBytes := common.SerializePanic(txData)
@@ -76,9 +80,12 @@ func (tx *Transaction) Validate() error {
 		return errHashMismatch
 	}
 
-	if !tx.Signature.Verify(txDataHash) {
+	pubKey := crypto.ToECDSAPub(tx.Data.From.Bytes())
+	if !tx.Signature.Verify(pubKey, txDataHash) {
 		return errSigInvalid
 	}
+
+	// TODO validate amount and nonce against account.
 
 	return nil
 }

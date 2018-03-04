@@ -56,9 +56,9 @@ func Test_BlockHeader_Clone(t *testing.T) {
 func Test_Block_FindTransaction(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
-		newTestTx(t, 10, 1),
-		newTestTx(t, 20, 2),
-		newTestTx(t, 30, 3),
+		newTestTx(t, 10, 1, true),
+		newTestTx(t, 20, 2, true),
+		newTestTx(t, 30, 3, true),
 	}
 
 	block := NewBlock(header, txs)
