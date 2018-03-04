@@ -6,15 +6,19 @@
 package leveldb
 
 import (
+	"github.com/seeleteam/go-seele/database"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
+// LevelDB level db struct
 type LevelDB struct {
 	db *leveldb.DB
 }
 
-func NewLevelDB(path string) (*LevelDB, error) {
+// NewLevelDB new database interface of level db
+func NewLevelDB(path string) (database.Database, error) {
 	db, err := leveldb.OpenFile(path, nil)
 
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
@@ -37,7 +41,7 @@ func (db *LevelDB) Close() {
 	db.db.Close()
 }
 
-// Get gets the value for the given key
+// GetString gets the value for the given key
 func (db *LevelDB) GetString(key string) (string, error) {
 	value, err := db.Get([]byte(key))
 
@@ -54,7 +58,7 @@ func (db *LevelDB) Put(key []byte, value []byte) error {
 	return db.db.Put(key, value, nil)
 }
 
-// Put sets the value for the given key
+// PutString sets the value for the given key
 func (db *LevelDB) PutString(key string, value string) error {
 	return db.Put([]byte(key), []byte(value))
 }
@@ -64,7 +68,7 @@ func (db *LevelDB) Has(key []byte) (ret bool, err error) {
 	return db.db.Has(key, nil)
 }
 
-// Has returns true if the DB does contains the given key.
+// HasString returns true if the DB does contains the given key.
 func (db *LevelDB) HasString(key string) (ret bool, err error) {
 	return db.Has([]byte(key))
 }
@@ -74,7 +78,17 @@ func (db *LevelDB) Delete(key []byte) error {
 	return db.db.Delete(key, nil)
 }
 
-// Delete deletes the value for the given key.
+// DeleteSring deletes the value for the given key.
 func (db *LevelDB) DeleteSring(key string) error {
 	return db.Delete([]byte(key))
+}
+
+// NewBatch new a batch operator
+func (db *LevelDB) NewBatch() database.Batch {
+	batch := &Batch{
+		db:      db,
+		leveldb: db.db,
+		batch:   new(leveldb.Batch),
+	}
+	return batch
 }

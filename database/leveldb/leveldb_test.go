@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -90,6 +91,19 @@ func Test_Delete(t *testing.T) {
 	assert.Equal(t, exist, false)
 }
 
+func Test_LevelDB_Newbatch(t *testing.T) {
+	// Init levelDB
+	dir := prepareDbFolder("", "leveldbtest")
+	defer os.RemoveAll(dir)
+	db := newDbInstance(dir)
+	defer db.Close()
+
+	batch := db.NewBatch()
+	if batch == nil {
+		t.Fatal("new level batch error")
+	}
+}
+
 func prepareDbFolder(pathRoot string, subDir string) string {
 	dir, err := ioutil.TempDir(pathRoot, subDir)
 	if err != nil {
@@ -99,7 +113,7 @@ func prepareDbFolder(pathRoot string, subDir string) string {
 	return dir
 }
 
-func newDbInstance(dbPath string) *LevelDB {
+func newDbInstance(dbPath string) database.Database {
 	db, err := NewLevelDB(dbPath)
 	if err != nil {
 		panic(err)
