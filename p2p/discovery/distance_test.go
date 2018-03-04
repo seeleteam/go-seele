@@ -29,12 +29,12 @@ func Test_Dic(t *testing.T) {
 	log.Debug("%d, %d, %d", log1, log2, log4)
 }
 
-func getHash(s string) *common.Hash {
+func getHash(s string) common.Hash {
 	var h common.Hash
 	buff, _ := hexutil.HexToBytes(s)
 	h.SetBytes(buff)
 
-	return &h
+	return h
 }
 
 func Test_Cmp(t *testing.T) {

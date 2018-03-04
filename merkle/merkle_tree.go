@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/seeleteam/go-seele/common"
 )
 
 var (
@@ -18,16 +19,16 @@ var (
 // Content represents the data that is stored and verified by the tree. A type that
 // implements this interface can be used as an item in the tree.
 type Content interface {
-	CalculateHash() []byte
+	CalculateHash() common.Hash
 	Equals(other Content) bool
 }
 
 // MerkleTree is the container for the tree. It holds a pointer to the root of the tree,
 // a list of pointers to the leaf nodes, and the merkle root.
-// And it is not thread safe
+// Note, it is not thread safe
 type MerkleTree struct {
 	Root       *node
-	merkleRoot []byte
+	merkleRoot common.Hash
 	Leafs      []*node
 }
 
@@ -37,8 +38,8 @@ type node struct {
 	Parent  *node
 	Left    *node
 	Right   *node
-	dup     bool // is it a duplicate node
-	Hash    []byte
+	dup     bool // indicates that whether this is a duplicate node in the rightmost leaf of the tree.
+	Hash    common.Hash
 	Content Content
 }
 
@@ -48,19 +49,19 @@ func (n *node) isLeaf() bool {
 
 // calculateRootHash walks down the tree until hitting a leaf, calculating the hash at each level
 // and returning the resulting hash of node n.
-func (n *node) calculateRootHash() []byte {
+func (n *node) calculateRootHash() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
-	return hashBytes(append(n.Left.calculateRootHash(), n.Right.calculateRootHash()...))
+	return common.HashBytes(append(n.Left.calculateRootHash().Bytes(), n.Right.calculateRootHash().Bytes()...))
 }
 
 // calculateNodeHash is a helper function that calculates the hash of the node.
-func (n *node) calculateNodeHash() []byte {
+func (n *node) calculateNodeHash() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
-	return hashBytes(append(n.Left.Hash, n.Right.Hash...))
+	return common.HashBytes(append(n.Left.Hash.Bytes(), n.Right.Hash.Bytes()...))
 }
 
 // NewTree creates a new Merkle Tree using the content cs.
@@ -77,9 +78,9 @@ func NewTree(contents []Content) (*MerkleTree, error) {
 	return t, nil
 }
 
-// buildWithContent is a helper function that for a given set of Contents, generates a
+// buildWithContent is a helper function that for a given set of Contents, to generates a
 // corresponding tree and returns the root node, a list of leaf nodes, and a possible error.
-// Returns an error if cs contains no Contents.
+// Returns an error if contents contains no Contents.
 func buildWithContent(contents []Content) (*node, []*node, error) {
 	if len(contents) == 0 {
 		return nil, nil, errNoContent
@@ -112,11 +113,11 @@ func buildIntermediate(nodeList []*node) *node {
 		if i+1 == len(nodeList) {
 			right = i
 		}
-		chash := append(nodeList[left].Hash, nodeList[right].Hash...)
+		chash := append(nodeList[left].Hash.Bytes(), nodeList[right].Hash.Bytes()...)
 		n := &node{
 			Left:  nodeList[left],
 			Right: nodeList[right],
-			Hash:  hashBytes(chash),
+			Hash:  common.HashBytes(chash),
 		}
 		nodes = append(nodes, n)
 		nodeList[left].Parent = n
@@ -129,7 +130,7 @@ func buildIntermediate(nodeList []*node) *node {
 }
 
 // MerkleRoot returns the unverified Merkle Root (hash of the root node) of the tree.
-func (m *MerkleTree) MerkleRoot() []byte {
+func (m *MerkleTree) MerkleRoot() common.Hash {
 	return m.merkleRoot
 }
 
@@ -169,14 +170,14 @@ func (m *MerkleTree) RebuildTreeWith(cs []Content) error {
 func (m *MerkleTree) VerifyTree() bool {
 	calculatedMerkleRoot := m.Root.calculateRootHash()
 
-	return bytes.Compare(m.merkleRoot, calculatedMerkleRoot) == 0
+	return bytes.Compare(m.merkleRoot.Bytes(), calculatedMerkleRoot.Bytes()) == 0
 }
 
 // VerifyContent indicates whether a given content is in the tree and the hashes are valid for that content.
 // Returns true if the expected Merkle Root is equivalent to the Merkle root calculated on the critical path
 // for a given content. Returns true if valid and false otherwise.
 func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) bool {
-	if bytes.Compare(m.merkleRoot, expectedMerkleRoot) != 0 {
+	if bytes.Compare(m.merkleRoot.Bytes(), expectedMerkleRoot) != 0 {
 		return false
 	}
 
@@ -184,8 +185,8 @@ func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) b
 		if l.Content.Equals(content) {
 			currentParent := l.Parent
 			for currentParent != nil {
-				buff := append(currentParent.Left.calculateNodeHash(), currentParent.Right.calculateNodeHash()...)
-				if bytes.Compare(hashBytes(buff), currentParent.Hash) != 0 {
+				buff := append(currentParent.Left.calculateNodeHash().Bytes(), currentParent.Right.calculateNodeHash().Bytes()...)
+				if bytes.Compare(common.HashBytes(buff).Bytes(), currentParent.Hash.Bytes()) != 0 {
 					return false
 				}
 				currentParent = currentParent.Parent

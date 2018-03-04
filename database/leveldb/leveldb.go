@@ -17,15 +17,12 @@ type LevelDB struct {
 func NewLevelDB(path string) (*LevelDB, error) {
 	db, err := leveldb.OpenFile(path, nil)
 
+	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
+		db, err = leveldb.RecoverFile(path, nil)
+	}
+
 	if err != nil {
-		if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
-			db, err = leveldb.RecoverFile(path, nil)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	result := &LevelDB{
