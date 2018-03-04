@@ -6,6 +6,7 @@
 package seele
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -16,6 +17,7 @@ type SeeleService struct {
 	networkID     uint64
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
+	coinbase      common.AccAddress // account address that mining rewards will be send to.
 }
 
 // NewSeeleService create SeeleService
@@ -49,5 +51,13 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
-	return apis
+	//TODO add other api interface, for example consensus engine
+	return append(apis, []rpc.API{
+		{
+			Namespace: "seele",
+			Version:   "1.0",
+			Service:   NewPublicSeeleAPI(s),
+			Public:    true,
+		},
+	}...)
 }

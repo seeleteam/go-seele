@@ -27,7 +27,7 @@ const (
 // Peer represents a connected remote node.
 type Peer struct {
 	conn     *connection     // tcp connection
-	node     *discovery.Node // remote peer that this peer connects
+	Node     *discovery.Node // remote peer that this peer connects
 	created  uint64          // Peer create time, nanosecond
 	err      error
 	closed   chan struct{}
