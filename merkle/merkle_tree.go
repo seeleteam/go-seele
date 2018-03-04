@@ -47,17 +47,17 @@ func (n *node) isLeaf() bool {
 	return n.Content != nil
 }
 
-// calculateRootHash walks down the tree until hitting a leaf, calculating the hash at each level
+// calculateHashRecursively walks down the tree until hitting a leaf, calculating the hash at each level
 // and returning the resulting hash of node n.
-func (n *node) calculateRootHash() common.Hash {
+func (n *node) calculateHashRecursively() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
-	return common.HashBytes(append(n.Left.calculateRootHash().Bytes(), n.Right.calculateRootHash().Bytes()...))
+	return common.HashBytes(append(n.Left.calculateHashRecursively().Bytes(), n.Right.calculateHashRecursively().Bytes()...))
 }
 
-// calculateNodeHash is a helper function that calculates the hash of the node.
-func (n *node) calculateNodeHash() common.Hash {
+// calculateHash is a helper function that calculates the hash of the node.
+func (n *node) calculateHash() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
@@ -168,7 +168,7 @@ func (m *MerkleTree) RebuildTreeWith(cs []Content) error {
 // VerifyTree validates the hashes at each level of the tree and returns true if the
 // resulting hash at the root of the tree matches the resulting root hash; otherwise, returns false.
 func (m *MerkleTree) VerifyTree() bool {
-	calculatedMerkleRoot := m.Root.calculateRootHash()
+	calculatedMerkleRoot := m.Root.calculateHashRecursively()
 
 	return bytes.Compare(m.merkleRoot.Bytes(), calculatedMerkleRoot.Bytes()) == 0
 }
@@ -185,7 +185,7 @@ func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) b
 		if l.Content.Equals(content) {
 			currentParent := l.Parent
 			for currentParent != nil {
-				buff := append(currentParent.Left.calculateNodeHash().Bytes(), currentParent.Right.calculateNodeHash().Bytes()...)
+				buff := append(currentParent.Left.calculateHash().Bytes(), currentParent.Right.calculateHash().Bytes()...)
 				if bytes.Compare(common.HashBytes(buff).Bytes(), currentParent.Hash.Bytes()) != 0 {
 					return false
 				}
