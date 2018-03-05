@@ -1,4 +1,9 @@
-package eventdispatcher
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
+package event
 
 import (
 	"reflect"
@@ -22,6 +27,7 @@ func (h *EventHandler) Fire(e Event) {
 }
 
 // AddListener registers a listener.
+// If there already has a same listener (same method pointer), we will not add it
 func (h *EventHandler) AddListener(listener Listener) {
 	if index := h.find(listener); index != -1 {
 		return

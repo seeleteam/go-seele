@@ -1,4 +1,9 @@
-package eventdispatcher
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
+package event
 
 import (
 	"fmt"
