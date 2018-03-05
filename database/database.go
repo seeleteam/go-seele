@@ -19,12 +19,10 @@ type Database interface {
 	NewBatch() Batch
 }
 
-// Batch iterface of batch for database
+// Batch interface of batch for database
 type Batch interface {
 	Put(key []byte, value []byte)
 	Delete(key []byte)
 	Commit() error
 	Rollback()
-	Close()
-	Database() Database
 }
