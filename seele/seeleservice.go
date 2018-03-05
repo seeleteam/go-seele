@@ -17,7 +17,7 @@ type SeeleService struct {
 	networkID     uint64
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
-	coinbase      common.AccAddress // account address that mining rewards will be send to.
+	coinbase      common.Address // account address that mining rewards will be send to.
 }
 
 // NewSeeleService create SeeleService

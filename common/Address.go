@@ -15,15 +15,10 @@ import (
 
 const (
 	addressIDBits = 512 // the length of the public key
-	// AccAddressLengh account address length
-	AccAddressLengh = 20
 )
 
 // Address we use public key as node id
 type Address [addressIDBits / 8]byte
-
-// AccAddress account address used as id of account
-type AccAddress [AccAddressLengh]byte
 
 // NewAddress converts a byte slice to a Address
 func NewAddress(b []byte) (Address, error) {

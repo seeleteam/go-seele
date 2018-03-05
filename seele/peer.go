@@ -16,6 +16,11 @@ import (
 	set "gopkg.in/fatih/set.v0"
 )
 
+const (
+	// DiscHandShakeErr peer handshake error
+	DiscHandShakeErr = 100
+)
+
 // PeerInfo represents a short summary of a connected peer.
 type PeerInfo struct {
 	Version    uint     `json:"version"`    // Seele protocol version negotiated
@@ -25,7 +30,7 @@ type PeerInfo struct {
 
 type peer struct {
 	*p2p.Peer
-	id      string // id of the peer derived from p2p.NodeID
+	peerID  string // id of the peer derived from p2p.NodeID
 	version uint   // Seele protocol version negotiated
 	head    common.Hash
 	td      *big.Int
@@ -40,7 +45,7 @@ func newPeer(version uint, p *p2p.Peer) *peer {
 		Peer:        p,
 		version:     version,
 		td:          big.NewInt(0),
-		id:          fmt.Sprintf("%x", p.Node.ID[:8]),
+		peerID:      fmt.Sprintf("%x", p.Node.ID[:8]), // assume the 8 bytes prefix of NodeID as peerID
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
@@ -73,4 +78,10 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 
 	copy(p.head[:], hash[:])
 	p.td.Set(td)
+}
+
+// HandShake exchange networkid td etc between two connected peers.
+func (p *peer) HandShake() error {
+	//TODO add exchange status msg
+	return nil
 }
