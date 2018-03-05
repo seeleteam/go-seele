@@ -7,12 +7,12 @@ package core
 
 // TransactionPoolConfig is the configuration of transaction pool.
 type TransactionPoolConfig struct {
-	MaximumTransactions uint
+	Capacity uint // Maximum number of transactions in pool.
 }
 
 // DefaultTxPoolConfig returns the default configuration of transaction pool.
 func DefaultTxPoolConfig() *TransactionPoolConfig {
 	return &TransactionPoolConfig{
-		MaximumTransactions: 1024,
+		Capacity: 1024,
 	}
 }

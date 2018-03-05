@@ -81,7 +81,7 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 
 func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	config := DefaultTxPoolConfig()
-	config.MaximumTransactions = 1
+	config.Capacity = 1
 	pool := NewTransactionPool(*config)
 
 	tx1 := newTestTx(t, 10, 100)
