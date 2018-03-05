@@ -14,8 +14,8 @@ import (
 
 // Signature is a wrapper for signed message, and is serializable.
 type Signature struct {
-	R *big.Int
-	S *big.Int
+	R *big.Int // Signature of elliptic curve cryptography.
+	S *big.Int // Signature of elliptic curve cryptography.
 }
 
 // NewSignature sign the specified hash with private key and returns a signature.
