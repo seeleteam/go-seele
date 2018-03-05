@@ -38,12 +38,12 @@ func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
 // AddTransaction adds a single transation into the pool if it is valid and return true.
 // Otherwise, return false and concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error) {
-	pool.mutex.Lock()
-	defer pool.mutex.Unlock()
-
 	if err := tx.Validate(); err != nil {
 		return false, err
 	}
+
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 
 	if pool.hashToTxMap[tx.Hash] != nil {
 		return false, errTxHashExists
