@@ -6,14 +6,11 @@
 package leveldb
 
 import (
-	"github.com/seeleteam/go-seele/database"
-
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // Batch batch  implementation for leveldb
 type Batch struct {
-	db      database.Database
 	leveldb *leveldb.DB
 	batch   *leveldb.Batch
 }
