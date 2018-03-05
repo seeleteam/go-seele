@@ -28,7 +28,7 @@ func (db *Database) add(value *Node) {
 	defer db.mutex.Unlock()
 
 	sha := value.getSha()
-	db.m[*sha] = value
+	db.m[sha] = value
 }
 
 func (db *Database) find(id common.Hash) *Node {
@@ -38,11 +38,11 @@ func (db *Database) find(id common.Hash) *Node {
 	return db.m[id]
 }
 
-func (db *Database) delete(id *common.Hash) {
+func (db *Database) delete(id common.Hash) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	delete(db.m, *id)
+	delete(db.m, id)
 }
 
 func (db *Database) size() int {
