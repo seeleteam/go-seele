@@ -16,28 +16,24 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 )
 
-func randomAddress(t *testing.T) common.Address {
-	address, err := common.GenerateRandomAddress()
-	if err != nil {
-		t.Fatalf("Failed to generate random address, error = %s", err.Error())
+func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
+	privKey, keyErr := crypto.GenerateKey()
+	if keyErr != nil {
+		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
 	}
 
-	return *address
-}
+	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
-func randomKey(t *testing.T) *ecdsa.PrivateKey {
-	privKey, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatalf("Failed to generate ECDSA private key, error = %s", err.Error())
-	}
-
-	return privKey
+	return privKey, common.HexToAddress(hexAddress)
 }
 
 func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
-	tx := types.NewTransaction(randomAddress(t), randomAddress(t), big.NewInt(amount), nonce)
-	privKey := randomKey(t)
-	tx.Sign(privKey)
+	fromPrivKey, fromAddress := randomAccount(t)
+	_, toAddress := randomAccount(t)
+
+	tx := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), nonce)
+	tx.Sign(fromPrivKey)
+
 	return tx
 }
 
