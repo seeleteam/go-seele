@@ -49,7 +49,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error)
 		return false, errTxHashExists
 	}
 
-	if uint(len(pool.hashToTxMap)) >= pool.config.MaximumTransactions {
+	if uint(len(pool.hashToTxMap)) >= pool.config.Capacity {
 		return false, errTxPoolFull
 	}
 
