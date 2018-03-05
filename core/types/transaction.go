@@ -16,9 +16,11 @@ import (
 )
 
 var (
-	errHashMismatch = errors.New("hash mismatch")
-	errSigMissed    = errors.New("signature missed")
-	errSigInvalid   = errors.New("signature is invalid")
+	errAmountNil      = errors.New("amount is null")
+	errAmountNegative = errors.New("amount is negative")
+	errHashMismatch   = errors.New("hash mismatch")
+	errSigMissed      = errors.New("signature missed")
+	errSigInvalid     = errors.New("signature is invalid")
 
 	emptyTxRootHash = txsTrieSum([]*Transaction{})
 )
@@ -40,13 +42,24 @@ type Transaction struct {
 
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
+// Panics if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Transaction {
+	if amount == nil {
+		panic("Failed to create tx, amount is nil.")
+	}
+
+	if amount.Sign() < 0 {
+		panic("Failed to create tx, amount is negative.")
+	}
+
 	txData := &TransactionData{
 		From:         from,
 		To:           &to,
-		Amount:       big.NewInt(amount.Int64()),
+		Amount:       new(big.Int),
 		AccountNonce: nonce,
 	}
+
+	txData.Amount.Set(amount)
 
 	txDataBytes := common.SerializePanic(txData)
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
@@ -64,8 +77,18 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 }
 
 // Validate returns true if the transation is valid, otherwise false.
-// It includes hash and signature validation.
 func (tx *Transaction) Validate() error {
+	if tx.Data == nil || tx.Data.Amount == nil {
+		return errAmountNil
+	}
+
+	if tx.Data.Amount.Sign() < 0 {
+		return errAmountNegative
+	}
+
+	// TODO tx.Data.Amount <= account.Balance
+	// TODO validate tx.Data.AccountNonce against account.Nonce
+
 	if tx.Signature == nil {
 		return errSigMissed
 	}
@@ -76,7 +99,8 @@ func (tx *Transaction) Validate() error {
 		return errHashMismatch
 	}
 
-	if !tx.Signature.Verify(txDataHash) {
+	pubKey := crypto.ToECDSAPub(tx.Data.From.Bytes())
+	if !tx.Signature.Verify(pubKey, txDataHash) {
 		return errSigInvalid
 	}
 
