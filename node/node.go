@@ -6,6 +6,7 @@
 package node
 
 import (
+	"reflect"
 	"errors"
 	"sync"
 
@@ -18,13 +19,47 @@ var (
 	ErrNodeStopped = errors.New("node is not started")
 )
 
+// DuplicateServiceError is returned during Node startup if a registered service
+// constructor returns a service of the same type that was already started.
+type DuplicateServiceError struct {
+	Kind reflect.Type
+}
+
 // Node is a container for registering services.
 type Node struct {
+	config *Config
+
 	serverConfig p2p.Config
 	server       *p2p.Server
 
+	serviceFuncs []ServiceConstructor
+	services map[reflect.Type]Service
+
 	log  *log.SeeleLog
 	lock sync.RWMutex
+}
+
+// New creates a new P2P node, ready for protocal registration
+func New(conf *Config) (*Node, error) {
+	confCopy := *conf
+	conf = &confCopy
+
+	return &Node{
+		config: conf,
+		serviceFuncs: []ServiceConstructor{},
+	}, nil
+}
+
+// Register a new service into the node's stack.
+func (n *Node) Register(constructor ServiceConstructor) error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	if n.server != nil {
+		return ErrNodeRunning
+	}
+	n.serviceFuncs = append(n.serviceFuncs, constructor)
+	return nil
 }
 
 // Start create a p2p node.
