@@ -11,15 +11,15 @@ import (
 
 type Service struct{}
 
-type Args struct {
+type ArgsServer struct {
 	S string
 }
 
 type Result struct {
-	Args *Args
+	Args *ArgsServer
 }
 
-func (s *Service) Func1(args *Args, result *Result) error {
+func (s *Service) Func1(args *ArgsServer, result *Result) error {
 	*result = Result{args}
 	return nil
 }

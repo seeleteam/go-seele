@@ -30,7 +30,7 @@ import (
 
 const (
 	// Maximun number of peers that can be connected
-	defaultMaxPeers = 30
+	defaultMaxPeers = 50
 
 	// Maximum number of concurrently handshaking inbound connections.
 	maxAcceptConns = 50

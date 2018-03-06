@@ -33,7 +33,7 @@ type Node struct {
 
 	// node id for Kademila, which is generated from public key
 	// better to get it with getSha()
-	sha *common.Hash
+	sha common.Hash
 }
 
 // NewNode new node with its value
@@ -89,8 +89,8 @@ func (n *Node) GetUDPAddr() *net.UDPAddr {
 	}
 }
 
-func (n *Node) getSha() *common.Hash {
-	if n.sha == nil || len(n.sha) == 0 {
+func (n *Node) getSha() common.Hash {
+	if n.sha == common.EmptyHash {
 		n.sha = n.ID.ToSha()
 	}
 

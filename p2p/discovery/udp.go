@@ -331,9 +331,9 @@ func (u *udp) addNode(n *Node) {
 	//log.Info("add node, total nodes:%d", u.db.size())
 }
 
-func (u *udp) deleteNode(sha *common.Hash) {
+func (u *udp) deleteNode(sha common.Hash) {
 	selfSha := u.self.getSha()
-	if *sha == *selfSha {
+	if sha == selfSha {
 		return
 	}
 

@@ -23,30 +23,7 @@ const (
 	ecdsaPublickKeyPrefix byte = 4
 )
 
-// Signature is a wrapper for signed message and signer public key.
-type Signature struct {
-	pubKey *ecdsa.PublicKey
-	r      *big.Int
-	s      *big.Int
-}
-
-// NewSignature sign the specified hash with private key and returns a signature.
-// Panics if failed to sign hash.
-func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
-	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash)
-	if err != nil {
-		panic(fmt.Errorf("Failed to sign hash, private key = %+v, hash = %v, error = %v", privKey, hash, err.Error()))
-	}
-
-	return &Signature{&privKey.PublicKey, r, s}
-}
-
-// Verify verifies the signature against the specified hash.
-// Return true if signature is valid, otherwise false.
-func (sig *Signature) Verify(hash []byte) bool {
-	return ecdsa.Verify(sig.pubKey, hash, sig.r, sig.s)
-}
-
+// GenerateKey generates and returns a ECDSA private key.
 func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(S256(), rand.Reader)
 }
@@ -79,6 +56,7 @@ func PubkeyToString(pub *ecdsa.PublicKey) (pubStr string) {
 	return
 }
 
+// FromECDSAPub marshals and returns byte array of ECDSA public key.
 func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 	if pub == nil || pub.X == nil || pub.Y == nil {
 		return nil
