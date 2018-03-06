@@ -9,27 +9,19 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
-// Config represents a small collection of configuration values to fine tune the
-// P2P network layer of a protocol stack. These values can be further extended by
-// all registered services.
+// Config holds Node options.
 type Config struct {
-	// Name sets the instance name of the node.
-	Name string `toml:"-"`
+	// The name of the node
+	Name string 
 
-	// UserIdent
-	UserIdent string `toml:",omitempty"`
+	// The version of the node
+	Version string 
+	
+	// The file system folder of the node use to store data
+	DataDir string 
 
-	// Version
-	Version string `toml:"-"`
-
-	// DataDir is the file system folder the node 
-	DataDir string
-
-	// Configuration of peer-to-peer networking.
+	// The configuration of p2p network
 	P2P p2p.Config
-
-	// KeyStoreDir is the file system folder that contains private keys
-	KeyStoreDir string `toml:",omitempty"`
 }
 
 

@@ -32,33 +32,33 @@ type Node struct {
 	serverConfig p2p.Config
 	server       *p2p.Server
 
-	serviceFuncs []ServiceConstructor
-	services map[reflect.Type]Service
+	services []Service
 
 	log  *log.SeeleLog
 	lock sync.RWMutex
 }
 
-// New creates a new P2P node, ready for protocal registration
+// New creates a new P2P node.
 func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
 
 	return &Node{
 		config: conf,
-		serviceFuncs: []ServiceConstructor{},
+		services: []Service{},
 	}, nil
 }
 
-// Register a new service into the node's stack.
-func (n *Node) Register(constructor ServiceConstructor) error {
+// Register append a new service into the node's stack.
+func (n *Node) Register(service Service) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
 	if n.server != nil {
 		return ErrNodeRunning
 	}
-	n.serviceFuncs = append(n.serviceFuncs, constructor)
+	n.services = append(n.services, service)
+
 	return nil
 }
 

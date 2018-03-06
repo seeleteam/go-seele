@@ -5,10 +5,7 @@
 
 package node
 
-import (
-	"reflect"
-	"github.com/seeleteam/go-seele/p2p"
-)
+import "github.com/seeleteam/go-seele/p2p"
 
 // Service registers to node after node starts.
 type Service interface {
@@ -19,10 +16,3 @@ type Service interface {
 
 	Stop() error
 }
-
-type ServiceContext struct {
-	config *Config
-	services map[reflect.Type]Service
-}
-
-type ServiceConstructor func(ctx *ServiceContext) (Service, error)
