@@ -10,25 +10,26 @@ import (
 	"sync"
 )
 
-// EventHandler interface defines the event handler behavior
-type EventHandler struct {
+// EventManager interface defines the event handler behavior
+// Note, it is thread safe
+type EventManager struct {
 	lock      sync.RWMutex
 	listeners []Listener
 }
 
 // Fire fire the event and returns it after all listeners do
 // their jobs.
-func (h *EventHandler) Fire(e Event) {
+func (h *EventManager) Fire(e Event) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	for _, l := range h.listeners {
-		go l.Callable(e)
+		l.Callable(e)
 	}
 }
 
 // AddListener registers a listener.
 // If there already has a same listener (same method pointer), we will not add it
-func (h *EventHandler) AddListener(listener Listener) {
+func (h *EventManager) AddListener(listener Listener) {
 	if index := h.find(listener); index != -1 {
 		return
 	}
@@ -39,7 +40,7 @@ func (h *EventHandler) AddListener(listener Listener) {
 }
 
 // RemoveListener removes the registered event listener for given event name.
-func (h *EventHandler) RemoveListener(listener Listener) {
+func (h *EventManager) RemoveListener(listener Listener) {
 	index := h.find(listener)
 	if index == -1 {
 		return
@@ -52,7 +53,7 @@ func (h *EventHandler) RemoveListener(listener Listener) {
 
 // find find listener already in the handler
 // return -1 not found, otherwise return the index of the listener
-func (h *EventHandler) find(listener Listener) int {
+func (h *EventManager) find(listener Listener) int {
 	p := reflect.ValueOf(listener.Callable).Pointer()
 
 	h.lock.RLock()
@@ -68,8 +69,8 @@ func (h *EventHandler) find(listener Listener) int {
 }
 
 // NewEventHandler creates a new instance of event handler
-func NewEventHandler() *EventHandler {
-	return &EventHandler{
+func NewEventHandler() *EventManager {
+	return &EventManager{
 		listeners: make([]Listener, 0),
 	}
 }
