@@ -33,7 +33,7 @@ type peer struct {
 	peerID  string // id of the peer derived from p2p.NodeID
 	version uint   // Seele protocol version negotiated
 	head    common.Hash
-	td      *big.Int
+	td      *big.Int // total difficulty
 	lock    sync.RWMutex
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
