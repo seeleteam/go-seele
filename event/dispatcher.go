@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// EventManager interface defines the event handler behavior
+// EventManager interface defines the event manager behavior
 // Note, it is thread safe
 type EventManager struct {
 	lock      sync.RWMutex
@@ -64,7 +64,7 @@ func (h *EventManager) removeOnceListener() {
 	h.listeners = listener
 }
 
-// find find listener already in the handler
+// find find listener already in the manager
 // return -1 not found, otherwise return the index of the listener
 func (h *EventManager) find(listener Listener) int {
 	p := reflect.ValueOf(listener.Callable).Pointer()
@@ -79,7 +79,7 @@ func (h *EventManager) find(listener Listener) int {
 	return -1
 }
 
-// NewEventManager creates a new instance of event handler
+// NewEventManager creates a new instance of event manager
 func NewEventManager() *EventManager {
 	return &EventManager{
 		listeners: make([]Listener, 0),
