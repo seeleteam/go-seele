@@ -6,45 +6,64 @@
 package event
 
 import (
-	"fmt"
+	"github.com/magiconair/properties/assert"
 	"testing"
 )
 
-func testfun0(e Event) { fmt.Println("hello-0") }
-func testfun1(e Event) { fmt.Println("hello-1") }
+var count int
 
-func Test_Handler(t *testing.T) {
+func testfun0(e Event) { count++ }
+func testfun1(e Event) { count++ }
+
+func Test_EventManager(t *testing.T) {
+	count = 0
 	listener1 := Listener{Callable: testfun0}
 	listener2 := Listener{Callable: testfun1}
 
-	handler := NewEventHandler()
+	manager := NewEventManager()
 
-	handler.AddListener(listener1)
-	handler.AddListener(listener2)
-	handler.AddListener(listener1) //test duplicate add
+	manager.AddListener(listener1)
+	manager.AddListener(listener2)
+	assert.Equal(t, len(manager.listeners), 2)
+
+	manager.AddListener(listener1) //test duplicate add
 	event := EmptyEvent
-	fmt.Println("test 1")
-	handler.Fire(event)
+	manager.Fire(event)
 
-	handler.RemoveListener(listener2)
+	assert.Equal(t, len(manager.listeners), 2)
+	assert.Equal(t, count, 2)
 
-	fmt.Println("test 3")
-	handler.Fire(event)
+	manager.RemoveListener(listener2)
+
+	manager.Fire(event)
+	assert.Equal(t, count, 3)
 }
 
 func Test_ExecuteOnce(t *testing.T) {
-	handler := NewEventHandler()
+	handler := NewEventManager()
+	count = 0
 
-	var listener Listener
-	listener = Listener{
+	listener := Listener{
 		Callable: func(e Event) {
-			fmt.Println("execution once")
-			handler.RemoveListener(listener)
+			count++
 		},
+		IsOnceListener: true,
 	}
 
-	fmt.Println("test 1")
+	listener2 := Listener {
+		Callable: func(e Event) {
+			count += 2
+		},
+		IsOnceListener: true,
+	}
+
+	handler.AddListener(listener)
+	handler.AddListener(listener2)
+	assert.Equal(t, len(handler.listeners), 2)
+
 	handler.Fire(EmptyEvent)
-	fmt.Println("test 2")
+	assert.Equal(t, count, 3)
 	handler.Fire(EmptyEvent)
+	assert.Equal(t, count, 3)
+	assert.Equal(t, len(handler.listeners), 0)
 }

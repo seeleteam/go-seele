@@ -25,30 +25,43 @@ func (h *EventManager) Fire(e Event) {
 	for _, l := range h.listeners {
 		l.Callable(e)
 	}
+
+	h.removeOnceListener()
 }
 
 // AddListener registers a listener.
 // If there already has a same listener (same method pointer), we will not add it
 func (h *EventManager) AddListener(listener Listener) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	if index := h.find(listener); index != -1 {
 		return
 	}
 
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	h.listeners = append(h.listeners, listener)
 }
 
 // RemoveListener removes the registered event listener for given event name.
 func (h *EventManager) RemoveListener(listener Listener) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	index := h.find(listener)
 	if index == -1 {
 		return
 	}
 
-	h.lock.Lock()
-	defer h.lock.Unlock()
 	h.listeners = append(h.listeners[:index], h.listeners[index+1:]...)
+}
+
+func (h *EventManager) removeOnceListener() {
+	listener := make([]Listener, 0, len(h.listeners))
+	for _, l := range h.listeners{
+		if !l.IsOnceListener {
+			listener = append(listener, l)
+		}
+	}
+
+	h.listeners = listener
 }
 
 // find find listener already in the handler
@@ -56,8 +69,6 @@ func (h *EventManager) RemoveListener(listener Listener) {
 func (h *EventManager) find(listener Listener) int {
 	p := reflect.ValueOf(listener.Callable).Pointer()
 
-	h.lock.RLock()
-	defer h.lock.RUnlock()
 	for i, l := range h.listeners {
 		lp := reflect.ValueOf(l.Callable).Pointer()
 		if lp == p {
@@ -68,8 +79,8 @@ func (h *EventManager) find(listener Listener) int {
 	return -1
 }
 
-// NewEventHandler creates a new instance of event handler
-func NewEventHandler() *EventManager {
+// NewEventManager creates a new instance of event handler
+func NewEventManager() *EventManager {
 	return &EventManager{
 		listeners: make([]Listener, 0),
 	}
