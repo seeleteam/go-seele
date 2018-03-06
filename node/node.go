@@ -6,7 +6,6 @@
 package node
 
 import (
-	"reflect"
 	"errors"
 	"sync"
 
@@ -14,16 +13,13 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
+// error infos
 var (
-	ErrNodeRunning = errors.New("node is already running")
-	ErrNodeStopped = errors.New("node is not started")
+	ErrNodeRunning        = errors.New("node is already running")
+	ErrNodeStopped        = errors.New("node is not started")
+	ErrServiceStartFailed = errors.New("node service start failed")
+	ErrServiceStopFailed  = errors.New("node service stop failed")
 )
-
-// DuplicateServiceError is returned during Node startup if a registered service
-// constructor returns a service of the same type that was already started.
-type DuplicateServiceError struct {
-	Kind reflect.Type
-}
 
 // Node is a container for registering services.
 type Node struct {
@@ -44,7 +40,7 @@ func New(conf *Config) (*Node, error) {
 	conf = &confCopy
 
 	return &Node{
-		config: conf,
+		config:   conf,
 		services: []Service{},
 	}, nil
 }
@@ -71,6 +67,27 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
+	n.serverConfig = n.config.P2P
+	running := &p2p.Server{Config: n.serverConfig}
+	for _, service := range n.services {
+		running.Protocols = append(running.Protocols, service.Protocols()...)
+	}
+	if err := running.Start(); err != nil {
+		return ErrServiceStartFailed
+	}
+
+	//Start services
+	for i, service := range n.services {
+		if err := service.Start(running); err != nil {
+			for j := 0; j <= i; j++ {
+				service.Stop()
+			}
+			//running.Stop() need add later
+			return err
+		}
+	}
+	n.server = running
+
 	return nil
 }
 
@@ -82,6 +99,14 @@ func (n *Node) Stop() error {
 	if n.server == nil {
 		return ErrNodeStopped
 	}
+	for _, service := range n.services {
+		if err := service.Stop(); err != nil {
+			return ErrNodeStopped
+		}
+	}
+	//n.server.stop() need add later
+	n.services = nil
+	n.server = nil
 
 	return nil
 }
