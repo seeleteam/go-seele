@@ -79,7 +79,7 @@ func (n *Node) Start() error {
 	//Start services
 	for i, service := range n.services {
 		if err := service.Start(running); err != nil {
-			for j := 0; j <= i; j++ {
+			for j := 0; j < i; j++ {
 				service.Stop()
 			}
 			//running.Stop() need add later
