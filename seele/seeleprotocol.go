@@ -18,7 +18,8 @@ type SeeleProtocol struct {
 	p2p.Protocol
 	peers     map[string]*peer // peers map. peerID=>peer
 	peersLock sync.RWMutex
-	log       *log.SeeleLog
+
+	log *log.SeeleLog
 }
 
 // NewSeeleService create SeeleProtocol
@@ -85,7 +86,7 @@ func (p *SeeleProtocol) handleMsg(msg *p2p.Message) {
 	return
 }
 
-// Stop stop protocol, called when seeleService quits.
+// Stop stops protocol, called when seeleService quits.
 func (p SeeleProtocol) Stop() {
 	//TODO add a quit channel
 }

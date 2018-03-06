@@ -24,7 +24,7 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
-// Coinbase is the account address that mining rewards will be send to.
+// Coinbase gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) Coinbase(input interface{}, addr *common.Address) error {
 	if addr == nil {
 		return errAPIInvalidParams
