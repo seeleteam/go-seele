@@ -51,7 +51,7 @@ func (t *Table) updateNode(node *Node) {
 }
 
 // findNodeWithTarget find nodes that distance of target is less than measure with target
-func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []*Node {
+func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
 
 	minDis := []*Node{}
@@ -67,18 +67,18 @@ func (t *Table) findNodeWithTarget(target *common.Hash, measure *common.Hash) []
 	return minDis
 }
 
-func (t *Table) deleteNode(target *common.Hash) {
+func (t *Table) deleteNode(target common.Hash) {
 	dis := logDist(t.selfNode.getSha(), target)
 
 	t.buckets[dis].deleteNode(target)
 }
 
 // findNodeForRequest calls when start find node, find the initialize nodes
-func (t *Table) findNodeForRequest(target *common.Hash) []*Node {
+func (t *Table) findNodeForRequest(target common.Hash) []*Node {
 	return t.findMinDisNodes(target, alpha)
 }
 
-func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node {
+func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node {
 	result := nodesByDistance{
 		target:   target,
 		maxElems: number,
@@ -98,7 +98,7 @@ func (t *Table) findMinDisNodes(target *common.Hash, number int) []*Node {
 // distance to to.
 type nodesByDistance struct {
 	entries  []*Node
-	target   *common.Hash
+	target   common.Hash
 	maxElems int
 }
 

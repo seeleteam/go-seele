@@ -29,6 +29,9 @@ import (
 )
 
 const (
+	// Maximun number of peers that can be connected
+	defaultMaxPeers = 50
+
 	// Maximum number of concurrently handshaking inbound connections.
 	maxAcceptConns = 50
 
@@ -60,6 +63,9 @@ type Config struct {
 
 	// MyNodeID public key extracted from PrivateKey, so need not load from config
 	MyNodeID string `toml:"-"`
+
+	// MaxPeers max number of peers that can be connected
+	MaxPeers int
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -111,6 +117,11 @@ func (srv *Server) Start() (err error) {
 	if srv.log == nil {
 		return errors.New("p2p Create logger error")
 	}
+
+	if srv.MaxPeers == 0 {
+		srv.MaxPeers = defaultMaxPeers
+	}
+
 	srv.running = true
 	srv.peers = make(map[common.Address]*Peer)
 

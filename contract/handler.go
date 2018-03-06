@@ -1,13 +1,16 @@
 package contract
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
 // HandleTransaction handles smart contract transation.
 func HandleTransaction(tx *Transaction) {
 	hash := crypto.Keccak256Hash(tx.payload)
-	if !tx.sig.Verify(hash) {
+	fromAddr := common.HexToAddress(tx.from)
+	pubKey := crypto.ToECDSAPub(fromAddr.Bytes())
+	if !tx.sig.Verify(pubKey, hash) {
 		log.Error("Transaction signature is invalid, and will not be archived into blockchain.")
 		return
 	}

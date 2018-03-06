@@ -62,14 +62,14 @@ func (b *bucket) findNode(node *Node) int {
 	return -1
 }
 
-func (b *bucket) deleteNode(target *common.Hash) {
+func (b *bucket) deleteNode(target common.Hash) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	index := -1
 	for i, n := range b.peers {
 		sha := n.ID.ToSha()
-		if *sha == *target {
+		if sha == target {
 			index = i
 			break
 		}

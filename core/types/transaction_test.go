@@ -15,76 +15,65 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 )
 
+func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
+	privKey, keyErr := crypto.GenerateKey()
+	if keyErr != nil {
+		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
+	}
+
+	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
+
+	return privKey, common.HexToAddress(hexAddress)
+}
+
 func randomAddress(t *testing.T) common.Address {
-	address, err := common.GenerateRandomAddress()
-	if err != nil {
-		t.Fatalf("Failed to generate random address, error = %s", err.Error())
-	}
-
-	return *address
+	_, address := randomAccount(t)
+	return address
 }
 
-func randomKey(t *testing.T) *ecdsa.PrivateKey {
-	privKey, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatalf("Failed to generate ECDSA private key, error = %s", err.Error())
+func newTestTx(t *testing.T, amount int64, nonce uint64, sign bool) *Transaction {
+	fromPrivKey, fromAddress := randomAccount(t)
+	toAddress := randomAddress(t)
+
+	tx := NewTransaction(fromAddress, toAddress, big.NewInt(amount), nonce)
+
+	if sign {
+		tx.Sign(fromPrivKey)
 	}
 
-	return privKey
-}
-
-func newTestTx(t *testing.T, amount int64, nonce uint64) *Transaction {
-	tx := NewTransaction(randomAddress(t), randomAddress(t), big.NewInt(amount), nonce)
-	privKey := randomKey(t)
-	tx.Sign(privKey)
 	return tx
-}
-
-// After Sign, the signature is not nil and can be verified against tx hash.
-func Test_Transaction_Sign(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
-
-	if tx.Signature == nil {
-		t.Fatal("The signature is nil after Sign.")
-	}
-
-	assert.Equal(t, tx.Signature.Verify(tx.Hash.Bytes()), true)
 }
 
 // Validate successfully if no data changed.
 func Test_Transaction_Validate_NoDataChange(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
+	tx := newTestTx(t, 100, 38, true)
 	err := tx.Validate()
 	assert.Equal(t, err, error(nil))
 }
 
 // Validate failed if transaction not signed.
 func Test_Transaction_Validate_NotSigned(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
-	tx.Signature = nil
-	err := tx.Validate()
-	assert.Equal(t, err, errSigMissed)
+	tx := newTestTx(t, 100, 38, false)
+	assert.Equal(t, tx.Validate(), errSigMissed)
 }
 
 // Validate failed if transaction Hash value changed.
 func Test_Transaction_Validate_HashChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
+	tx := newTestTx(t, 100, 38, true)
 	tx.Hash = common.BytesToHash(crypto.Keccak256Hash([]byte("test")))
-	err := tx.Validate()
-	assert.Equal(t, err, errHashMismatch)
+	assert.Equal(t, tx.Validate(), errHashMismatch)
 }
 
 // Validate failed if transation data changed.
 func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
+	tx := newTestTx(t, 100, 38, true)
 	tx.Data.Amount.SetInt64(200)
-	err := tx.Validate()
-	assert.Equal(t, err, errHashMismatch)
+	assert.Equal(t, tx.Validate(), errHashMismatch)
 }
 
 // Validate failed if transaction data changed along with Hash updated.
 func Test_Transaction_Validate_SignInvalid(t *testing.T) {
-	tx := newTestTx(t, 100, 38)
+	tx := newTestTx(t, 100, 38, true)
 
 	// Change amount and update Hash in transaction.
 	tx.Data.Amount.SetInt64(200)
@@ -92,6 +81,5 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 	txDataHash := crypto.Keccak256Hash(txDataBytes)
 	tx.Hash = common.BytesToHash(txDataHash)
 
-	err := tx.Validate()
-	assert.Equal(t, err, errSigInvalid)
+	assert.Equal(t, tx.Validate(), errSigInvalid)
 }
