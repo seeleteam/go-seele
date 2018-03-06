@@ -31,7 +31,7 @@ type Protocol struct {
 	// ReadMsgCh a whole Message has recved, SubProtocol can handle as quickly as possible
 	ReadMsgCh chan *Message
 
-	// IsSpecial if value is true, means SubProtocol maintains peers itself, for example when to initiate a tcp connection.
+	// IsSelfConnect if value is true, means SubProtocol maintains peers itself, for example when to initiate a tcp connection.
 	// Otherwise, all SubProtols share one tcp connection which is initiated by p2p.scheduleTasks
 	IsSelfConnect bool
 }
