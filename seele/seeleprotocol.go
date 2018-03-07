@@ -6,6 +6,9 @@
 package seele
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -13,9 +16,10 @@ import (
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
-	maxPeers int
-	peers    map[*p2p.Peer]bool
-	log      *log.SeeleLog
+	peers     map[string]*peer // peers map. peerID=>peer
+	peersLock sync.RWMutex
+
+	log *log.SeeleLog
 }
 
 // NewSeeleService create SeeleProtocol
@@ -29,7 +33,7 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 			ReadMsgCh: make(chan *p2p.Message),
 		},
 		log:   log,
-		peers: make(map[*p2p.Peer]bool),
+		peers: make(map[string]*peer),
 	}
 	return s, nil
 }
@@ -40,12 +44,12 @@ func (p *SeeleProtocol) Run() {
 
 	for {
 		select {
-		case peer := <-p.AddPeerCh:
-			p.peers[peer] = true
-		case peer := <-p.DelPeerCh:
-			delete(p.peers, peer)
-		case message := <-p.ReadMsgCh:
-			p.log.Debug("SeeleProtocol readmsg. MsgCode[%d]", message.MsgCode)
+		case newPeer := <-p.AddPeerCh:
+			go p.handleAddPeer(newPeer)
+		case delPeer := <-p.DelPeerCh:
+			p.handleDelPeer(delPeer)
+		case msg := <-p.ReadMsgCh:
+			p.handleMsg(msg)
 		}
 	}
 }
@@ -55,12 +59,34 @@ func (p SeeleProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 	return &(p.Protocol)
 }
 
-func (p *SeeleProtocol) handleMsg(msg *p2p.Message) error {
-	//TODO add handle msg
-	return nil
+func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer) {
+	newPeer := newPeer(SeeleVersion, p2pPeer)
+	if err := newPeer.HandShake(); err != nil {
+		newPeer.Disconnect(DiscHandShakeErr)
+		p.log.Error("handleAddPeer err. %s", err)
+		return
+	}
+
+	// insert to peers map
+	p.peersLock.Lock()
+	p.peers[newPeer.peerID] = newPeer
+	p.peersLock.Unlock()
 }
 
-// Stop stop protocol, called when seeleService quits.
+func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+	p.peersLock.Lock()
+	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
+	delete(p.peers, peerID)
+	p.peersLock.Unlock()
+}
+
+func (p *SeeleProtocol) handleMsg(msg *p2p.Message) {
+	//TODO add handle msg
+	p.log.Debug("SeeleProtocol readmsg. MsgCode[%d]", msg.MsgCode)
+	return
+}
+
+// Stop stops protocol, called when seeleService quits.
 func (p SeeleProtocol) Stop() {
 	//TODO add a quit channel
 }
