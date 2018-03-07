@@ -82,7 +82,7 @@ func (n *Node) Start() error {
 			for j := 0; j < i; j++ {
 				service.Stop()
 			}
-			//running.Stop() need add later
+
 			return err
 		}
 	}
@@ -104,7 +104,7 @@ func (n *Node) Stop() error {
 			return ErrNodeStopped
 		}
 	}
-	//n.server.stop() need add later
+
 	n.services = nil
 	n.server = nil
 
