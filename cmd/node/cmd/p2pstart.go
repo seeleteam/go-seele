@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -109,8 +110,8 @@ func myresolve(id string) (*discovery.Node, error) {
 }
 
 // startCmd represents the start command
-var startCmd = &cobra.Command{
-	Use:   "start",
+var p2pStartCmd = &cobra.Command{
+	Use:   "p2pstart",
 	Short: "start the p2p server of seele",
 	Long: `usage example:
     p2p server start 
@@ -118,7 +119,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
-
+		var wg sync.WaitGroup
 		var config *Config = new(Config)
 		_, err := toml.DecodeFile("test.toml", config)
 		if err != nil {
@@ -158,13 +159,14 @@ var startCmd = &cobra.Command{
 			fmt.Println("Start err.", err)
 			os.Exit(1)
 		}
+
 		for {
-			time.Sleep(10 * time.Second)
+			wg.Wait()
 		}
 
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(p2pStartCmd)
 }
