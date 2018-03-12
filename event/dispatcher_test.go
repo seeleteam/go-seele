@@ -12,14 +12,17 @@ import (
 	"github.com/magiconair/properties/assert"
 )
 
-var count int
-
-func testfun0(e Event) { count++ }
-func testfun1(e Event) { count++ }
-
 func Test_EventManager(t *testing.T) {
-	count = 0
+	count := 0
 	manager := NewEventManager()
+
+	testfun0 := func(e Event) {
+		count++
+	}
+
+	testfun1 := func(e Event) {
+		count++
+	}
 
 	manager.AddListener(testfun0)
 	manager.AddListener(testfun1)
@@ -38,7 +41,7 @@ func Test_EventManager(t *testing.T) {
 
 func Test_ExecuteOnce(t *testing.T) {
 	manager := NewEventManager()
-	count = 0
+	count := 0
 
 	callback := func(e Event) {
 		count++
@@ -61,9 +64,9 @@ func Test_ExecuteOnce(t *testing.T) {
 
 func Test_EventAsync(t *testing.T) {
 	manager := NewEventManager()
-	count = 0
+	count := 0
 	manager.AddAsyncListener(func(e Event) {
-		time.Sleep(1)
+		time.Sleep(1*time.Second)
 		count += 1
 	})
 
@@ -74,7 +77,7 @@ func Test_EventAsync(t *testing.T) {
 
 func Test_EventInstance(t *testing.T) {
 	manager := NewEventManager()
-	count = 0
+	count := 0
 	manager.AddListener(func(e Event) {
 		v := e.(int)
 		count += v
@@ -89,7 +92,7 @@ func Test_EventInstance(t *testing.T) {
 
 func Test_EventOnceAndAsync(t *testing.T) {
 	manager := NewEventManager()
-	count = 0
+	count := 0
 	manager.AddAsyncOnceListener(func(e Event) {
 		time.Sleep(1*time.Second)
 		count += 1
@@ -101,7 +104,7 @@ func Test_EventOnceAndAsync(t *testing.T) {
 	// async listener is sleeping
 	assert.Equal(t, count, 0)
 
-	time.Sleep(1*time.Second)
+	time.Sleep(2*time.Second)
 	assert.Equal(t, count, 1)
 	assert.Equal(t, len(manager.listeners), 0)
 }
