@@ -20,8 +20,8 @@ type EventManager struct {
 // Fire fire the event and returns it after all listeners do
 // their jobs.
 func (h *EventManager) Fire(e Event) {
-	h.lock.RLock()
-	defer h.lock.RUnlock()
+	h.lock.Lock()
+	defer h.lock.Unlock()
 	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)
@@ -48,6 +48,17 @@ func (h *EventManager) AddOnceListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:       callback,
 		IsOnceListener: true,
+	}
+
+	h.addEventListener(listener)
+}
+
+// AddOnceListener register a listener which only run once and async
+func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
+	listener := eventListener{
+		Callable:       callback,
+		IsOnceListener: true,
+		IsAsyncListener: true,
 	}
 
 	h.addEventListener(listener)

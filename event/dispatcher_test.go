@@ -86,3 +86,22 @@ func Test_EventInstance(t *testing.T) {
 	manager.Fire(3)
 	assert.Equal(t, count, 5)
 }
+
+func Test_EventOnceAndAsync(t *testing.T) {
+	manager := NewEventManager()
+	count = 0
+	manager.AddAsyncOnceListener(func(e Event) {
+		time.Sleep(1)
+		count += 1
+	})
+
+	assert.Equal(t, len(manager.listeners), 1)
+
+	manager.Fire(EmptyEvent)
+	// async listener is sleeping
+	assert.Equal(t, count, 0)
+
+	time.Sleep(1)
+	assert.Equal(t, count, 1)
+	assert.Equal(t, len(manager.listeners), 0)
+}
