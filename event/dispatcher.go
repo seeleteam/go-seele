@@ -56,8 +56,8 @@ func (h *EventManager) AddOnceListener(callback EventHandleMethod) {
 // AddOnceListener register a listener which only run once and async
 func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
 	listener := eventListener{
-		Callable:       callback,
-		IsOnceListener: true,
+		Callable:        callback,
+		IsOnceListener:  true,
 		IsAsyncListener: true,
 	}
 
