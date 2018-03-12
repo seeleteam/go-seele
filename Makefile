@@ -1,10 +1,10 @@
 all: discovery node
 discovery:
-	go build ./cmd/discovery
+	go build -o ./build/discovery ./cmd/discovery
 	@echo "Done discovery building"
 
 node:
-	go build -o seele-node ./cmd/node 
+	go build -o ./build/node ./cmd/node 
 	@echo "Done node building"
 
 .PHONY: discovery node
