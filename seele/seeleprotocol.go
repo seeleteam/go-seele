@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/asaskevich/EventBus"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -18,8 +19,8 @@ type SeeleProtocol struct {
 	p2p.Protocol
 	peers     map[string]*peer // peers map. peerID=>peer
 	peersLock sync.RWMutex
-
-	log *log.SeeleLog
+	eventMux  EventBus.Bus
+	log       *log.SeeleLog
 }
 
 // NewSeeleService create SeeleProtocol
@@ -35,6 +36,7 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 		log:   log,
 		peers: make(map[string]*peer),
 	}
+	s.eventMux = EventBus.New()
 	return s, nil
 }
 
