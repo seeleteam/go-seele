@@ -15,9 +15,10 @@ type EventHandleMethod func(e Event)
 type Event interface {
 }
 
-// Listener type for defining functions as listeners
-type Listener struct {
+// eventListener type for defining functions as listeners
+type eventListener struct {
 	// Callable call function
-	Callable EventHandleMethod
-	IsOnceListener bool
+	Callable        EventHandleMethod
+	IsOnceListener  bool
+	IsAsyncListener bool
 }

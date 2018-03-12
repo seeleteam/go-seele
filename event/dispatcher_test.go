@@ -6,64 +6,105 @@
 package event
 
 import (
-	"github.com/magiconair/properties/assert"
 	"testing"
+	"time"
+
+	"github.com/magiconair/properties/assert"
 )
 
-var count int
-
-func testfun0(e Event) { count++ }
-func testfun1(e Event) { count++ }
-
 func Test_EventManager(t *testing.T) {
-	count = 0
-	listener1 := Listener{Callable: testfun0}
-	listener2 := Listener{Callable: testfun1}
-
+	count := 0
 	manager := NewEventManager()
 
-	manager.AddListener(listener1)
-	manager.AddListener(listener2)
+	testfun0 := func(e Event) {
+		count++
+	}
+
+	testfun1 := func(e Event) {
+		count++
+	}
+
+	manager.AddListener(testfun0)
+	manager.AddListener(testfun1)
 	assert.Equal(t, len(manager.listeners), 2)
 
-	manager.AddListener(listener1) //test duplicate add
+	manager.AddListener(testfun0) //test duplicate add
 	event := EmptyEvent
 	manager.Fire(event)
-
 	assert.Equal(t, len(manager.listeners), 2)
 	assert.Equal(t, count, 2)
 
-	manager.RemoveListener(listener2)
-
+	manager.RemoveListener(testfun1)
 	manager.Fire(event)
 	assert.Equal(t, count, 3)
 }
 
 func Test_ExecuteOnce(t *testing.T) {
-	handler := NewEventManager()
-	count = 0
+	manager := NewEventManager()
+	count := 0
 
-	listener := Listener{
-		Callable: func(e Event) {
-			count++
-		},
-		IsOnceListener: true,
+	callback := func(e Event) {
+		count++
 	}
 
-	listener2 := Listener {
-		Callable: func(e Event) {
-			count += 2
-		},
-		IsOnceListener: true,
+	callback2 := func(e Event) {
+		count += 2
 	}
 
-	handler.AddListener(listener)
-	handler.AddListener(listener2)
-	assert.Equal(t, len(handler.listeners), 2)
+	manager.AddOnceListener(callback)
+	manager.AddOnceListener(callback2)
+	assert.Equal(t, len(manager.listeners), 2)
 
-	handler.Fire(EmptyEvent)
+	manager.Fire(EmptyEvent)
 	assert.Equal(t, count, 3)
-	handler.Fire(EmptyEvent)
+	manager.Fire(EmptyEvent)
 	assert.Equal(t, count, 3)
-	assert.Equal(t, len(handler.listeners), 0)
+	assert.Equal(t, len(manager.listeners), 0)
+}
+
+func Test_EventAsync(t *testing.T) {
+	manager := NewEventManager()
+	count := 0
+	manager.AddAsyncListener(func(e Event) {
+		time.Sleep(1*time.Second)
+		count += 1
+	})
+
+	manager.Fire(EmptyEvent)
+	// async listener is sleeping
+	assert.Equal(t, count, 0)
+}
+
+func Test_EventInstance(t *testing.T) {
+	manager := NewEventManager()
+	count := 0
+	manager.AddListener(func(e Event) {
+		v := e.(int)
+		count += v
+	})
+
+	manager.Fire(2)
+	assert.Equal(t, count, 2)
+
+	manager.Fire(3)
+	assert.Equal(t, count, 5)
+}
+
+func Test_EventOnceAndAsync(t *testing.T) {
+	manager := NewEventManager()
+	count := 0
+	manager.AddAsyncOnceListener(func(e Event) {
+		time.Sleep(1*time.Second)
+		count += 1
+	})
+
+	assert.Equal(t, len(manager.listeners), 1)
+
+	manager.Fire(EmptyEvent)
+	// async listener is sleeping
+	assert.Equal(t, count, 0)
+
+	time.Sleep(2*time.Second)
+	assert.Equal(t, count, 1)
+	assert.Equal(t, len(manager.listeners), 0)
 }
