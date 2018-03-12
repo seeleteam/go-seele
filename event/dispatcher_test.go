@@ -7,7 +7,6 @@ package event
 
 import (
 	"testing"
-
 	"time"
 
 	"github.com/magiconair/properties/assert"
