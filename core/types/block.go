@@ -42,6 +42,13 @@ func (header *BlockHeader) Clone() *BlockHeader {
 	return &clone
 }
 
+// Hash calculates and returns the hash of bloch header.
+func (header *BlockHeader) Hash() common.Hash {
+	headerBytes := common.SerializePanic(header)
+	headerHash := crypto.Keccak256Hash(headerBytes)
+	return common.BytesToHash(headerHash)
+}
+
 // Block represents a block in the blockchain.
 type Block struct {
 	HeaderHash   common.Hash // Hash on RLP encoded header bytes.

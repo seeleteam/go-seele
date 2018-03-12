@@ -6,7 +6,6 @@
 package core
 
 import (
-	"bytes"
 	"math/big"
 
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -14,11 +13,15 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
-// ErrGenesisHashMismatch is returned when genesis block hash mismatch between store and memory.
-var ErrGenesisHashMismatch = errors.New("genesis block hash mismatch")
+var (
+	// ErrGenesisHashMismatch is returned when genesis block hash mismatch between store and memory.
+	ErrGenesisHashMismatch = errors.New("genesis block hash mismatch")
+
+	// ErrGenesisNotFound is returned when genesis block not found in store.
+	ErrGenesisNotFound = errors.New("genesis block not found")
+)
 
 // Genesis represents the genesis block in the blockchain.
 type Genesis struct {
@@ -53,14 +56,17 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 func (genesis *Genesis) Initialize() error {
 	storedGenesisHash, err := genesis.bcStore.GetBlockHash(0)
 
-	// TODO use seele defined common error instead of levelDB error.
+	// TODO use seele defined common error instead of concrete levelDB error.
 	if err == errors.ErrNotFound {
 		return genesis.store()
 	}
 
-	headerBytes := common.SerializePanic(genesis.header)
-	headerHash := crypto.Keccak256Hash(headerBytes)
-	if !bytes.Equal(headerHash, storedGenesisHash.Bytes()) {
+	if err != nil {
+		return err
+	}
+
+	headerHash := genesis.header.Hash()
+	if !headerHash.Equal(storedGenesisHash) {
 		return ErrGenesisHashMismatch
 	}
 
@@ -69,6 +75,6 @@ func (genesis *Genesis) Initialize() error {
 
 // store atomically stores the genesis block in blockchain store.
 func (genesis *Genesis) store() error {
-	// TODO note, default accounts should be initialized/stored as well.
-	return nil
+	// TODO setup default accounts from config file.
+	return genesis.bcStore.PutBlockHeader(genesis.header, true)
 }

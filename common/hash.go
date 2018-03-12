@@ -5,6 +5,8 @@
 package common
 
 import (
+	"bytes"
+
 	"github.com/seeleteam/go-seele/crypto"
 )
 
@@ -49,4 +51,9 @@ func HashBytes(value []byte) Hash {
 	buff := crypto.Keccak256Hash(value)
 	h := BytesToHash(buff)
 	return h
+}
+
+// Equal returns a boolean reporting whether this hash a is equal to the input hash b.
+func (a Hash) Equal(b Hash) bool {
+	return bytes.Equal(a[:], b[:])
 }
