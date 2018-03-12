@@ -8,8 +8,9 @@ package event
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"time"
+
+	"github.com/magiconair/properties/assert"
 )
 
 var count int
@@ -28,12 +29,10 @@ func Test_EventManager(t *testing.T) {
 	manager.AddListener(testfun0) //test duplicate add
 	event := EmptyEvent
 	manager.Fire(event)
-
 	assert.Equal(t, len(manager.listeners), 2)
 	assert.Equal(t, count, 2)
 
 	manager.RemoveListener(testfun1)
-
 	manager.Fire(event)
 	assert.Equal(t, count, 3)
 }
@@ -63,9 +62,7 @@ func Test_ExecuteOnce(t *testing.T) {
 
 func Test_EventAsync(t *testing.T) {
 	manager := NewEventManager()
-
 	count = 0
-
 	manager.AddAsyncListener(func(e Event) {
 		time.Sleep(1)
 		count += 1
@@ -78,12 +75,9 @@ func Test_EventAsync(t *testing.T) {
 
 func Test_EventInstance(t *testing.T) {
 	manager := NewEventManager()
-	
 	count = 0
-	
 	manager.AddListener(func(e Event) {
 		v := e.(int)
-
 		count += v
 	})
 
