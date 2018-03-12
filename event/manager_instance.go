@@ -6,7 +6,7 @@
 package event
 
 // BlockDownloaderEvent block download event
-var BlockDownloaderEvent *EventManager = NewEventManager()
+var BlockDownloaderEventManager *EventManager = NewEventManager()
 
 const (
 	DownloaderStartEvent  = 0
