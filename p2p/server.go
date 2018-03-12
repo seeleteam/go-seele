@@ -106,6 +106,12 @@ type Server struct {
 	log   *log.SeeleLog
 }
 
+// Wait waits server finished.
+func (srv *Server) Wait() (err error) {
+	srv.loopWG.Wait()
+	return nil
+}
+
 // Start starts running the server.
 func (srv *Server) Start() (err error) {
 	srv.lock.Lock()

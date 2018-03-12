@@ -12,7 +12,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -119,7 +118,7 @@ var p2pStartCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
-		var wg sync.WaitGroup
+
 		var config *Config = new(Config)
 		_, err := toml.DecodeFile("test.toml", config)
 		if err != nil {
@@ -160,10 +159,7 @@ var p2pStartCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		for {
-			wg.Wait()
-		}
-
+		myServer.Wait()
 	},
 }
 
