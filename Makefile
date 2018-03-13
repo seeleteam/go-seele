@@ -1,4 +1,4 @@
-# Makefile to build the command lines and tests in seele project.
+# Makefile to build the command lines and tests in Seele project.
 # This Makefile doesn't consider Windows Environment. If you use it in Windows, please be careful.
 
 all: discovery node
