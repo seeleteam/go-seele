@@ -57,3 +57,10 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error)
 
 	return true, nil
 }
+
+func (pool *TransactionPool) Pending() ([]*types.Transaction, error) {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+	// TODO
+	return nil,nil
+}

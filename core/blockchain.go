@@ -7,6 +7,7 @@ package core
 
 import (
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
@@ -30,4 +31,14 @@ func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
 	}
 
 	return bc, nil
+}
+
+func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	// TODO:
+	return nil
+}
+
+func (bc *Blockchain) CurrentBlock() *types.Block {
+	// TODO:
+	return nil
 }
