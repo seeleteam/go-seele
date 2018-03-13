@@ -17,7 +17,7 @@ var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "start the node of seele",
 	Long: `usage example:
-    node start 
+		node start 
 		start a node.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
