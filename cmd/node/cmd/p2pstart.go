@@ -114,7 +114,7 @@ var p2pStartCmd = &cobra.Command{
 	Use:   "p2pstart",
 	Short: "start the p2p server of seele",
 	Long: `usage example:
-    	p2p server start 
+		p2p server start 
 		start a p2p server.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
