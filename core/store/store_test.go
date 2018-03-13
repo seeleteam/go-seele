@@ -1,0 +1,72 @@
+/**
+* @file
+* @copyright defined in go-seele/LICENSE
+ */
+
+package store
+
+import (
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+
+	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database/leveldb"
+)
+
+func testBlockchainDatabase(ut func(BlockchainStore)) {
+	dir, err := ioutil.TempDir("", "BlockchainStore")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir)
+
+	db, err := leveldb.NewLevelDB(dir)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	ut(NewBlockchainDatabase(db))
+}
+
+func newTestBlockHeader(t *testing.T) *types.BlockHeader {
+	address, err := common.GenerateRandomAddress()
+	if err != nil {
+		t.Fatal()
+	}
+
+	return &types.BlockHeader{
+		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
+		Creator:           *address,
+		TxHash:            common.StringToHash("TxHash"),
+		Difficulty:        big.NewInt(1),
+		Height:            big.NewInt(1),
+		CreateTimestamp:   big.NewInt(1),
+		Nonce:             1,
+	}
+}
+
+func Test_blockchainDatabase_Header(t *testing.T) {
+	header := newTestBlockHeader(t)
+	headerHash := header.Hash()
+
+	testBlockchainDatabase(func(bcStore BlockchainStore) {
+		bcStore.PutBlockHeader(header, true)
+
+		hash, err := bcStore.GetBlockHash(1)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, hash, headerHash)
+
+		headHash, err := bcStore.GetHeadBlockHash()
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, headHash, headerHash)
+
+		storedHeader, err := bcStore.GetBlockHeader(headerHash)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, storedHeader.Hash(), headerHash)
+	})
+}

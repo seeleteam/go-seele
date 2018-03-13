@@ -53,6 +53,16 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	assert.Equal(t, cloned.Nonce, uint64(1))
 }
 
+func Test_BlockHeader_Hash(t *testing.T) {
+	header := newTestBlockHeader(t)
+	hash1 := header.Hash()
+
+	header.Nonce = 2
+	hash2 := header.Hash()
+
+	assert.Equal(t, hash1.Equal(hash2), false)
+}
+
 func Test_Block_FindTransaction(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
