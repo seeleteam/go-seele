@@ -66,7 +66,7 @@ func Test_EventAsync(t *testing.T) {
 	manager := NewEventManager()
 	count := 0
 	manager.AddAsyncListener(func(e Event) {
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 		count += 1
 	})
 
@@ -94,7 +94,7 @@ func Test_EventOnceAndAsync(t *testing.T) {
 	manager := NewEventManager()
 	count := 0
 	manager.AddAsyncOnceListener(func(e Event) {
-		time.Sleep(1*time.Second)
+		time.Sleep(1 * time.Second)
 		count += 1
 	})
 
@@ -104,7 +104,7 @@ func Test_EventOnceAndAsync(t *testing.T) {
 	// async listener is sleeping
 	assert.Equal(t, count, 0)
 
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 	assert.Equal(t, count, 1)
 	assert.Equal(t, len(manager.listeners), 0)
 }
