@@ -109,7 +109,7 @@ func myresolve(id string) (*discovery.Node, error) {
 	return node, nil
 }
 
-// startCmd represents the start command
+// p2pStartCmd represents the start command
 var p2pStartCmd = &cobra.Command{
 	Use:   "p2pstart",
 	Short: "start the p2p server of seele",
