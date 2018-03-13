@@ -15,6 +15,12 @@
 			"revisionTime": "2018-01-24T01:13:10Z"
 		},
 		{
+			"checksumSHA1": "oV1jOmDTKbb1SWVAfSRLpLhqRBc=",
+			"path": "github.com/asaskevich/EventBus",
+			"revision": "68a521d7cbbb7a859c2608b06342f384b3bd5f5a",
+			"revisionTime": "2018-01-03T00:01:10Z"
+		},
+		{
 			"checksumSHA1": "Lps/+JqMRVlrXgO/+cazYcfsglg=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
 			"path": "github.com/davecgh/go-spew/spew",

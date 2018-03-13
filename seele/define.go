@@ -11,4 +11,13 @@ const (
 
 	// SeeleVersion Version number of Seele protocol
 	SeeleVersion uint = 1
+
+	// DownloadStartEvent event name of start downloading blocks
+	DownloadStartEvent = "downloader.StartEvent"
+
+	// DownloadDownEvent event name of blocks downloaded successfully
+	DownloadDownEvent = "downloader.DoneEvent"
+
+	// DownloadFailedEvent event name of blocks downloaded failed
+	DownloadFailedEvent = "downloader.FailedEvent"
 )
