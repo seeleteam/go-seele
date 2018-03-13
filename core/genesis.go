@@ -56,7 +56,7 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 func (genesis *Genesis) Initialize() error {
 	storedGenesisHash, err := genesis.bcStore.GetBlockHash(0)
 
-	// TODO use seele defined common error instead of concrete levelDB error.
+	// FIXME use seele defined common error instead of concrete levelDB error.
 	if err == errors.ErrNotFound {
 		return genesis.store()
 	}
