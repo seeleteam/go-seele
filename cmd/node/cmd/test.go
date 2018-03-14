@@ -21,7 +21,7 @@ var (
 	configFile *string
 )
 
-// this package shows how to use p2p network in a higher level
+// this file shows how to use p2p network in a higher level
 // 1. Create SubProtocol inherits p2p.Protocol
 // 2. Implements two functions (Run GetBaseProtocol)
 // 3. In function Run, handle three channels
