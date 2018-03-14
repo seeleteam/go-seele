@@ -24,7 +24,7 @@ var (
 // this package shows how to use p2p network in a higher level
 // 1. Create SubProtocol inherits p2p.Protocol
 // 2. Implements two functions (Run GetBaseProtocol)
-// 3. In function Run, handle three channel
+// 3. In function Run, handle three channels
 // 4. Append SubProtocols to p2p.server.Protocols
 // 5. Send hello world message to peers
 
