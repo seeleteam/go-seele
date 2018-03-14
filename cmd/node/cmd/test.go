@@ -62,7 +62,6 @@ func (p *myProtocol) Run() {
 }
 
 func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
-	//fmt.Println("myProtocol Running...")
 	return &(p.Protocol)
 }
 
@@ -123,7 +122,7 @@ func startServer(configFile string) {
 	myServer.Wait()
 }
 
-// testCmd represents the start command
+// testCmd represents the test p2p protocol command
 var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "start the p2p server of seele",
