@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
@@ -34,7 +35,7 @@ type myProtocol struct {
 func (p *myProtocol) Run() {
 	fmt.Println("myProtocol Running...")
 	p.peers = make(map[*p2p.Peer]bool)
-	ping := time.NewTimer(10 * time.Second)
+	ping := time.NewTimer(30 * time.Second)
 
 	for {
 		select {
@@ -47,7 +48,10 @@ func (p *myProtocol) Run() {
 			delete(p.peers, peer)
 			fmt.Println("myProtocol del peer. peers=", len(p.peers))
 		case message := <-p.ReadMsgCh:
-			fmt.Println("myProtocol readmsg", message)
+			msg := []string{}
+			common.Deserialize(message.Payload, &msg)
+			fmt.Printf("myProtocol readmsg, code:%d, peer:%s, msg:%s\n", message.MsgCode,
+				message.CurPeer.Node.GetUDPAddr(), msg)
 		case <-ping.C:
 			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
 			p.sendMessage()
@@ -63,7 +67,7 @@ func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 
 func (p *myProtocol) sendMessage() {
 	for peer := range p.peers {
-		peer.SendMsg(&p.Protocol, 100, []interface{}{"Hello", "world"})
+		peer.SendMsg(&p.Protocol, 100, []string{"Hello", "world"})
 	}
 }
 
@@ -118,13 +122,13 @@ func startServer(configFile string) {
 	myServer.Wait()
 }
 
-// p2pStartCmd represents the start command
-var p2pStartCmd = &cobra.Command{
-	Use:   "p2pstart",
+// testCmd represents the start command
+var testCmd = &cobra.Command{
+	Use:   "test",
 	Short: "start the p2p server of seele",
 	Long: `usage example:
-		p2p server start 
-		start a p2p server.`,
+		node.exe test -c cmd\peer1.toml
+		start a p2p server with config file.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		startServer(*configFile)
@@ -132,7 +136,8 @@ var p2pStartCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(p2pStartCmd)
+	rootCmd.AddCommand(testCmd)
 
-	configFile = p2pStartCmd.Flags().StringP("config", "c", "", "node config")
+	configFile = testCmd.Flags().StringP("config", "c", "", "node config (required)")
+	testCmd.MarkFlagRequired("config")
 }

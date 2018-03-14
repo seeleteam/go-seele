@@ -82,7 +82,7 @@ type Config struct {
 	KadAddr string
 
 	// Protocols should contain the protocols supported by the server.
-	Protocols []Protocol `toml:"-"`
+	Protocols []ProtocolInterface `toml:"-"`
 
 	// p2p.server will listen for incoming tcp connections.
 	ListenAddr string
@@ -191,8 +191,8 @@ running:
 				c.Disconnect(discAlreadyConnected)
 			} else {
 				peers[c.Node.ID] = c
-				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
-				srv.log.Info("server.run  <-srv.addpeer ", c.Node.ID)
+				//srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
+				srv.log.Info("server.run  <-srv.addpeer %s", c.Node.ID.ToHex())
 			}
 		case pd := <-srv.delpeer:
 			curPeer, ok := peers[pd.Node.ID]
@@ -300,7 +300,10 @@ func (srv *Server) listenLoop() {
 		go func() {
 			srv.log.Info("Accept new connection from, %s", fd.RemoteAddr())
 			err := srv.setupConn(fd, inboundConn, nil)
-			srv.log.Info("setupConn err, %s", err)
+			if err != nil {
+				srv.log.Info("setupConn err, %s", err)
+			}
+
 			slots <- struct{}{}
 		}()
 	}
@@ -357,11 +360,11 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			return errors.New("not found nodeID in discovery database!")
 		}
 
-		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID)
+		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
 		peer.Node = peerNode
 	}
 
-	srv.log.Info("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
+	srv.log.Debug("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
 		srv.addpeer <- peer
