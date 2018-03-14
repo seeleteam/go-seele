@@ -7,6 +7,8 @@ package seele
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -18,6 +20,19 @@ type SeeleService struct {
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
 	coinbase      common.Address // account address that mining rewards will be send to.
+
+	txPool *core.TransactionPool
+	chain  *core.Blockchain
+}
+
+func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
+func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
+func (s *SeeleService) NetVersion() uint64            { return s.networkID }
+
+// ApplyTransaction applys a transaction
+func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Transaction) error {
+	// TODO
+	return nil
 }
 
 // NewSeeleService create SeeleService
