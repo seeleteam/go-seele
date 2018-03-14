@@ -91,3 +91,54 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	assert.Equal(t, added, false)
 	assert.Equal(t, err, errTxPoolFull)
 }
+
+func Test_TransactionPool_GetTransaction(t *testing.T) {
+	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	tx := newTestTx(t, 10, 100)
+	pool.AddTransaction(tx)
+
+	assert.Equal(t, pool.GetTransaction(tx.Hash), tx)
+}
+
+func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.Address, []*types.Transaction) {
+	if len(amounts) != len(nonces) || len(amounts) == 0 {
+		t.Fatal()
+	}
+
+	fromPrivKey, fromAddress := randomAccount(t)
+	txs := make([]*types.Transaction, 0, len(amounts))
+
+	for i, amount := range amounts {
+		_, toAddress := randomAccount(t)
+
+		tx := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), nonces[i])
+		tx.Sign(fromPrivKey)
+
+		txs = append(txs, tx)
+	}
+
+	return fromAddress, txs
+}
+
+func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
+	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	account1, txs1 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{9, 5, 7})
+	account2, txs2 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{7, 9, 5})
+
+	for _, tx := range append(txs1, txs2...) {
+		pool.AddTransaction(tx)
+	}
+
+	processableTxs := pool.GetProcessableTransactions()
+	assert.Equal(t, len(processableTxs), 2)
+
+	assert.Equal(t, len(processableTxs[account1]), 3)
+	assert.Equal(t, processableTxs[account1][0], txs1[1])
+	assert.Equal(t, processableTxs[account1][1], txs1[2])
+	assert.Equal(t, processableTxs[account1][2], txs1[0])
+
+	assert.Equal(t, len(processableTxs[account2]), 3)
+	assert.Equal(t, processableTxs[account2][0], txs2[2])
+	assert.Equal(t, processableTxs[account2][1], txs2[0])
+	assert.Equal(t, processableTxs[account2][2], txs2[1])
+}
