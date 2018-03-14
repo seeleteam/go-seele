@@ -32,8 +32,6 @@ var startCmd = &cobra.Command{
     discovery start -b snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000 -a "127.0.0.1:9001"
         start a server with a bootstrap node and specific its binding address.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
-
 		bootstrap := make([]*discovery.Node, 0)
 		if *bootstrapNode != "" {
 			n, err := discovery.NewNodeFromString(*bootstrapNode)

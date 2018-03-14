@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	pingInterval         = 3 * time.Second // ping interval for peer tcp connection. Should be 15
-	discAlreadyConnected = 10              // node already has connection
-	discServerQuit       = 11              // p2p.server need quit, all peers should quit as it can
+	pingInterval         = 15 * time.Second // ping interval for peer tcp connection. Should be 15
+	discAlreadyConnected = 10               // node already has connection
+	discServerQuit       = 11               // p2p.server need quit, all peers should quit as it can
 )
 
 // Peer represents a connected remote node.
@@ -154,7 +154,7 @@ func (p *Peer) handle(msgRecv *msg) error {
 	case msgRecv.msgCode == ctlMsgPingCode:
 		go p.sendCtlMsg(ctlMsgPongCode)
 	case msgRecv.msgCode == ctlMsgPongCode:
-		p.log.Debug("peer handle Ping msg.")
+		//p.log.Debug("peer handle Ping msg.")
 		return nil
 	case msgRecv.msgCode == ctlMsgDiscCode:
 		return fmt.Errorf("error=%d", ctlMsgDiscCode)
@@ -186,14 +186,18 @@ func (p *Peer) sendCtlMsg(msgCode uint16) error {
 		protoCode: ctlProtoCode,
 		msgCode:   msgCode,
 	}
+
+	//TODO need handle ping failed event
 	hsMsg.size = 0
 	p.sendRawMsg(hsMsg)
+
 	return nil
 }
 
 func (p *Peer) sendRawMsg(msgSend *msg) error {
 	p.wMutex.Lock()
 	defer p.wMutex.Unlock()
+
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint32(b[:4], msgSend.size)
 	binary.BigEndian.PutUint16(b[4:6], msgSend.protoCode)
@@ -213,7 +217,8 @@ func (p *Peer) sendRawMsg(msgSend *msg) error {
 			return err
 		}
 	}
-	p.log.Debug("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
+
+	//p.log.Debug("sendRawMsg protoCode:%d msgCode:%d", msgSend.protoCode, msgSend.msgCode)
 	return nil
 }
 
@@ -228,6 +233,7 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 		size:      binary.BigEndian.Uint32(headbuf[:4]),
 		msgCode:   binary.BigEndian.Uint16(headbuf[6:8]),
 	}
+
 	if msgRecv.size > 0 {
 		msgRecv.payload = make([]byte, msgRecv.size)
 		if err = p.conn.readFull(msgRecv.payload); err != nil {
@@ -235,7 +241,7 @@ func (p *Peer) recvRawMsg() (msgRecv *msg, err error) {
 		}
 	}
 
-	p.log.Debug("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
+	//p.log.Debug("recvRawMsg protoCode:%d msgCode:%d", msgRecv.protoCode, msgRecv.msgCode)
 	return msgRecv, nil
 }
 

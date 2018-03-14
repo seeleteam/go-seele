@@ -43,6 +43,9 @@ const (
 	// Maximum amount of time allowed for writing a complete message.
 	frameWriteTimeout = 20 * time.Second
 
+	// peerSyncDuration the duration of syncing peer info with node discovery, must bigger than discovery.discoveryInterval
+	peerSyncDuration = 25 * time.Second
+
 	inboundConn  = 1
 	outboundConn = 2
 
@@ -75,11 +78,11 @@ type Config struct {
 	// pre-configured nodes.
 	StaticNodes []*discovery.Node
 
-	// KadPort udp port for Kad network
-	KadPort string
+	// KadAddr udp addr for Kad network
+	KadAddr string
 
 	// Protocols should contain the protocols supported by the server.
-	Protocols []ProtocolInterface `toml:"-"`
+	Protocols []Protocol `toml:"-"`
 
 	// p2p.server will listen for incoming tcp connections.
 	ListenAddr string
@@ -134,8 +137,11 @@ func (srv *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+
+	srv.log.Debug("my ecdsa key: %s", srv.ECDSAKey)
+
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
-	addr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("0.0.0.0:%s", srv.KadPort))
+	addr, err := net.ResolveUDPAddr("udp", srv.KadAddr)
 	if err != nil {
 		return err
 	}
@@ -165,14 +171,14 @@ func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	peers := srv.peers
 	srv.log.Info("p2p start running...")
-	checkTimer := time.NewTimer(10 * time.Second)
+	checkTimer := time.NewTimer(peerSyncDuration)
+
 running:
 	for {
-		//srv.scheduleTasks()
 		select {
 		case <-checkTimer.C:
-			checkTimer.Reset(5 * time.Second)
-			srv.scheduleTasks()
+			checkTimer.Reset(peerSyncDuration)
+			srv.syncPeerNodes()
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
@@ -210,24 +216,20 @@ running:
 	}
 }
 
-//scheduleTasks
-func (srv *Server) scheduleTasks() {
+// syncPeerNodes
+func (srv *Server) syncPeerNodes() {
 	// TODO select nodes from ntab to connect
 	nodeMap := srv.kadDB.GetCopy()
-	srv.log.Info("scheduleTasks called... nodeMap=[%d] srv.peers=%d", len(nodeMap), len(srv.peers))
 	for _, node := range nodeMap {
 		_, ok := srv.peers[node.ID]
 		if ok {
 			continue
 		}
-		/*fmt.Println("\tscheduleTasks, curNode=", node.ID)
-		for _, p := range srv.peers {
-			fmt.Println("\tpeer's node = ", p.node.ID)
-		}*/
+
 		//TODO UDPPort==> TCPPort
 		addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
 		conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
-		srv.log.Info("scheduleTasks connecting... %s", addr.String())
+		srv.log.Info("syncPeerNodes connecting... %s", addr.String())
 		if err != nil {
 			if conn != nil {
 				conn.Close()
@@ -236,7 +238,7 @@ func (srv *Server) scheduleTasks() {
 		}
 		go func() {
 			if err := srv.setupConn(conn, outboundConn, node); err != nil {
-				srv.log.Info("scheduleTasks. setupConn called err returns. err=%s", err)
+				srv.log.Info("syncPeerNodes. setupConn called err returns. err=%s", err)
 			}
 		}()
 	}
@@ -258,6 +260,11 @@ func (srv *Server) startListening() error {
 
 type tempError interface {
 	Temporary() bool
+}
+
+// Wait wait for server until it exit
+func (srv *Server) Wait() {
+	srv.loopWG.Wait()
 }
 
 // listenLoop runs in its own goroutine and accepts inbound connections.
@@ -343,11 +350,13 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 				break
 			}
 		}
+
 		if peerNode == nil {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
 			return errors.New("not found nodeID in discovery database!")
 		}
+
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID)
 		peer.Node = peerNode
 	}

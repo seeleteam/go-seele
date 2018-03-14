@@ -6,20 +6,18 @@
 package cmd
 
 import (
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"net"
 	"os"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
+)
+
+var (
+	configFile *string
 )
 
 // this package shows how to use p2p network in a higher level
@@ -36,14 +34,11 @@ type myProtocol struct {
 func (p *myProtocol) Run() {
 	fmt.Println("myProtocol Running...")
 	p.peers = make(map[*p2p.Peer]bool)
-	//	var peer *p2p.Peer
-	//	var message *p2p.Message
-	ping := time.NewTimer(5 * time.Second)
+	ping := time.NewTimer(10 * time.Second)
 
 	for {
 		select {
 		case peer := <-p.AddPeerCh:
-
 			p.peers[peer] = true
 			fmt.Println("myProtocol add new peer. peers=", len(p.peers))
 		case peer := <-p.DelPeerCh:
@@ -54,10 +49,9 @@ func (p *myProtocol) Run() {
 		case message := <-p.ReadMsgCh:
 			fmt.Println("myProtocol readmsg", message)
 		case <-ping.C:
-			//p.SendM
 			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
-			p.sendMyMessage()
-			ping.Reset(3 * time.Second)
+			p.sendMessage()
+			//ping.Reset(3 * time.Second)
 		}
 	}
 }
@@ -67,7 +61,7 @@ func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 	return &(p.Protocol)
 }
 
-func (p *myProtocol) sendMyMessage() {
+func (p *myProtocol) sendMessage() {
 	for peer := range p.peers {
 		peer.SendMsg(&p.Protocol, 100, []interface{}{"Hello", "world"})
 	}
@@ -75,38 +69,53 @@ func (p *myProtocol) sendMyMessage() {
 
 // Config is test p2p server's config
 type Config struct {
-	P2PConfig    p2p.Config
-	StaticNodes  []string
-	RemoteNodeID string // optional. peer node
-	RemoteAddr   string // optional, format 182.87.223.29:39008
+	P2PConfig   p2p.Config
+	StaticNodes []string
 }
 
-func myresolve(id string) (*discovery.Node, error) {
-	nodeHeader := "snode://"
-	id = id[len(nodeHeader):]
-
-	idSplit := strings.Split(id, "@")
-	if len(idSplit) != 2 {
-		return nil, errors.New("invalidNodeError")
-	}
-
-	address, err := hex.DecodeString(idSplit[0])
+func startServer(configFile string) {
+	config := new(Config)
+	_, err := toml.DecodeFile(configFile, config)
 	if err != nil {
-		return nil, err
+		fmt.Println(err)
+		return
 	}
 
-	publicKey, err := common.NewAddress(address)
+	myServer := &p2p.Server{
+		Config: config.P2PConfig,
+	}
+
+	if len(config.StaticNodes) == 0 {
+		fmt.Println("No remote peer configed, so is a static peer")
+	} else {
+		for _, id := range config.StaticNodes {
+			n, err := discovery.NewNodeFromString(id)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			myServer.StaticNodes = append(myServer.StaticNodes, n)
+		}
+	}
+
+	my1 := &myProtocol{
+		Protocol: p2p.Protocol{
+			Name:      "test",
+			Version:   1,
+			AddPeerCh: make(chan *p2p.Peer),
+			DelPeerCh: make(chan *p2p.Peer),
+			ReadMsgCh: make(chan *p2p.Message),
+		},
+	}
+	myServer.Protocols = append(myServer.Protocols, my1)
+	err = myServer.Start()
 	if err != nil {
-		return nil, err
+		fmt.Println("Start err.", err)
+		os.Exit(1)
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", idSplit[1])
-	if err != nil {
-		return nil, err
-	}
-
-	node := discovery.NewNodeWithAddr(publicKey, addr)
-	return node, nil
+	myServer.Wait()
 }
 
 // p2pStartCmd represents the start command
@@ -118,53 +127,12 @@ var p2pStartCmd = &cobra.Command{
 		start a p2p server.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
-		var wg sync.WaitGroup
-		var config *Config = new(Config)
-		_, err := toml.DecodeFile("./cmd/p2pstart.toml", config)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		myServer := &p2p.Server{
-			Config: config.P2PConfig,
-		}
-
-		if len(config.StaticNodes) == 0 {
-			fmt.Println("No remote peer configed, so is a static peer")
-		} else {
-			for _, id := range config.StaticNodes {
-				n, err := discovery.NewNodeFromString(id)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				myServer.StaticNodes = append(myServer.StaticNodes, n)
-			}
-		}
-
-		my1 := &myProtocol{
-			Protocol: p2p.Protocol{
-				Name:      "test",
-				Version:   1,
-				AddPeerCh: make(chan *p2p.Peer),
-				DelPeerCh: make(chan *p2p.Peer),
-				ReadMsgCh: make(chan *p2p.Message),
-			},
-		}
-		myServer.Protocols = append(myServer.Protocols, my1)
-		err = myServer.Start()
-		if err != nil {
-			fmt.Println("Start err.", err)
-			os.Exit(1)
-		}
-
-		wg.Add(1)
-		wg.Wait()
+		startServer(*configFile)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(p2pStartCmd)
+
+	configFile = p2pStartCmd.Flags().StringP("config", "c", "", "node config")
 }
