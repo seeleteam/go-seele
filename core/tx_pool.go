@@ -22,16 +22,18 @@ var (
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain.
 type TransactionPool struct {
-	mutex       sync.RWMutex
-	config      TransactionPoolConfig
-	hashToTxMap map[common.Hash]*types.Transaction
+	mutex           sync.RWMutex
+	config          TransactionPoolConfig
+	hashToTxMap     map[common.Hash]*types.Transaction
+	accountToTxsMap map[common.Address]*txCollection // Account address to tx collection mapping.
 }
 
 // NewTransactionPool creates and returns a transaction pool.
 func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
 	return &TransactionPool{
-		config:      config,
-		hashToTxMap: make(map[common.Hash]*types.Transaction),
+		config:          config,
+		hashToTxMap:     make(map[common.Hash]*types.Transaction),
+		accountToTxsMap: make(map[common.Address]*txCollection),
 	}
 }
 
@@ -55,5 +57,34 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error)
 
 	pool.hashToTxMap[tx.Hash] = tx
 
+	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
+		pool.accountToTxsMap[tx.Data.From] = newTxCollection()
+	}
+
+	pool.accountToTxsMap[tx.Data.From].add(tx)
+
 	return true, nil
+}
+
+// GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
+func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transaction {
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
+
+	return pool.hashToTxMap[txHash]
+}
+
+// GetProcessableTransactions retrieves all processable transactions. The returned transactions
+// are grouped by origin account address and sorted by nonce ASC.
+func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*types.Transaction {
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
+
+	allAccountTxs := make(map[common.Address][]*types.Transaction)
+
+	for account, txs := range pool.accountToTxsMap {
+		allAccountTxs[account] = txs.getTxsOrderByNonceAsc()
+	}
+
+	return allAccountTxs
 }
