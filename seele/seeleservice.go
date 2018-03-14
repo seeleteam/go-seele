@@ -33,7 +33,7 @@ func NewSeeleService(networkID uint64, log *log.SeeleLog) (s *SeeleService, err 
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *SeeleService) Protocols() (protos []p2p.Protocol) {
+func (s *SeeleService) Protocols() (protos []p2p.ProtocolInterface) {
 	protos = append(protos, s.seeleProtocol)
 	return
 }

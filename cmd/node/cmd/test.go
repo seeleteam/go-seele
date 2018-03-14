@@ -26,6 +26,7 @@ var (
 // 2. Implements two functions (Run GetBaseProtocol)
 // 3. In function Run, handle three channel
 // 4. Append SubProtocols to p2p.server.Protocols
+// 5. Send hello world message to peers
 
 type myProtocol struct {
 	p2p.Protocol

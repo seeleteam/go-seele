@@ -12,8 +12,6 @@ import (
 const (
 	baseProtoCode uint   = 8 //start protoCode used by higher level
 	ctlProtoCode  uint16 = 1 //control protoCode. For example, handshake ping pong message etc
-
-	protocolVersion uint = 1 //protocol version
 )
 
 //Protocol base class for high level transfer protocol.
