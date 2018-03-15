@@ -7,15 +7,19 @@ package store
 
 import (
 	"encoding/binary"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 )
 
 var (
 	keyHeadBlockHash = []byte("HeadBlockHash")
+
+	keyPrefixHash   = []byte("H")
+	keyPrefixHeader = []byte("h")
+	keyPrefixTD     = []byte("t")
 )
 
 type blockchainDatabase struct {
@@ -24,17 +28,22 @@ type blockchainDatabase struct {
 
 // NewBlockchainDatabase returns a blockchainDatabase instance.
 // There are following mappings in database:
-//   1) height => hash
-//   2) HeadBlockHash => hash
-//   3) hash => header
+//   1) keyPrefixHash + height => hash
+//   2) keyHeadBlockHash => HEAD hash
+//   3) keyPrefixHeader + hash => header
+//   4) keyPrefixTD + hash => TD
 func NewBlockchainDatabase(db database.Database) BlockchainStore {
 	return &blockchainDatabase{db}
 }
 
+func heightToHashKey(height uint64) []byte { return append(keyPrefixHash, encodeBlockHeight(height)...) }
+func hashToHeaderKey(hash []byte) []byte   { return append(keyPrefixHeader, hash...) }
+func hashToTDKey(hash []byte) []byte       { return append(keyPrefixTD, hash...) }
+
 func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error) {
-	hashBytes, err := store.db.Get(encodeBlockHeight(height))
+	hashBytes, err := store.db.Get(heightToHashKey(height))
 	if err != nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 
 	return common.BytesToHash(hashBytes), nil
@@ -50,14 +59,14 @@ func encodeBlockHeight(height uint64) []byte {
 func (store *blockchainDatabase) GetHeadBlockHash() (common.Hash, error) {
 	hashBytes, err := store.db.Get(keyHeadBlockHash)
 	if err != nil {
-		return common.Hash{}, err
+		return common.EmptyHash, err
 	}
 
 	return common.BytesToHash(hashBytes), nil
 }
 
 func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockHeader, error) {
-	headerBytes, err := store.db.Get(hash.Bytes())
+	headerBytes, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +79,7 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 	return header, nil
 }
 
-func (store *blockchainDatabase) PutBlockHeader(header *types.BlockHeader, isHead bool) error {
+func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error {
 	if header == nil {
 		panic("header is nil.")
 	}
@@ -80,15 +89,30 @@ func (store *blockchainDatabase) PutBlockHeader(header *types.BlockHeader, isHea
 		return err
 	}
 
-	headerHash := crypto.Keccak256Hash(headerBytes)
+	hashBytes := hash.Bytes()
 
 	batch := store.db.NewBatch()
-	batch.Put(encodeBlockHeight(header.Height.Uint64()), headerHash)
-	batch.Put(headerHash, headerBytes)
+	batch.Put(heightToHashKey(header.Height), hashBytes)
+	batch.Put(hashToHeaderKey(hashBytes), headerBytes)
+	batch.Put(hashToTDKey(hashBytes), common.SerializePanic(td))
 
 	if isHead {
-		batch.Put(keyHeadBlockHash, headerHash)
+		batch.Put(keyHeadBlockHash, hashBytes)
 	}
 
 	return batch.Commit()
+}
+
+func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
+	tdBytes, err := store.db.Get(hashToTDKey(hash.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+
+	td := new(big.Int)
+	if err = common.Deserialize(tdBytes, td); err != nil {
+		return nil, err
+	}
+
+	return td, nil
 }

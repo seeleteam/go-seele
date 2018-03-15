@@ -6,6 +6,8 @@
 package store
 
 import (
+	"math/big"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -19,7 +21,10 @@ type BlockchainStore interface {
 
 	// GetBlockHeader retrieves the block header for the specified block hash.
 	GetBlockHeader(hash common.Hash) (*types.BlockHeader, error)
-	// PutBlockHeader serializes a block header into the store. The input parameter
-	// isHead indicates if the header is a HEAD block header.
-	PutBlockHeader(header *types.BlockHeader, isHead bool) error
+	// PutBlockHeader serializes a block header with total difficulty into the store.
+	// The input parameter isHead indicates if the header is a HEAD block header.
+	PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error
+
+	// GetBlockTotalDifficulty retrieves a block's total difficulty for the specified block hash.
+	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
 }
