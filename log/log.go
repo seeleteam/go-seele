@@ -8,9 +8,16 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	// logFolder the default folder to write log
+	logFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
 // SeeleLog wrapped log class
@@ -74,15 +81,21 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	if bConsole {
 		log.Out = os.Stdout
 	} else {
-		// TODO we need to find a proper path for log file
-		logFileName := logName + ".log"
-		file, err := os.OpenFile(logFileName, os.O_CREATE|os.O_APPEND, 0666)
+		err := os.MkdirAll(logFolder, os.ModePerm)
 		if err != nil {
-			fmt.Println("create log file failed. ", err)
-			return nil
+			panic(fmt.Sprintf("create log file failed %s", err))
 		}
+
+		logFileName := logName + ".log"
+		logFullPath := filepath.Join(logFolder, logFileName)
+		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			panic(fmt.Sprintf("create log file failed %s", err))
+		}
+
 		log.Out = file
 	}
+
 	log.SetLevel(logrus.DebugLevel)
 	log.AddHook(&CallerHook{}) // add caller hook to print caller's file & line number
 	curLog = &SeeleLog{
