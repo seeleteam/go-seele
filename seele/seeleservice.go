@@ -8,7 +8,10 @@ package seele
 import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -21,8 +24,9 @@ type SeeleService struct {
 	log           *log.SeeleLog
 	coinbase      common.Address // account address that mining rewards will be send to.
 
-	txPool *core.TransactionPool
-	chain  *core.Blockchain
+	txPool  *core.TransactionPool
+	chain   *core.Blockchain
+	chainDB database.Database
 }
 
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
@@ -36,14 +40,44 @@ func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Trans
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(networkID uint64, log *log.SeeleLog) (s *SeeleService, err error) {
+func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
 	s = &SeeleService{
-		networkID: networkID,
+		networkID: conf.NetworkID,
 		log:       log,
 	}
+	s.coinbase = conf.Coinbase
+	dbPath := conf.DataRoot + BlockChainDir
+	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
+	s.chainDB, err = leveldb.NewLevelDB(dbPath)
+	if err != nil {
+		log.Error("NewSeeleService Create BlockChain err. %s", err)
+		return nil, err
+	}
 
-	s.seeleProtocol, err = NewSeeleProtocol(networkID, log)
-	return s, err
+	bcStore := store.NewBlockchainDatabase(s.chainDB)
+	genesis := core.DefaultGenesis(bcStore)
+	err = genesis.Initialize()
+	if err != nil {
+		log.Error("NewSeeleService genesis.Initialize err. %s", err)
+		return nil, err
+	}
+
+	s.chain, err = core.NewBlockchain(bcStore)
+	if err != nil {
+		s.chainDB.Close()
+		log.Error("NewSeeleService init chain failed. %s", err)
+		return nil, err
+	}
+
+	s.txPool = core.NewTransactionPool(conf.txConf)
+	s.seeleProtocol, err = NewSeeleProtocol(s, log)
+	if err != nil {
+		s.chainDB.Close()
+		log.Error("NewSeeleService create seeleProtocol err. %s", err)
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // Protocols implements node.Service, returning all the currently configured
@@ -55,12 +89,17 @@ func (s *SeeleService) Protocols() (protos []p2p.ProtocolInterface) {
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
 func (s *SeeleService) Start(srvr *p2p.Server) error {
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines.
 func (s *SeeleService) Stop() error {
 	s.seeleProtocol.Stop()
+
+	//TODO
+	// s.txPool.Stop() s.chain.Stop()
+	s.chainDB.Close()
 	return nil
 }
 

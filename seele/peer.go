@@ -19,6 +19,7 @@ import (
 const (
 	// DiscHandShakeErr peer handshake error
 	DiscHandShakeErr = 100
+	DiscBreakOut     = 105
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -78,10 +79,4 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 
 	copy(p.head[:], hash[:])
 	p.td.Set(td)
-}
-
-// HandShake exchange networkid td etc between two connected peers.
-func (p *peer) HandShake() error {
-	//TODO add exchange status msg
-	return nil
 }
