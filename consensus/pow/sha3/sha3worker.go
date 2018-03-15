@@ -28,16 +28,16 @@ type Worker struct {
 	nonce  string
 	target *big.Int
 
-	isStop bool
-	wg     sync.WaitGroup
+	isStoppedByUser bool
+	wg              sync.WaitGroup
 }
 
 func NewSha3Worker(data []byte, target *big.Int) *Worker {
 	return &Worker{
-		data:   data,
-		nonce:  "",
-		target: target,
-		isStop: false,
+		data:            data,
+		nonce:           "",
+		target:          target,
+		isStoppedByUser: false,
 	}
 }
 
@@ -58,10 +58,11 @@ func (w *Worker) prepareData(nonce string) []byte {
 func (w *Worker) start() {
 	defer w.wg.Done()
 
+	w.isStoppedByUser = false
 	var nonce int64
 	var hashInt big.Int
 	for nonce < math.MaxInt64 {
-		if w.isStop {
+		if w.isStoppedByUser {
 			break
 		}
 
@@ -81,7 +82,7 @@ func (w *Worker) start() {
 
 // GetResult if got error, will return the error info
 func (w *Worker) GetResult() (string, error) {
-	if w.isStop {
+	if w.isStoppedByUser {
 		return "", ErrorStoppedByUser
 	}
 
@@ -113,5 +114,5 @@ func (w *Worker) Validate(nonce string) bool {
 }
 
 func (w *Worker) Stop() {
-	w.isStop = true
+	w.isStoppedByUser = true
 }
