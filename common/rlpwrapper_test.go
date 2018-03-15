@@ -7,8 +7,6 @@ package common
 
 import (
 	"bytes"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -34,13 +32,13 @@ func Test_RLP(t *testing.T) {
 	buffer := bytes.Buffer{}
 	err := rlp.Encode(&buffer, &s)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	nst := Student{}
 	err = rlp.Decode(&buffer, &nst)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	assert.Equal(t, nst.Name, s.Name)
@@ -53,7 +51,7 @@ func Test_RLP(t *testing.T) {
 func Test_RLPWrapper(t *testing.T) {
 	data, err := Serialize(&s)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
 	nst := Student{}
@@ -63,18 +61,6 @@ func Test_RLPWrapper(t *testing.T) {
 	assert.Equal(t, nst.NO, s.NO)
 	assert.Equal(t, nst.score, uint(0))
 	assert.Equal(t, nst._age, uint(0))
-}
-
-// test json effective
-func Test_Json(t *testing.T) {
-	buff, err := json.Marshal(&s)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(len(buff))
-
-	fmt.Println(string(buff))
 }
 
 // Panics when serialize unsupported data.
