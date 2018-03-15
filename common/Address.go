@@ -42,6 +42,10 @@ func (id *Address) ToSha() Hash {
 	return h
 }
 
+func (id *Address) ToHex() string {
+	return hexutil.BytesToHex(id.Bytes())
+}
+
 func GenerateRandomAddress() (*Address, error) {
 	keypair, err := crypto.GenerateKey()
 	if err != nil {

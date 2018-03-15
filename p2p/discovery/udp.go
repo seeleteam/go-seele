@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	_ "github.com/seeleteam/go-seele/common/hexutil"
 )
 
 const (
