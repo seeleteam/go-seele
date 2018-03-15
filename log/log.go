@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	// logFolder the default folder to write log
 	logFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
