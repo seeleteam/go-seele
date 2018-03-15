@@ -5,7 +5,7 @@
 
 package common
 
-import(
+import (
 	"os"
 	"path/filepath"
 )
@@ -14,7 +14,7 @@ var (
 	tempFolder string
 )
 
-func init()  {
+func init() {
 	tempFolder = filepath.Join(os.TempDir(), "SeeleTemp")
 }
 

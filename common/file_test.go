@@ -6,10 +6,11 @@
 package common
 
 import (
-	"testing"
-	"github.com/magiconair/properties/assert"
 	"os"
 	"path/filepath"
+	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 func Test_IsFileOrFolderExist(t *testing.T) {

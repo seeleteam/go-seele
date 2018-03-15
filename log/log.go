@@ -8,11 +8,11 @@ package log
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"github.com/seeleteam/go-seele/common"
-	"path/filepath"
+	"github.com/sirupsen/logrus"
 )
 
 var (

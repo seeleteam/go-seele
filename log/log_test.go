@@ -6,10 +6,11 @@
 package log
 
 import (
-	"testing"
-	"github.com/seeleteam/go-seele/common"
 	"path/filepath"
+	"testing"
+
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 )
 
 func Test_Log(t *testing.T) {
@@ -22,7 +23,7 @@ func Test_Log(t *testing.T) {
 	//panic("panic msg")
 }
 
-func Test_LogFile(t *testing.T)  {
+func Test_LogFile(t *testing.T) {
 	log := GetLogger("test2", false)
 
 	log.Debug("debug")
