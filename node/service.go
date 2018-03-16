@@ -5,12 +5,17 @@
 
 package node
 
-import "github.com/seeleteam/go-seele/p2p"
+import (
+	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
+)
 
 // Service registers to node after node starts.
 type Service interface {
 	// Protocols retrieves the P2P protocols the service wishes to start.
 	Protocols() []p2p.ProtocolInterface
+
+	APIs() (apis []rpc.API)
 
 	Start(server *p2p.Server) error
 
