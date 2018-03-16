@@ -16,7 +16,7 @@ import (
 
 var clientConfigFile *string
 
-//
+// ClientConfig is the rpc client config
 type ClientConfig struct {
 	RPCAddr string
 }
