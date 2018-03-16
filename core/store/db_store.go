@@ -31,7 +31,7 @@ type blockchainDatabase struct {
 //   1) keyPrefixHash + height => hash
 //   2) keyHeadBlockHash => HEAD hash
 //   3) keyPrefixHeader + hash => header
-//   4) keyPrefixTD + hash => TD
+//   4) keyPrefixTD + hash => total difficulty (td for short)
 func NewBlockchainDatabase(db database.Database) BlockchainStore {
 	return &blockchainDatabase{db}
 }
