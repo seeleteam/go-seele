@@ -126,6 +126,7 @@ func (p *SeeleProtocol) handleStatusMsg(peerID string, msg *p2p.Message) error {
 	var statusMsg statusData
 	err := common.Deserialize(msg.Payload, &statusMsg)
 	p.peersLock.Lock()
+	defer p.peersLock.Unlock()
 	if err != nil {
 		p.log.Info("handleStatusMsg not valid msg. %s", err)
 		return err

@@ -36,8 +36,7 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	log := log.GetLogger("seele", true)
 	ss, err := NewSeeleService(conf, log)
 	if err != nil {
-		t.Fail()
-		return
+		t.Fatal()
 	}
 
 	api := NewPublicSeeleAPI(ss)

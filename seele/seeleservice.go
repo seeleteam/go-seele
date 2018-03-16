@@ -99,6 +99,7 @@ func (s *SeeleService) Stop() error {
 
 	//TODO
 	// s.txPool.Stop() s.chain.Stop()
+	// retries? leave it to future
 	s.chainDB.Close()
 	return nil
 }
