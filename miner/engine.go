@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
+// CPUEngine is a mine engine used to find a good nonce for block
 type CPUEngine struct {
 	mutex sync.Mutex
 
@@ -25,6 +26,7 @@ type CPUEngine struct {
 	mining int32
 }
 
+// NewCPUEngine is constructor of CPUEngine
 func NewCPUEngine(consensus pow.Worker) *CPUEngine {
 	engine := &CPUEngine{
 		consensus: consensus,
@@ -35,25 +37,28 @@ func NewCPUEngine(consensus pow.Worker) *CPUEngine {
 	return engine
 }
 
+// Task return taskChan
 func (eng *CPUEngine) Task() chan<- *Task {
 	return eng.taskChan
 }
 
+// SetRetChan set retChan
 func (eng *CPUEngine) SetRetChan(ch chan<- *Result) {
 	eng.retChan = ch
 }
 
+// Start function used to start engine
 func (eng *CPUEngine) Start() {
-	if atomic.LoadInt32(&eng.mining) == 1 {
+	if !atomic.CompareAndSwapInt32(&eng.mining, 0, 1) {
 		return
 	}
 
-	atomic.StoreInt32(&eng.mining, 1)
 	go eng.doTask()
 }
 
+// Stop function used to stop engine
 func (eng *CPUEngine) Stop() {
-	if atomic.LoadInt32(&eng.mining) == 0 {
+	if !atomic.CompareAndSwapInt32(&eng.mining, 1, 0) {
 		return
 	}
 

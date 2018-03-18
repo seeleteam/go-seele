@@ -24,15 +24,15 @@ type SeeleBackend interface {
 
 // fake impl of SeeleBackend
 type SeeleBackendImpl struct {
-	txPool 		*core.TransactionPool
-	chain 		*core.Blockchain
+	txPool *core.TransactionPool
+	chain  *core.Blockchain
 }
 
 func NewSeeleBackendImpl(dbPath string) *SeeleBackendImpl {
-	seele := &SeeleBackendImpl {
-		txPool:		core.NewTransactionPool(*core.DefaultTxPoolConfig()),
+	seele := &SeeleBackendImpl{
+		txPool: core.NewTransactionPool(*core.DefaultTxPoolConfig()),
 	}
-	
+
 	db, err := leveldb.NewLevelDB(dbPath)
 	if err != nil {
 		fmt.Println("New leveldb instance failed")
