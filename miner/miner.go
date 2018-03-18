@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -15,25 +14,30 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/seele"
 )
 
+// Task is a mining work for engine, it contains block header, transactions, and transaction receipts.
 type Task struct {
-	block      *types.Block
-	header 	   *types.BlockHeader
-	txs        []*types.Transaction
-	txNum 	   int32
-    //receipts   []*types.Receipt
-    //state      *state.StateDB
+	block  *types.Block
+	header *types.BlockHeader
+	txs    []*types.Transaction
+	txNum  int32
+	//receipts   []*types.Receipt
+
+	//state      *state.StateDB
 
 	createdAt time.Time
 }
 
+// Result if struct of mined result by engine, it contains the raw task and mined block.
 type Result struct {
-	Task 	*Task
-	Block 	*types.Block // mined block
+	Task  *Task
+	Block *types.Block // mined block
 }
 
+// Engine is interface of engine
 type Engine interface {
 	TaskChan() chan<- *Task
 	SetRetChan(chan<- *Result)
@@ -41,32 +45,37 @@ type Engine interface {
 	Stop()
 }
 
+// Miner defines base elements of miner
 type Miner struct {
-	mutex		sync.Mutex
+	mutex sync.Mutex
 
-	coinbase  	common.Address
-	mining      int32
-	canStart    int32
+	coinbase common.Address
+	mining   int32
+	canStart int32
 
-	seele		seele.SeeleBackend
+	seele seele.SeeleBackend
 
-	engines  	map[Engine]struct{}
+	engines map[Engine]struct{}
 
-	txChan		chan *types.Transaction
-	headChan 	chan *types.BlockHeader
-    stopChan    chan struct{}
+	txChan   chan *types.Transaction
+	headChan chan *types.BlockHeader
+	stopChan chan struct{}
 
-	current		*Task
-	recv		chan *Result
+	current *Task
+	recv    chan *Result
+
+	log		*log.SeeleLog
 }
 
-func NewMiner(addr common.Address, seele seele.SeeleBackend) *Miner {
+// NewMiner construct a miner, return a Miner instance
+func NewMiner(addr common.Address, seele seele.SeeleBackend, log *log.SeeleLog) *Miner {
 	miner := &Miner{
-		coinbase: 	addr,
-		canStart: 	1,
-		seele:		seele,
-		engines:	make(map[Engine]struct{}),
-        stopChan:   make(chan struct{}, 1),
+		coinbase: addr,
+		canStart: 1,
+		seele:    seele,
+		engines:  make(map[Engine]struct{}),
+		stopChan: make(chan struct{}, 1),
+		log:	  log,
 	}
 
 	event.BlockDownloaderEventManager.AddListener(miner.downloadEventCallback)
@@ -76,20 +85,21 @@ func NewMiner(addr common.Address, seele seele.SeeleBackend) *Miner {
 	return miner
 }
 
-func (miner *Miner) Start() bool {	
+// Start function is used to start miner
+func (miner *Miner) Start() bool {
 	miner.mutex.Lock()
 	defer miner.mutex.Unlock()
 
 	if atomic.LoadInt32(&miner.mining) == 1 {
-		fmt.Printf("Miner is running")
+		miner.log.Info("Miner is running")
 		return true
 	}
 
 	if atomic.LoadInt32(&miner.canStart) == 0 {
-		fmt.Printf("Can not start miner when syncing")
+		miner.log.Info("Can not start miner when syncing")
 		return false
 	}
-	
+
 	atomic.StoreInt32(&miner.mining, 1)
 
 	// start engine
@@ -97,31 +107,33 @@ func (miner *Miner) Start() bool {
 		engine.Start()
 	}
 
-    go miner.updateBlock()
-    go miner.waitBlock()
+	go miner.updateBlock()
+	go miner.waitBlock()
 
-    miner.prepareNewBlock() // try to prepare the first block
+	miner.prepareNewBlock() // try to prepare the first block
 
 	return true
 }
 
+// Stop function is used to stop miner
 func (miner *Miner) Stop() {
 	miner.mutex.Lock()
 	defer miner.mutex.Unlock()
 
+	atomic.StoreInt32(&miner.mining, 0)
+	miner.stopChan <- struct{}{}
+
 	for engine := range miner.engines {
 		engine.Stop()
 	}
-
-	atomic.StoreInt32(&miner.mining, 0)
-
-    miner.stopChan <- struct{}{}
 }
 
-func (miner *Miner) Mining() bool {
+// IsMining returns true if miner is started, return false if not
+func (miner *Miner) IsMining() bool {
 	return atomic.LoadInt32(&miner.mining) == 1
 }
 
+// RegisterEngine adds one engine to miner
 func (miner *Miner) RegisterEngine(engine Engine) {
 	miner.mutex.Lock()
 	defer miner.mutex.Unlock()
@@ -129,11 +141,12 @@ func (miner *Miner) RegisterEngine(engine Engine) {
 	miner.engines[engine] = struct{}{}
 	engine.SetRetChan(miner.recv)
 
-	if miner.Mining() {
+	if miner.IsMining() {
 		engine.Start()
 	}
 }
 
+// UnregisterEngine delete one engine
 func (miner *Miner) UnregisterEngine(engine Engine) {
 	miner.mutex.Lock()
 	defer miner.mutex.Unlock()
@@ -147,7 +160,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 	switch p {
 	case event.DownloaderStartEvent:
 		atomic.StoreInt32(&miner.canStart, 0)
-		if miner.Mining() {
+		if miner.IsMining() {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
@@ -170,13 +183,13 @@ func (miner *Miner) updateBlock() {
 out:
 	for {
 		select {
-		case <- miner.txChan:
-			// TODO: 
-		case <- miner.headChan:
+		case <-miner.txChan:
+			// TODO:
+		case <-miner.headChan:
 			miner.prepareNewBlock()
-        case <- miner.stopChan:
-            miner.stopChan <- struct{}{}
-            break out
+		case <-miner.stopChan:
+			miner.stopChan <- struct{}{}
+			break out
 		}
 	}
 }
@@ -185,23 +198,23 @@ func (miner *Miner) waitBlock() {
 out:
 	for {
 		select {
-        case result := <- miner.recv:
+		case result := <-miner.recv:
 			if result == nil {
 				continue
 			}
 
-			ret := miner.saveBlock(result.Block, result.Task)
+			ret := miner.saveBlock(result)
 			if ret != nil {
-				// log 
+				// log
 				continue
 			}
 
 			event.BlockMinedEventManager.Fire(result.Block) // notify p2p to broadcast block
-			
+
 			miner.prepareNewBlock() // start a new block if save one newest block successfully
-        case <- miner.stopChan:
-            miner.stopChan <- struct{}{}
-            break out
+		case <-miner.stopChan:
+			miner.stopChan <- struct{}{}
+			break out
 		}
 	}
 }
@@ -233,9 +246,9 @@ func (miner *Miner) prepareNewBlock() {
 	}
 
 	miner.current = &Task{
-		header: 	header,
-		txNum:		0,
-		createdAt: 	time.Now(),
+		header:    header,
+		txNum:     0,
+		createdAt: time.Now(),
 	}
 
 	pendingTx, err := miner.seele.TxPool().Pending()
@@ -250,15 +263,15 @@ func (miner *Miner) prepareNewBlock() {
 	miner.commitTask(miner.current)
 }
 
-func (miner *Miner) saveBlock(block *types.Block, task *Task) error {
+func (miner *Miner) saveBlock(result *Result) error {
 	// call blockchain to write
-	ret := miner.seele.BlockChain().WriteBlock(block)
-    // TODO: write recepit&state
-    return ret
+	ret := miner.seele.BlockChain().WriteBlock(result.Block)
+	// TODO: write recepit&state
+	return ret
 }
 
 func (miner *Miner) commitTask(task *Task) {
-	if (atomic.LoadInt32(&miner.mining) != 1) {
+	if atomic.LoadInt32(&miner.mining) != 1 {
 		return
 	}
 
@@ -274,9 +287,9 @@ func (task *Task) applyTransactions(seele seele.SeeleBackend, coinbase common.Ad
 	for _, tx := range txs {
 		// execute tx
 		err := seele.ApplyTransaction(coinbase, tx)
-		if (err != nil) {
+		if err != nil {
 			// log
-			continue;
+			continue
 		}
 
 		task.txs = append(task.txs, tx)

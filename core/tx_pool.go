@@ -58,6 +58,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error)
 	return true, nil
 }
 
+// Pending returns the pending transactions in the transaction pool.
 func (pool *TransactionPool) Pending() ([]*types.Transaction, error) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
