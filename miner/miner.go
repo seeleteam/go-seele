@@ -241,7 +241,7 @@ func (miner *Miner) prepareNewBlock() {
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.HeaderHash,
 		Creator:           miner.coinbase,
-		Height:            height.Add(height, big.NewInt(1)),
+		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(tstamp),
 	}
 
