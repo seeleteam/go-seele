@@ -75,8 +75,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	}
 
 	// Calculate the block header hash.
-	headerBytes := common.SerializePanic(block.Header)
-	block.HeaderHash = common.BytesToHash(crypto.Keccak256Hash(headerBytes))
+	block.HeaderHash = block.Header.Hash()
 
 	return block
 }
