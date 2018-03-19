@@ -20,7 +20,12 @@ var (
 	keyPrefixHash   = []byte("H")
 	keyPrefixHeader = []byte("h")
 	keyPrefixTD     = []byte("t")
+	keyPrefixBody   = []byte("b")
 )
+
+type blockBody struct {
+	Txs []*types.Transaction
+}
 
 type blockchainDatabase struct {
 	db database.Database
@@ -32,6 +37,7 @@ type blockchainDatabase struct {
 //   2) keyHeadBlockHash => HEAD hash
 //   3) keyPrefixHeader + hash => header
 //   4) keyPrefixTD + hash => total difficulty (td for short)
+//   5) keyPrefixBody + hash => block body (transactions)
 func NewBlockchainDatabase(db database.Database) BlockchainStore {
 	return &blockchainDatabase{db}
 }
@@ -39,6 +45,7 @@ func NewBlockchainDatabase(db database.Database) BlockchainStore {
 func heightToHashKey(height uint64) []byte { return append(keyPrefixHash, encodeBlockHeight(height)...) }
 func hashToHeaderKey(hash []byte) []byte   { return append(keyPrefixHeader, hash...) }
 func hashToTDKey(hash []byte) []byte       { return append(keyPrefixTD, hash...) }
+func hashToBodyKey(hash []byte) []byte     { return append(keyPrefixBody, hash...) }
 
 func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error) {
 	hashBytes, err := store.db.Get(heightToHashKey(height))
@@ -80,8 +87,12 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 }
 
 func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error {
+	return store.putBlockInternal(hash, header, nil, td, isHead)
+}
+
+func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *types.BlockHeader, body *blockBody, td *big.Int, isHead bool) error {
 	if header == nil {
-		panic("header is nil.")
+		panic("header is nil")
 	}
 
 	headerBytes, err := common.Serialize(header)
@@ -95,6 +106,10 @@ func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.
 	batch.Put(heightToHashKey(header.Height), hashBytes)
 	batch.Put(hashToHeaderKey(hashBytes), headerBytes)
 	batch.Put(hashToTDKey(hashBytes), common.SerializePanic(td))
+
+	if body != nil {
+		batch.Put(hashToBodyKey(hashBytes), common.SerializePanic(body))
+	}
 
 	if isHead {
 		batch.Put(keyHeadBlockHash, hashBytes)
@@ -115,4 +130,48 @@ func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big
 	}
 
 	return td, nil
+}
+
+func (store *blockchainDatabase) PutBlock(block *types.Block, td *big.Int, isHead bool) error {
+	if block == nil {
+		panic("block is nil")
+	}
+
+	return store.putBlockInternal(block.HeaderHash, block.Header, &blockBody{block.Transactions}, td, isHead)
+}
+
+func (store *blockchainDatabase) GetBlock(hash common.Hash) (*types.Block, error) {
+	header, err := store.GetBlockHeader(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyKey := hashToBodyKey(hash.Bytes())
+	hasBody, err := store.db.Has(bodyKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !hasBody {
+		return &types.Block{
+			HeaderHash: hash,
+			Header:     header,
+		}, nil
+	}
+
+	bodyBytes, err := store.db.Get(bodyKey)
+	if err != nil {
+		return nil, err
+	}
+
+	body := blockBody{}
+	if err := common.Deserialize(bodyBytes, &body); err != nil {
+		return nil, err
+	}
+
+	return &types.Block{
+		HeaderHash:   hash,
+		Header:       header,
+		Transactions: body.Txs,
+	}, nil
 }
