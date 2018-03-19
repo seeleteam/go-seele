@@ -9,36 +9,24 @@ import (
 	"fmt"
 	"net/rpc/jsonrpc"
 
-	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/spf13/cobra"
 )
 
-var clientConfigFile *string
-
-// ClientConfig is the rpc client config
-type ClientConfig struct {
-	RPCAddr string
-}
+var rpcServerAddr *string
 
 // rpcClientCmd the rpc test client to node.
 var rpcClientCmd = &cobra.Command{
 	Use:   "rpcClient",
 	Short: "test the rpc of node",
 	Long: `usage example:
-		node.exe rpcClient -c cmd\rpcClient.toml
-		start a rpc client with config file to test rpc server.`,
+		node.exe rpcClient -a 127.0.0.1:55027
+		start a rpc client to test rpc server.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("testrpc called")
-		clientConfig := new(ClientConfig)
-		_, err := toml.DecodeFile(*clientConfigFile, clientConfig)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
 
-		client, err := jsonrpc.Dial("tcp", clientConfig.RPCAddr)
+		client, err := jsonrpc.Dial("tcp", *rpcServerAddr)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -60,7 +48,6 @@ var rpcClientCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(rpcClientCmd)
 
-	clientConfigFile = rpcClientCmd.Flags().StringP("config", "c", "", "seele node config file (required)")
-	rpcClientCmd.MarkFlagRequired("config")
-
+	rpcServerAddr = rpcClientCmd.Flags().StringP("address", "a", "", "seele node rpc start address (Ip:Port)")
+	rpcClientCmd.MarkFlagRequired("address")
 }

@@ -18,10 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	seeleNodeKey, _     = crypto.GenerateKey()
-	seeleNodeConfigFile *string
-)
+var seeleNodeConfigFile *string
 
 // SeeleNodeConfig is test seele node config
 type SeeleNodeConfig struct {
@@ -31,12 +28,16 @@ type SeeleNodeConfig struct {
 	SeeleECDSAKey string
 }
 
-func seeleNodeConfig(configFile string) *node.Config {
+func seeleNodeConfig(configFile string) (*node.Config, error) {
 	seeleNodeConfig := new(SeeleNodeConfig)
 	_, err := toml.DecodeFile(configFile, seeleNodeConfig)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return nil, err
+	}
+
+	seeleNodeKey, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
 	}
 
 	return &node.Config{
@@ -47,7 +48,7 @@ func seeleNodeConfig(configFile string) *node.Config {
 			PrivateKey: seeleNodeKey,
 			ECDSAKey:   seeleNodeConfig.SeeleECDSAKey,
 		},
-	}
+	}, nil
 }
 
 // startCmd represents the start command
@@ -61,15 +62,25 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 		var wg sync.WaitGroup
-		// seeleNode := &node.Node{}
-		seeleNode, err := node.New(seeleNodeConfig(*seeleNodeConfigFile))
+
+		nCfg, err := seeleNodeConfig(*seeleNodeConfigFile)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		slog := log.GetLogger("seele", true)
+		seeleNode, err := node.New(nCfg)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-		seeleService, _ := seele.NewSeeleService(0, slog)
+		// Create seele service and register the service
+		slog := log.GetLogger("seele", true)
+		seeleService, err := seele.NewSeeleService(0, slog)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 		services := []node.Service{seeleService}
 		for _, service := range services {
 			if err := seeleNode.Register(service); err != nil {
