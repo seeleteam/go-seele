@@ -30,11 +30,15 @@ type TransactionPool struct {
 
 // NewTransactionPool creates and returns a transaction pool.
 func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
-	return &TransactionPool{
+	pool := &TransactionPool{
 		config:          config,
 		hashToTxMap:     make(map[common.Hash]*types.Transaction),
 		accountToTxsMap: make(map[common.Address]*txCollection),
 	}
+
+	// TODO register event listeners
+
+	return pool
 }
 
 // AddTransaction adds a single transation into the pool if it is valid and return true.
@@ -87,4 +91,9 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 	}
 
 	return allAccountTxs
+}
+
+// Stop terminates the transaction pool.
+func (pool *TransactionPool) Stop() {
+	// TODO remove event listeners
 }

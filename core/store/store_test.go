@@ -44,7 +44,7 @@ func newTestBlockHeader(t *testing.T) *types.BlockHeader {
 		Creator:           *address,
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
-		Height:            big.NewInt(1),
+		Height:            1,
 		CreateTimestamp:   big.NewInt(1),
 		Nonce:             1,
 	}
@@ -55,7 +55,7 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 	headerHash := header.Hash()
 
 	testBlockchainDatabase(func(bcStore BlockchainStore) {
-		bcStore.PutBlockHeader(header, true)
+		bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
 
 		hash, err := bcStore.GetBlockHash(1)
 		assert.Equal(t, err, error(nil))
@@ -68,5 +68,9 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 		storedHeader, err := bcStore.GetBlockHeader(headerHash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, storedHeader.Hash(), headerHash)
+
+		td, err := bcStore.GetBlockTotalDifficulty(headerHash)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, td, header.Difficulty)
 	})
 }

@@ -62,7 +62,7 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 	testBlockchainDatabase(func(bcStore store.BlockchainStore) {
 		header := DefaultGenesis(bcStore).header.Clone()
 		header.Nonce = 38
-		bcStore.PutBlockHeader(header, true)
+		bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
 
 		genesis := DefaultGenesis(bcStore)
 		err := genesis.Initialize()

@@ -18,7 +18,7 @@ type BlockHeader struct {
 	Creator           common.Address
 	TxHash            common.Hash // Transaction tree root hash
 	Difficulty        *big.Int    // Mining difficulty of current block
-	Height            *big.Int
+	Height            uint64
 	CreateTimestamp   *big.Int
 	Nonce             uint64
 }
@@ -29,10 +29,6 @@ func (header *BlockHeader) Clone() *BlockHeader {
 
 	if clone.Difficulty = new(big.Int); header.Difficulty != nil {
 		clone.Difficulty.Set(header.Difficulty)
-	}
-
-	if clone.Height = new(big.Int); header.Height != nil {
-		clone.Height.Set(header.Height)
 	}
 
 	if clone.CreateTimestamp = new(big.Int); header.CreateTimestamp != nil {

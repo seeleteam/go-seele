@@ -21,7 +21,7 @@ func newTestBlockHeader(t *testing.T) *BlockHeader {
 		Creator:           randomAddress(t),
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
-		Height:            big.NewInt(1),
+		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().UnixNano()),
 		Nonce:             1,
 	}
@@ -39,7 +39,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	header.Creator = randomAddress(t)
 	header.TxHash = common.BytesToHash(crypto.Keccak256Hash([]byte("TxHash2")))
 	header.Difficulty.SetInt64(2)
-	header.Height.SetInt64(2)
+	header.Height = 2
 	header.CreateTimestamp.SetInt64(2)
 	header.Nonce = 2
 
@@ -48,7 +48,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	assert.Equal(t, cloned.Creator, originalAddress)
 	assert.Equal(t, cloned.TxHash, common.StringToHash("TxHash"))
 	assert.Equal(t, cloned.Difficulty.Int64(), int64(1))
-	assert.Equal(t, cloned.Height.Int64(), int64(1))
+	assert.Equal(t, cloned.Height, uint64(1))
 	assert.Equal(t, cloned.CreateTimestamp.Int64(), originalTimestamp)
 	assert.Equal(t, cloned.Nonce, uint64(1))
 }

@@ -40,11 +40,11 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 	return &Genesis{
 		bcStore: bcStore,
 		header: &types.BlockHeader{
-			PreviousBlockHash: common.Hash{},
+			PreviousBlockHash: common.EmptyHash,
 			Creator:           common.Address{},
-			TxHash:            common.Hash{},
+			TxHash:            common.EmptyHash,
 			Difficulty:        big.NewInt(1),
-			Height:            big.NewInt(0),
+			Height:            0,
 			CreateTimestamp:   big.NewInt(0),
 			Nonce:             1,
 		},
@@ -76,5 +76,5 @@ func (genesis *Genesis) Initialize() error {
 // store atomically stores the genesis block in blockchain store.
 func (genesis *Genesis) store() error {
 	// TODO setup default accounts from config file.
-	return genesis.bcStore.PutBlockHeader(genesis.header, true)
+	return genesis.bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
 }
