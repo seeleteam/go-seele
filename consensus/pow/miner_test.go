@@ -7,9 +7,8 @@ package pow
 
 import (
 	"math/big"
-	"testing"
-
 	"sync"
+	"testing"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/core/types"
