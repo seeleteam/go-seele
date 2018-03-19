@@ -90,6 +90,12 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer) {
 
 	// insert to peers map
 	p.peersLock.Lock()
+	if _, ok := p.peersCan[newPeer.peerID]; ok {
+		newPeer.Disconnect(DiscHandShakeErr)
+		p.log.Error("handleAddPeer err. peer already exists")
+		p.peersLock.Unlock()
+		return
+	}
 	p.peersCan[newPeer.peerID] = newPeer
 	p.peersLock.Unlock()
 }

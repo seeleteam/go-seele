@@ -6,6 +6,8 @@
 package seele
 
 import (
+	"path"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
@@ -46,10 +48,11 @@ func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err erro
 		log:       log,
 	}
 	s.coinbase = conf.Coinbase
-	dbPath := conf.DataRoot + BlockChainDir
+	dbPath := path.Join(conf.DataRoot, BlockChainDir)
 	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
 	s.chainDB, err = leveldb.NewLevelDB(dbPath)
 	if err != nil {
+		s.chainDB.Close()
 		log.Error("NewSeeleService Create BlockChain err. %s", err)
 		return nil, err
 	}
@@ -58,6 +61,7 @@ func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err erro
 	genesis := core.DefaultGenesis(bcStore)
 	err = genesis.Initialize()
 	if err != nil {
+		s.chainDB.Close()
 		log.Error("NewSeeleService genesis.Initialize err. %s", err)
 		return nil, err
 	}
