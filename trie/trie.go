@@ -25,7 +25,7 @@ var (
 // Trie is a Merkle Patricia Trie
 type Trie struct {
 	db     database.Database
-	root   Noder  // root node of the Trie
+	root   noder  // root node of the Trie
 	prefix []byte //prefix of Trie node
 }
 
@@ -36,8 +36,8 @@ func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, erro
 		prefix: prefix,
 	}
 
-	if (root != common.Hash{}) {
-		rootnode, err := trie.loadNode(root[:])
+	if root != common.EmptyHash {
+		rootnode, err := trie.loadNode(root.Bytes())
 		if err != nil {
 			return nil, err
 		}
@@ -58,6 +58,7 @@ func (t *Trie) Update(key, value []byte) error {
 }
 
 // Delete delete node with key in the trie
+// return true is delete successfully;false mean the key not exist
 func (t *Trie) Delete(key []byte) bool {
 	if t.root != nil {
 		key = keybytesToHex(key)
@@ -71,21 +72,21 @@ func (t *Trie) Delete(key []byte) bool {
 }
 
 // Get get the value by key
-func (t *Trie) Get(key []byte) []byte {
+func (t *Trie) Get(key []byte) ([]byte, bool) {
 	key = keybytesToHex(key)
 	if t.root != nil {
 		val, _ := t.get(t.root, key, 0)
-		if val != nil && len(val) > 0 {
-			return val
+		if len(val) > 0 {
+			return val, true
 		}
-		return nil
+		return nil, false
 	}
 	val, newroot := t.get(t.root, key, 0)
 	t.root = newroot
-	if val != nil && len(val) > 0 {
-		return val
+	if len(val) > 0 {
+		return val, true
 	}
-	return nil
+	return nil, false
 }
 
 // Hash return the hash of trie
@@ -96,7 +97,7 @@ func (t *Trie) Hash() common.Hash {
 		t.hash(t.root, buf, sha, nil)
 		return common.BytesToHash(t.root.Hash())
 	}
-	return common.Hash{}
+	return common.EmptyHash
 }
 
 // Commit commit the dirty node to database
@@ -107,10 +108,10 @@ func (t *Trie) Commit(batch database.Batch) (common.Hash, error) {
 		t.hash(t.root, buf, sha, batch)
 		return common.BytesToHash(t.root.Hash()), nil
 	}
-	return common.Hash{}, nil
+	return common.EmptyHash, nil
 }
 
-func (t *Trie) hash(node Noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch) []byte {
+func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch) []byte {
 	if node == nil {
 		return nil
 	}
@@ -151,7 +152,7 @@ func (t *Trie) hash(node Noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		copy(n.hash, hash)
 		return n.hash
 	case *BranchNode:
-		var children [NumberChildren][]byte
+		var children [numBranchNodes][]byte
 		for i, child := range n.Children {
 			children[i] = t.hash(child, buf, sha, batch)
 		}
@@ -176,85 +177,12 @@ func (t *Trie) hash(node Noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	}
 }
 
-func (t *Trie) insert(node Noder, key []byte, value []byte) (bool, Noder, error) {
+func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error) {
 	switch n := node.(type) {
 	case *ExtendNode:
-		matchlen := matchkeyLen(n.Key, key)
-		if matchlen == len(n.Key) {
-			var dirty bool
-			dirty, n.Nextnode, _ = t.insert(n.Nextnode, key[matchlen:], value)
-			if dirty {
-				n.dirty = true
-			}
-			return n.dirty, n, nil
-		}
-		branchnode := &BranchNode{
-			Node: Node{
-				dirty: true,
-				hash:  make([]byte, LengthOfNodeHash),
-			},
-		}
-
-		if matchlen != len(n.Key)-1 {
-			branchnode.Children[n.Key[matchlen]] = n
-			n.Key = n.Key[matchlen+1:]
-			n.dirty = true
-		} else {
-			branchnode.Children[n.Key[matchlen]] = n.Nextnode
-		}
-
-		var err error
-		_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
-		if err != nil {
-			return false, nil, err
-		}
-		if matchlen == 0 {
-			return true, branchnode, nil
-		}
-
-		return true, &ExtendNode{
-			Node: Node{
-				dirty: true,
-				hash:  make([]byte, LengthOfNodeHash),
-			},
-			Key:      key[:matchlen],
-			Nextnode: branchnode,
-		}, nil
+		return t.insertExtentNode(n, key, value)
 	case *LeafNode:
-		matchlen := matchkeyLen(n.Key, key)
-		if matchlen == len(n.Key) {
-			n.Value = value
-			n.dirty = true
-			return true, n, nil
-		}
-		branchnode := &BranchNode{
-			Node: Node{
-				dirty: true,
-				hash:  make([]byte, LengthOfNodeHash),
-			},
-		}
-		var err error
-		branchnode.Children[n.Key[matchlen]] = n
-		n.Key = n.Key[matchlen+1:]
-		n.dirty = true
-
-		_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
-		if err != nil {
-			return false, nil, err
-		}
-		if matchlen == 0 {
-			return true, branchnode, nil
-		}
-
-		return true, &ExtendNode{
-			Node: Node{
-				dirty: true,
-				hash:  make([]byte, LengthOfNodeHash),
-			},
-			Key:      key[:matchlen],
-			Nextnode: branchnode,
-		}, nil
-
+		return t.insertLeafNode(n, key, value)
 	case *BranchNode:
 		_, child, _ := t.insert(n.Children[key[0]], key[1:], value)
 		n.Children[key[0]] = child
@@ -271,7 +199,7 @@ func (t *Trie) insert(node Noder, key []byte, value []byte) (bool, Noder, error)
 		newnode := &LeafNode{
 			Node: Node{
 				dirty: true,
-				hash:  make([]byte, LengthOfNodeHash),
+				hash:  make([]byte, common.HashLength),
 			},
 			Key:   key,
 			Value: value,
@@ -281,7 +209,87 @@ func (t *Trie) insert(node Noder, key []byte, value []byte) (bool, Noder, error)
 	return false, nil, nil
 }
 
-func (t *Trie) delete(node Noder, key []byte) (bool, Noder, error) {
+func (t *Trie) insertExtentNode(n *ExtendNode, key []byte, value []byte) (bool, noder, error) {
+	matchlen := matchkeyLen(n.Key, key)
+	if matchlen == len(n.Key) { // key match insert in nextnode
+		var dirty bool
+		dirty, n.Nextnode, _ = t.insert(n.Nextnode, key[matchlen:], value)
+		if dirty {
+			n.dirty = true
+		}
+		return n.dirty, n, nil
+	}
+	branchnode := &BranchNode{
+		Node: Node{
+			dirty: true,
+			hash:  make([]byte, common.HashLength),
+		},
+	}
+
+	if matchlen != len(n.Key)-1 {
+		branchnode.Children[n.Key[matchlen]] = n
+		n.Key = n.Key[matchlen+1:]
+		n.dirty = true
+	} else {
+		branchnode.Children[n.Key[matchlen]] = n.Nextnode
+	}
+
+	var err error
+	_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
+	if err != nil {
+		return false, nil, err
+	}
+	if matchlen == 0 { // not match key value return branch node
+		return true, branchnode, nil
+	}
+
+	return true, &ExtendNode{ // have match key,return extend node
+		Node: Node{
+			dirty: true,
+			hash:  make([]byte, common.HashLength),
+		},
+		Key:      key[:matchlen],
+		Nextnode: branchnode,
+	}, nil
+}
+
+func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, noder, error) {
+	matchlen := matchkeyLen(n.Key, key)
+	if matchlen == len(n.Key) { // key match, change the value of leaf node
+		n.Value = value
+		n.dirty = true
+		return true, n, nil
+	}
+	branchnode := &BranchNode{
+		Node: Node{
+			dirty: true,
+			hash:  make([]byte, common.HashLength),
+		},
+	}
+	var err error
+	branchnode.Children[n.Key[matchlen]] = n
+	n.Key = n.Key[matchlen+1:]
+	n.dirty = true
+
+	_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
+	if err != nil {
+		return false, nil, err
+	}
+	if matchlen == 0 { // not match key value return branch node
+		return true, branchnode, nil
+	}
+
+	return true, &ExtendNode{ // have match key,return extend node
+		Node: Node{
+			dirty: true,
+			hash:  make([]byte, common.HashLength),
+		},
+		Key:      key[:matchlen],
+		Nextnode: branchnode,
+	}, nil
+}
+
+func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 	switch n := node.(type) {
 	case *LeafNode:
 		matchlen := matchkeyLen(key, n.Key)
@@ -320,7 +328,7 @@ func (t *Trie) delete(node Noder, key []byte) (bool, Noder, error) {
 			}
 		}
 		if count == 1 {
-			var childnode Noder
+			var childnode noder
 			var err error
 			childnode = n.Children[pos]
 			if hashnode, ok := childnode.(hashNode); ok {
@@ -334,7 +342,7 @@ func (t *Trie) delete(node Noder, key []byte) (bool, Noder, error) {
 				newnode := &LeafNode{
 					Node: Node{
 						dirty: true,
-						hash:  make([]byte, LengthOfNodeHash),
+						hash:  make([]byte, common.HashLength),
 					},
 					Key:   append([]byte{byte(pos)}, childnode.Key...),
 					Value: childnode.Value,
@@ -344,7 +352,7 @@ func (t *Trie) delete(node Noder, key []byte) (bool, Noder, error) {
 				newnode := &ExtendNode{
 					Node: Node{
 						dirty: true,
-						hash:  make([]byte, LengthOfNodeHash),
+						hash:  make([]byte, common.HashLength),
 					},
 					Key:      append([]byte{byte(pos)}, childnode.Key...),
 					Nextnode: childnode.Nextnode,
@@ -371,18 +379,18 @@ func (t *Trie) delete(node Noder, key []byte) (bool, Noder, error) {
 }
 
 // loadNode get node from memory cache or database
-func (t *Trie) loadNode(hash []byte) (Noder, error) {
+func (t *Trie) loadNode(hash []byte) (noder, error) {
 	//TODO need cache nodes
 	key := append(t.prefix, hash...)
 	val, err := t.db.Get(key)
-	if err != nil || val == nil {
+	if err != nil || len(val) == 0 {
 		return nil, err
 	}
 	return t.decodeNode(hash, val)
 }
 
 // decodeNode decode node from buf byte
-func (t *Trie) decodeNode(hash, value []byte) (Noder, error) {
+func (t *Trie) decodeNode(hash, value []byte) (noder, error) {
 	if len(value) == 0 {
 		return nil, io.ErrUnexpectedEOF
 	}
@@ -402,7 +410,7 @@ func (t *Trie) decodeNode(hash, value []byte) (Noder, error) {
 	}
 }
 
-func (t *Trie) decodeLeafNode(hash, values []byte) (Noder, error) {
+func (t *Trie) decodeLeafNode(hash, values []byte) (noder, error) {
 	key, rest, err := rlp.SplitString(values)
 	if err != nil {
 		return nil, err
@@ -421,7 +429,7 @@ func (t *Trie) decodeLeafNode(hash, values []byte) (Noder, error) {
 	}, nil
 }
 
-func (t *Trie) decodeExtendNode(hash, values []byte) (Noder, error) {
+func (t *Trie) decodeExtendNode(hash, values []byte) (noder, error) {
 	_, bufs, err := rlp.SplitString(values)
 	key, rest, err := rlp.SplitString(bufs)
 	if err != nil {
@@ -441,14 +449,14 @@ func (t *Trie) decodeExtendNode(hash, values []byte) (Noder, error) {
 	}, nil
 }
 
-func (t *Trie) decodeBranchNode(hash, values []byte) (Noder, error) {
+func (t *Trie) decodeBranchNode(hash, values []byte) (noder, error) {
 
 	kind, elems, _, err := rlp.Split(values)
 	if err != nil {
 		return nil, err
 	}
 	itemcount, _ := rlp.CountValues(elems)
-	if kind != rlp.List && itemcount != NumberChildren {
+	if kind != rlp.List && itemcount != numBranchNodes {
 		return nil, errNodeFormat
 	}
 	branchnode := &BranchNode{
@@ -457,7 +465,7 @@ func (t *Trie) decodeBranchNode(hash, values []byte) (Noder, error) {
 			hash:  hash,
 		},
 	}
-	for i := 0; i < NumberChildren; i++ {
+	for i := 0; i < numBranchNodes; i++ {
 		kind, val, rest, err := rlp.Split(elems)
 		if err != nil {
 			return nil, err
@@ -465,7 +473,7 @@ func (t *Trie) decodeBranchNode(hash, values []byte) (Noder, error) {
 		elems = rest
 		if kind == rlp.String {
 			length := len(val)
-			if length == LengthOfNodeHash {
+			if length == common.HashLength {
 				branchnode.Children[i] = append(hashNode{}, val...)
 			} else {
 				branchnode.Children[i] = nil
@@ -475,7 +483,7 @@ func (t *Trie) decodeBranchNode(hash, values []byte) (Noder, error) {
 	return branchnode, nil
 }
 
-func (t *Trie) get(node Noder, key []byte, pos int) (value []byte, newnode Noder) {
+func (t *Trie) get(node noder, key []byte, pos int) (value []byte, newnode noder) {
 	switch n := (node).(type) {
 	case nil:
 		return nil, nil
@@ -512,10 +520,10 @@ func keybytesToHex(str []byte) []byte {
 	l := len(str)*2 + 1
 	var nibbles = make([]byte, l)
 	for i, b := range str {
-		nibbles[i*2] = b / byte(NumberChildren-1)
-		nibbles[i*2+1] = b % byte(NumberChildren-1)
+		nibbles[i*2] = b / byte(numBranchNodes-1)
+		nibbles[i*2+1] = b % byte(numBranchNodes-1)
 	}
-	nibbles[l-1] = byte(NumberChildren - 1)
+	nibbles[l-1] = byte(numBranchNodes - 1)
 	return nibbles
 }
 

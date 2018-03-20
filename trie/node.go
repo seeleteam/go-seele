@@ -6,16 +6,14 @@
 package trie
 
 const (
-	// NumberChildren number children in branch node
-	NumberChildren int = 17 // for 0-f branches + value node; reduce the high of tree for performance
-	// LengthOfNodeHash length of node hash
-	LengthOfNodeHash int = 32
+	// numBranchNodes number children in branch node
+	numBranchNodes int = 17 // for 0-f branches + value node; reduce the high of tree for performance
 )
 
 // Noder interface for node
-type Noder interface {
+type noder interface {
 	Hash() []byte
-	IsDirty() bool
+	IsDirty() bool // node is just created;value/childern is modified;it return true.
 }
 
 // Node is trie node struct
@@ -24,28 +22,28 @@ type Node struct {
 	dirty bool   // is the node dirty,need to write to database
 }
 
-// ExtendNode is extend node struct.for root,extend node
+// ExtendNode is extend node struct
 type ExtendNode struct {
 	Node
-	Key      []byte // for shared nibbles or key-end
-	Nextnode Noder
+	Key      []byte // for shared nibbles
+	Nextnode noder  // for next node
 }
 
 // LeafNode is leaf node struct
 type LeafNode struct {
 	Node
-	Key   []byte // for shared nibbles or key-end
+	Key   []byte // for key-end
 	Value []byte // the value of leafnode
 }
 
 // BranchNode is node for branch
 type BranchNode struct {
 	Node
-	Children [NumberChildren]Noder
+	Children [numBranchNodes]noder
 }
 
 // hashNode is just used by nextnode of ExtendNode
-// when it does not load real node from datbase
+// when it does not load real node from database
 type hashNode []byte
 
 // Hash return the hash of node
