@@ -79,11 +79,6 @@ func (bc *Blockchain) CurrentBlock() *types.Block {
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
-	newTd, err := bc.headerChain.validateNewHeader(block.Header)
-	if err != nil {
-		return err
-	}
-
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -95,6 +90,11 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
+
+	newTd, err := bc.headerChain.validateNewHeader(block.Header)
+	if err != nil {
+		return err
+	}
 
 	err = bc.bcStore.PutBlock(block, newTd, true)
 	if err != nil {
@@ -108,6 +108,9 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	copy(bc.currentBlock.Transactions, block.Transactions)
+
+	bc.headerChain.currentHeaderHash = bc.currentBlock.HeaderHash
+	bc.headerChain.currentHeader = bc.currentBlock.Header
 
 	return nil
 }

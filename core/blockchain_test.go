@@ -57,16 +57,6 @@ func newTestBlock(t *testing.T, parent *types.Block) *types.Block {
 	}
 }
 
-func Test_Blockchain_WriteBlock_InvalidHeader(t *testing.T) {
-	testBlockchain(t, func(bc *Blockchain) {
-		newBlock := newTestBlock(t, bc.genesisBlock)
-		newBlock.Header.Height = 10
-
-		err := bc.WriteBlock(newBlock)
-		assert.Equal(t, err, ErrHeaderChainInvalidHeight)
-	})
-}
-
 func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 	testBlockchain(t, func(bc *Blockchain) {
 		newBlock := newTestBlock(t, bc.genesisBlock)
@@ -88,6 +78,17 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 	})
 }
 
+func Test_Blockchain_WriteBlock_InvalidHeader(t *testing.T) {
+	testBlockchain(t, func(bc *Blockchain) {
+		newBlock := newTestBlock(t, bc.genesisBlock)
+		newBlock.Header.Height = 10
+		newBlock.HeaderHash = newBlock.Header.Hash()
+
+		err := bc.WriteBlock(newBlock)
+		assert.Equal(t, err, ErrHeaderChainInvalidHeight)
+	})
+}
+
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	testBlockchain(t, func(bc *Blockchain) {
 		newBlock := newTestBlock(t, bc.genesisBlock)
@@ -98,5 +99,32 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 		storedBlock, err := bc.bcStore.GetBlock(newBlock.HeaderHash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, storedBlock, newBlock)
+	})
+}
+
+func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
+	testBlockchain(t, func(bc *Blockchain) {
+		newBlock := newTestBlock(t, bc.genesisBlock)
+
+		err := bc.WriteBlock(newBlock)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, bc.currentBlock, newBlock)
+
+		err = bc.WriteBlock(newBlock)
+		assert.Equal(t, err, ErrHeaderChainInvalidParentHash)
+	})
+}
+
+func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
+	testBlockchain(t, func(bc *Blockchain) {
+		block1 := newTestBlock(t, bc.genesisBlock)
+		err := bc.WriteBlock(block1)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, bc.currentBlock, block1)
+
+		block2 := newTestBlock(t, block1)
+		err = bc.WriteBlock(block2)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, bc.currentBlock, block2)
 	})
 }
