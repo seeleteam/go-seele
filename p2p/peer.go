@@ -125,13 +125,6 @@ func (p *Peer) readLoop(errc chan<- error) {
 func (p *Peer) handle(msgRecv *msg) error {
 	proto, ok := p.protoMap[msgRecv.protoCode]
 	if ok {
-		/*var dataMsg interface{}
-		if msgRecv.payload != nil {
-			if err := common.Deserialize(msgRecv.payload, dataMsg); err != nil {
-				p.log.Info("peer.handle err, %s", err)
-				return nil
-			}
-		}*/
 		msgTo := &Message{
 			MsgCode:    msgRecv.msgCode,
 			ReceivedAt: time.Now(),
