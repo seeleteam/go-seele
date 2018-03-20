@@ -65,7 +65,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	if len(txs) == 0 {
 		block.Header.TxHash = emptyTxRootHash
 	} else {
-		block.Header.TxHash = txsTrieSum(txs)
+		block.Header.TxHash = MerkleRootHash(txs)
 		block.Transactions = make([]*Transaction, len(txs))
 		copy(block.Transactions, txs)
 	}

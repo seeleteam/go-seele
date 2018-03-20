@@ -14,6 +14,7 @@ import (
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
@@ -72,5 +73,38 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 		td, err := bcStore.GetBlockTotalDifficulty(headerHash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, td, header.Difficulty)
+	})
+}
+
+func newTestTx() *types.Transaction {
+	from, _ := common.GenerateRandomAddress()
+	to, _ := common.GenerateRandomAddress()
+
+	return &types.Transaction{
+		Hash: common.EmptyHash,
+		Data: &types.TransactionData{
+			From:   *from,
+			To:     to,
+			Amount: big.NewInt(3),
+		},
+		Signature: &crypto.Signature{big.NewInt(1), big.NewInt(2)},
+	}
+}
+
+func Test_blockchainDatabase_Block(t *testing.T) {
+	header := newTestBlockHeader(t)
+	block := &types.Block{
+		HeaderHash:   header.Hash(),
+		Header:       header,
+		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
+	}
+
+	testBlockchainDatabase(func(bcStore BlockchainStore) {
+		err := bcStore.PutBlock(block, header.Difficulty, true)
+		assert.Equal(t, err, error(nil))
+
+		storedBlock, err := bcStore.GetBlock(block.HeaderHash)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, storedBlock, block)
 	})
 }

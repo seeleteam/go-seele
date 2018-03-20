@@ -13,6 +13,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/merkle"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 	errSigMissed      = errors.New("signature missed")
 	errSigInvalid     = errors.New("signature is invalid")
 
-	emptyTxRootHash = txsTrieSum([]*Transaction{})
+	emptyTxRootHash = MerkleRootHash([]*Transaction{})
 )
 
 // TransactionData wraps the data in a transaction.
@@ -107,14 +108,34 @@ func (tx *Transaction) Validate() error {
 	return nil
 }
 
-// txsTrieSum calculates and returns the transactions trie root hash.
-// TODO depend on the merkle tree implementation.
-func txsTrieSum(txs []*Transaction) common.Hash {
-	txsBytes := make([][]byte, len(txs))
+// CalculateHash calculates and returns the transaction hash.
+// This is to implement the merkle.Content interface.
+func (tx *Transaction) CalculateHash() common.Hash {
+	txDataBytes := common.SerializePanic(tx.Data)
+	txDataHash := crypto.Keccak256Hash(txDataBytes)
+	return common.BytesToHash(txDataHash)
+}
 
-	for i, tx := range txs {
-		txsBytes[i] = common.SerializePanic(tx.Data)
+// Equals returns if the transaction is equals to the specified content.
+// This is to implement the merkle.Content interface.
+func (tx *Transaction) Equals(other merkle.Content) bool {
+	otherTx, ok := other.(*Transaction)
+	return ok && tx.Hash.Equal(otherTx.Hash)
+}
+
+// MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
+// If the given transactions is empty, return empty hash.
+func MerkleRootHash(txs []*Transaction) common.Hash {
+	if len(txs) == 0 {
+		return common.EmptyHash
 	}
 
-	return common.BytesToHash(crypto.Keccak256Hash(txsBytes...))
+	contents := make([]merkle.Content, len(txs))
+	for i, tx := range txs {
+		contents[i] = tx
+	}
+
+	bmt, _ := merkle.NewTree(contents)
+
+	return bmt.MerkleRoot()
 }
