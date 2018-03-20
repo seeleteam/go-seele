@@ -8,7 +8,6 @@ package node
 import (
 	"errors"
 	"net"
-	"net/rpc/jsonrpc"
 	"sync"
 
 	"github.com/seeleteam/go-seele/log"
@@ -114,7 +113,7 @@ func (n *Node) startRPC(services []Service) error {
 		apis = append(apis, service.APIs()...)
 	}
 
-	if err := n.startProc(apis); err != nil {
+	if err := n.startJSONRPC(apis); err != nil {
 		n.log.Error("startProc err", err)
 		return err
 	}
@@ -122,8 +121,8 @@ func (n *Node) startRPC(services []Service) error {
 	return nil
 }
 
-// startPorc starts process
-func (n *Node) startProc(apis []rpc.API) error {
+// startJSONRPC starts JSONRPC server
+func (n *Node) startJSONRPC(apis []rpc.API) error {
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
@@ -153,7 +152,7 @@ func (n *Node) startProc(apis []rpc.API) error {
 				continue
 			}
 			n.log.Debug("After accept")
-			go handler.ServeCodec(jsonrpc.NewServerCodec(conn))
+			go handler.ServeCodec(rpc.NewJsonCodec(conn))
 		}
 	}()
 

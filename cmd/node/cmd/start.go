@@ -22,10 +22,10 @@ var seeleNodeConfigFile *string
 
 // SeeleNodeConfig is test seele node config
 type SeeleNodeConfig struct {
-	Name          string
-	Version       string
-	RPCAddr       string
-	SeeleECDSAKey string
+	Name      string
+	Version   string
+	RPCAddr   string
+	P2PConfig p2p.Config
 }
 
 func seeleNodeConfig(configFile string) (*node.Config, error) {
@@ -35,7 +35,7 @@ func seeleNodeConfig(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 
-	seeleNodeKey, err := crypto.GenerateKey()
+	seeleNodeKey, err := crypto.LoadECDSAFromString(seeleNodeConfig.P2PConfig.ECDSAKey)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func seeleNodeConfig(configFile string) (*node.Config, error) {
 		RPCAddr: seeleNodeConfig.RPCAddr,
 		P2P: p2p.Config{
 			PrivateKey: seeleNodeKey,
-			ECDSAKey:   seeleNodeConfig.SeeleECDSAKey,
+			ECDSAKey:   seeleNodeConfig.P2PConfig.ECDSAKey,
 		},
 	}, nil
 }
