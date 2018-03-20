@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	// maxUint256 is a big integer representing 2^256-1
+	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
 
 	logger = log.GetLogger("miner", true)
@@ -23,7 +23,7 @@ var (
 // Mine start calculate nonce for the block.
 // result found nonce will be set in the result block
 // abort you could stop it by close(abort)
-func Mine(block *types.Block, result chan *types.Block, abort chan interface{}) {
+func Mine(block *types.Block, result chan<- *types.Block, abort <-chan interface{}) {
 	var nonce uint64
 	var hashInt big.Int
 	target := new(big.Int).Div(maxUint256, block.Header.Difficulty)
