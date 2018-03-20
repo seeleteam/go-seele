@@ -26,9 +26,9 @@ const (
 type Peer struct {
 	err           chan error
 	closed        chan struct{}
-	Node          *discovery.Node
+	Node          *discovery.Node // remote peer that this peer connects
 	disconnection chan uint
-	protocolMap   map[string]protocolRW
+	protocolMap   map[string]protocolRW // protocol cap => protocol read write wrapper
 	rw            MsgReadWriter
 
 	wg  sync.WaitGroup
