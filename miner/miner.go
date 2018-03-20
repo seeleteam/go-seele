@@ -23,7 +23,6 @@ type Task struct {
 	block  *types.Block
 	header *types.BlockHeader
 	txs    []*types.Transaction
-	txNum  int32
 	//receipts   []*types.Receipt
 
 	//state      *state.StateDB
@@ -34,7 +33,7 @@ type Task struct {
 // Result if struct of mined result by engine, it contains the raw task and mined block.
 type Result struct {
 	Task  *Task
-	Block *types.Block // mined block
+	Block *types.Block // mined block, with good nonce
 }
 
 // Engine is interface of engine
@@ -121,7 +120,7 @@ func (miner *Miner) Stop() {
 	defer miner.mutex.Unlock()
 
 	atomic.StoreInt32(&miner.mining, 0)
-	miner.stopChan <- struct{}{}
+	close(miner.stopChan)
 
 	for engine := range miner.engines {
 		engine.Stop()
@@ -156,8 +155,8 @@ func (miner *Miner) UnregisterEngine(engine Engine) {
 }
 
 func (miner *Miner) downloadEventCallback(e event.Event) {
-	p := e.(int)
-	switch p {
+	eventType := e.(int)
+	switch eventType {
 	case event.DownloaderStartEvent:
 		atomic.StoreInt32(&miner.canStart, 0)
 		if miner.IsMining() {
@@ -188,7 +187,6 @@ out:
 		case <-miner.headChan:
 			miner.prepareNewBlock()
 		case <-miner.stopChan:
-			miner.stopChan <- struct{}{}
 			break out
 		}
 	}
@@ -214,7 +212,6 @@ out:
 
 			miner.prepareNewBlock() // start a new block if save one newest block successfully
 		case <-miner.stopChan:
-			miner.stopChan <- struct{}{}
 			break out
 		}
 	}
@@ -232,7 +229,7 @@ func (miner *Miner) prepareNewBlock() {
 		tstamp = parent.Header.CreateTimestamp.Int64() + 1
 	}
 	// this will ensure we're not going off too far in the future
-	if now := time.Now().Unix(); tstamp > now+1 {
+	if now := time.Now().Unix(); tstamp > now + 1 {
 		wait := time.Duration(tstamp-now) * time.Second
 		//log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
 		time.Sleep(wait)
@@ -248,7 +245,6 @@ func (miner *Miner) prepareNewBlock() {
 
 	miner.current = &Task{
 		header:    header,
-		txNum:     0,
 		createdAt: time.Now(),
 	}
 
@@ -295,6 +291,5 @@ func (task *Task) applyTransactions(seele seele.SeeleService, coinbase common.Ad
 		}
 
 		task.txs = append(task.txs, tx)
-		task.txNum++
 	}
 }

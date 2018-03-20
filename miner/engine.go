@@ -16,10 +16,10 @@ import (
 type CPUEngine struct {
 	mutex sync.Mutex
 
-	taskChan    chan *Task
-	stopChan    chan struct{}
-	retChan     chan<- *Result
-	currentChan chan struct{}
+	taskChan     chan *Task
+	stopChan     chan struct{}
+	retChan      chan<- *Result
+	taskStopChan chan struct{}
 
 	consensus pow.Worker
 
@@ -37,8 +37,8 @@ func NewCPUEngine(consensus pow.Worker) *CPUEngine {
 	return engine
 }
 
-// Task return taskChan
-func (eng *CPUEngine) Task() chan<- *Task {
+// TaskChan return taskChan
+func (eng *CPUEngine) TaskChan() chan<- *Task {
 	return eng.taskChan
 }
 
@@ -81,17 +81,17 @@ out:
 		select {
 		case work := <-eng.taskChan:
 			eng.mutex.Lock()
-			if eng.currentChan != nil {
-				close(eng.currentChan) // close current worker if exist
+			if eng.taskStopChan != nil {
+				close(eng.taskStopChan) // close current worker if exist
 			}
-			eng.currentChan = make(chan struct{})
-			go eng.mine(work, eng.currentChan) // start mining
+			eng.taskStopChan = make(chan struct{})
+			go eng.mine(work, eng.taskStopChan) // start mining
 			eng.mutex.Unlock()
 		case <-eng.stopChan:
 			eng.mutex.Lock()
-			if eng.currentChan != nil {
-				close(eng.currentChan)
-				eng.currentChan = nil
+			if eng.taskStopChan != nil {
+				close(eng.taskStopChan)
+				eng.taskStopChan = nil
 			}
 			eng.mutex.Unlock()
 			break out
