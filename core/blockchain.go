@@ -45,7 +45,7 @@ func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
 	}
 
 	// Get genesis block from store
-	genesisHash, err := bcStore.GetBlockHash(0)
+	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,8 @@ var (
 	ErrGenesisNotFound = errors.New("genesis block not found")
 )
 
+const genesisBlockHeight = uint64(0)
+
 // Genesis represents the genesis block in the blockchain.
 type Genesis struct {
 	bcStore store.BlockchainStore
@@ -54,7 +56,7 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 // Initialize writes the genesis block in blockchain store if unavailable.
 // Otherwise, check if the existing genesis block is valid in blockchain store.
 func (genesis *Genesis) Initialize() error {
-	storedGenesisHash, err := genesis.bcStore.GetBlockHash(0)
+	storedGenesisHash, err := genesis.bcStore.GetBlockHash(genesisBlockHeight)
 
 	// FIXME use seele defined common error instead of concrete levelDB error.
 	if err == errors.ErrNotFound {
