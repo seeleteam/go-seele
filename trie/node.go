@@ -1,8 +1,13 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package trie
 
 const (
 	// NumberChildren number children in branch node
-	NumberChildren int = 17
+	NumberChildren int = 17 // for 0-f branches + value node; reduce the high of tree for performance
 	// LengthOfNodeHash length of node hash
 	LengthOfNodeHash int = 32
 )

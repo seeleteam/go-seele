@@ -1,3 +1,8 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package trie
 
 import (
@@ -17,7 +22,7 @@ var (
 	errNodeFormat = errors.New("node format is invalid")
 )
 
-//Trie is a Merkle Patricia Trie
+// Trie is a Merkle Patricia Trie
 type Trie struct {
 	db     database.Database
 	root   Noder  // root node of the Trie
@@ -26,7 +31,6 @@ type Trie struct {
 
 // NewTrie new a trie tree
 func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, error) {
-
 	trie := &Trie{
 		db:     db,
 		prefix: prefix,
@@ -44,14 +48,13 @@ func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, erro
 }
 
 // Update update [key,value] in the trie
-func (t *Trie) Update(key, value []byte) {
-
+func (t *Trie) Update(key, value []byte) error {
 	key = keybytesToHex(key)
 	_, node, err := t.insert(t.root, key, value)
 	if err == nil {
 		t.root = node
 	}
-
+	return err
 }
 
 // Delete delete node with key in the trie
@@ -86,7 +89,7 @@ func (t *Trie) Get(key []byte) []byte {
 }
 
 // Hash return the hash of trie
-func (t Trie) Hash() common.Hash {
+func (t *Trie) Hash() common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
 		sha := sha3.NewKeccak256()
@@ -108,7 +111,6 @@ func (t *Trie) Commit(batch database.Batch) (common.Hash, error) {
 }
 
 func (t *Trie) hash(node Noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch) []byte {
-
 	if node == nil {
 		return nil
 	}
@@ -175,7 +177,6 @@ func (t *Trie) hash(node Noder, buf *bytes.Buffer, sha hash.Hash, batch database
 }
 
 func (t *Trie) insert(node Noder, key []byte, value []byte) (bool, Noder, error) {
-
 	switch n := node.(type) {
 	case *ExtendNode:
 		matchlen := matchkeyLen(n.Key, key)
