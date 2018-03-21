@@ -7,7 +7,7 @@ package trie
 
 const (
 	// numBranchNodes number children in branch node
-	numBranchNodes int = 17 // for 0-f branches + value node; reduce the high of tree for performance
+	numBranchNodes int = 17 // for 0-f branches + value node; reduce the height of tree for performance
 )
 
 // Noder interface for node

@@ -25,15 +25,19 @@ var (
 // Trie is a Merkle Patricia Trie
 type Trie struct {
 	db     database.Database
-	root   noder  // root node of the Trie
-	prefix []byte //prefix of Trie node
+	root   noder     // root node of the Trie
+	prefix []byte    // prefix of Trie node
+	sha    hash.Hash // hash calc for trie
 }
 
 // NewTrie new a trie tree
+// param prefix will be used as prefix of hash key to save db.
+// because we save all of trie trees in the same db,prefix protects key/values for different trees
 func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, error) {
 	trie := &Trie{
 		db:     db,
 		prefix: prefix,
+		sha:    sha3.NewKeccak256(),
 	}
 
 	if root != common.EmptyHash {
@@ -93,8 +97,8 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 func (t *Trie) Hash() common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
-		sha := sha3.NewKeccak256()
-		t.hash(t.root, buf, sha, nil)
+		t.sha.Reset()
+		t.hash(t.root, buf, t.sha, nil)
 		return common.BytesToHash(t.root.Hash())
 	}
 	return common.EmptyHash
@@ -104,8 +108,8 @@ func (t *Trie) Hash() common.Hash {
 func (t *Trie) Commit(batch database.Batch) (common.Hash, error) {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
-		sha := sha3.NewKeccak256()
-		t.hash(t.root, buf, sha, batch)
+		t.sha.Reset()
+		t.hash(t.root, buf, t.sha, batch)
 		return common.BytesToHash(t.root.Hash()), nil
 	}
 	return common.EmptyHash, nil
