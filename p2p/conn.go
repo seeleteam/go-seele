@@ -53,11 +53,10 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 		return Message{}, err
 	}
 
+	size := binary.BigEndian.Uint32(headbuff[:4])
 	msgRecv = Message{
 		Code: binary.BigEndian.Uint16(headbuff[4:6]),
 	}
-
-	size := binary.BigEndian.Uint32(headbuff[:4])
 	if size > 0 {
 		msgRecv.Payload = make([]byte, size)
 		if err = c.readFull(msgRecv.Payload); err != nil {

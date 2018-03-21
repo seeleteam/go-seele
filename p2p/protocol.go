@@ -33,22 +33,7 @@ type Protocol struct {
 	// The peer connection is closed when Start returns. It should return
 	// any protocol-level error (such as an I/O error) that is
 	// encountered.
-	run func(peer *Peer, rw MsgReadWriter) error
-
-	// AddPeerCh a peer joins protocol, SubProtocol should handle the channel
-	AddPeerCh chan *Peer
-
-	// DelPeerCh a peer leaves protocol
-	DelPeerCh chan *Peer
-
-	// ReadMsgCh a whole Message has recved, SubProtocol can handle as quickly as possible
-	ReadMsgCh chan *Message
-}
-
-// ProtocolInterface high level protocol should implement this interface
-type ProtocolInterface interface {
-	Run()
-	GetBaseProtocol() *Protocol
+	Run func(peer *Peer, rw MsgReadWriter) error
 }
 
 func (p *Protocol) cap() Cap {

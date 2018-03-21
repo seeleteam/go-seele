@@ -28,42 +28,32 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 		Protocol: p2p.Protocol{
 			Name:      SeeleProtoName,
 			Version:   SeeleVersion,
-			AddPeerCh: make(chan *p2p.Peer),
-			DelPeerCh: make(chan *p2p.Peer),
-			ReadMsgCh: make(chan *p2p.Message),
 		},
 		log:   log,
 		peers: make(map[string]*peer),
 	}
+
+	s.Protocol.Run = func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+		s.handlePeer(peer)
+
+		for {
+			msg, err := rw.ReadMsg()
+			if err != nil {
+				s.log.Warn(err.Error())
+			}
+
+			s.handleMsg(msg)
+		}
+	}
+
 	return s, nil
 }
 
-// Run implements p2p.Protocol, called in p2p.Server.Start function
-func (p *SeeleProtocol) Run() {
-	p.log.Info("SeeleProtocol started...")
-
-	for {
-		select {
-		case newPeer := <-p.AddPeerCh:
-			go p.handleAddPeer(newPeer)
-		case delPeer := <-p.DelPeerCh:
-			p.handleDelPeer(delPeer)
-		case msg := <-p.ReadMsgCh:
-			p.handleMsg(msg)
-		}
-	}
-}
-
-// GetBaseProtocol implements p2p.Protocol
-func (p SeeleProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
-	return &(p.Protocol)
-}
-
-func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer) {
+func (p *SeeleProtocol) handlePeer(p2pPeer *p2p.Peer) {
 	newPeer := newPeer(SeeleVersion, p2pPeer)
 	if err := newPeer.HandShake(); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
-		p.log.Error("handleAddPeer err. %s", err)
+		p.log.Error("handlePeer err. %s", err)
 		return
 	}
 
@@ -73,20 +63,20 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer) {
 	p.peersLock.Unlock()
 }
 
-func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-	p.peersLock.Lock()
-	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
-	delete(p.peers, peerID)
-	p.peersLock.Unlock()
-}
+//func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+//	p.peersLock.Lock()
+//	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
+//	delete(p.peers, peerID)
+//	p.peersLock.Unlock()
+//}
 
-func (p *SeeleProtocol) handleMsg(msg *p2p.Message) {
+func (p *SeeleProtocol) handleMsg(msg p2p.Message) {
 	//TODO add handle msg
 	p.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
 	return
 }
 
-// Stop stops protocol, called when seeleService quits.
-func (p SeeleProtocol) Stop() {
-	//TODO add a quit channel
-}
+//// Stop stops protocol, called when seeleService quits.
+//func (p SeeleProtocol) Stop() {
+//	//TODO add a quit channel
+//}
