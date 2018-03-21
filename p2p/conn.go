@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+const (
+	headBuffLegth     = 6
+	headBuffSizeStart = 0
+	headBuffSizeEnd   = 4
+	headBuffCodeStart = 4
+	headBuffCodeEnd   = 6
+)
+
 // connection TODO add bandwidth meter for connection
 type connection struct {
 	fd net.Conn // tcp connection
@@ -48,16 +56,16 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 	c.rmutux.Lock()
 	defer c.rmutux.Unlock()
 
-	headbuff := make([]byte, 6)
+	headbuff := make([]byte, headBuffLegth)
 	if err = c.readFull(headbuff); err != nil {
 		return Message{}, err
 	}
 
 	msgRecv = Message{
-		Code: binary.BigEndian.Uint16(headbuff[4:6]),
+		Code: binary.BigEndian.Uint16(headbuff[headBuffCodeStart:headBuffCodeEnd]),
 	}
 
-	size := binary.BigEndian.Uint32(headbuff[:4])
+	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
 	if size > 0 {
 		msgRecv.Payload = make([]byte, size)
 		if err = c.readFull(msgRecv.Payload); err != nil {
@@ -68,14 +76,14 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 	return msgRecv, nil
 }
 
-// SendMsg message can be any data type
+// WriteMsg message can be any data type
 func (c *connection) WriteMsg(msg Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
 
-	b := make([]byte, 6)
-	binary.BigEndian.PutUint32(b[:4], uint32(len(msg.Payload)))
-	binary.BigEndian.PutUint16(b[4:6], msg.Code)
+	b := make([]byte, headBuffLegth)
+	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
+	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
 	c.fd.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
 
 	_, err := c.fd.Write(b)

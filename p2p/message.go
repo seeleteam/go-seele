@@ -33,6 +33,7 @@ type ProtoHandShake struct {
 }
 
 type MsgReader interface {
+	// ReadMsg read a message. It will block until send the message out or get errors
 	ReadMsg() (Message, error)
 }
 
