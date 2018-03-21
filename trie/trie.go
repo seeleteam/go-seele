@@ -19,25 +19,26 @@ import (
 )
 
 var (
-	errNodeFormat = errors.New("node format is invalid")
+	errNodeFormat   = errors.New("node format is invalid")
+	errNodeNotExist = errors.New("node not exist in db")
 )
 
 // Trie is a Merkle Patricia Trie
 type Trie struct {
-	db     database.Database
-	root   noder     // root node of the Trie
-	prefix []byte    // prefix of Trie node
-	sha    hash.Hash // hash calc for trie
+	db       database.Database
+	root     noder     // root node of the Trie
+	dbprefix []byte    // db prefix of Trie node
+	sha      hash.Hash // hash calc for trie
 }
 
 // NewTrie new a trie tree
-// param prefix will be used as prefix of hash key to save db.
-// because we save all of trie trees in the same db,prefix protects key/values for different trees
-func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, error) {
+// param dbprefix will be used as prefix of hash key to save db.
+// because we save all of trie trees in the same db,dbprefix protects key/values for different trees
+func NewTrie(root common.Hash, dbprefix []byte, db database.Database) (*Trie, error) {
 	trie := &Trie{
-		db:     db,
-		prefix: prefix,
-		sha:    sha3.NewKeccak256(),
+		db:       db,
+		dbprefix: dbprefix,
+		sha:      sha3.NewKeccak256(),
 	}
 
 	if root != common.EmptyHash {
@@ -51,8 +52,8 @@ func NewTrie(root common.Hash, prefix []byte, db database.Database) (*Trie, erro
 	return trie, nil
 }
 
-// Update update [key,value] in the trie
-func (t *Trie) Update(key, value []byte) error {
+// Put add or update [key,value] in the trie
+func (t *Trie) Put(key, value []byte) error {
 	key = keybytesToHex(key)
 	_, node, err := t.insert(t.root, key, value)
 	if err == nil {
@@ -85,11 +86,6 @@ func (t *Trie) Get(key []byte) ([]byte, bool) {
 		}
 		return nil, false
 	}
-	val, newroot := t.get(t.root, key, 0)
-	t.root = newroot
-	if len(val) > 0 {
-		return val, true
-	}
 	return nil, false
 }
 
@@ -119,7 +115,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	if node == nil {
 		return nil
 	}
-	if node.IsDirty() == false {
+	if !node.IsDirty() {
 		return node.Hash()
 	}
 	switch n := node.(type) {
@@ -133,7 +129,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		sha.Write(buf.Bytes())
 		hash := sha.Sum(nil)
 		if batch != nil {
-			batch.Put(append(t.prefix, hash...), buf.Bytes())
+			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
 			n.dirty = false
 		}
 		copy(n.hash, hash)
@@ -150,7 +146,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		sha.Write(buf.Bytes())
 		hash := sha.Sum(nil)
 		if batch != nil {
-			batch.Put(append(t.prefix, hash...), buf.Bytes())
+			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
 			n.dirty = false
 		}
 		copy(n.hash, hash)
@@ -169,7 +165,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		sha.Write(buf.Bytes())
 		hash := sha.Sum(nil)
 		if batch != nil {
-			batch.Put(append(t.prefix, hash...), buf.Bytes())
+			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
 			n.dirty = false
 		}
 		copy(n.hash, hash)
@@ -181,6 +177,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	}
 }
 
+// return true if insert succeed,it also mean node is dirty,should recalc hash
 func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error) {
 	switch n := node.(type) {
 	case *ExtendNode:
@@ -188,7 +185,10 @@ func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error)
 	case *LeafNode:
 		return t.insertLeafNode(n, key, value)
 	case *BranchNode:
-		_, child, _ := t.insert(n.Children[key[0]], key[1:], value)
+		_, child, err := t.insert(n.Children[key[0]], key[1:], value)
+		if err != nil {
+			return false, nil, err
+		}
 		n.Children[key[0]] = child
 		n.dirty = true
 		return true, n, nil
@@ -385,10 +385,10 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 // loadNode get node from memory cache or database
 func (t *Trie) loadNode(hash []byte) (noder, error) {
 	//TODO need cache nodes
-	key := append(t.prefix, hash...)
+	key := append(t.dbprefix, hash...)
 	val, err := t.db.Get(key)
 	if err != nil || len(val) == 0 {
-		return nil, err
+		return nil, errNodeNotExist
 	}
 	return t.decodeNode(hash, val)
 }
@@ -524,10 +524,10 @@ func keybytesToHex(str []byte) []byte {
 	l := len(str)*2 + 1
 	var nibbles = make([]byte, l)
 	for i, b := range str {
-		nibbles[i*2] = b / byte(numBranchNodes-1)
-		nibbles[i*2+1] = b % byte(numBranchNodes-1)
+		nibbles[i*2] = b / byte(numBranchNodes-1)   // now is b / 16
+		nibbles[i*2+1] = b % byte(numBranchNodes-1) // now is b% 16
 	}
-	nibbles[l-1] = byte(numBranchNodes - 1)
+	nibbles[l-1] = byte(numBranchNodes - 1) // term key is 16
 	return nibbles
 }
 

@@ -47,10 +47,14 @@ type BranchNode struct {
 type hashNode []byte
 
 // Hash return the hash of node
-func (n hashNode) Hash() []byte { return n }
+func (n hashNode) Hash() []byte {
+	return n
+}
 
 // IsDirty is node dirty
-func (n hashNode) IsDirty() bool { return false }
+func (n hashNode) IsDirty() bool {
+	return false
+}
 
 // Hash return the hash of node
 func (n Node) Hash() []byte {
