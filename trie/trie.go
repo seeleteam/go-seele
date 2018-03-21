@@ -78,13 +78,12 @@ func (t *Trie) Delete(key []byte) bool {
 
 // Get get the value by key
 func (t *Trie) Get(key []byte) ([]byte, bool) {
-	key = keybytesToHex(key)
 	if t.root != nil {
+		key = keybytesToHex(key)
 		val, _ := t.get(t.root, key, 0)
 		if len(val) > 0 {
 			return val, true
 		}
-		return nil, false
 	}
 	return nil, false
 }
