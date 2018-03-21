@@ -48,7 +48,7 @@ func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
 			panic(err)
 		}
 
-		hash, err := bcStore.GetBlockHash(0)
+		hash, err := bcStore.GetBlockHash(genesisBlockHeight)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, hash, genesisHash)
 
