@@ -26,8 +26,8 @@ type SeeleProtocol struct {
 func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:      SeeleProtoName,
-			Version:   SeeleVersion,
+			Name:    SeeleProtoName,
+			Version: SeeleVersion,
 		},
 		log:   log,
 		peers: make(map[string]*peer),
@@ -63,12 +63,12 @@ func (p *SeeleProtocol) handlePeer(p2pPeer *p2p.Peer) {
 	p.peersLock.Unlock()
 }
 
-//func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-//	p.peersLock.Lock()
-//	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
-//	delete(p.peers, peerID)
-//	p.peersLock.Unlock()
-//}
+func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+	p.peersLock.Lock()
+	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
+	delete(p.peers, peerID)
+	p.peersLock.Unlock()
+}
 
 func (p *SeeleProtocol) handleMsg(msg p2p.Message) {
 	//TODO add handle msg
@@ -76,7 +76,7 @@ func (p *SeeleProtocol) handleMsg(msg p2p.Message) {
 	return
 }
 
-//// Stop stops protocol, called when seeleService quits.
-//func (p SeeleProtocol) Stop() {
-//	//TODO add a quit channel
-//}
+// Stop stops protocol, called when seeleService quits.
+func (p SeeleProtocol) Stop() {
+	//TODO add a quit channel
+}

@@ -8,9 +8,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
