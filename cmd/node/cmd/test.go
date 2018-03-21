@@ -51,8 +51,8 @@ func (p *myProtocol) Run() {
 		case message := <-p.ReadMsgCh:
 			msg := []string{}
 			common.Deserialize(message.Payload, &msg)
-			fmt.Printf("myProtocol readmsg, code:%d, peer:%s, msg:%s\n", message.MsgCode,
-				message.CurPeer.Node.GetUDPAddr(), msg)
+			//fmt.Printf("myProtocol readmsg, code:%d, peer:%s, msg:%s\n", message.Code,
+			//	message.CurPeer.Node.GetUDPAddr(), msg)
 		case <-ping.C:
 			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
 			p.sendMessage()
@@ -66,9 +66,9 @@ func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
 }
 
 func (p *myProtocol) sendMessage() {
-	for peer := range p.peers {
-		peer.SendMsg(&p.Protocol, 100, []string{"Hello", "world"})
-	}
+	//for peer := range p.peers {
+	//	peer.SendMsg(&p.Protocol, 100, []string{"Hello", "world"})
+	//}
 }
 
 // Config is test p2p server's config

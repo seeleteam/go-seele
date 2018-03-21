@@ -82,7 +82,7 @@ func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
 
 func (p *SeeleProtocol) handleMsg(msg *p2p.Message) {
 	//TODO add handle msg
-	p.log.Debug("SeeleProtocol readmsg. MsgCode[%d]", msg.MsgCode)
+	p.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
 	return
 }
 
