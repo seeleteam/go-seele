@@ -28,21 +28,21 @@ func testNodeConfig() *Config {
 // TestServiceA is a test implementation of the Service interface.
 type TestServiceA struct{}
 
-func (s TestServiceA) Protocols() []p2p.ProtocolInterface { return nil }
+func (s TestServiceA) Protocols() []p2p.Protocol { return nil }
 func (s TestServiceA) Start(*p2p.Server) error            { return nil }
 func (s TestServiceA) Stop() error                        { return nil }
 
 // TestServiceB is a test implementation of the Service interface.
 type TestServiceB struct{}
 
-func (s TestServiceB) Protocols() []p2p.ProtocolInterface { return nil }
+func (s TestServiceB) Protocols() []p2p.Protocol { return nil }
 func (s TestServiceB) Start(*p2p.Server) error            { return nil }
 func (s TestServiceB) Stop() error                        { return nil }
 
 // TestServiceC is a test implementation of the Service interface.
 type TestServiceC struct{}
 
-func (s TestServiceC) Protocols() []p2p.ProtocolInterface { return nil }
+func (s TestServiceC) Protocols() []p2p.Protocol { return nil }
 func (s TestServiceC) Start(*p2p.Server) error            { return nil }
 func (s TestServiceC) Stop() error                        { return nil }
 

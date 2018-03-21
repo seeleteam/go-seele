@@ -26,34 +26,25 @@ type SeeleProtocol struct {
 func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:    SeeleProtoName,
-			Version: SeeleVersion,
+			Name:       SeeleProtoName,
+			Version:    SeeleVersion,
+			Length:     1,
+			AddPeer:    s.handleAddPeer,
+			DeletePeer: s.handleDelPeer,
+			HandleMsg:  s.handleMsg,
 		},
 		log:   log,
 		peers: make(map[string]*peer),
 	}
 
-	s.Protocol.Run = func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
-		s.handlePeer(peer)
-
-		for {
-			msg, err := rw.ReadMsg()
-			if err != nil {
-				s.log.Warn(err.Error())
-			}
-
-			s.handleMsg(msg)
-		}
-	}
-
 	return s, nil
 }
 
-func (p *SeeleProtocol) handlePeer(p2pPeer *p2p.Peer) {
+func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	newPeer := newPeer(SeeleVersion, p2pPeer)
 	if err := newPeer.HandShake(); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
-		p.log.Error("handlePeer err. %s", err)
+		p.log.Error("handleAddPeer err. %s", err)
 		return
 	}
 
@@ -70,7 +61,7 @@ func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
 	p.peersLock.Unlock()
 }
 
-func (p *SeeleProtocol) handleMsg(msg p2p.Message) {
+func (p *SeeleProtocol) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
 	//TODO add handle msg
 	p.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
 	return

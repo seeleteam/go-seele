@@ -8,7 +8,6 @@ package p2p
 import (
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -68,7 +67,7 @@ func (p *Peer) run() (err error) {
 	go p.readLoop(readErr)
 	go p.pingLoop()
 
-	p.startProtocols()
+	p.notifyProtocols()
 	// Wait for an error or disconnect.
 errLoop:
 	for {
@@ -128,15 +127,12 @@ func (p *Peer) readLoop(readErr chan<- error) {
 	}
 }
 
-func (p *Peer) startProtocols() {
+func (p *Peer) notifyProtocols() {
 	p.wg.Add(len(p.protocolMap))
 	for _, proto := range p.protocolMap {
 		go func() {
 			defer p.wg.Done()
-			err := proto.Run(p, &proto)
-			if err != nil {
-				p.protocolErr <- err
-			}
+			proto.AddPeer(p, &proto)
 		}()
 	}
 }
@@ -171,12 +167,10 @@ func (p *Peer) handle(msgRecv Message) error {
 		return fmt.Errorf(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
 	}
 
-	select {
-	case protocolTarget.in <- msgRecv:
-		return nil
-	case <-p.closed:
-		return io.EOF
-	}
+	protocolTarget.SetMsgCode(&msgRecv)
+	go protocolTarget.HandleMsg(p, &protocolTarget, msgRecv)
+
+	return nil
 }
 
 func (p *Peer) sendCtlMsg(msgCode uint16) error {
@@ -216,10 +210,14 @@ func (rw *protocolRW) WriteMsg(msg Message) (err error) {
 }
 
 func (rw *protocolRW) ReadMsg() (Message, error) {
-	rw.rw.ReadMsg()
 	select {
 	case msg := <-rw.in:
 		msg.Code -= rw.offset
+
 		return msg, nil
 	}
+}
+
+func (rw *protocolRW) SetMsgCode(msg *Message) {
+	msg.Code -= rw.offset
 }

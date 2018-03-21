@@ -26,14 +26,14 @@ type Protocol struct {
 	// Length should contain the number of message codes used by the protocol.
 	Length uint16
 
-	// Run is called in a new groutine when the protocol has been
-	// negotiated with a peer. It should read and write messages from
-	// rw. The Payload for each message must be fully consumed.
-	//
-	// The peer connection is closed when Start returns. It should return
-	// any protocol-level error (such as an I/O error) that is
-	// encountered.
-	Run func(peer *Peer, rw MsgReadWriter) error
+	// AddPeer find a new peer will call this method
+	AddPeer func(peer *Peer, rw MsgReadWriter)
+
+	// DeletePeer this method will be called when a peer is disconnected
+	DeletePeer func(peer *Peer)
+
+	// HandleMsg get a new peers msg, you could call write to response
+	HandleMsg func(peer *Peer, write MsgWriter, msg Message)
 }
 
 func (p *Protocol) cap() Cap {

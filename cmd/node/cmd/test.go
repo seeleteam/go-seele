@@ -46,40 +46,22 @@ func NewProtocolTest() *ProtocolTest {
 		Name:    "test",
 		Version: 1,
 		Length:  1,
-		Run: func(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+		AddPeer: func(peer *p2p.Peer, rw p2p.MsgReadWriter) {
 			test.peers = append(test.peers, peer)
 
-			test.wg.Add(2)
-			go test.readMsg(rw)
-			go test.sendMsg(rw)
-			test.wg.Wait()
-
-			fmt.Println("test protocol done")
-			return nil
+			test.wg.Add(1)
+			go test.writeMsg(rw)
 		},
+		DeletePeer: func(peer *p2p.Peer) {
+			// do nothing
+		},
+		HandleMsg: test.handleMsg,
 	}
 
 	return test
 }
 
-func (t *ProtocolTest) readMsg(rw p2p.MsgReader) {
-	defer t.wg.Done()
-
-	msg, err := rw.ReadMsg()
-	if err != nil {
-		panic(err)
-	}
-
-	str := []string{}
-	err = common.Deserialize(msg.Payload, &str)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(str)
-}
-
-func (t *ProtocolTest) sendMsg(rw p2p.MsgWriter) {
+func (t *ProtocolTest) writeMsg(rw p2p.MsgWriter) {
 	defer t.wg.Done()
 
 	ping := time.NewTimer(5 * time.Second)
@@ -95,6 +77,16 @@ func (t *ProtocolTest) sendMsg(rw p2p.MsgWriter) {
 
 		rw.WriteMsg(msg)
 	}
+}
+
+func (t *ProtocolTest) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
+	str := []string{}
+	err := common.Deserialize(msg.Payload, &str)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(str)
 }
 
 // Config is test p2p server's config
