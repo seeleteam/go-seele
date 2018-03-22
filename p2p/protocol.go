@@ -26,29 +26,11 @@ type Protocol struct {
 	// Length should contain the number of message codes used by the protocol.
 	Length uint16
 
-	// Run is called in a new groutine when the protocol has been
-	// negotiated with a peer. It should read and write messages from
-	// rw. The Payload for each message must be fully consumed.
-	//
-	// The peer connection is closed when Start returns. It should return
-	// any protocol-level error (such as an I/O error) that is
-	// encountered.
-	run func(peer *Peer, rw MsgReadWriter) error
+	// AddPeer find a new peer will call this method
+	AddPeer func(peer *Peer, rw MsgReadWriter)
 
-	// AddPeerCh a peer joins protocol, SubProtocol should handle the channel
-	AddPeerCh chan *Peer
-
-	// DelPeerCh a peer leaves protocol
-	DelPeerCh chan *Peer
-
-	// ReadMsgCh a whole Message has recved, SubProtocol can handle as quickly as possible
-	ReadMsgCh chan *Message
-}
-
-// ProtocolInterface high level protocol should implement this interface
-type ProtocolInterface interface {
-	Run()
-	GetBaseProtocol() *Protocol
+	// DeletePeer this method will be called when a peer is disconnected
+	DeletePeer func(peer *Peer)
 }
 
 func (p *Protocol) cap() Cap {

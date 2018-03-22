@@ -8,7 +8,6 @@ package p2p
 import (
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -24,32 +23,30 @@ const (
 
 // Peer represents a connected remote node.
 type Peer struct {
-	err           chan error
+	protocolErr   chan error
 	closed        chan struct{}
 	Node          *discovery.Node // remote peer that this peer connects
 	disconnection chan uint
 	protocolMap   map[string]protocolRW // protocol cap => protocol read write wrapper
-	rw            MsgReadWriter
+	rw            *connection
 
 	wg  sync.WaitGroup
 	log *log.SeeleLog
 }
 
-func NewPeer(conn *connection, protocols []ProtocolInterface, log *log.SeeleLog, node *discovery.Node) *Peer {
+func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
 	offset := baseProtoCode
 	protoMap := make(map[string]protocolRW)
 	for _, p := range protocols {
-		proto := *p.GetBaseProtocol()
-
 		protoRW := protocolRW{
 			rw:       conn,
 			offset:   offset,
-			Protocol: proto,
+			Protocol: p,
 			in:       make(chan Message),
 		}
 
-		protoMap[proto.cap().String()] = protoRW
-		offset += proto.Length
+		protoMap[p.cap().String()] = protoRW
+		offset += p.Length
 	}
 
 	return &Peer{
@@ -58,47 +55,41 @@ func NewPeer(conn *connection, protocols []ProtocolInterface, log *log.SeeleLog,
 		disconnection: make(chan uint),
 		closed:        make(chan struct{}),
 		log:           log,
-		err:           make(chan error),
+		protocolErr:   make(chan error),
 		Node:          node,
 	}
 }
 
 // run assumes that SubProtocol will never quit, otherwise proto.DelPeerCh may be closed before peer.run quits?
-func (p *Peer) run() {
-	// add peer to protocols
-	var (
-		readErr = make(chan error, 1)
-		err     error
-	)
-	for _, proto := range p.protocolMap {
-		proto.AddPeerCh <- p
-	}
-
+func (p *Peer) run() (err error) {
+	var readErr = make(chan error, 1)
 	p.wg.Add(2)
 	go p.readLoop(readErr)
 	go p.pingLoop()
 
+	p.notifyProtocols()
 	// Wait for an error or disconnect.
-loop:
+errLoop:
 	for {
 		select {
 		case err = <-readErr:
-			p.log.Info("p2p.peer.run read err %s", err)
-			p.err <- err
-			break loop
+			p.log.Warn("p2p.peer.run read err %s", err.Error())
+			break errLoop
 		case <-p.disconnection:
-			p.err <- errors.New("disconnection error recved")
-			break loop
+			p.log.Info("p2p peer got disconnection request")
+			err = errors.New("disconnection error recved")
+			break errLoop
+		case err = <-p.protocolErr:
+			p.log.Warn("p2p peer got protocol err %s", err.Error())
+			break errLoop
 		}
 	}
 
 	p.close()
 	p.wg.Wait()
-	// send delpeer message for each protocols
-	for _, proto := range p.protocolMap {
-		proto.DelPeerCh <- p
-	}
-	p.log.Info("p2p.peer.run quit. err=%s", p.err)
+	p.log.Info("p2p.peer.run quit. err=%s", err)
+
+	return err
 }
 
 func (p *Peer) close() {
@@ -121,18 +112,31 @@ func (p *Peer) pingLoop() {
 	}
 }
 
-func (p *Peer) readLoop(errc chan<- error) {
+func (p *Peer) readLoop(readErr chan<- error) {
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
 		if err != nil {
-			errc <- err
+			readErr <- err
 			return
 		}
 		if err = p.handle(msgRecv); err != nil {
-			errc <- err
+			readErr <- err
 			return
 		}
+	}
+}
+
+func (p *Peer) notifyProtocols() {
+	p.wg.Add(len(p.protocolMap))
+	for _, proto := range p.protocolMap {
+		go func() {
+			defer p.wg.Done()
+
+			if proto.AddPeer != nil {
+				proto.AddPeer(p, &proto)
+			}
+		}()
 	}
 }
 
@@ -163,15 +167,12 @@ func (p *Peer) handle(msgRecv Message) error {
 	}
 
 	if !found {
-		return errors.New(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
+		return fmt.Errorf(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
 	}
 
-	select {
-	case protocolTarget.in <- msgRecv:
-		return nil
-	case <-p.closed:
-		return io.EOF
-	}
+	protocolTarget.in <- msgRecv
+
+	return nil
 }
 
 func (p *Peer) sendCtlMsg(msgCode uint16) error {
@@ -206,14 +207,15 @@ func (rw *protocolRW) WriteMsg(msg Message) (err error) {
 	}
 
 	msg.Code += rw.offset
+
 	return rw.rw.WriteMsg(msg)
 }
 
 func (rw *protocolRW) ReadMsg() (Message, error) {
-	rw.rw.ReadMsg()
 	select {
 	case msg := <-rw.in:
 		msg.Code -= rw.offset
+
 		return msg, nil
 	}
 }

@@ -81,7 +81,7 @@ type Config struct {
 	KadAddr string
 
 	// Protocols should contain the protocols supported by the server.
-	Protocols []ProtocolInterface `toml:"-"`
+	Protocols []Protocol `toml:"-"`
 
 	// p2p.server will listen for incoming tcp connections.
 	ListenAddr string
@@ -150,16 +150,6 @@ func (srv *Server) Start() (err error) {
 		return err
 	}
 
-	for _, proto := range srv.Protocols {
-		go func() {
-			srv.loopWG.Add(1)
-			proto.Run()
-			close(proto.GetBaseProtocol().AddPeerCh)
-			close(proto.GetBaseProtocol().DelPeerCh)
-			close(proto.GetBaseProtocol().ReadMsgCh)
-			srv.loopWG.Done()
-		}()
-	}
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
@@ -315,7 +305,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	var caps []Cap
 	for _, proto := range srv.Protocols {
-		caps = append(caps, proto.GetBaseProtocol().cap())
+		caps = append(caps, proto.cap())
 	}
 
 	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)

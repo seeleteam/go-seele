@@ -26,40 +26,20 @@ type SeeleProtocol struct {
 func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:      SeeleProtoName,
-			Version:   SeeleVersion,
-			AddPeerCh: make(chan *p2p.Peer),
-			DelPeerCh: make(chan *p2p.Peer),
-			ReadMsgCh: make(chan *p2p.Message),
+			Name:       SeeleProtoName,
+			Version:    SeeleVersion,
+			Length:     1,
+			AddPeer:    s.handleAddPeer,
+			DeletePeer: s.handleDelPeer,
 		},
 		log:   log,
 		peers: make(map[string]*peer),
 	}
+
 	return s, nil
 }
 
-// Run implements p2p.Protocol, called in p2p.Server.Start function
-func (p *SeeleProtocol) Run() {
-	p.log.Info("SeeleProtocol started...")
-
-	for {
-		select {
-		case newPeer := <-p.AddPeerCh:
-			go p.handleAddPeer(newPeer)
-		case delPeer := <-p.DelPeerCh:
-			p.handleDelPeer(delPeer)
-		case msg := <-p.ReadMsgCh:
-			p.handleMsg(msg)
-		}
-	}
-}
-
-// GetBaseProtocol implements p2p.Protocol
-func (p SeeleProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
-	return &(p.Protocol)
-}
-
-func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer) {
+func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	newPeer := newPeer(SeeleVersion, p2pPeer)
 	if err := newPeer.HandShake(); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
@@ -80,7 +60,7 @@ func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
 	p.peersLock.Unlock()
 }
 
-func (p *SeeleProtocol) handleMsg(msg *p2p.Message) {
+func (p *SeeleProtocol) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
 	//TODO add handle msg
 	p.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
 	return
