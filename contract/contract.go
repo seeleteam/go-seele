@@ -25,7 +25,7 @@ var (
 // codeAddress returns the code address based on hash.
 func codeAddress(code []byte) string {
 	// TODO could use any other encoding method to shorten the address, e.g. base58
-	return hex.EncodeToString(crypto.Keccak256Hash(code))
+	return hex.EncodeToString(crypto.HashBytes(code).Bytes())
 }
 
 // Address returns account public address for the specified private key.

@@ -23,7 +23,7 @@ func (operator *Operator) Register(code []byte) {
 }
 
 func (operator *Operator) sendTx(toAddr string, txType int, payload []byte) {
-	hash := crypto.Keccak256Hash(payload)
+	hash := crypto.HashBytes(payload).Bytes()
 
 	sig := crypto.NewSignature(operator.privKey, hash)
 	tx := &Transaction{

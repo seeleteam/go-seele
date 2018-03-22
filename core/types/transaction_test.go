@@ -60,7 +60,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 // Validate failed if transaction Hash value changed.
 func Test_Transaction_Validate_HashChanged(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
-	tx.Hash = common.BytesToHash(crypto.Keccak256Hash([]byte("test")))
+	tx.Hash = crypto.HashBytes([]byte("test"))
 	assert.Equal(t, tx.Validate(), errHashMismatch)
 }
 
@@ -77,9 +77,7 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 
 	// Change amount and update Hash in transaction.
 	tx.Data.Amount.SetInt64(200)
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-	tx.Hash = common.BytesToHash(txDataHash)
+	tx.Hash = crypto.MustHash(tx.Data)
 
 	assert.Equal(t, tx.Validate(), errSigInvalid)
 }

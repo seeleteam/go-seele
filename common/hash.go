@@ -7,8 +7,6 @@ package common
 
 import (
 	"bytes"
-
-	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -46,12 +44,6 @@ func (a Hash) Bytes() []byte {
 // String to string
 func (a Hash) String() string {
 	return string(a[:])
-}
-
-func HashBytes(value []byte) Hash {
-	buff := crypto.Keccak256Hash(value)
-	h := BytesToHash(buff)
-	return h
 }
 
 // Equal returns a boolean reporting whether this hash a is equal to the input hash b.

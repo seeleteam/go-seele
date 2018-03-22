@@ -35,14 +35,9 @@ func testBlockchainDatabase(ut func(BlockchainStore)) {
 }
 
 func newTestBlockHeader(t *testing.T) *types.BlockHeader {
-	address, err := common.GenerateRandomAddress()
-	if err != nil {
-		t.Fatal()
-	}
-
 	return &types.BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
-		Creator:           *address,
+		Creator:           *crypto.MustGenerateRandomAddress(),
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
 		Height:            1,
@@ -77,14 +72,11 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 }
 
 func newTestTx() *types.Transaction {
-	from, _ := common.GenerateRandomAddress()
-	to, _ := common.GenerateRandomAddress()
-
 	return &types.Transaction{
 		Hash: common.EmptyHash,
 		Data: &types.TransactionData{
-			From:   *from,
-			To:     to,
+			From:   *crypto.MustGenerateRandomAddress(),
+			To:     crypto.MustGenerateRandomAddress(),
 			Amount: big.NewInt(3),
 		},
 		Signature: &crypto.Signature{big.NewInt(1), big.NewInt(2)},

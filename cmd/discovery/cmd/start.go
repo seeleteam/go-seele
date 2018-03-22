@@ -10,7 +10,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +51,7 @@ var startCmd = &cobra.Command{
 				return
 			}
 
-			myId, err := common.GenerateRandomAddress()
+			myId, err := crypto.GenerateRandomAddress()
 			if err != nil {
 				fmt.Println(err)
 				return

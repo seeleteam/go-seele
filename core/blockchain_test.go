@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func testBlockchain(t *testing.T, ut func(*Blockchain)) {
@@ -38,11 +39,9 @@ func newTestBlock(t *testing.T, parent *types.Block) *types.Block {
 		newTestTx(t, 3, 3),
 	}
 
-	creator, _ := common.GenerateRandomAddress()
-
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.HeaderHash,
-		Creator:           *creator,
+		Creator:           *crypto.MustGenerateRandomAddress(),
 		TxHash:            types.MerkleRootHash(txs),
 		Height:            parent.Header.Height + 1,
 		Difficulty:        big.NewInt(3),

@@ -9,7 +9,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 var (
@@ -53,7 +55,7 @@ func (n *node) calculateHashRecursively() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
-	return common.HashBytes(append(n.Left.calculateHashRecursively().Bytes(), n.Right.calculateHashRecursively().Bytes()...))
+	return crypto.HashBytes(append(n.Left.calculateHashRecursively().Bytes(), n.Right.calculateHashRecursively().Bytes()...))
 }
 
 // calculateHash is a helper function that calculates the hash of the node.
@@ -61,7 +63,7 @@ func (n *node) calculateHash() common.Hash {
 	if n.isLeaf() {
 		return n.Content.CalculateHash()
 	}
-	return common.HashBytes(append(n.Left.Hash.Bytes(), n.Right.Hash.Bytes()...))
+	return crypto.HashBytes(append(n.Left.Hash.Bytes(), n.Right.Hash.Bytes()...))
 }
 
 // NewTree creates a new Merkle Tree using the content cs.
@@ -117,7 +119,7 @@ func buildIntermediate(nodeList []*node) *node {
 		n := &node{
 			Left:  nodeList[left],
 			Right: nodeList[right],
-			Hash:  common.HashBytes(chash),
+			Hash:  crypto.HashBytes(chash),
 		}
 		nodes = append(nodes, n)
 		nodeList[left].Parent = n
@@ -186,7 +188,7 @@ func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) b
 			currentParent := l.Parent
 			for currentParent != nil {
 				buff := append(currentParent.Left.calculateHash().Bytes(), currentParent.Right.calculateHash().Bytes()...)
-				if bytes.Compare(common.HashBytes(buff).Bytes(), currentParent.Hash.Bytes()) != 0 {
+				if bytes.Compare(crypto.HashBytes(buff).Bytes(), currentParent.Hash.Bytes()) != 0 {
 					return false
 				}
 				currentParent = currentParent.Parent

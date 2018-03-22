@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func Test_PublicSeeleAPI(t *testing.T) {
-	accAddr, _ := common.GenerateRandomAddress()
+	accAddr := crypto.MustGenerateRandomAddress()
 	ss, _ := NewSeeleService(0, nil)
 	ss.coinbase = *accAddr
 	api := NewPublicSeeleAPI(ss)
