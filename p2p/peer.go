@@ -132,7 +132,10 @@ func (p *Peer) notifyProtocols() {
 	for _, proto := range p.protocolMap {
 		go func() {
 			defer p.wg.Done()
-			proto.AddPeer(p, &proto)
+
+			if proto.AddPeer != nil {
+				proto.AddPeer(p, &proto)
+			}
 		}()
 	}
 }
@@ -167,8 +170,7 @@ func (p *Peer) handle(msgRecv Message) error {
 		return fmt.Errorf(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
 	}
 
-	protocolTarget.SetMsgCode(&msgRecv)
-	go protocolTarget.HandleMsg(p, &protocolTarget, msgRecv)
+	protocolTarget.in <- msgRecv
 
 	return nil
 }
@@ -216,8 +218,4 @@ func (rw *protocolRW) ReadMsg() (Message, error) {
 
 		return msg, nil
 	}
-}
-
-func (rw *protocolRW) SetMsgCode(msg *Message) {
-	msg.Code -= rw.offset
 }

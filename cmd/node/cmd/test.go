@@ -49,13 +49,17 @@ func NewProtocolTest() *ProtocolTest {
 		AddPeer: func(peer *p2p.Peer, rw p2p.MsgReadWriter) {
 			test.peers = append(test.peers, peer)
 
-			test.wg.Add(1)
+			test.wg.Add(2)
 			go test.writeMsg(rw)
+			go test.handleMsg(rw)
+
+			test.wg.Wait()
+
+			fmt.Println("test done")
 		},
 		DeletePeer: func(peer *p2p.Peer) {
 			// do nothing
 		},
-		HandleMsg: test.handleMsg,
 	}
 
 	return test
@@ -79,9 +83,16 @@ func (t *ProtocolTest) writeMsg(rw p2p.MsgWriter) {
 	}
 }
 
-func (t *ProtocolTest) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
+func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
+	defer t.wg.Done()
+
+	msg, err := rw.ReadMsg()
+	if err != nil {
+		panic(err)
+	}
+
 	str := []string{}
-	err := common.Deserialize(msg.Payload, &str)
+	err = common.Deserialize(msg.Payload, &str)
 	if err != nil {
 		panic(err)
 	}

@@ -31,9 +31,6 @@ type Protocol struct {
 
 	// DeletePeer this method will be called when a peer is disconnected
 	DeletePeer func(peer *Peer)
-
-	// HandleMsg get a new peers msg, you could call write to response
-	HandleMsg func(peer *Peer, write MsgWriter, msg Message)
 }
 
 func (p *Protocol) cap() Cap {

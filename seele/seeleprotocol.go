@@ -31,7 +31,6 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 			Length:     1,
 			AddPeer:    s.handleAddPeer,
 			DeletePeer: s.handleDelPeer,
-			HandleMsg:  s.handleMsg,
 		},
 		log:   log,
 		peers: make(map[string]*peer),
