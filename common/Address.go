@@ -10,7 +10,6 @@ import (
 	"log"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -35,31 +34,8 @@ func (id *Address) Bytes() []byte {
 	return id[:]
 }
 
-// ToSha get the node hash
-func (id *Address) ToSha() Hash {
-	data := crypto.Keccak256Hash(id[:])
-	h := BytesToHash(data)
-	return h
-}
-
 func (id *Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
-}
-
-func GenerateRandomAddress() (*Address, error) {
-	keypair, err := crypto.GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-
-	buff := crypto.FromECDSAPub(&keypair.PublicKey)
-
-	id, err := NewAddress(buff[1:])
-	if err != nil {
-		return nil, err
-	}
-
-	return &id, err
 }
 
 func HexToAddress(id string) Address {

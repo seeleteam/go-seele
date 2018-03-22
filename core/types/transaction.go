@@ -6,7 +6,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -62,19 +61,13 @@ func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Tra
 
 	txData.Amount.Set(amount)
 
-	txDataBytes := common.SerializePanic(txData)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-
-	return &Transaction{common.BytesToHash(txDataHash), txData, nil}
+	return &Transaction{crypto.MustHash(txData), txData, nil}
 }
 
 // Sign signs the transaction with private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-
-	tx.Hash = common.BytesToHash(txDataHash)
-	tx.Signature = crypto.NewSignature(privKey, txDataHash)
+	tx.Hash = crypto.MustHash(tx.Data)
+	tx.Signature = crypto.NewSignature(privKey, tx.Hash.Bytes())
 }
 
 // Validate returns true if the transation is valid, otherwise false.
@@ -94,14 +87,12 @@ func (tx *Transaction) Validate() error {
 		return errSigMissed
 	}
 
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-	if !bytes.Equal(txDataHash, tx.Hash.Bytes()) {
+	txDataHash := crypto.MustHash(tx.Data)
+	if !txDataHash.Equal(tx.Hash) {
 		return errHashMismatch
 	}
 
-	pubKey := crypto.ToECDSAPub(tx.Data.From.Bytes())
-	if !tx.Signature.Verify(pubKey, txDataHash) {
+	if !tx.Signature.Verify(&tx.Data.From, txDataHash.Bytes()) {
 		return errSigInvalid
 	}
 
@@ -111,9 +102,7 @@ func (tx *Transaction) Validate() error {
 // CalculateHash calculates and returns the transaction hash.
 // This is to implement the merkle.Content interface.
 func (tx *Transaction) CalculateHash() common.Hash {
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-	return common.BytesToHash(txDataHash)
+	return crypto.MustHash(tx.Data)
 }
 
 // Equals returns if the transaction is equals to the specified content.

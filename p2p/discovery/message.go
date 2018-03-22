@@ -9,6 +9,7 @@ import (
 	"net"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 type msgType uint8
@@ -106,7 +107,7 @@ func (m *ping) send(t *udp) {
 			return true
 		},
 		errorCallBack: func() { // delete this node when ping timeout, TODO add time limit
-			sha := m.to.ID.ToSha()
+			sha := crypto.HashBytes(m.to.ID.Bytes())
 			t.deleteNode(sha)
 		},
 	}
@@ -121,7 +122,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from)
 	t.addNode(node)
 
-	nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), t.self.getSha())
+	nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()), t.self.getSha())
 
 	rpcs := make([]*rpcNode, len(nodes))
 	for index, n := range nodes {
@@ -172,7 +173,7 @@ func (m *findNode) send(t *udp) {
 
 			// if not found, will find the node that is more closer than last one
 			if !found {
-				nodes := t.table.findNodeWithTarget(m.QueryID.ToSha(), m.SelfID.ToSha())
+				nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()), crypto.HashBytes(m.SelfID.Bytes()))
 				sendFindNodeRequest(t, nodes, m.QueryID)
 			}
 
