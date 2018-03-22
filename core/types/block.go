@@ -65,14 +65,13 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	if len(txs) == 0 {
 		block.Header.TxHash = emptyTxRootHash
 	} else {
-		block.Header.TxHash = txsTrieSum(txs)
+		block.Header.TxHash = MerkleRootHash(txs)
 		block.Transactions = make([]*Transaction, len(txs))
 		copy(block.Transactions, txs)
 	}
 
 	// Calculate the block header hash.
-	headerBytes := common.SerializePanic(block.Header)
-	block.HeaderHash = common.BytesToHash(crypto.Keccak256Hash(headerBytes))
+	block.HeaderHash = block.Header.Hash()
 
 	return block
 }

@@ -23,5 +23,3 @@ type Config struct {
 	// The configuration of p2p network
 	P2P p2p.Config
 }
-
-

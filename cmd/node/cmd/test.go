@@ -8,6 +8,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -28,47 +29,75 @@ var (
 // 4. Append SubProtocols to p2p.server.Protocols
 // 5. Send hello world message to peers
 
-type myProtocol struct {
+type ProtocolTest struct {
 	p2p.Protocol
-	peers map[*p2p.Peer]bool //for test
+	peers []*p2p.Peer
+
+	wg sync.WaitGroup
 }
 
-func (p *myProtocol) Run() {
-	fmt.Println("myProtocol Running...")
-	p.peers = make(map[*p2p.Peer]bool)
-	ping := time.NewTimer(30 * time.Second)
+func NewProtocolTest() *ProtocolTest {
+	test := &ProtocolTest{
+		peers: make([]*p2p.Peer, 0),
+		wg:    sync.WaitGroup{},
+	}
 
-	for {
-		select {
-		case peer := <-p.AddPeerCh:
-			p.peers[peer] = true
-			fmt.Println("myProtocol add new peer. peers=", len(p.peers))
-		case peer := <-p.DelPeerCh:
-			fmt.Println("myProtocol del peer")
-			// need del from peers
-			delete(p.peers, peer)
-			fmt.Println("myProtocol del peer. peers=", len(p.peers))
-		case message := <-p.ReadMsgCh:
-			msg := []string{}
-			common.Deserialize(message.Payload, &msg)
-			fmt.Printf("myProtocol readmsg, code:%d, peer:%s, msg:%s\n", message.MsgCode,
-				message.CurPeer.Node.GetUDPAddr(), msg)
-		case <-ping.C:
-			fmt.Println("myProtocol ping.C. peers num=", len(p.peers))
-			p.sendMessage()
-			//ping.Reset(3 * time.Second)
+	test.Protocol = p2p.Protocol{
+		Name:    "test",
+		Version: 1,
+		Length:  1,
+		AddPeer: func(peer *p2p.Peer, rw p2p.MsgReadWriter) {
+			test.peers = append(test.peers, peer)
+
+			test.wg.Add(2)
+			go test.writeMsg(rw)
+			go test.handleMsg(rw)
+
+			test.wg.Wait()
+
+			fmt.Println("test done")
+		},
+		DeletePeer: func(peer *p2p.Peer) {
+			// do nothing
+		},
+	}
+
+	return test
+}
+
+func (t *ProtocolTest) writeMsg(rw p2p.MsgWriter) {
+	defer t.wg.Done()
+
+	ping := time.NewTimer(5 * time.Second)
+	// send msg once
+	select {
+	case <-ping.C:
+		fmt.Println("myProtocol ping.C. peers num=", len(t.peers))
+		strs := []string{"Hello", "world"}
+		msg := p2p.Message{
+			Code:    0,
+			Payload: common.SerializePanic(strs),
 		}
+
+		rw.WriteMsg(msg)
 	}
 }
 
-func (p myProtocol) GetBaseProtocol() (baseProto *p2p.Protocol) {
-	return &(p.Protocol)
-}
+func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
+	defer t.wg.Done()
 
-func (p *myProtocol) sendMessage() {
-	for peer := range p.peers {
-		peer.SendMsg(&p.Protocol, 100, []string{"Hello", "world"})
+	msg, err := rw.ReadMsg()
+	if err != nil {
+		panic(err)
 	}
+
+	str := []string{}
+	err = common.Deserialize(msg.Payload, &str)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(str)
 }
 
 // Config is test p2p server's config
@@ -103,16 +132,8 @@ func startServer(configFile string) {
 		}
 	}
 
-	my1 := &myProtocol{
-		Protocol: p2p.Protocol{
-			Name:      "test",
-			Version:   1,
-			AddPeerCh: make(chan *p2p.Peer),
-			DelPeerCh: make(chan *p2p.Peer),
-			ReadMsgCh: make(chan *p2p.Message),
-		},
-	}
-	myServer.Protocols = append(myServer.Protocols, my1)
+	test := NewProtocolTest()
+	myServer.Protocols = append(myServer.Protocols, test.Protocol)
 	err = myServer.Start()
 	if err != nil {
 		fmt.Println("Start err.", err)
