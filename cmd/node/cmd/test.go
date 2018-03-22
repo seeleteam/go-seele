@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
@@ -68,19 +67,14 @@ func NewProtocolTest() *ProtocolTest {
 func (t *ProtocolTest) writeMsg(rw p2p.MsgWriter) {
 	defer t.wg.Done()
 
-	ping := time.NewTimer(5 * time.Second)
-	// send msg once
-	select {
-	case <-ping.C:
-		fmt.Println("myProtocol ping.C. peers num=", len(t.peers))
-		strs := []string{"Hello", "world"}
-		msg := p2p.Message{
-			Code:    0,
-			Payload: common.SerializePanic(strs),
-		}
-
-		rw.WriteMsg(msg)
+	fmt.Println("myProtocol ping.C. peers num=", len(t.peers))
+	strs := []string{"Hello", "world"}
+	msg := p2p.Message{
+		Code:    0,
+		Payload: common.SerializePanic(strs),
 	}
+
+	rw.WriteMsg(msg)
 }
 
 func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
