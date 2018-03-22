@@ -146,6 +146,8 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s][%s]", srv.MyNodeID, addr)
 	srv.kadDB = discovery.StartService(common.HexToAddress(srv.MyNodeID), addr, srv.StaticNodes)
+	srv.kadDB.SetHookForNewNode(srv.addNode)
+
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -156,18 +158,37 @@ func (srv *Server) Start() (err error) {
 	return nil
 }
 
+func (srv *Server) addNode(node *discovery.Node) {
+	_, ok := srv.peers[node.ID]
+	if ok {
+		return
+	}
+
+	//TODO UDPPort==> TCPPort
+	addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
+	srv.log.Info("connecting to a new node... %s", addr.String())
+	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
+	if err != nil {
+		if conn != nil {
+			conn.Close()
+		}
+
+		return
+	}
+
+	if err := srv.setupConn(conn, outboundConn, node); err != nil {
+		srv.log.Info("add new node. setupConn called err returns. err=%s", err)
+	}
+}
+
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	peers := srv.peers
 	srv.log.Info("p2p start running...")
-	checkTimer := time.NewTimer(peerSyncDuration)
 
 running:
 	for {
 		select {
-		case <-checkTimer.C:
-			checkTimer.Reset(peerSyncDuration)
-			srv.syncPeerNodes()
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
@@ -202,34 +223,6 @@ running:
 	for len(peers) > 0 {
 		p := <-srv.delpeer
 		delete(peers, p.Node.ID)
-	}
-}
-
-// syncPeerNodes
-func (srv *Server) syncPeerNodes() {
-	// TODO select nodes from ntab to connect
-	nodeMap := srv.kadDB.GetCopy()
-	for _, node := range nodeMap {
-		_, ok := srv.peers[node.ID]
-		if ok {
-			continue
-		}
-
-		//TODO UDPPort==> TCPPort
-		addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
-		conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
-		srv.log.Info("syncPeerNodes connecting... %s", addr.String())
-		if err != nil {
-			if conn != nil {
-				conn.Close()
-			}
-			continue
-		}
-		go func() {
-			if err := srv.setupConn(conn, outboundConn, node); err != nil {
-				srv.log.Info("syncPeerNodes. setupConn called err returns. err=%s", err)
-			}
-		}()
 	}
 }
 
@@ -316,16 +309,8 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	peerCaps, peerNodeID := recvMsg.Caps, recvMsg.NodeID
 	if flags == inboundConn {
-		var peerNode *discovery.Node
-		nodeMap := srv.kadDB.GetCopy()
-		for _, node := range nodeMap {
-			if bytes.Equal(node.ID[0:], peerNodeID[0:]) {
-				peerNode = node
-				break
-			}
-		}
-
-		if peerNode == nil {
+		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
+		if !ok {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
 			return errors.New("not found nodeID in discovery database!")

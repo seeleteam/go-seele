@@ -8,7 +8,7 @@ package p2p
 import (
 	"time"
 
-	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/common"
 )
 
 const (
@@ -29,7 +29,7 @@ type Message struct {
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {
 	Caps   []Cap
-	NodeID discovery.NodeID
+	NodeID common.Address
 }
 
 type MsgReader interface {

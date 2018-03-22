@@ -15,9 +15,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-// NodeID compatible with previous defination
-type NodeID common.Address
-
 var (
 	invalidNodeError = "invalid node"
 	nodeHeaderError  = "node id should start with snode://"
