@@ -53,8 +53,8 @@ func Test_Statedb_Operate(t *testing.T) {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		amount := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		amount, _ := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
+		nonce, _ := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		if amount.Cmp(big.NewInt(2*int64(i))) != 0 {
 			panic(fmt.Errorf("error anount amount %d", i))
 		}
@@ -71,6 +71,7 @@ func teststatedbaddmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
+		statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
 		statedb.AddAmount(BytesToAddressForTest([]byte{i}), big.NewInt(4*int64(i)))
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), 1)
 	}
@@ -87,8 +88,8 @@ func teststatedbaddmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		amount := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		amount, _ := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
+		nonce, _ := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		if amount.Cmp(big.NewInt(4*int64(i))) != 0 {
 			panic(fmt.Errorf("error anount amount %d", i))
 		}
@@ -105,9 +106,10 @@ func teststatedbsubmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		stateobject := statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
+		nonce := stateobject.GetNonce()
 		statedb.SubAmount(BytesToAddressForTest([]byte{i}), big.NewInt(2*int64(i)))
-		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
+		stateobject.SetNonce(nonce + 1)
 	}
 
 	batch := db.NewBatch()
@@ -122,8 +124,8 @@ func teststatedbsubmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		amount := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		amount, _ := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
+		nonce, _ := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		if amount.Cmp(big.NewInt(2*int64(i))) != 0 {
 			panic(fmt.Errorf("error anount amount %d", i))
 		}
@@ -140,7 +142,8 @@ func teststatedbsetmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
+		nonce, _ := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		statedb.SetAmount(BytesToAddressForTest([]byte{i}), big.NewInt(4*int64(i)))
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
@@ -157,8 +160,8 @@ func teststatedbsetmount(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		amount := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
+		amount, _ := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
+		nonce, _ := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		if amount.Cmp(big.NewInt(4*int64(i))) != 0 {
 			panic(fmt.Errorf("error anount amount %d", i))
 		}
@@ -170,41 +173,4 @@ func teststatedbsetmount(root common.Hash, db database.Database) common.Hash {
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
 	return hash
-}
-func Test_Statedb_Reset(t *testing.T) {
-	db, remove := newTestStateDB()
-	defer remove()
-
-	statedb, err := NewStatedb(common.Hash{}, db)
-	if err != nil {
-		panic(err)
-	}
-	for i := byte(0); i < 255; i++ {
-		statedb.AddAmount(BytesToAddressForTest([]byte{i}), big.NewInt(3*int64(i)))
-		statedb.SetNonce(BytesToAddressForTest([]byte{i}), uint64(i))
-	}
-
-	batch := db.NewBatch()
-	hash, err := statedb.Commit(batch)
-	if err != nil {
-		panic(err)
-	}
-	batch.Commit()
-
-	err = statedb.ResetStatedb(hash, db)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := byte(0); i < 255; i++ {
-		amount := statedb.GetAmount(BytesToAddressForTest([]byte{i}))
-		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
-		if amount.Cmp(big.NewInt(3*int64(i))) != 0 {
-			panic(fmt.Errorf("error anount amount %d", i))
-		}
-		if nonce != uint64(i) {
-			panic(fmt.Errorf("error anount nonce %d", i))
-		}
-	}
-
 }

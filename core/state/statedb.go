@@ -14,10 +14,14 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
-// Statedb use to store accout with the merkle trie
+var (
+	stateAmount0 = big.NewInt(0)
+)
+
+// Statedb use to store account with the MPT tee
 type Statedb struct {
 	trie         *trie.Trie
-	stateObjects map[common.Address]*stateObject
+	stateObjects map[common.Address]*StateObject // add LRU for this?
 }
 
 // NewStatedb new a statedb
@@ -28,28 +32,17 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}
 	return &Statedb{
 		trie:         trie,
-		stateObjects: make(map[common.Address]*stateObject),
+		stateObjects: make(map[common.Address]*StateObject),
 	}, nil
 }
 
-// ResetStatedb reset state db
-func (s *Statedb) ResetStatedb(root common.Hash, db database.Database) error {
-	trie, err := trie.NewTrie(root, []byte("S"), db)
-	if err != nil {
-		return err
-	}
-	s.trie = trie
-	s.stateObjects = make(map[common.Address]*stateObject)
-	return nil
-}
-
 // GetAmount get amount of account
-func (s *Statedb) GetAmount(addr common.Address) *big.Int {
+func (s *Statedb) GetAmount(addr common.Address) (*big.Int, bool) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		return object.GetAmount()
+		return object.GetAmount(), true
 	}
-	return big.NewInt(0)
+	return stateAmount0, false
 }
 
 // SetAmount set amount of account
@@ -77,12 +70,12 @@ func (s *Statedb) SubAmount(addr common.Address, amount *big.Int) {
 }
 
 // GetNonce get nonce of account
-func (s *Statedb) GetNonce(addr common.Address) uint64 {
+func (s *Statedb) GetNonce(addr common.Address) (uint64, bool) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		return object.GetNonce()
+		return object.GetNonce(), true
 	}
-	return 0
+	return 0, false
 }
 
 // SetNonce set nonce of account
@@ -102,21 +95,31 @@ func (s *Statedb) Commit(batch database.Batch) (root common.Hash, err error) {
 				return common.Hash{}, err
 			}
 			s.trie.Put(addr[:], data)
+			object.dirty = false
 		}
 	}
 	return s.trie.Commit(batch)
 }
 
-func (s *Statedb) getStateObject(addr common.Address) *stateObject {
+// GetOrNewStateObject get or new a state object
+func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
+	object := s.getStateObject(addr)
+	if object == nil {
+		object := newStateObject()
+		object.SetNonce(0)
+		s.stateObjects[addr] = object
+	}
+	return object
+}
+
+func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	if object := s.stateObjects[addr]; object != nil {
 		return object
 	}
 	object := newStateObject()
 	val, _ := s.trie.Get(addr[:])
 	if len(val) == 0 {
-		object.SetNonce(0)
-		s.stateObjects[addr] = object
-		return object
+		return nil
 	}
 	if err := rlp.DecodeBytes(val, &object.account); err != nil {
 		return nil
