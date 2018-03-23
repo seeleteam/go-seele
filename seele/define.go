@@ -17,6 +17,9 @@ const (
 
 	// SeeleVersion Version number of Seele protocol
 	SeeleVersion uint = 1
+
+	// BlockChainDir blockchain data directory based on config.DataRoot
+	BlockChainDir = "/db/blockchain"
 )
 
 const (

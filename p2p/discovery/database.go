@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 type NodeHook func(node *Node)
@@ -43,7 +44,7 @@ func (db *Database) FindByNodeID(id common.Address) (*Node, bool) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	sha := id.ToSha()
+	sha := crypto.HashBytes(id.Bytes())
 	val, ok := db.m[sha]
 
 	return val, ok

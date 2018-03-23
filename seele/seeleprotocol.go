@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -17,13 +18,17 @@ import (
 type SeeleProtocol struct {
 	p2p.Protocol
 	peers     map[string]*peer // peers map. peerID=>peer
+	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
 	peersLock sync.RWMutex
 
-	log *log.SeeleLog
+	networkID uint64
+	txPool    *core.TransactionPool
+	chain     *core.Blockchain
+	log       *log.SeeleLog
 }
 
 // NewSeeleService create SeeleProtocol
-func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, err error) {
+func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
 			Name:       SeeleProtoName,
@@ -32,8 +37,12 @@ func NewSeeleProtocol(networkID uint64, log *log.SeeleLog) (s *SeeleProtocol, er
 			AddPeer:    s.handleAddPeer,
 			DeletePeer: s.handleDelPeer,
 		},
-		log:   log,
-		peers: make(map[string]*peer),
+		networkID: seele.networkID,
+		txPool:    seele.TxPool(),
+		chain:     seele.BlockChain(),
+		log:       log,
+		peers:     make(map[string]*peer),
+		peersCan:  make(map[string]*peer),
 	}
 
 	return s, nil
