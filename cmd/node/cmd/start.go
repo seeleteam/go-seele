@@ -13,48 +13,27 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
-	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
 var seeleNodeConfigFile *string
 
-// SeeleNodeConfig is test seele node config
-type SeeleNodeConfig struct {
-	Name        string
-	Version     string
-	RPCAddr     string
-	P2PConfig   p2p.Config
-	SeeleConfig seele.Config
-}
-
-func seeleNodeConfig(configFile string) (*node.Config, *seele.Config, error) {
-	seeleNodeConfig := new(SeeleNodeConfig)
+func seeleNodeConfig(configFile string) (*node.Config, error) {
+	seeleNodeConfig := new(node.Config)
 	_, err := toml.DecodeFile(configFile, seeleNodeConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	seeleNodeKey, err := crypto.LoadECDSAFromString(seeleNodeConfig.P2PConfig.ECDSAKey)
+	seeleNodeKey, err := crypto.LoadECDSAFromString(seeleNodeConfig.P2P.ECDSAKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+	seeleNodeConfig.P2P.PrivateKey = seeleNodeKey
+	seeleNodeConfig.SeeleConfig.DataRoot = seeleNodeConfig.DataDir
 
-	return &node.Config{
-			Name:    seeleNodeConfig.Name,
-			Version: seeleNodeConfig.Version,
-			RPCAddr: seeleNodeConfig.RPCAddr,
-			P2P: p2p.Config{
-				PrivateKey: seeleNodeKey,
-				ECDSAKey:   seeleNodeConfig.P2PConfig.ECDSAKey,
-			},
-		}, &seele.Config{
-			TxConf:    seeleNodeConfig.SeeleConfig.TxConf,
-			NetworkID: seeleNodeConfig.SeeleConfig.NetworkID,
-			DataRoot:  seeleNodeConfig.SeeleConfig.DataRoot,
-			Coinbase:  *crypto.MustGenerateRandomAddress(),
-		}, nil
+	return seeleNodeConfig, nil
 }
 
 // startCmd represents the start command
@@ -69,7 +48,7 @@ var startCmd = &cobra.Command{
 		fmt.Println("start called")
 		var wg sync.WaitGroup
 
-		nCfg, sCfg, err := seeleNodeConfig(*seeleNodeConfigFile)
+		nCfg, err := seeleNodeConfig(*seeleNodeConfigFile)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -82,7 +61,7 @@ var startCmd = &cobra.Command{
 
 		// Create seele service and register the service
 		slog := log.GetLogger("seele", true)
-		seeleService, err := seele.NewSeeleService(sCfg, slog)
+		seeleService, err := seele.NewSeeleService(&nCfg.SeeleConfig, slog)
 		if err != nil {
 			fmt.Println(err)
 			return

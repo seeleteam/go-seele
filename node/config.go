@@ -7,6 +7,7 @@ package node
 
 import (
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // Config holds Node options.
@@ -25,4 +26,7 @@ type Config struct {
 
 	// The RPCAddr is the address on which to start RPC server.
 	RPCAddr string
+
+	// The SeeleConfig is the configuration to create seele service.
+	SeeleConfig seele.Config
 }
