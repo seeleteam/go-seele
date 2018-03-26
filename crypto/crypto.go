@@ -15,6 +15,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 )
@@ -110,4 +111,32 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 		return nil
 	}
 	return math.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
+}
+
+// GenerateRandomAddress generates and returns a random address.
+func GenerateRandomAddress() (*common.Address, error) {
+	keypair, err := GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	buff := FromECDSAPub(&keypair.PublicKey)
+
+	id, err := common.NewAddress(buff[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, err
+}
+
+// MustGenerateRandomAddress generates and returns a random address.
+// Panics on any error.
+func MustGenerateRandomAddress() *common.Address {
+	address, err := GenerateRandomAddress()
+	if err != nil {
+		panic(err)
+	}
+
+	return address
 }

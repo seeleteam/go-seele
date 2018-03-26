@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func Test_Bucket(t *testing.T) {
@@ -45,7 +45,7 @@ func Test_AddNode(t *testing.T) {
 	b := bucket{}
 
 	var n1 *Node
-	for i:= 0; i < 17; i++ {
+	for i := 0; i < 17; i++ {
 		port := i + 9000
 		n := getNode(strconv.Itoa(port))
 		b.addNode(n)
@@ -60,7 +60,7 @@ func Test_AddNode(t *testing.T) {
 }
 
 func getNode(port string) *Node {
-	id, err := common.GenerateRandomAddress()
+	id, err := crypto.GenerateRandomAddress()
 	if err != nil {
 		panic(err)
 	}

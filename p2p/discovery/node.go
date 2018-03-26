@@ -13,10 +13,8 @@ import (
 	"strings"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
-
-// NodeID compatible with previous defination
-type NodeID common.Address
 
 var (
 	invalidNodeError = "invalid node"
@@ -91,7 +89,7 @@ func (n *Node) GetUDPAddr() *net.UDPAddr {
 
 func (n *Node) getSha() common.Hash {
 	if n.sha == common.EmptyHash {
-		n.sha = n.ID.ToSha()
+		n.sha = crypto.HashBytes(n.ID.Bytes())
 	}
 
 	return n.sha

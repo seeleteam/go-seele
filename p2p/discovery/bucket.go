@@ -10,6 +10,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -68,7 +69,7 @@ func (b *bucket) deleteNode(target common.Hash) {
 
 	index := -1
 	for i, n := range b.peers {
-		sha := n.ID.ToSha()
+		sha := crypto.HashBytes(n.ID.Bytes())
 		if sha == target {
 			index = i
 			break

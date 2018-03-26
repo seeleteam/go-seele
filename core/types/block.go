@@ -40,9 +40,7 @@ func (header *BlockHeader) Clone() *BlockHeader {
 
 // Hash calculates and returns the hash of bloch header.
 func (header *BlockHeader) Hash() common.Hash {
-	headerBytes := common.SerializePanic(header)
-	headerHash := crypto.Keccak256Hash(headerBytes)
-	return common.BytesToHash(headerHash)
+	return crypto.MustHash(header)
 }
 
 // Block represents a block in the blockchain.
@@ -65,7 +63,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	if len(txs) == 0 {
 		block.Header.TxHash = emptyTxRootHash
 	} else {
-		block.Header.TxHash = txsTrieSum(txs)
+		block.Header.TxHash = MerkleRootHash(txs)
 		block.Transactions = make([]*Transaction, len(txs))
 		copy(block.Transactions, txs)
 	}

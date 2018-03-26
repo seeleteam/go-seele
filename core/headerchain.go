@@ -38,7 +38,7 @@ func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 	}
 
 	// Get genesis block header from store.
-	genesisHash, err := bcStore.GetBlockHash(0)
+	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -62,26 +62,34 @@ func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 	return &hc, nil
 }
 
-// WriteHeader writes a block new header into the header chain.
-// It requires the new header's parent header is the HEAD header
-// in the chain.
-func (hc *HeaderChain) WriteHeader(newHeader *types.BlockHeader) error {
+func (hc *HeaderChain) validateNewHeader(newHeader *types.BlockHeader) (*big.Int, error) {
 	if !newHeader.PreviousBlockHash.Equal(hc.currentHeaderHash) {
-		return ErrHeaderChainInvalidParentHash
+		return nil, ErrHeaderChainInvalidParentHash
 	}
 
 	if newHeader.Height != hc.currentHeader.Height+1 {
-		return ErrHeaderChainInvalidHeight
+		return nil, ErrHeaderChainInvalidHeight
 	}
 
 	// TODO validate the nonce via consensus engine.
 
 	currentTd, err := hc.bcStore.GetBlockTotalDifficulty(hc.currentHeaderHash)
 	if err != nil {
+		return nil, err
+	}
+
+	return new(big.Int).Add(currentTd, newHeader.Difficulty), nil
+}
+
+// WriteHeader writes a block new header into the header chain.
+// It requires the new header's parent header is the HEAD header
+// in the chain.
+func (hc *HeaderChain) WriteHeader(newHeader *types.BlockHeader) error {
+	newTd, err := hc.validateNewHeader(newHeader)
+	if err != nil {
 		return err
 	}
 
-	newTd := new(big.Int).Add(currentTd, newHeader.Difficulty)
 	newHeaderHash := newHeader.Hash()
 	if err = hc.bcStore.PutBlockHeader(newHeaderHash, newHeader, newTd, true); err != nil {
 		return err

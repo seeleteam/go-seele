@@ -13,7 +13,7 @@ import (
 // Service registers to node after node starts.
 type Service interface {
 	// Protocols retrieves the P2P protocols the service wishes to start.
-	Protocols() []p2p.ProtocolInterface
+	Protocols() []p2p.Protocol
 
 	APIs() (apis []rpc.API)
 
