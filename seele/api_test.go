@@ -28,8 +28,11 @@ func getTmpConfig() *Config {
 
 func Test_PublicSeeleAPI(t *testing.T) {
 	conf := getTmpConfig()
-	ctx := context.WithValue(context.Background(), "DataDir", "./seeleRoot")
-	dataDir := ctx.Value("DataDir").(string)
+	serviceContext := ServiceContext{
+		DataDir: "./seeleRoot",
+	}
+	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
+	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
 	defer os.RemoveAll(dataDir)
 	log := log.GetLogger("seele", true)
 	ss, err := NewSeeleService(ctx, conf, log)

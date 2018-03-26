@@ -32,6 +32,11 @@ type SeeleService struct {
 	chainDB database.Database
 }
 
+// ServiceContext is a collection of service configuration inherited from node
+type ServiceContext struct {
+	DataDir string
+}
+
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
@@ -49,8 +54,8 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		log:       log,
 	}
 	s.coinbase = conf.Coinbase
-	dataDir := ctx.Value("DataDir").(string)
-	dbPath := filepath.Join(dataDir, BlockChainDir)
+	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	dbPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
 	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
 	s.chainDB, err = leveldb.NewLevelDB(dbPath)
 	if err != nil {
