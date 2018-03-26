@@ -22,10 +22,7 @@ type Config struct {
 
 	// The configuration of p2p network
 	P2P p2p.Config
-<<<<<<< HEAD
 
 	// The RPCAddr is the address on which to start RPC server.
 	RPCAddr string
-=======
->>>>>>> f0266a436e0564324a37cfe576a77adfa6787ac1
 }

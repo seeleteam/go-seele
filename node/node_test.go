@@ -29,40 +29,28 @@ func testNodeConfig() *Config {
 // TestServiceA is a test implementation of the Service interface.
 type TestServiceA struct{}
 
-<<<<<<< HEAD
-func (s TestServiceA) Protocols() []p2p.ProtocolInterface { return nil }
-func (s TestServiceA) APIs() []rpc.API                    { return nil }
-=======
 func (s TestServiceA) Protocols() []p2p.Protocol { return nil }
->>>>>>> f0266a436e0564324a37cfe576a77adfa6787ac1
-func (s TestServiceA) Start(*p2p.Server) error            { return nil }
-func (s TestServiceA) Stop() error                        { return nil }
+func (s TestServiceA) APIs() []rpc.API           { return nil }
+func (s TestServiceA) Start(*p2p.Server) error   { return nil }
+func (s TestServiceA) Stop() error               { return nil }
 
 // TestServiceB is a test implementation of the Service interface.
 type TestServiceB struct{}
 
-<<<<<<< HEAD
-func (s TestServiceB) Protocols() []p2p.ProtocolInterface { return nil }
-func (s TestServiceB) APIs() []rpc.API                    { return nil }
-=======
 func (s TestServiceB) Protocols() []p2p.Protocol { return nil }
->>>>>>> f0266a436e0564324a37cfe576a77adfa6787ac1
-func (s TestServiceB) Start(*p2p.Server) error            { return nil }
-func (s TestServiceB) Stop() error                        { return nil }
+func (s TestServiceB) APIs() []rpc.API           { return nil }
+func (s TestServiceB) Start(*p2p.Server) error   { return nil }
+func (s TestServiceB) Stop() error               { return nil }
 
 //func (s TestServiceB) APIs() []rpc.API {return nil}
 
 // TestServiceC is a test implementation of the Service interface.
 type TestServiceC struct{}
 
-<<<<<<< HEAD
-func (s TestServiceC) Protocols() []p2p.ProtocolInterface { return nil }
-func (s TestServiceC) APIs() []rpc.API                    { return nil }
-=======
 func (s TestServiceC) Protocols() []p2p.Protocol { return nil }
->>>>>>> f0266a436e0564324a37cfe576a77adfa6787ac1
-func (s TestServiceC) Start(*p2p.Server) error            { return nil }
-func (s TestServiceC) Stop() error                        { return nil }
+func (s TestServiceC) APIs() []rpc.API           { return nil }
+func (s TestServiceC) Start(*p2p.Server) error   { return nil }
+func (s TestServiceC) Stop() error               { return nil }
 
 var testServiceA TestServiceA
 var testServiceB TestServiceB
