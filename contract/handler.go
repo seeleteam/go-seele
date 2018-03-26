@@ -7,10 +7,9 @@ import (
 
 // HandleTransaction handles smart contract transation.
 func HandleTransaction(tx *Transaction) {
-	hash := crypto.Keccak256Hash(tx.payload)
+	hash := crypto.HashBytes(tx.payload).Bytes()
 	fromAddr := common.HexToAddress(tx.from)
-	pubKey := crypto.ToECDSAPub(fromAddr.Bytes())
-	if !tx.sig.Verify(pubKey, hash) {
+	if !tx.sig.Verify(&fromAddr, hash) {
 		log.Error("Transaction signature is invalid, and will not be archived into blockchain.")
 		return
 	}

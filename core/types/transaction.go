@@ -6,13 +6,13 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/merkle"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	errSigMissed      = errors.New("signature missed")
 	errSigInvalid     = errors.New("signature is invalid")
 
-	emptyTxRootHash = txsTrieSum([]*Transaction{})
+	emptyTxRootHash = MerkleRootHash([]*Transaction{})
 )
 
 // TransactionData wraps the data in a transaction.
@@ -61,19 +61,13 @@ func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Tra
 
 	txData.Amount.Set(amount)
 
-	txDataBytes := common.SerializePanic(txData)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-
-	return &Transaction{common.BytesToHash(txDataHash), txData, nil}
+	return &Transaction{crypto.MustHash(txData), txData, nil}
 }
 
 // Sign signs the transaction with private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-
-	tx.Hash = common.BytesToHash(txDataHash)
-	tx.Signature = crypto.NewSignature(privKey, txDataHash)
+	tx.Hash = crypto.MustHash(tx.Data)
+	tx.Signature = crypto.NewSignature(privKey, tx.Hash.Bytes())
 }
 
 // Validate returns true if the transation is valid, otherwise false.
@@ -93,28 +87,44 @@ func (tx *Transaction) Validate() error {
 		return errSigMissed
 	}
 
-	txDataBytes := common.SerializePanic(tx.Data)
-	txDataHash := crypto.Keccak256Hash(txDataBytes)
-	if !bytes.Equal(txDataHash, tx.Hash.Bytes()) {
+	txDataHash := crypto.MustHash(tx.Data)
+	if !txDataHash.Equal(tx.Hash) {
 		return errHashMismatch
 	}
 
-	pubKey := crypto.ToECDSAPub(tx.Data.From.Bytes())
-	if !tx.Signature.Verify(pubKey, txDataHash) {
+	if !tx.Signature.Verify(&tx.Data.From, txDataHash.Bytes()) {
 		return errSigInvalid
 	}
 
 	return nil
 }
 
-// txsTrieSum calculates and returns the transactions trie root hash.
-// TODO depend on the merkle tree implementation.
-func txsTrieSum(txs []*Transaction) common.Hash {
-	txsBytes := make([][]byte, len(txs))
+// CalculateHash calculates and returns the transaction hash.
+// This is to implement the merkle.Content interface.
+func (tx *Transaction) CalculateHash() common.Hash {
+	return crypto.MustHash(tx.Data)
+}
 
-	for i, tx := range txs {
-		txsBytes[i] = common.SerializePanic(tx.Data)
+// Equals returns if the transaction is equals to the specified content.
+// This is to implement the merkle.Content interface.
+func (tx *Transaction) Equals(other merkle.Content) bool {
+	otherTx, ok := other.(*Transaction)
+	return ok && tx.Hash.Equal(otherTx.Hash)
+}
+
+// MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
+// If the given transactions is empty, return empty hash.
+func MerkleRootHash(txs []*Transaction) common.Hash {
+	if len(txs) == 0 {
+		return common.EmptyHash
 	}
 
-	return common.BytesToHash(crypto.Keccak256Hash(txsBytes...))
+	contents := make([]merkle.Content, len(txs))
+	for i, tx := range txs {
+		contents[i] = tx
+	}
+
+	bmt, _ := merkle.NewTree(contents)
+
+	return bmt.MerkleRoot()
 }

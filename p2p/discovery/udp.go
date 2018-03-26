@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -279,13 +280,13 @@ func (u *udp) loopReply() {
 
 func (u *udp) discovery() {
 	for {
-		id, err := common.GenerateRandomAddress()
+		id, err := crypto.GenerateRandomAddress()
 		if err != nil {
 			log.Error(err.Error())
 			continue
 		}
 
-		nodes := u.table.findNodeForRequest(id.ToSha())
+		nodes := u.table.findNodeForRequest(crypto.HashBytes(id.Bytes()))
 
 		//log.Debug("query id: %s", hexutil.BytesToHex(id.Bytes()))
 		sendFindNodeRequest(u, nodes, *id)

@@ -27,4 +27,10 @@ type BlockchainStore interface {
 
 	// GetBlockTotalDifficulty retrieves a block's total difficulty for the specified block hash.
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
+
+	// PutBlock serializes a block with total difficulty (td) into the store.
+	// The input parameter isHead indicates if the header is a HEAD block header.
+	PutBlock(block *types.Block, td *big.Int, isHead bool) error
+	// GetBlock retrieves the block for the specified block hash.
+	GetBlock(hash common.Hash) (*types.Block, error)
 }

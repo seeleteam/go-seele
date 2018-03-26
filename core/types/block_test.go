@@ -37,7 +37,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	// Change all values of original header.
 	header.PreviousBlockHash = common.StringToHash("PreviousBlockHash2")
 	header.Creator = randomAddress(t)
-	header.TxHash = common.BytesToHash(crypto.Keccak256Hash([]byte("TxHash2")))
+	header.TxHash = crypto.HashBytes([]byte("TxHash2"))
 	header.Difficulty.SetInt64(2)
 	header.Height = 2
 	header.CreateTimestamp.SetInt64(2)

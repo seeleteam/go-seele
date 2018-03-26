@@ -8,7 +8,7 @@ package p2p
 import (
 	"time"
 
-	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/common"
 )
 
 const (
@@ -20,23 +20,36 @@ const (
 
 // Message exposed for high level layer to receive
 type Message struct {
-	MsgCode    uint16 // message code, defined in each protocol
+	Code       uint16 // message code, defined in each protocol
 	Payload    []byte
 	ReceivedAt time.Time
-	CurPeer    *Peer // peer that handle this message
-}
-
-// msg wrapped Message, used in p2p layer
-type msg struct {
-	protoCode uint16
-	msgCode   uint16
-	size      uint32
-	payload   []byte
 }
 
 // ProtoHandShake handshake message for two peer to exchage base information
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {
 	Caps   []Cap
-	NodeID discovery.NodeID
+	NodeID common.Address
+}
+
+type MsgReader interface {
+	// ReadMsg read a message. It will block until send the message out or get errors
+	ReadMsg() (Message, error)
+}
+
+type MsgWriter interface {
+	// WriteMsg sends a message. It will block until the message's
+	// Payload has been consumed by the other end.
+	//
+	// Note that messages can be sent only once because their
+	// payload reader is drained.
+	WriteMsg(Message) error
+}
+
+// MsgReadWriter provides reading and writing of encoded messages.
+// Implementations should ensure that ReadMsg and WriteMsg can be
+// called simultaneously from multiple goroutines.
+type MsgReadWriter interface {
+	MsgReader
+	MsgWriter
 }

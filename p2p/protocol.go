@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	baseProtoCode uint   = 8 //start protoCode used by higher level
-	ctlProtoCode  uint16 = 1 //control protoCode. For example, handshake ping pong message etc
+	baseProtoCode uint16 = 16 //start protoCode used by higher level
+	ctlProtoCode  uint16 = 1  //control protoCode. For example, handshake ping pong message etc
 )
 
 //Protocol base class for high level transfer protocol.
@@ -23,24 +23,14 @@ type Protocol struct {
 	// Version should contain the version number of the protocol.
 	Version uint
 
-	// AddPeerCh a peer joins protocol, SubProtocol should handle the channel
-	AddPeerCh chan *Peer
+	// Length should contain the number of message codes used by the protocol.
+	Length uint16
 
-	// DelPeerCh a peer leaves protocol
-	DelPeerCh chan *Peer
+	// AddPeer find a new peer will call this method
+	AddPeer func(peer *Peer, rw MsgReadWriter)
 
-	// ReadMsgCh a whole Message has recved, SubProtocol can handle as quickly as possible
-	ReadMsgCh chan *Message
-
-	// IsSelfConnect if value is true, means SubProtocol maintains peers itself, for example when to initiate a tcp connection.
-	// Otherwise, all SubProtols share one tcp connection which is initiated by p2p.syncPeerNodes
-	IsSelfConnect bool
-}
-
-// ProtocolInterface high level protocol should implement this interface
-type ProtocolInterface interface {
-	Run()
-	GetBaseProtocol() *Protocol
+	// DeletePeer this method will be called when a peer is disconnected
+	DeletePeer func(peer *Peer)
 }
 
 func (p *Protocol) cap() Cap {

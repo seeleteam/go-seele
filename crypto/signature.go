@@ -10,6 +10,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 // Signature is a wrapper for signed message, and is serializable.
@@ -31,6 +33,7 @@ func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
 
 // Verify verifies the signature against the specified hash.
 // Return true if signature is valid, otherwise false.
-func (sig *Signature) Verify(pubKey *ecdsa.PublicKey, hash []byte) bool {
+func (sig *Signature) Verify(signerAddress *common.Address, hash []byte) bool {
+	pubKey := ToECDSAPub(signerAddress.Bytes())
 	return ecdsa.Verify(pubKey, hash, sig.R, sig.S)
 }
