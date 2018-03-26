@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -31,7 +32,6 @@ func seeleNodeConfig(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 	seeleNodeConfig.P2P.PrivateKey = seeleNodeKey
-	seeleNodeConfig.SeeleConfig.DataRoot = seeleNodeConfig.DataDir
 
 	return seeleNodeConfig, nil
 }
@@ -61,7 +61,8 @@ var startCmd = &cobra.Command{
 
 		// Create seele service and register the service
 		slog := log.GetLogger("seele", true)
-		seeleService, err := seele.NewSeeleService(&nCfg.SeeleConfig, slog)
+		ctx := context.WithValue(context.Background(), "DataDir", nCfg.DataDir)
+		seeleService, err := seele.NewSeeleService(ctx, &nCfg.SeeleConfig, slog)
 		if err != nil {
 			fmt.Println(err)
 			return

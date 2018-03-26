@@ -16,7 +16,5 @@ type Config struct {
 
 	NetworkID uint64
 
-	// DataRoot root dir of local storage
-	DataRoot string
 	Coinbase common.Address `toml:",omitempty"`
 }

@@ -6,6 +6,7 @@
 package seele
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -42,13 +43,14 @@ func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Trans
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
 	s = &SeeleService{
 		networkID: conf.NetworkID,
 		log:       log,
 	}
 	s.coinbase = conf.Coinbase
-	dbPath := filepath.Join(conf.DataRoot, BlockChainDir)
+	dataDir := ctx.Value("DataDir").(string)
+	dbPath := filepath.Join(dataDir, BlockChainDir)
 	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
 	s.chainDB, err = leveldb.NewLevelDB(dbPath)
 	if err != nil {

@@ -6,7 +6,7 @@ package seele
 
 import (
 	"bytes"
-	"io/ioutil"
+	"context"
 	"os"
 	"testing"
 
@@ -17,25 +17,22 @@ import (
 )
 
 func getTmpConfig() *Config {
-	rootDir, err := ioutil.TempDir("", "seeleRoot")
-	if err != nil {
-		panic(err)
-	}
 	acctAddr := crypto.MustGenerateRandomAddress()
 
 	return &Config{
 		TxConf:    *core.DefaultTxPoolConfig(),
 		NetworkID: 1,
-		DataRoot:  rootDir,
 		Coinbase:  *acctAddr,
 	}
 }
 
 func Test_PublicSeeleAPI(t *testing.T) {
 	conf := getTmpConfig()
-	defer os.RemoveAll(conf.DataRoot)
+	ctx := context.WithValue(context.Background(), "DataDir", "./seeleRoot")
+	dataDir := ctx.Value("DataDir").(string)
+	defer os.RemoveAll(dataDir)
 	log := log.GetLogger("seele", true)
-	ss, err := NewSeeleService(conf, log)
+	ss, err := NewSeeleService(ctx, conf, log)
 	if err != nil {
 		t.Fatal()
 	}
