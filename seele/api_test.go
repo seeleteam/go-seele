@@ -24,7 +24,7 @@ func getTmpConfig() *Config {
 	acctAddr := crypto.MustGenerateRandomAddress()
 
 	return &Config{
-		txConf:    *core.DefaultTxPoolConfig(),
+		TxConf:    *core.DefaultTxPoolConfig(),
 		NetworkID: 1,
 		DataRoot:  rootDir,
 		Coinbase:  *acctAddr,

@@ -10,8 +10,9 @@ import (
 	"github.com/seeleteam/go-seele/core"
 )
 
+// Config is the seele's configuration to create seele service
 type Config struct {
-	txConf core.TransactionPoolConfig
+	TxConf core.TransactionPoolConfig
 
 	NetworkID uint64
 

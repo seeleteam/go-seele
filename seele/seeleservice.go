@@ -73,7 +73,7 @@ func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err erro
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.txConf)
+	s.txPool = core.NewTransactionPool(conf.TxConf)
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()
