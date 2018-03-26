@@ -9,7 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/seeleteam/go-seele/consensus/pow"
+	//"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 // CPUEngine is a mine engine used to find a good nonce for block
@@ -21,15 +21,12 @@ type CPUEngine struct {
 	retChan      chan<- *Result
 	taskStopChan chan struct{}
 
-	consensus pow.Worker
-
 	mining int32
 }
 
 // NewCPUEngine is constructor of CPUEngine
-func NewCPUEngine(consensus pow.Worker) *CPUEngine {
+func NewCPUEngine() *CPUEngine {
 	engine := &CPUEngine{
-		consensus: consensus,
 		taskChan:  make(chan *Task, 1),
 		stopChan:  make(chan struct{}, 1),
 	}
