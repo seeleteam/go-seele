@@ -7,10 +7,9 @@ package miner
 
 import (
 	"math/big"
+	"math/rand"
 	"sync/atomic"
 	"time"
-
-	"math/rand"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"

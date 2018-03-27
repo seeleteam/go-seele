@@ -22,6 +22,7 @@ type Task struct {
 	createdAt time.Time
 }
 
+// applyTransactions TODO need check more about the transactions, such as gas limit
 func (task *Task) applyTransactions(seele seele.SeeleService, coinbase common.Address, txs []*types.Transaction, log *log.SeeleLog) {
 	for _, tx := range txs {
 		// execute tx
