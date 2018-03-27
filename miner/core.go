@@ -32,7 +32,7 @@ miner:
 	for {
 		select {
 		case <-abort:
-			exit(log)
+			logAbort(log)
 			break miner
 
 		default:
@@ -47,7 +47,7 @@ miner:
 
 				select {
 				case <-abort:
-					exit(log)
+					logAbort(log)
 				case result <- found:
 					log.Info("nonce found succeed")
 				}
@@ -58,7 +58,7 @@ miner:
 			if nonce == math.MaxUint64 {
 				select {
 				case <-abort:
-					exit(log)
+					logAbort(log)
 				case result <- nil:
 					log.Info("nonce found outage")
 				}
@@ -71,6 +71,6 @@ miner:
 	}
 }
 
-func exit(log *log.SeeleLog) {
+func logAbort(log *log.SeeleLog) {
 	log.Info("nonce found abort")
 }
