@@ -6,6 +6,7 @@
 package seele
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -31,6 +32,11 @@ type SeeleService struct {
 	chainDB database.Database
 }
 
+// ServiceContext is a collection of service configuration inherited from node
+type ServiceContext struct {
+	DataDir string
+}
+
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
@@ -42,13 +48,14 @@ func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Trans
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
 	s = &SeeleService{
 		networkID: conf.NetworkID,
 		log:       log,
 	}
 	s.coinbase = conf.Coinbase
-	dbPath := filepath.Join(conf.DataRoot, BlockChainDir)
+	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	dbPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
 	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
 	s.chainDB, err = leveldb.NewLevelDB(dbPath)
 	if err != nil {
@@ -73,7 +80,7 @@ func NewSeeleService(conf *Config, log *log.SeeleLog) (s *SeeleService, err erro
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.txConf)
+	s.txPool = core.NewTransactionPool(conf.TxConf)
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()
