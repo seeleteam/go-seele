@@ -42,6 +42,7 @@ func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
 
 // ApplyTransaction applys a transaction
+// Check if this transaction is valid in the state db
 func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Transaction) error {
 	// TODO
 	return nil

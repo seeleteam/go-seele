@@ -3,28 +3,28 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package pow
+package miner
 
 import (
 	"math"
 	"math/big"
 
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 )
 
 var (
 	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
-
-	logger = log.GetLogger("miner", true)
 )
 
-// Mine start calculate nonce for the block.
+// StartMining start calculate nonce for the block.
+// seed random start value for nonce
 // result found nonce will be set in the result block
 // abort you could stop it by close(abort)
-func Mine(block *types.Block, result chan<- *types.Block, abort <-chan interface{}) {
-	var nonce uint64
+func StartMining(task *Task, seed uint64, result chan<- *Result, abort <-chan struct{}, log *log.SeeleLog) {
+	block := task.generateBlock()
+
+	var nonce = seed
 	var hashInt big.Int
 	target := new(big.Int).Div(maxUint256, block.Header.Difficulty)
 
@@ -32,7 +32,7 @@ miner:
 	for {
 		select {
 		case <-abort:
-			exit()
+			exit(log)
 			break miner
 
 		default:
@@ -40,11 +40,16 @@ miner:
 			hash := block.Header.Hash()
 			hashInt.SetBytes(hash.Bytes())
 			if hashInt.Cmp(target) <= 0 {
+				found := &Result{
+					task:  task,
+					block: block,
+				}
+
 				select {
 				case <-abort:
-					exit()
-				case result <- block:
-					logger.Info("nonce found succeed")
+					exit(log)
+				case result <- found:
+					log.Info("nonce found succeed")
 				}
 
 				break miner
@@ -53,9 +58,9 @@ miner:
 			if nonce == math.MaxUint64 {
 				select {
 				case <-abort:
-					exit()
+					exit(log)
 				case result <- nil:
-					logger.Info("nonce found outage")
+					log.Info("nonce found outage")
 				}
 
 				break miner
@@ -66,6 +71,6 @@ miner:
 	}
 }
 
-func exit() {
-	logger.Info("nonce found abort")
+func exit(log *log.SeeleLog) {
+	log.Info("nonce found abort")
 }
