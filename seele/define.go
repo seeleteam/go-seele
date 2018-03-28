@@ -23,7 +23,11 @@ const (
 )
 
 const (
-	StatusMsg = 0x00
+	StatusMsg          = 0x00
+	GetBlockHeadersMsg = 0x01
+	BlockHeadersMsg    = 0x02
+	GetBlocksMsg       = 0x03
+	BlocksMsg          = 0x04
 )
 
 // statusData the structure for peers to exchange status
@@ -33,4 +37,12 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+}
+
+// getBlockHeadersData represents a block header query.
+type getBlockHeadersData struct {
+	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
+	Number  uint64      // Block hash from which to retrieve headers (excludes Hash)
+	Amount  uint64      // Maximum number of headers to retrieve
+	Reverse bool        // Query direction (false = rising towards latest, true = falling towards genesis)
 }
