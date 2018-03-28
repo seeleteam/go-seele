@@ -7,10 +7,12 @@ package node
 
 import (
 	"errors"
+	"net"
 	"sync"
 
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // error infos
@@ -30,6 +32,8 @@ type Node struct {
 
 	services []Service
 
+	rpcAPIs []rpc.API
+
 	log  *log.SeeleLog
 	lock sync.RWMutex
 }
@@ -38,10 +42,12 @@ type Node struct {
 func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
+	nlog := log.GetLogger("node", true)
 
 	return &Node{
 		config:   conf,
 		services: []Service{},
+		log:      nlog,
 	}, nil
 }
 
@@ -76,7 +82,7 @@ func (n *Node) Start() error {
 		return ErrServiceStartFailed
 	}
 
-	//Start services
+	// Start services
 	for i, service := range n.services {
 		if err := service.Start(running); err != nil {
 			for j := 0; j < i; j++ {
@@ -86,7 +92,69 @@ func (n *Node) Start() error {
 			return err
 		}
 	}
+
+	// Start RPC server
+	if err := n.startRPC(n.services); err != nil {
+		for _, service := range n.services {
+			service.Stop()
+		}
+		return err
+	}
+
 	n.server = running
+
+	return nil
+}
+
+// startRPC starts all RPC
+func (n *Node) startRPC(services []Service) error {
+	apis := []rpc.API{}
+	for _, service := range services {
+		apis = append(apis, service.APIs()...)
+	}
+
+	if err := n.startJSONRPC(apis); err != nil {
+		n.log.Error("startProc err", err)
+		return err
+	}
+
+	return nil
+}
+
+// startJSONRPC starts JSONRPC server
+func (n *Node) startJSONRPC(apis []rpc.API) error {
+	handler := rpc.NewServer()
+	for _, api := range apis {
+		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+			return err
+		}
+		n.log.Debug("Proc registered", "service", api.Service, "namespace", api.Namespace)
+	}
+
+	var (
+		listerner net.Listener
+		err       error
+	)
+
+	if listerner, err = net.Listen("tcp", n.config.RPCAddr); err != nil {
+		n.log.Error("Listen failed", "err", err)
+		return err
+	}
+
+	n.log.Debug("Listerner address", listerner.Addr().String())
+	go func() {
+		for {
+			n.log.Debug("Before accept")
+			conn, err := listerner.Accept()
+			if err != nil {
+				n.log.Error("RPC accept failed", "err", err)
+				continue
+			}
+			n.log.Debug("After accept")
+			go handler.ServeCodec(rpc.NewJsonCodec(conn))
+		}
+	}()
 
 	return nil
 }

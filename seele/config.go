@@ -10,12 +10,10 @@ import (
 	"github.com/seeleteam/go-seele/core"
 )
 
+// Config is the seele's configuration to create seele service
 type Config struct {
-	txConf core.TransactionPoolConfig
-
-	NetworkID uint64
-
-	// DataRoot root dir of local storage
-	DataRoot string
-	Coinbase common.Address `toml:",omitempty"`
+	TxConf      core.TransactionPoolConfig
+	NetworkID   uint64
+	Coinbase    common.Address `toml:"-"`
+	CoinbaseStr string
 }

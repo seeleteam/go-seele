@@ -97,3 +97,11 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 func (pool *TransactionPool) Stop() {
 	// TODO remove event listeners
 }
+
+// Pending returns the pending transactions in the transaction pool.
+func (pool *TransactionPool) Pending() ([]*types.Transaction, error) {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+	// TODO
+	return nil,nil
+}
