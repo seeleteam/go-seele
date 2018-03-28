@@ -1,5 +1,4 @@
 language: go
 script: 
-    - go test ./...
+    - go test -p 1 -covermode=atomic -cover ./...
     - make
-

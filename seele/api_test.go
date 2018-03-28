@@ -29,7 +29,7 @@ func getTmpConfig() *Config {
 func Test_PublicSeeleAPI(t *testing.T) {
 	conf := getTmpConfig()
 	serviceContext := ServiceContext{
-		DataDir: os.TempDir(),
+		DataDir: common.GetTempFolder(),
 	}
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
