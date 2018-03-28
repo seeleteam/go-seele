@@ -28,9 +28,9 @@ type PeerInfo struct {
 	Head       string   `json:"head"`       // SHA3 hash of the peer's best owned block
 }
 
-type peer struct {
+type Peer struct {
 	*p2p.Peer
-	peerID  string // id of the peer derived from p2p.NodeID
+	PeerID  string // id of the peer derived from p2p.NodeID
 	version uint   // Seele protocol version negotiated
 	head    common.Hash
 	td      *big.Int // total difficulty
@@ -40,19 +40,19 @@ type peer struct {
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 }
 
-func newPeer(version uint, p *p2p.Peer) *peer {
-	return &peer{
+func newPeer(version uint, p *p2p.Peer) *Peer {
+	return &Peer{
 		Peer:        p,
 		version:     version,
 		td:          big.NewInt(0),
-		peerID:      fmt.Sprintf("%x", p.Node.ID[:8]), // assume the 8 bytes prefix of NodeID as peerID
+		PeerID:      fmt.Sprintf("%x", p.Node.ID[:8]), // assume the 8 bytes prefix of NodeID as peerID
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
-func (p *peer) Info() *PeerInfo {
+func (p *Peer) Info() *PeerInfo {
 	hash, td := p.Head()
 
 	return &PeerInfo{
@@ -63,7 +63,7 @@ func (p *peer) Info() *PeerInfo {
 }
 
 // Head retrieves a copy of the current head hash and total difficulty.
-func (p *peer) Head() (hash common.Hash, td *big.Int) {
+func (p *Peer) Head() (hash common.Hash, td *big.Int) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -72,7 +72,7 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 }
 
 // SetHead updates the head hash and total difficulty of the peer.
-func (p *peer) SetHead(hash common.Hash, td *big.Int) {
+func (p *Peer) SetHead(hash common.Hash, td *big.Int) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -80,8 +80,22 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
+// RequestHeadersByHashOrNumber fetches a batch of blocks' headers corresponding to the
+// specified header query, based on the hash of an origin block.
+func (p *Peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amount int, reverse bool) error {
+	//TODO send GetBlockHeadersMsg
+	return nil
+}
+
+// RequestBlocksByHashOrNumber fetches a batch of blocks corresponding to the
+// specified header query, based on the hash of an origin block.
+func (p *Peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error {
+	//TODO send GetBlocksMsg
+	return nil
+}
+
 // HandShake exchange networkid td etc between two connected peers.
-func (p *peer) HandShake() error {
+func (p *Peer) HandShake() error {
 	//TODO add exchange status msg
 	return nil
 }

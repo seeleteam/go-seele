@@ -17,8 +17,8 @@ import (
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
-	peers     map[string]*peer // peers map. peerID=>peer
-	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
+	peers     map[string]*Peer // peers map. peerID=>peer
+	peersCan  map[string]*Peer // candidate peers, holding peers before handshaking
 	peersLock sync.RWMutex
 
 	networkID uint64
@@ -41,8 +41,8 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		txPool:    seele.TxPool(),
 		chain:     seele.BlockChain(),
 		log:       log,
-		peers:     make(map[string]*peer),
-		peersCan:  make(map[string]*peer),
+		peers:     make(map[string]*Peer),
+		peersCan:  make(map[string]*Peer),
 	}
 
 	return s, nil
@@ -58,7 +58,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 
 	// insert to peers map
 	p.peersLock.Lock()
-	p.peers[newPeer.peerID] = newPeer
+	p.peers[newPeer.PeerID] = newPeer
 	p.peersLock.Unlock()
 }
 
