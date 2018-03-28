@@ -42,8 +42,6 @@ func (s TestServiceB) APIs() []rpc.API           { return nil }
 func (s TestServiceB) Start(*p2p.Server) error   { return nil }
 func (s TestServiceB) Stop() error               { return nil }
 
-//func (s TestServiceB) APIs() []rpc.API {return nil}
-
 // TestServiceC is a test implementation of the Service interface.
 type TestServiceC struct{}
 

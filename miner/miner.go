@@ -28,12 +28,12 @@ type Miner struct {
 	current  *Task
 	recv     chan *Result
 
-	seele seele.SeeleService
+	seele *seele.SeeleService
 	log   *log.SeeleLog
 }
 
 // NewMiner construct a miner, return a Miner instance
-func NewMiner(addr common.Address, seele seele.SeeleService, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog) *Miner {
 	miner := &Miner{
 		coinbase: addr,
 		canStart: 1,
@@ -43,8 +43,8 @@ func NewMiner(addr common.Address, seele seele.SeeleService, log *log.SeeleLog) 
 		log:      log,
 	}
 
-	event.BlockDownloaderEventManager.AddListener(miner.downloadEventCallback)
-	event.TransactionInsertedEventManager.AddListener(miner.newTxCallback)
+	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
+	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
 
 	return miner
 }
@@ -95,6 +95,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 }
 
 func (miner *Miner) newTxCallback(e event.Event) {
+	miner.log.Debug("got new tx event")
 	// if not mining, start mining
 	if atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		miner.prepareNewBlock()
@@ -126,6 +127,8 @@ out:
 }
 
 func (miner *Miner) prepareNewBlock() {
+	miner.log.Debug("start mining new block")
+
 	timestamp := time.Now().Unix()
 	parent := miner.seele.BlockChain().CurrentBlock()
 
@@ -146,7 +149,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(25), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(5), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{
@@ -160,7 +163,12 @@ func (miner *Miner) prepareNewBlock() {
 		txSlice = append(txSlice, value...)
 	}
 
-	miner.current.applyTransactions(miner.seele, miner.coinbase, txSlice, miner.log)
+	err := miner.current.applyTransactions(miner.seele, miner.coinbase, txSlice, miner.log)
+	if err != nil {
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
+		return
+	}
 
 	miner.log.Info("commit a new task to engine, height=%d", header.Height)
 	miner.commitTask(miner.current)

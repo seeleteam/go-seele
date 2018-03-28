@@ -125,11 +125,11 @@ func (n *Node) startRPC(services []Service) error {
 func (n *Node) startJSONRPC(apis []rpc.API) error {
 	handler := rpc.NewServer()
 	for _, api := range apis {
-		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
-			return err
-		}
-		n.log.Debug("Proc registered", "service", api.Service, "namespace", api.Namespace)
+		//if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+		//	n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+		//	return err
+		//}
+		n.log.Debug("Proc registered service namespace %s", api.Namespace)
 	}
 
 	var (
@@ -142,7 +142,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		return err
 	}
 
-	n.log.Debug("Listerner address", listerner.Addr().String())
+	n.log.Debug("Listerner address %s", listerner.Addr().String())
 	go func() {
 		for {
 			n.log.Debug("Before accept")

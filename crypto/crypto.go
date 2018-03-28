@@ -113,21 +113,27 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 	return math.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
 }
 
-// GenerateRandomAddress generates and returns a random address.
-func GenerateRandomAddress() (*common.Address, error) {
+// GenerateKeyPair generate public key and private key
+func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error)  {
 	keypair, err := GenerateKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	buff := FromECDSAPub(&keypair.PublicKey)
-
 	id, err := common.NewAddress(buff[1:])
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &id, err
+	return &id, keypair, err
+}
+
+// GenerateRandomAddress generates and returns a random address.
+func GenerateRandomAddress() (*common.Address, error) {
+	publicKey, _, error := GenerateKeyPair()
+
+	return publicKey, error
 }
 
 // MustGenerateRandomAddress generates and returns a random address.
