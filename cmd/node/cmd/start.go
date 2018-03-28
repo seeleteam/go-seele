@@ -8,19 +8,19 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
-	"time"
-	"github.com/seeleteam/go-seele/core/types"
-	"math/big"
 )
 
 var seeleNodeConfigFile *string
@@ -89,6 +89,7 @@ var startCmd = &cobra.Command{
 		startMiner(seeleService, nCfg, slog)
 		seeleNode.Start()
 
+		// this is for test
 		time.Sleep(3 * time.Second)
 		go addTx(seeleService)
 
