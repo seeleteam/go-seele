@@ -66,7 +66,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 
 	pool.accountToTxsMap[tx.Data.From].add(tx)
 
-	//fire event
+	// fire event
 	event.TransactionInsertedEventManager.Fire(tx)
 
 	return nil
