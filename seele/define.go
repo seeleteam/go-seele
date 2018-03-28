@@ -34,3 +34,11 @@ type statusData struct {
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
 }
+
+// getBlockHeadersData represents a block header query.
+type getBlockHeadersData struct {
+	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
+	Number  uint64      // Block hash from which to retrieve headers (excludes Hash)
+	Amount  uint64      // Maximum number of headers to retrieve
+	Reverse bool        // Query direction (false = rising towards latest, true = falling towards genesis)
+}

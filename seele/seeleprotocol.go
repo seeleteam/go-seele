@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/seele/download"
 )
 
 // SeeleProtocol service implementation of seele
@@ -21,10 +22,11 @@ type SeeleProtocol struct {
 	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
 	peersLock sync.RWMutex
 
-	networkID uint64
-	txPool    *core.TransactionPool
-	chain     *core.Blockchain
-	log       *log.SeeleLog
+	networkID  uint64
+	downloader *downloader.Downloader
+	txPool     *core.TransactionPool
+	chain      *core.Blockchain
+	log        *log.SeeleLog
 }
 
 // NewSeeleService create SeeleProtocol
