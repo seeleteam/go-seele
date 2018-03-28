@@ -7,6 +7,7 @@ package seele
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 )
@@ -20,6 +21,10 @@ const (
 
 	// BlockChainDir blockchain data directory based on config.DataRoot
 	BlockChainDir = "/db/blockchain"
+
+	forceSyncInterval = time.Second * 5
+
+	txsyncPackSize = 100 * 1024
 )
 
 const (
@@ -41,4 +46,10 @@ type getBlockHeadersData struct {
 	Number  uint64      // Block hash from which to retrieve headers (excludes Hash)
 	Amount  uint64      // Maximum number of headers to retrieve
 	Reverse bool        // Query direction (false = rising towards latest, true = falling towards genesis)
+}
+
+// newBlockHash is the network packet for the block announcements.
+type newBlockHash struct {
+	Hash   common.Hash
+	Number uint64
 }

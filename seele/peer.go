@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/p2p"
 	set "gopkg.in/fatih/set.v0"
 )
@@ -91,6 +92,19 @@ func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amou
 // specified header query, based on the hash of an origin block.
 func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error {
 	//TODO send GetBlocksMsg
+	return nil
+}
+
+func (p *peer) sendNewBlockHash(block *types.Block) {
+	// TODO
+}
+
+func (p *peer) sendNewBlock(block *types.Block, td *big.Int) {
+	// TODO
+}
+
+func (p *peer) sendTransactions([]*types.Transaction) error {
+	// TODO
 	return nil
 }
 

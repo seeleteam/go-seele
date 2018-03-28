@@ -20,6 +20,8 @@ import (
 )
 
 const (
+
+	// message codes start from 0x81
 	GetBlockHeadersMsg = 0x81
 	BlockHeadersMsg    = 0x82
 	GetBlocksMsg       = 0x83
@@ -60,7 +62,7 @@ type Downloader struct {
 	lock       sync.RWMutex
 }
 
-func newDownloader(chain *core.Blockchain) *Downloader {
+func NewDownloader(chain *core.Blockchain) *Downloader {
 	d := &Downloader{
 		peers: make(map[string]*peerConn),
 		chain: chain,
