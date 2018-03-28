@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/event"
 )
 
 var (
@@ -36,27 +37,25 @@ func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
 		accountToTxsMap: make(map[common.Address]*txCollection),
 	}
 
-	// TODO register event listeners
-
 	return pool
 }
 
 // AddTransaction adds a single transation into the pool if it is valid and return true.
 // Otherwise, return false and concrete error.
-func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error) {
+func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	if err := tx.Validate(); err != nil {
-		return false, err
+		return err
 	}
 
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
 	if pool.hashToTxMap[tx.Hash] != nil {
-		return false, errTxHashExists
+		return errTxHashExists
 	}
 
 	if uint(len(pool.hashToTxMap)) >= pool.config.Capacity {
-		return false, errTxPoolFull
+		return errTxPoolFull
 	}
 
 	pool.hashToTxMap[tx.Hash] = tx
@@ -67,7 +66,10 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) (bool, error)
 
 	pool.accountToTxsMap[tx.Data.From].add(tx)
 
-	return true, nil
+	// fire event
+	event.TransactionInsertedEventManager.Fire(tx)
+
+	return nil
 }
 
 // GetTransaction returns a transaction if it is contained in the pool and nil otherwise.

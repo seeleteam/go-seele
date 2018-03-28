@@ -22,8 +22,8 @@ type SeeleProtocol struct {
 	peersLock sync.RWMutex
 
 	networkID uint64
-	txPool    *core.TransactionPool
-	chain     *core.Blockchain
+	txPool    *core.TransactionPool //same instance with seeleService tx pool
+	chain     *core.Blockchain      //same instance with seeleService chain
 	log       *log.SeeleLog
 }
 

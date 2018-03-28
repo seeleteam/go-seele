@@ -30,9 +30,9 @@ type API struct {
 }
 
 // RPCService offers meta information of the server.
-type RPCService struct {
-	server *Server
-}
+//type RPCService struct {
+//	server *Server
+//}
 
 // NewServer returns a new Server.
 func NewServer() *Server {
@@ -40,9 +40,10 @@ func NewServer() *Server {
 		rpc.Server{},
 	}
 
+	// Not implemented service
 	// register a default service which will provide meta information about the RPC service.
-	rpcService := &RPCService{server}
-	server.RegisterName(MetadataAPI, rpcService)
+	//rpcService := &RPCService{server}
+	//server.RegisterName(MetadataAPI, rpcService)
 
 	return server
 }

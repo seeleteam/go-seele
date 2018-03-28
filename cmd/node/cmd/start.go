@@ -8,12 +8,16 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
@@ -32,8 +36,10 @@ func seeleNodeConfig(configFile string) (*node.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	seeleNodeConfig.P2P.PrivateKey = seeleNodeKey
 	seeleNodeConfig.SeeleConfig.Coinbase = common.HexToAddress(seeleNodeConfig.SeeleConfig.CoinbaseStr)
+	seeleNodeConfig.DataDir = common.GetTempFolder()
 
 	return seeleNodeConfig, nil
 }
@@ -72,6 +78,7 @@ var startCmd = &cobra.Command{
 			fmt.Println(err)
 			return
 		}
+
 		services := []node.Service{seeleService}
 		for _, service := range services {
 			if err := seeleNode.Register(service); err != nil {
@@ -80,9 +87,36 @@ var startCmd = &cobra.Command{
 		}
 
 		seeleNode.Start()
+		startMiner(seeleService, nCfg, slog)
+
+		// this is for test
+		time.Sleep(3 * time.Second)
+		go addTx(seeleService)
+
 		wg.Add(1)
 		wg.Wait()
 	},
+}
+
+func startMiner(seele *seele.SeeleService, nodeConfig *node.Config, log *log.SeeleLog) {
+	miner := miner.NewMiner(nodeConfig.SeeleConfig.Coinbase, seele, log)
+	go miner.Start()
+}
+
+// for test
+func addTx(seele *seele.SeeleService) {
+	from, privateKey, _ := crypto.GenerateKeyPair()
+	to := crypto.MustGenerateRandomAddress()
+	tx := types.NewTransaction(*from, *to, big.NewInt(0), 0)
+
+	tx.Sign(privateKey)
+
+	err := seele.TxPool().AddTransaction(tx)
+	if err != nil {
+		fmt.Println("add transaction error ", err.Error())
+	}
+
+	fmt.Println("add transaction done")
 }
 
 func init() {
@@ -95,7 +129,7 @@ func init() {
 /*
 ecdsa private-public key pairs used for test.
 The shorter one is the private key, and the other is public key.
-The lengt of public key is 65, has fix prefix '04' which can remove in some case.
+The length of public key is 65, has fix prefix '04' which can remove in some case.
 29
 key00   692e7dcb0efebc71bd544755baebb41a6b7245efd78799e836d56ef02f417efa
 key00   040548d0b1a3297fea072284f86b9fd39a9f1273c46fba8951b62de5b95cd3dd846278057ec4df598a0b089a0bdc0c8fd3aa601cf01a9f30a60292ea0769388d1f
