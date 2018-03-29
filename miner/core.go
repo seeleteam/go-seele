@@ -39,7 +39,10 @@ miner:
 			block.Header.Nonce = nonce
 			hash := block.Header.Hash()
 			hashInt.SetBytes(hash.Bytes())
+
+			// found
 			if hashInt.Cmp(target) <= 0 {
+				block.HeaderHash = hash
 				found := &Result{
 					task:  task,
 					block: block,
@@ -55,6 +58,7 @@ miner:
 				break miner
 			}
 
+			// outage
 			if nonce == math.MaxUint64 {
 				select {
 				case <-abort:

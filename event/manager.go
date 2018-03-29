@@ -22,6 +22,7 @@ type EventManager struct {
 func (h *EventManager) Fire(e Event) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+
 	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)

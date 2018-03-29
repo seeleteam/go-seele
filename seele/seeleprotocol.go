@@ -33,6 +33,7 @@ type SeeleProtocol struct {
 	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
 	peersLock sync.RWMutex
 
+<<<<<<< HEAD
 	networkID  uint64
 	downloader *downloader.Downloader
 	txPool     *core.TransactionPool
@@ -42,6 +43,12 @@ type SeeleProtocol struct {
 	quitCh chan struct{}
 	syncCh chan struct{}
 	log    *log.SeeleLog
+=======
+	networkID uint64
+	txPool    *core.TransactionPool //same instance with seeleService tx pool
+	chain     *core.Blockchain      //same instance with seeleService chain
+	log       *log.SeeleLog
+>>>>>>> master
 }
 
 // NewSeeleService create SeeleProtocol
