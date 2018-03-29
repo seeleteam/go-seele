@@ -146,12 +146,51 @@ func (t *taskMgr) isDone() bool {
 	return t.curNo == t.toNo+1
 }
 
-//deliverHeaderMsg recved header msg from peer.
+// onPeerQuit need to remove tasks assigned to peer
+func (t *taskMgr) onPeerQuit(peerID string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	for _, masterHead := range t.masterHeaderList[t.curNo-t.fromNo:] {
+		if masterHead.status != taskStatusDownloading || masterHead.peerID != peerID {
+			continue
+		}
+		masterHead.peerID = ""
+		masterHead.status = taskStatusIdle
+	}
+}
+
+// deliverHeaderMsg recved header msg from peer.
 func (p *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) {
 	//TODO
 }
 
-//deliverBlockMsg recved blocks msg from peer.
+// deliverBlockPreMsg recved blocks-pre msg from peer.
+func (t *taskMgr) deliverBlockPreMsg(peerID string, blockNums []uint64) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	for _, masterHead := range t.masterHeaderList[t.curNo-t.fromNo:] {
+		if masterHead.status != taskStatusDownloading || masterHead.peerID != peerID {
+			continue
+		}
+
+		curNo := masterHead.header.Height
+		bFind := false
+		for _, n := range blockNums {
+			if n == curNo {
+				bFind = true
+				break
+			}
+		}
+
+		if !bFind {
+			masterHead.peerID = ""
+			masterHead.status = taskStatusIdle
+		}
+	}
+}
+
+// deliverBlockMsg recved blocks msg from peer.
 func (p *taskMgr) deliverBlockMsg(peerID string, headers []*types.Block) {
-	//TODO need remove all flags from masterHeaders
+	//TODO also need inject to blockchain, order requirements?
 }

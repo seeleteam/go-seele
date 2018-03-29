@@ -160,6 +160,8 @@ func (p *SeeleProtocol) NewTxCB(e event.Event) {
 
 // syncTransactions sends pending transactions to remote peer.
 func (pm *SeeleProtocol) syncTransactions(p *peer) {
+	defer pm.wg.Done()
+
 	pending, _ := pm.txPool.Pending()
 	if len(pending) == 0 {
 		return
@@ -181,7 +183,7 @@ func (pm *SeeleProtocol) syncTransactions(p *peer) {
 			return
 		}
 		curPos = curPos + needSend
-		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend-1]) }()
+		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend]) }()
 	}
 
 	resultCh <- nil

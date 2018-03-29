@@ -25,7 +25,8 @@ const (
 	GetBlockHeadersMsg = 0x81
 	BlockHeadersMsg    = 0x82
 	GetBlocksMsg       = 0x83
-	BlocksMsg          = 0x84
+	BlocksPreMsg       = 0x84 // is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksMsg          = 0x85
 )
 
 var (
@@ -36,30 +37,34 @@ var (
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
 
-	statusNone      = 1
-	statusPreparing = 2
-	statusFetching  = 3
-	statusCleaning  = 4
+	statusNone      = 1 // no sync session
+	statusPreparing = 2 // sync session is preparing
+	statusFetching  = 3 // sync session is downloading
+	statusCleaning  = 4 // sync session is cleaning
 )
 
 var (
 	errIsSynchronising     = errors.New("Is synchronising")
 	errPeerNotFound        = errors.New("Peer not found")
-	errHashNotMatch        = errors.New("Hash not match!")
+	errHashNotMatch        = errors.New("Hash not match")
 	errInvalidPacketRecved = errors.New("Invalid packet recved")
+	errSyncErr             = errors.New("Err occurs when syncing")
 )
 
+// Downloader sync block chain with remote peer
 type Downloader struct {
 	cancelCh chan struct{} // Cancel current synchronising session
 
 	masterPeer string               // Identifier of the peer currently being used as the master
 	peers      map[string]*peerConn // peers map. peerID=>peer
 
-	syncStatus int // 0 for none; 1 for preparing; 2 for downloading; 3 for cleaning
-	chain      *core.Blockchain
-	sessionWG  sync.WaitGroup
-	log        *log.SeeleLog
-	lock       sync.RWMutex
+	syncStatus int
+	tm         *taskMgr
+
+	chain     *core.Blockchain
+	sessionWG sync.WaitGroup
+	log       *log.SeeleLog
+	lock      sync.RWMutex
 }
 
 func NewDownloader(chain *core.Blockchain) *Downloader {
@@ -85,22 +90,20 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 		return errIsSynchronising
 	}
 	d.syncStatus = statusPreparing
+	d.cancelCh = make(chan struct{})
 	d.lock.Unlock()
 
-	d.cancelCh = make(chan struct{})
 	d.masterPeer = id
-
 	p, ok := d.peers[id]
 	if !ok {
 		return errPeerNotFound
 	}
 
 	err := d.synchronise(p, head, td)
-	close(d.cancelCh)
-
 	d.lock.Lock()
 	d.syncStatus = statusNone
 	d.sessionWG.Wait()
+	d.cancelCh = nil
 	d.lock.Unlock()
 	return err
 }
@@ -129,6 +132,7 @@ func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) 
 	// need download blocks from number origin to height.
 	localTD := d.chain.CurrentBlock().Header.Difficulty //TODO get total difficulty
 	tm := newTaskMgr(d.log, d.masterPeer, origin, height)
+	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
 	for _, c := range d.peers {
@@ -142,9 +146,18 @@ func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) 
 	}
 	d.lock.Unlock()
 	d.sessionWG.Wait()
+
+	d.lock.Lock()
 	d.syncStatus = statusCleaning
+	d.lock.Unlock()
 	d.log.Info("downloader.synchronise quit!")
-	return nil
+	d.tm = nil
+
+	if tm.isDone() {
+		return nil
+	}
+
+	return errSyncErr
 }
 
 // fetchHeight gets the latest head of peer
@@ -180,7 +193,11 @@ func (d *Downloader) RegisterPeer(peerID string, peer Peer) {
 	defer d.lock.Unlock()
 	newConn := newPeerConn(peer, peerID)
 	d.peers[peerID] = newConn
-	//TODO start download routine if session is running
+
+	if d.syncStatus == statusFetching {
+		d.sessionWG.Add(1)
+		go d.peerDownload(newConn, d.tm)
+	}
 }
 
 // UnRegisterPeer remove peer from download routine
@@ -259,11 +276,26 @@ outLoop:
 				d.log.Info("RequestBlocksByHashOrNumber err!")
 				break
 			}
-			msg, err := conn.waitMsg(BlocksMsg, d.cancelCh)
+
+			msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
+			if err != nil {
+				d.log.Info("peerDownload waitMsg BlocksPreMsg err! %s", err)
+				break
+			}
+
+			var blockNums []uint64
+			if err = common.Deserialize(msg.Payload, blockNums); err != nil {
+				d.log.Info("peerDownload Deserialize err! %s", err)
+				break
+			}
+			tm.deliverBlockPreMsg(peerID, blockNums)
+
+			msg, err = conn.waitMsg(BlocksMsg, d.cancelCh)
 			if err != nil {
 				d.log.Info("peerDownload waitMsg BlocksMsg err! %s", err)
 				break
 			}
+
 			var blocks []*types.Block
 			if err = common.Deserialize(msg.Payload, blocks); err != nil {
 				d.log.Info("peerDownload Deserialize err! %s", err)
@@ -278,12 +310,15 @@ outLoop:
 			select {
 			case <-d.cancelCh:
 				break outLoop
+			case <-conn.quitCh:
+				break outLoop
 			case <-time.After(peerIdleTime):
 				break
 			}
 		}
 	}
 
+	tm.onPeerQuit(peerID)
 	if bMaster {
 		d.Cancel()
 	}
