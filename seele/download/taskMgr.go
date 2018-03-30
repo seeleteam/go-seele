@@ -6,7 +6,9 @@
 package downloader
 
 import (
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -15,12 +17,20 @@ import (
 const (
 	taskStatusIdle        = 0 // request task is not assigned
 	taskStatusDownloading = 1 // block is downloading
-	taskStatusDown        = 2 // block is downloaded
+	taskStatusApplying    = 2 // block is downloaded, needs to apply
+
+	maxBlocksWaiting = 1024 // max blocks waiting to download
+)
+
+var (
+	errMasterHeadersNotMatch = errors.New("Master headers not match")
+	errHeadInfoNotFound      = errors.New("Header info not found")
 )
 
 // masterHeadInfo header info for master peer
 type masterHeadInfo struct {
 	header *types.BlockHeader
+	block  *types.Block
 	peerID string
 	status int // block download status
 }
@@ -38,27 +48,66 @@ func newPeerHeadInfo() *peerHeadInfo {
 }
 
 type taskMgr struct {
+	downloader       *Downloader
 	fromNo, toNo     uint64                   // block number range [from, to]
 	curNo            uint64                   // the smallest block number need to recv
 	peersHeaderMap   map[string]*peerHeadInfo // peer's header information
-	masterHeaderList []masterHeadInfo         // headers for master peer
+	masterHeaderList []*masterHeadInfo        // headers for master peer
 
 	masterPeer string
 	lock       sync.RWMutex
+	quitCh     chan struct{}
+	wg         sync.WaitGroup
 	log        *log.SeeleLog
 }
 
-func newTaskMgr(log *log.SeeleLog, masterPeer string, from uint64, to uint64) *taskMgr {
+func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskMgr {
 	t := &taskMgr{
-		log:              log,
+		log:              d.log,
+		downloader:       d,
 		fromNo:           from,
 		toNo:             to,
 		curNo:            from,
 		masterPeer:       masterPeer,
 		peersHeaderMap:   make(map[string]*peerHeadInfo),
-		masterHeaderList: make([]masterHeadInfo, 0, to-from+1),
+		masterHeaderList: make([]*masterHeadInfo, 0, to-from+1),
+		quitCh:           make(chan struct{}),
 	}
+	t.wg.Add(1)
+	go t.run()
 	return t
+}
+
+func (t *taskMgr) run() {
+	defer t.wg.Done()
+loopOut:
+	for {
+		t.lock.Lock()
+		startPos, num := int(t.curNo-t.fromNo), 0
+		for (startPos+num < len(t.masterHeaderList)) && (t.masterHeaderList[startPos+num].status != taskStatusApplying) {
+			num = num + 1
+		}
+
+		results := t.masterHeaderList[startPos : startPos+num]
+		t.curNo = t.curNo + uint64(num)
+		t.lock.Unlock()
+		t.downloader.processBlocks(results)
+
+		select {
+		case <-time.After(time.Second):
+		case <-t.quitCh:
+			break loopOut
+		}
+	}
+}
+
+func (t *taskMgr) close() {
+	select {
+	case <-t.quitCh:
+	default:
+		close(t.quitCh)
+	}
+	t.wg.Wait()
 }
 
 // getReqHeaderInfo gets header request information, returns the start block number and amount of headers.
@@ -68,6 +117,9 @@ func (t *taskMgr) getReqHeaderInfo(conn *peerConn) (uint64, int) {
 		t.lock.RLock()
 		startNo = t.fromNo + uint64(len(t.masterHeaderList))
 		t.lock.RUnlock()
+		if startNo-t.curNo > maxBlocksWaiting {
+			return 0, 0
+		}
 	} else {
 		t.lock.Lock()
 		headInfo, ok := t.peersHeaderMap[conn.peerID]
@@ -146,7 +198,7 @@ func (t *taskMgr) isDone() bool {
 	return t.curNo == t.toNo+1
 }
 
-// onPeerQuit need to remove tasks assigned to peer
+// onPeerQuit needs to remove tasks assigned to peer
 func (t *taskMgr) onPeerQuit(peerID string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -160,8 +212,36 @@ func (t *taskMgr) onPeerQuit(peerID string) {
 }
 
 // deliverHeaderMsg recved header msg from peer.
-func (p *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) {
-	//TODO
+func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if peerID == t.masterPeer {
+		lastNo := t.fromNo + uint64(len(t.masterHeaderList))
+		if lastNo+1 != headers[0].Height {
+			return errMasterHeadersNotMatch
+		}
+		for _, h := range headers {
+			t.masterHeaderList = append(t.masterHeaderList, &masterHeadInfo{
+				header: h,
+				status: taskStatusIdle,
+			})
+		}
+		return nil
+	}
+
+	headInfo, ok := t.peersHeaderMap[peerID]
+	if !ok {
+		return errHeadInfoNotFound
+	}
+
+	for _, h := range headers {
+		headInfo.headers[h.Height] = h
+		if headInfo.maxNo < h.Height {
+			headInfo.maxNo = h.Height
+		}
+	}
+
+	return nil
 }
 
 // deliverBlockPreMsg recved blocks-pre msg from peer.
@@ -191,6 +271,17 @@ func (t *taskMgr) deliverBlockPreMsg(peerID string, blockNums []uint64) {
 }
 
 // deliverBlockMsg recved blocks msg from peer.
-func (p *taskMgr) deliverBlockMsg(peerID string, headers []*types.Block) {
-	//TODO also need inject to blockchain, order requirements?
+func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	for _, b := range blocks {
+		headInfo := t.masterHeaderList[int(b.Header.Height-t.fromNo)]
+		if headInfo.peerID != peerID {
+			t.log.Info("Recved block from different peer, discard this block. peerID=%s", peerID)
+			continue
+		}
+
+		headInfo.block = b
+		headInfo.status = taskStatusApplying
+	}
 }

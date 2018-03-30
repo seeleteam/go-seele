@@ -131,7 +131,7 @@ func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) 
 
 	// need download blocks from number origin to height.
 	localTD := d.chain.CurrentBlock().Header.Difficulty //TODO get total difficulty
-	tm := newTaskMgr(d.log, d.masterPeer, origin, height)
+	tm := newTaskMgr(d, d.masterPeer, origin, height)
 	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
@@ -150,8 +150,9 @@ func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) 
 	d.lock.Lock()
 	d.syncStatus = statusCleaning
 	d.lock.Unlock()
-	d.log.Info("downloader.synchronise quit!")
+	tm.close()
 	d.tm = nil
+	d.log.Info("downloader.synchronise quit!")
 
 	if tm.isDone() {
 		return nil
@@ -267,7 +268,11 @@ outLoop:
 				d.log.Info("peerDownload Deserialize err! %s", err)
 				break
 			}
-			tm.deliverHeaderMsg(peerID, headers)
+
+			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
+				d.log.Info("peerDownload deliverHeaderMsg err! %s", err)
+				break
+			}
 		}
 
 		if startNo, amount := tm.getReqBlocks(conn); amount > 0 {
@@ -321,5 +326,16 @@ outLoop:
 	tm.onPeerQuit(peerID)
 	if bMaster {
 		d.Cancel()
+	}
+}
+
+// processBlocks writes blocks to the blockchain.
+func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
+	for _, h := range headInfos {
+		if err := d.chain.WriteBlock(h.block); err != nil {
+			d.log.Error("downloader processBlocks err. %s", err)
+			d.Cancel()
+			break
+		}
 	}
 }

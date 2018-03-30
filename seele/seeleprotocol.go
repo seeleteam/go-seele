@@ -33,7 +33,6 @@ type SeeleProtocol struct {
 	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
 	peersLock sync.RWMutex
 
-<<<<<<< HEAD
 	networkID  uint64
 	downloader *downloader.Downloader
 	txPool     *core.TransactionPool
@@ -43,12 +42,6 @@ type SeeleProtocol struct {
 	quitCh chan struct{}
 	syncCh chan struct{}
 	log    *log.SeeleLog
-=======
-	networkID uint64
-	txPool    *core.TransactionPool //same instance with seeleService tx pool
-	chain     *core.Blockchain      //same instance with seeleService chain
-	log       *log.SeeleLog
->>>>>>> master
 }
 
 // NewSeeleService create SeeleProtocol
@@ -75,48 +68,48 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	return s, nil
 }
 
-func (p *SeeleProtocol) Start() {
-	event.BlockMinedEventManager.AddListener(p.NewBlockCB)
-	event.TransactionInsertedEventManager.AddListener(p.NewTxCB)
-	go p.syncer()
+func (sp *SeeleProtocol) Start() {
+	event.BlockMinedEventManager.AddListener(sp.NewBlockCB)
+	event.TransactionInsertedEventManager.AddListener(sp.NewTxCB)
+	go sp.syncer()
 }
 
 // Stop stops protocol, called when seeleService quits.
-func (p *SeeleProtocol) Stop() {
-	event.BlockMinedEventManager.RemoveListener(p.NewBlockCB)
-	event.TransactionInsertedEventManager.RemoveListener(p.NewTxCB)
-	close(p.quitCh)
-	close(p.syncCh)
-	p.wg.Wait()
+func (sp *SeeleProtocol) Stop() {
+	event.BlockMinedEventManager.RemoveListener(sp.NewBlockCB)
+	event.TransactionInsertedEventManager.RemoveListener(sp.NewTxCB)
+	close(sp.quitCh)
+	close(sp.syncCh)
+	sp.wg.Wait()
 }
 
 // syncer try to synchronise with remote peer
-func (p *SeeleProtocol) syncer() {
-	defer p.downloader.Terminate()
-	defer p.wg.Done()
-	p.wg.Add(1)
+func (sp *SeeleProtocol) syncer() {
+	defer sp.downloader.Terminate()
+	defer sp.wg.Done()
+	sp.wg.Add(1)
 
 	forceSync := time.NewTicker(forceSyncInterval)
 	for {
 		select {
-		case <-p.syncCh:
-			go p.synchronise(p.bestPeer())
+		case <-sp.syncCh:
+			go sp.synchronise(sp.bestPeer())
 		case <-forceSync.C:
-			go p.synchronise(p.bestPeer())
-		case <-p.quitCh:
+			go sp.synchronise(sp.bestPeer())
+		case <-sp.quitCh:
 			return
 		}
 	}
 }
 
-func (pm *SeeleProtocol) bestPeer() *peer {
-	pm.peersLock.RLock()
-	defer pm.peersLock.RUnlock()
+func (sp *SeeleProtocol) bestPeer() *peer {
+	sp.peersLock.RLock()
+	defer sp.peersLock.RUnlock()
 	var (
 		bestPeer *peer
 		bestTd   *big.Int
 	)
-	for _, p := range pm.peers {
+	for _, p := range sp.peers {
 		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
 			bestPeer, bestTd = p, td
 		}
@@ -124,11 +117,11 @@ func (pm *SeeleProtocol) bestPeer() *peer {
 	return bestPeer
 }
 
-func (pm *SeeleProtocol) peersWithoutBlock(hash common.Hash) []*peer {
-	pm.peersLock.RLock()
-	defer pm.peersLock.RUnlock()
-	list := make([]*peer, 0, len(pm.peers))
-	for _, p := range pm.peers {
+func (sp *SeeleProtocol) peersWithoutBlock(hash common.Hash) []*peer {
+	sp.peersLock.RLock()
+	defer sp.peersLock.RUnlock()
+	list := make([]*peer, 0, len(sp.peers))
+	for _, p := range sp.peers {
 		if !p.knownBlocks.Has(hash) {
 			list = append(list, p)
 		}
@@ -136,15 +129,15 @@ func (pm *SeeleProtocol) peersWithoutBlock(hash common.Hash) []*peer {
 	return list
 }
 
-func (pm *SeeleProtocol) synchronise(p *peer) {
+func (sp *SeeleProtocol) synchronise(p *peer) {
 	//TODO
 }
 
 // NewBlockCB callback when a block is mined.
-func (pm *SeeleProtocol) NewBlockCB(e event.Event) {
+func (sp *SeeleProtocol) NewBlockCB(e event.Event) {
 	block := e.(*types.Block)
 	hash := block.HeaderHash
-	peers := pm.peersWithoutBlock(hash)
+	peers := sp.peersWithoutBlock(hash)
 
 	// send block hash to peers first
 	for _, p := range peers {
@@ -161,15 +154,15 @@ func (pm *SeeleProtocol) NewBlockCB(e event.Event) {
 }
 
 // NewTxCB callback when tx recved.
-func (p *SeeleProtocol) NewTxCB(e event.Event) {
+func (sp *SeeleProtocol) NewTxCB(e event.Event) {
 	// TODO
 }
 
 // syncTransactions sends pending transactions to remote peer.
-func (pm *SeeleProtocol) syncTransactions(p *peer) {
-	defer pm.wg.Done()
+func (sp *SeeleProtocol) syncTransactions(p *peer) {
+	defer sp.wg.Done()
 
-	pending, _ := pm.txPool.Pending()
+	pending, _ := sp.txPool.Pending()
 	if len(pending) == 0 {
 		return
 	}
@@ -202,37 +195,37 @@ loopOut:
 				break loopOut
 			}
 			send(curPos)
-		case <-pm.quitCh:
+		case <-sp.quitCh:
 			break loopOut
 		}
 	}
 	close(resultCh)
 }
 
-func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
+func (sp *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	newPeer := newPeer(SeeleVersion, p2pPeer)
 	if err := newPeer.HandShake(); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
-		p.log.Error("handleAddPeer err. %s", err)
+		sp.log.Error("handleAddPeer err. %s", err)
 		return
 	}
 
 	// insert to peers map
-	p.peersLock.Lock()
-	p.peers[newPeer.peerID] = newPeer
-	p.peersLock.Unlock()
-	p.syncCh <- struct{}{}
+	sp.peersLock.Lock()
+	sp.peers[newPeer.peerID] = newPeer
+	sp.peersLock.Unlock()
+	sp.syncCh <- struct{}{}
 }
 
-func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-	p.peersLock.Lock()
+func (sp *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+	sp.peersLock.Lock()
 	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
-	delete(p.peers, peerID)
-	p.peersLock.Unlock()
+	delete(sp.peers, peerID)
+	sp.peersLock.Unlock()
 }
 
-func (p *SeeleProtocol) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
+func (sp *SeeleProtocol) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
 	//TODO add handle msg
-	p.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
+	sp.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
 	return
 }
