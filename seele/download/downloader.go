@@ -20,8 +20,6 @@ import (
 )
 
 const (
-
-	// message codes start from 0x81
 	GetBlockHeadersMsg = 0x81
 	BlockHeadersMsg    = 0x82
 	GetBlocksMsg       = 0x83
@@ -30,9 +28,8 @@ const (
 )
 
 var (
-	MaxHashFetch   = 1024 // Amount of hashes to be fetched per retrieval request
-	MaxBlockFetch  = 128  // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch = 256  // Amount of block headers to be fetched per retrieval request
+	MaxBlockFetch  = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
 
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
@@ -47,14 +44,13 @@ var (
 	errIsSynchronising     = errors.New("Is synchronising")
 	errPeerNotFound        = errors.New("Peer not found")
 	errHashNotMatch        = errors.New("Hash not match")
-	errInvalidPacketRecved = errors.New("Invalid packet recved")
+	errInvalidPacketRecved = errors.New("Invalid packet received")
 	errSyncErr             = errors.New("Err occurs when syncing")
 )
 
 // Downloader sync block chain with remote peer
 type Downloader struct {
-	cancelCh chan struct{} // Cancel current synchronising session
-
+	cancelCh   chan struct{}        // Cancel current synchronising session
 	masterPeer string               // Identifier of the peer currently being used as the master
 	peers      map[string]*peerConn // peers map. peerID=>peer
 
@@ -337,5 +333,6 @@ func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
 			d.Cancel()
 			break
 		}
+		h.status = taskStatusProcessed
 	}
 }

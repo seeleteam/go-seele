@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	taskStatusIdle        = 0 // request task is not assigned
-	taskStatusDownloading = 1 // block is downloading
-	taskStatusApplying    = 2 // block is downloaded, needs to apply
-
-	maxBlocksWaiting = 1024 // max blocks waiting to download
+	taskStatusIdle           = 0    // request task is not assigned
+	taskStatusDownloading    = 1    // block is downloading
+	taskStatusWaitProcessing = 2    // block is downloaded, needs to process
+	taskStatusProcessed      = 3    // block is written to chain
+	maxBlocksWaiting         = 1024 // max blocks waiting to download
 )
 
 var (
@@ -84,7 +84,7 @@ loopOut:
 	for {
 		t.lock.Lock()
 		startPos, num := int(t.curNo-t.fromNo), 0
-		for (startPos+num < len(t.masterHeaderList)) && (t.masterHeaderList[startPos+num].status != taskStatusApplying) {
+		for (startPos+num < len(t.masterHeaderList)) && (t.masterHeaderList[startPos+num].status == taskStatusWaitProcessing) {
 			num = num + 1
 		}
 
@@ -282,6 +282,6 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 		}
 
 		headInfo.block = b
-		headInfo.status = taskStatusApplying
+		headInfo.status = taskStatusWaitProcessing
 	}
 }

@@ -22,7 +22,7 @@ const (
 	// BlockChainDir blockchain data directory based on config.DataRoot
 	BlockChainDir = "/db/blockchain"
 
-	forceSyncInterval = time.Second * 5
+	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 
 	txsyncPackSize = 100 * 1024
 )
@@ -40,8 +40,8 @@ type statusData struct {
 	GenesisBlock    common.Hash
 }
 
-// getBlockHeadersData represents a block header query.
-type getBlockHeadersData struct {
+// blockHeadersQuery represents a block header query.
+type blockHeadersQuery struct {
 	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
 	Number  uint64      // Block hash from which to retrieve headers (excludes Hash)
 	Amount  uint64      // Maximum number of headers to retrieve
