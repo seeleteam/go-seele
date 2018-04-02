@@ -11,24 +11,28 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func testBlockchainDatabase(ut func(store.BlockchainStore)) {
-	dir, err := ioutil.TempDir("", "BlockchainStore")
+func newTestDatabase() (db database.Database, dispose func()) {
+	dir, err := ioutil.TempDir("", "BlockchainCore")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
 
-	db, err := leveldb.NewLevelDB(dir)
+	db, err = leveldb.NewLevelDB(dir)
 	if err != nil {
+		os.RemoveAll(dir)
 		panic(err)
 	}
-	defer db.Close()
 
-	ut(store.NewBlockchainDatabase(db))
+	return db, func() {
+		db.Close()
+		os.RemoveAll(dir)
+	}
 }
 
 func Test_Genesis_DefaultGenesis(t *testing.T) {
@@ -39,33 +43,42 @@ func Test_Genesis_DefaultGenesis(t *testing.T) {
 }
 
 func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
-	testBlockchainDatabase(func(bcStore store.BlockchainStore) {
-		genesis := DefaultGenesis(bcStore)
-		genesisHash := genesis.header.Hash()
+	db, dispose := newTestDatabase()
+	defer dispose()
 
-		err := genesis.Initialize()
-		if err != nil {
-			panic(err)
-		}
+	bcStore := store.NewBlockchainDatabase(db)
 
-		hash, err := bcStore.GetBlockHash(genesisBlockHeight)
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, hash, genesisHash)
+	genesis := DefaultGenesis(bcStore)
+	genesisHash := genesis.header.Hash()
 
-		headHash, err := bcStore.GetHeadBlockHash()
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, headHash, genesisHash)
-	})
+	err := genesis.Initialize(db)
+	if err != nil {
+		panic(err)
+	}
+
+	hash, err := bcStore.GetBlockHash(genesisBlockHeight)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, hash, genesisHash)
+
+	headHash, err := bcStore.GetHeadBlockHash()
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, headHash, genesisHash)
+
+	_, err = state.NewStatedb(genesis.header.StateHash, db)
+	assert.Equal(t, err, error(nil))
 }
 
 func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
-	testBlockchainDatabase(func(bcStore store.BlockchainStore) {
-		header := DefaultGenesis(bcStore).header.Clone()
-		header.Nonce = 38
-		bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
+	db, dispose := newTestDatabase()
+	defer dispose()
 
-		genesis := DefaultGenesis(bcStore)
-		err := genesis.Initialize()
-		assert.Equal(t, err, ErrGenesisHashMismatch)
-	})
+	bcStore := store.NewBlockchainDatabase(db)
+
+	header := DefaultGenesis(bcStore).header.Clone()
+	header.Nonce = 38
+	bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
+
+	genesis := DefaultGenesis(bcStore)
+	err := genesis.Initialize(db)
+	assert.Equal(t, err, ErrGenesisHashMismatch)
 }
