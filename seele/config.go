@@ -15,5 +15,4 @@ type Config struct {
 	TxConf      core.TransactionPoolConfig
 	NetworkID   uint64
 	Coinbase    common.Address `toml:"-"`
-	CoinbaseStr string
 }

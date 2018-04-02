@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -26,22 +25,26 @@ import (
 var seeleNodeConfigFile *string
 
 func seeleNodeConfig(configFile string) (*node.Config, error) {
-	seeleNodeConfig := new(node.Config)
-	_, err := toml.DecodeFile(configFile, seeleNodeConfig)
+	config, err := GetConfigFromFile(configFile)
+	if err != nil {
+		return  nil, err
+	}
+
+	nodeConfig := new(node.Config)
+	nodeConfig.Name = config.Name
+	nodeConfig.Version = config.Version
+	nodeConfig.RPCAddr = config.RPCAddr
+	nodeConfig.SeeleConfig.Coinbase = common.HexToAddress(config.Coinbase)
+	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
+
+	seeleNodeKey, err := crypto.LoadECDSAFromString(config.ECDSAKey)
 	if err != nil {
 		return nil, err
 	}
 
-	seeleNodeKey, err := crypto.LoadECDSAFromString(seeleNodeConfig.P2P.ECDSAKey)
-	if err != nil {
-		return nil, err
-	}
-
-	seeleNodeConfig.P2P.PrivateKey = seeleNodeKey
-	seeleNodeConfig.SeeleConfig.Coinbase = common.HexToAddress(seeleNodeConfig.SeeleConfig.CoinbaseStr)
-	seeleNodeConfig.DataDir = common.GetTempFolder()
-
-	return seeleNodeConfig, nil
+	nodeConfig.P2P.PrivateKey = seeleNodeKey
+	nodeConfig.DataDir = common.GetTempFolder()
+	return nodeConfig, nil
 }
 
 // startCmd represents the start command
