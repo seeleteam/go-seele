@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	// reserves msgcode [1-79] for messages defined in seele module
 	GetBlockHeadersMsg = 0x81
 	BlockHeadersMsg    = 0x82
 	GetBlocksMsg       = 0x83
@@ -95,7 +96,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 		return errPeerNotFound
 	}
 
-	err := d.synchronise(p, head, td)
+	err := d.doSynchronise(p, head, td)
 	d.lock.Lock()
 	d.syncStatus = statusNone
 	d.sessionWG.Wait()
@@ -104,7 +105,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 	return err
 }
 
-func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) (err error) {
+func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int) (err error) {
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
@@ -148,7 +149,7 @@ func (d *Downloader) synchronise(conn *peerConn, head common.Hash, td *big.Int) 
 	d.lock.Unlock()
 	tm.close()
 	d.tm = nil
-	d.log.Info("downloader.synchronise quit!")
+	d.log.Info("downloader.doSynchronise quit!")
 
 	if tm.isDone() {
 		return nil
