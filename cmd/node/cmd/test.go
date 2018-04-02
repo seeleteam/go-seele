@@ -10,10 +10,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/BurntSushi/toml"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
 )
 
@@ -94,36 +92,25 @@ func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
 	fmt.Println(str)
 }
 
-// Config is test p2p server's config
-type Config struct {
-	P2PConfig   p2p.Config
-	StaticNodes []string
-}
-
 func startServer(configFile string) {
-	config := new(Config)
-	_, err := toml.DecodeFile(configFile, config)
+	config, err := GetConfigFromFile(configFile)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("read config file failed %s", err.Error())
+		return
+	}
+
+	p2pconfig, err := GetP2pConfig(config)
+	if err != nil {
+		fmt.Printf("generate p2p config failed %s", err.Error())
 		return
 	}
 
 	myServer := &p2p.Server{
-		Config: config.P2PConfig,
+		Config: p2pconfig,
 	}
 
-	if len(config.StaticNodes) == 0 {
+	if len(myServer.StaticNodes) == 0 {
 		fmt.Println("No remote peer configed, so is a static peer")
-	} else {
-		for _, id := range config.StaticNodes {
-			n, err := discovery.NewNodeFromString(id)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			myServer.StaticNodes = append(myServer.StaticNodes, n)
-		}
 	}
 
 	test := NewProtocolTest()
@@ -142,7 +129,7 @@ var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "start the p2p server of seele",
 	Long: `usage example:
-		node.exe test -c cmd\peer1.toml
+		node.exe test -c cmd\node1.json
 		start a p2p server with config file.`,
 
 	Run: func(cmd *cobra.Command, args []string) {

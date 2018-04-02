@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
@@ -23,29 +22,6 @@ import (
 )
 
 var seeleNodeConfigFile *string
-
-func seeleNodeConfig(configFile string) (*node.Config, error) {
-	config, err := GetConfigFromFile(configFile)
-	if err != nil {
-		return  nil, err
-	}
-
-	nodeConfig := new(node.Config)
-	nodeConfig.Name = config.Name
-	nodeConfig.Version = config.Version
-	nodeConfig.RPCAddr = config.RPCAddr
-	nodeConfig.SeeleConfig.Coinbase = common.HexToAddress(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
-
-	seeleNodeKey, err := crypto.LoadECDSAFromString(config.ECDSAKey)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeConfig.P2P.PrivateKey = seeleNodeKey
-	nodeConfig.DataDir = common.GetTempFolder()
-	return nodeConfig, nil
-}
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -59,11 +35,12 @@ var startCmd = &cobra.Command{
 		fmt.Println("start called")
 		var wg sync.WaitGroup
 
-		nCfg, err := seeleNodeConfig(*seeleNodeConfigFile)
+		nCfg, err := GetNodeConfigFromFile(*seeleNodeConfigFile)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("read config file failed %s", err.Error())
 			return
 		}
+
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
 			fmt.Println(err)

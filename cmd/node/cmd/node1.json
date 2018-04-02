@@ -2,8 +2,12 @@
   "Name":       "seele node",
   "Version":    "1.0",
   "RPCAddr":    "127.0.0.1:55027",
-  "ECDSAKey":   "0x445e92837140929b190e89818c39223d1d2b9c07388d80e907adf2e3ba187563",
+  "ECDSAKey":   "0x6d05f8df3278d8937668f0fd5af7aea6ece8129e615e8586535a021f1626416d",
   "NetworkID":  1,
-  "Coinbase":"0x0548d0b1a3297fea072284f86b9fd39a9f1273c46fba8951b62de5b95cd3dd846278057ec4df598a0b089a0bdc0c8fd3aa601cf01a9f30a60292ea0769388d1f"
-  "Capacity":   1024
+  "Coinbase":   "0xd178f7524cfcd500802cdb4fc20c2147572261d8c3cb5cdda0d0da0da3c434841acdb49538aded2e694321661744864c94c027c11ff592b6cf79ac5a487c6873",
+  "Capacity":   1024,
+  "StaticNodes": [],
+  "KadAddr":      "127.0.0.1:39007",
+  "ListenAddr":    "0.0.0.0:39007",
+  "DataDir": "node1"
 }
