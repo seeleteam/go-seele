@@ -19,6 +19,7 @@ func newTestBlockHeader(t *testing.T) *BlockHeader {
 	return &BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
 		Creator:           randomAddress(t),
+		StateHash:         common.StringToHash("StateHash"),
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
 		Height:            1,
@@ -37,6 +38,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	// Change all values of original header.
 	header.PreviousBlockHash = common.StringToHash("PreviousBlockHash2")
 	header.Creator = randomAddress(t)
+	header.StateHash = crypto.HashBytes([]byte("StateHash2"))
 	header.TxHash = crypto.HashBytes([]byte("TxHash2"))
 	header.Difficulty.SetInt64(2)
 	header.Height = 2

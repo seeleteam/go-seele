@@ -105,7 +105,7 @@ func (s *Statedb) Commit(batch database.Batch) (root common.Hash, err error) {
 func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	object := s.getStateObject(addr)
 	if object == nil {
-		object := newStateObject()
+		object = newStateObject()
 		object.SetNonce(0)
 		s.stateObjects[addr] = object
 	}
