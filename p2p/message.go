@@ -25,6 +25,15 @@ type Message struct {
 	ReceivedAt time.Time
 }
 
+func SendMessage(write MsgWriter, code uint16, payload []byte) error {
+	msg := Message{
+		Code:    code,
+		Payload: payload,
+	}
+
+	return write.WriteMsg(msg)
+}
+
 // ProtoHandShake handshake message for two peer to exchage base information
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {

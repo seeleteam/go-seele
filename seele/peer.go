@@ -7,11 +7,11 @@ package seele
 
 import (
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/p2p"
 	set "gopkg.in/fatih/set.v0"
 )
@@ -19,6 +19,15 @@ import (
 const (
 	// DiscHandShakeErr peer handshake error
 	DiscHandShakeErr = 100
+
+	transactionHashMsgCode uint16 = 0
+	blockHashMsgCode       uint16 = 1
+
+	transactionRequestMsgCode uint16 = 2
+	transactionMsgCode        uint16 = 3
+
+	blockRequestMsgCode uint16 = 4
+	blockMsgCode        uint16 = 5
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -30,24 +39,27 @@ type PeerInfo struct {
 
 type peer struct {
 	*p2p.Peer
-	peerID  string // id of the peer derived from p2p.NodeID
-	version uint   // Seele protocol version negotiated
+	peerID  common.Address // id of the peer
+	version uint           // Seele protocol version negotiated
 	head    common.Hash
 	td      *big.Int // total difficulty
 	lock    sync.RWMutex
 
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	rw p2p.MsgReadWriter // the read write method for this peer
+
+	knownTxs    *set.Set // Set of transaction hashes known by this peer
+	knownBlocks *set.Set // Set of block hashes known by this peer
 }
 
-func newPeer(version uint, p *p2p.Peer) *peer {
+func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
 		Peer:        p,
 		version:     version,
 		td:          big.NewInt(0),
-		peerID:      fmt.Sprintf("%x", p.Node.ID[:8]), // assume the 8 bytes prefix of NodeID as peerID
+		peerID:      p.Node.ID,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		rw:          rw,
 	}
 }
 
@@ -60,6 +72,30 @@ func (p *peer) Info() *PeerInfo {
 		Difficulty: td,
 		Head:       hex.EncodeToString(hash[0:]),
 	}
+}
+
+func (p *peer) SendTransactionHash(tx *types.Transaction) error {
+	if p.knownTxs.Has(tx.Hash) {
+		return nil
+	}
+
+	return p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(tx.Hash))
+}
+
+func (p *peer) SendBlockHash(block *types.Block) error {
+	if p.knownBlocks.Has(block.HeaderHash) {
+		return nil
+	}
+
+	return p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(block.HeaderHash))
+}
+
+func (p *peer) SendTransactionRequest(txHash common.Hash) error {
+	return p2p.SendMessage(p.rw, transactionRequestMsgCode, common.SerializePanic(txHash))
+}
+
+func (p *peer) SendBlockRequest(blockHash common.Hash) error {
+	return p2p.SendMessage(p.rw, blockRequestMsgCode, common.SerializePanic(blockHash))
 }
 
 // Head retrieves a copy of the current head hash and total difficulty.
