@@ -42,11 +42,11 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		peerSet:   newPeerSet(),
 	}
 
-	event.TransactionInsertedEventManager.AddAsyncListener(s.findNewTx)
+	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	return s, nil
 }
 
-func (p *SeeleProtocol) findNewTx(e event.Event) {
+func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	p.log.Debug("find new tx")
 	tx := e.(*types.Transaction)
 
