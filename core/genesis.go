@@ -77,12 +77,12 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 
 // Initialize writes the genesis block in blockchain store if unavailable.
 // Otherwise, check if the existing genesis block is valid in blockchain store.
-func (genesis *Genesis) Initialize(db database.Database) error {
+func (genesis *Genesis) Initialize(accountStateDB database.Database) error {
 	storedGenesisHash, err := genesis.bcStore.GetBlockHash(genesisBlockHeight)
 
 	// FIXME use seele defined common error instead of concrete levelDB error.
 	if err == errors.ErrNotFound {
-		return genesis.store(db)
+		return genesis.store(accountStateDB)
 	}
 
 	if err != nil {
@@ -98,8 +98,8 @@ func (genesis *Genesis) Initialize(db database.Database) error {
 }
 
 // store atomically stores the genesis block in blockchain store.
-func (genesis *Genesis) store(db database.Database) error {
-	statedb, err := state.NewStatedb(common.EmptyHash, db)
+func (genesis *Genesis) store(accountStateDB database.Database) error {
+	statedb, err := state.NewStatedb(common.EmptyHash, accountStateDB)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (genesis *Genesis) store(db database.Database) error {
 		stateObj.SetAmount(account.Amount)
 	}
 
-	batch := db.NewBatch()
+	batch := accountStateDB.NewBatch()
 
 	_, err = statedb.Commit(batch)
 	if err != nil {
