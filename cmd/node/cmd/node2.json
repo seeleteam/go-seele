@@ -1,7 +1,7 @@
 {
   "Name":       "seele node",
   "Version":    "1.0",
-  "RPCAddr":    "127.0.0.1:55027",
+  "RPCAddr":    "127.0.0.1:55028",
   "ECDSAKey":   "0x5ea132a88e64aa450aedd93531c6b7153f45eacef32a1fb9628b9f3cb6281414",
   "NetworkID":  1,
   "Coinbase":   "0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb",

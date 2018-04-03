@@ -8,6 +8,8 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/node"
@@ -85,7 +87,7 @@ func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 
-	nodeConfig.DataDir = config.DataDir
+	nodeConfig.DataDir = filepath.Join(os.TempDir(), config.DataDir)
 	return nodeConfig, nil
 }
 

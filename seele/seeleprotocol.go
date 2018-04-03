@@ -14,6 +14,19 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
+var (
+	transactionHashMsgCode uint16 = 0
+	blockHashMsgCode       uint16 = 1
+
+	transactionRequestMsgCode uint16 = 2
+	transactionMsgCode        uint16 = 3
+
+	blockRequestMsgCode uint16 = 4
+	blockMsgCode        uint16 = 5
+
+	protocolMsgCodeLength uint16 = 6
+)
+
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
@@ -29,11 +42,9 @@ type SeeleProtocol struct {
 func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:       SeeleProtoName,
-			Version:    SeeleVersion,
-			Length:     1,
-			AddPeer:    s.handleAddPeer,
-			DeletePeer: s.handleDelPeer,
+			Name:    SeeleProtoName,
+			Version: SeeleVersion,
+			Length:  protocolMsgCodeLength,
 		},
 		networkID: seele.networkID,
 		txPool:    seele.TxPool(),
@@ -42,7 +53,11 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		peerSet:   newPeerSet(),
 	}
 
+	s.Protocol.AddPeer = s.handleAddPeer
+	s.Protocol.DeletePeer = s.handleDelPeer
+
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
+	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
 	return s, nil
 }
 
@@ -51,11 +66,23 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	tx := e.(*types.Transaction)
 
 	p.peerSet.ForEach(func(peer *peer) bool {
-		p.log.Debug("handle node %s", peer.Node.String())
+		err := peer.SendTransactionHash(tx.Hash)
+		if err != nil {
+			p.log.Warn("send transaction hash failed %s", err.Error())
+		}
+		return true
+	})
+}
 
-		p.log.Debug("send tx")
-		peer.SendTransactionHash(tx)
+func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+	p.log.Debug("find new mined block")
+	block := e.(*types.Block)
 
+	p.peerSet.ForEach(func(peer *peer) bool {
+		err := peer.SendBlockHash(block.HeaderHash)
+		if err != nil {
+			p.log.Warn("send mined block hash failed %s", err.Error())
+		}
 		return true
 	})
 }
@@ -94,6 +121,8 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got tx hash %s", txHash.ToHex())
+
 			if !peer.knownTxs.Has(txHash) {
 				peer.knownTxs.Add(txHash) //update peer known transaction
 				err := peer.SendTransactionRequest(txHash)
@@ -110,6 +139,8 @@ handler:
 				p.log.Warn("deserialize transaction request msg failed %s", err.Error())
 				continue
 			}
+
+			p.log.Debug("got tx request %s", txHash.ToHex())
 
 			tx := p.txPool.GetTransaction(txHash)
 			err = peer.SendTransaction(tx)
@@ -137,6 +168,8 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block hash msg %s", blockHash.ToHex())
+
 			if !peer.knownBlocks.Has(blockHash) {
 				peer.knownBlocks.Add(blockHash)
 				err := peer.SendBlockRequest(blockHash)
@@ -154,6 +187,7 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block request msg %s", blockHash.ToHex())
 			block, err := p.chain.GetBlockChainStore().GetBlock(blockHash)
 			if err != nil {
 				p.log.Warn("not found request block %s", err.Error())
@@ -173,6 +207,7 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block msg %s", block.HeaderHash.ToHex())
 			// @todo need to make sure WriteBlock handle block fork
 			p.chain.WriteBlock(&block)
 

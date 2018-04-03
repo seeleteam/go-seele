@@ -78,6 +78,7 @@ func (n *Node) Start() error {
 	for _, service := range n.services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
+
 	if err := running.Start(); err != nil {
 		return ErrServiceStartFailed
 	}
