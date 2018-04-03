@@ -52,7 +52,7 @@ var (
 // Downloader sync block chain with remote peer
 type Downloader struct {
 	cancelCh   chan struct{}        // Cancel current synchronising session
-	masterPeer string               // Identifier of the peer currently being used as the master
+	masterPeer string               // Identifier of the best peer
 	peers      map[string]*peerConn // peers map. peerID=>peer
 
 	syncStatus int
