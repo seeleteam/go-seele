@@ -12,7 +12,7 @@ import (
 
 // Config is the seele's configuration to create seele service
 type Config struct {
-	TxConf      core.TransactionPoolConfig
-	NetworkID   uint64
-	Coinbase    common.Address `toml:"-"`
+	TxConf    core.TransactionPoolConfig
+	NetworkID uint64
+	Coinbase  common.Address `toml:"-"`
 }

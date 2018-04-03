@@ -19,7 +19,7 @@ var rpcAddr string
 var rootCmd = &cobra.Command{
 	Use:   "client",
 	Short: "rpc client",
-	Long: `rpc client to interact with node process`,
+	Long:  `rpc client to interact with node process`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -36,7 +36,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a","127.0.0.1:55027", "rpc address")
+	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
 }
 
 // initConfig reads in config file and ENV variables if set.

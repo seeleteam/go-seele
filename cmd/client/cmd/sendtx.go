@@ -7,16 +7,16 @@ package cmd
 
 import (
 	"fmt"
-
-	"github.com/spf13/cobra"
 	"net/rpc/jsonrpc"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/seele"
+	"github.com/spf13/cobra"
 )
 
 var (
 	amount *uint64
-	to *string
+	to     *string
 )
 
 // sendtxCmd represents the sendtx command
@@ -26,12 +26,8 @@ var sendtxCmd = &cobra.Command{
 	Long: `send tx to miner
   For example:
     client.exe sendtx -m 0 -t 0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb
-    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb 
-			`,
+    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sendtx called")
-		fmt.Println(rpcAddr)
-
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Printf("invalid address. %s\n", err.Error())
@@ -45,9 +41,9 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		rpcArgs := seele.AddTxArgs {
-			To:toAddr,
-			Amount:*amount,
+		rpcArgs := seele.AddTxArgs{
+			To:     toAddr,
+			Amount: *amount,
 		}
 
 		var result bool
