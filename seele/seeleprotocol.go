@@ -42,9 +42,9 @@ type SeeleProtocol struct {
 func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:       SeeleProtoName,
-			Version:    SeeleVersion,
-			Length:     protocolMsgCodeLength,
+			Name:    SeeleProtoName,
+			Version: SeeleVersion,
+			Length:  protocolMsgCodeLength,
 		},
 		networkID: seele.networkID,
 		txPool:    seele.TxPool(),

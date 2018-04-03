@@ -19,6 +19,15 @@ import (
 const (
 	// DiscHandShakeErr peer handshake error
 	DiscHandShakeErr = 100
+
+	transactionHashMsgCode uint16 = 0
+	blockHashMsgCode       uint16 = 1
+
+	transactionRequestMsgCode uint16 = 2
+	transactionMsgCode        uint16 = 3
+
+	blockRequestMsgCode uint16 = 4
+	blockMsgCode        uint16 = 5
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -65,6 +74,7 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
+<<<<<<< HEAD
 func (p *peer) SendTransactionHash(txHash common.Hash) error {
 	if p.knownTxs.Has(txHash) {
 		return nil
@@ -79,6 +89,32 @@ func (p *peer) SendBlockHash(blockHash common.Hash) error {
 	}
 
 	return p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(blockHash))
+=======
+func (p *peer) SendTransactionHash(tx *types.Transaction) error {
+	if p.knownTxs.Has(tx.Hash) {
+		return nil
+	}
+
+	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(tx.Hash))
+	if err == nil {
+		p.knownTxs.Add(tx.Hash)
+	}
+
+	return err
+}
+
+func (p *peer) SendBlockHash(block *types.Block) error {
+	if p.knownBlocks.Has(block.HeaderHash) {
+		return nil
+	}
+
+	err := p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(block.HeaderHash))
+	if err == nil {
+		p.knownBlocks.Add(block.HeaderHash)
+	}
+
+	return err
+>>>>>>> master
 }
 
 func (p *peer) SendTransactionRequest(txHash common.Hash) error {
