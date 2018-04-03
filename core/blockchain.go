@@ -9,11 +9,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/seeleteam/go-seele/database"
-
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
 )
 
 // ErrBlockHashMismatch is returned when block hash does not match the header hash.
@@ -27,10 +26,10 @@ var ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch"
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure.
 type Blockchain struct {
-	mutex       sync.RWMutex
-	bcStore     store.BlockchainStore
-	db          database.Database
-	headerChain *HeaderChain
+	mutex          sync.RWMutex
+	bcStore        store.BlockchainStore
+	accountStateDB database.Database
+	headerChain    *HeaderChain
 
 	genesisBlock *types.Block
 	currentBlock *types.Block
@@ -38,11 +37,11 @@ type Blockchain struct {
 	currentState *state.Statedb
 }
 
-// NewBlockchain returns a initialized block chain with given store.
-func NewBlockchain(bcStore store.BlockchainStore, db database.Database) (*Blockchain, error) {
+// NewBlockchain returns a initialized block chain with given store and account state DB.
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
 	bc := &Blockchain{
-		bcStore: bcStore,
-		db:      db,
+		bcStore:        bcStore,
+		accountStateDB: accountStateDB,
 	}
 
 	var err error
@@ -74,7 +73,7 @@ func NewBlockchain(bcStore store.BlockchainStore, db database.Database) (*Blockc
 	}
 
 	// Get the state DB of current block
-	bc.currentState, err = state.NewStatedb(bc.currentBlock.Header.StateHash, db)
+	bc.currentState, err = state.NewStatedb(bc.currentBlock.Header.StateHash, accountStateDB)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +100,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return ErrBlockTxsHashMismatch
 	}
 
-	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.db)
+	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 	if err != nil {
 		return err
 	}
