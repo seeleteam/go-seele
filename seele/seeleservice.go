@@ -74,14 +74,14 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		return nil, err
 	}
 
-	s.chain, err = core.NewBlockchain(bcStore)
+	s.chain, err = core.NewBlockchain(bcStore, s.chainDB)
 	if err != nil {
 		s.chainDB.Close()
 		log.Error("NewSeeleService init chain failed. %s", err)
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.TxConf)
+	s.txPool = core.NewTransactionPool(conf.TxConf, s.chain)
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()

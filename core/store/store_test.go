@@ -38,6 +38,7 @@ func newTestBlockHeader(t *testing.T) *types.BlockHeader {
 	return &types.BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
 		Creator:           *crypto.MustGenerateRandomAddress(),
+		StateHash:         common.StringToHash("StateHash"),
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
 		Height:            1,
