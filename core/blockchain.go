@@ -114,3 +114,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	return nil
 }
+
+func (bc *Blockchain) GetBlockChainStore() store.BlockchainStore {
+	return bc.bcStore
+}

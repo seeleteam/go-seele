@@ -42,7 +42,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 			rw:       conn,
 			offset:   offset,
 			Protocol: p,
-			in:       make(chan Message),
+			in:       make(chan Message, 1),
 		}
 
 		protoMap[p.cap().String()] = protoRW
