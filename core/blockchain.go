@@ -9,6 +9,9 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/seeleteam/go-seele/database"
+
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -26,16 +29,20 @@ var ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch"
 type Blockchain struct {
 	mutex       sync.RWMutex
 	bcStore     store.BlockchainStore
+	db          database.Database
 	headerChain *HeaderChain
 
 	genesisBlock *types.Block
 	currentBlock *types.Block
+
+	currentState *state.Statedb
 }
 
 // NewBlockchain returns a initialized block chain with given store.
-func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
+func NewBlockchain(bcStore store.BlockchainStore, db database.Database) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore: bcStore,
+		db:      db,
 	}
 
 	var err error
@@ -66,6 +73,12 @@ func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
 		return nil, err
 	}
 
+	// Get the state DB of current block
+	bc.currentState, err = state.NewStatedb(bc.currentBlock.Header.StateHash, db)
+	if err != nil {
+		return nil, err
+	}
+
 	return bc, nil
 }
 
@@ -86,6 +99,11 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	txsHash := types.MerkleRootHash(block.Transactions)
 	if !txsHash.Equal(block.Header.TxHash) {
 		return ErrBlockTxsHashMismatch
+	}
+
+	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.db)
+	if err != nil {
+		return err
 	}
 
 	bc.mutex.Lock()
@@ -111,6 +129,20 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	bc.headerChain.currentHeaderHash = bc.currentBlock.HeaderHash
 	bc.headerChain.currentHeader = bc.currentBlock.Header
+	bc.currentState = blockStatedb
 
 	return nil
+}
+
+// GetStore returns the blockchain store instance.
+func (bc *Blockchain) GetStore() store.BlockchainStore {
+	return bc.bcStore
+}
+
+// CurrentState returns the state DB of current block.
+func (bc *Blockchain) CurrentState() *state.Statedb {
+	bc.mutex.RLock()
+	defer bc.mutex.RUnlock()
+
+	return bc.currentState
 }

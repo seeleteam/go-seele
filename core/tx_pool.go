@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 )
@@ -19,20 +20,26 @@ var (
 	errTxPoolFull   = errors.New("transaction pool is full")
 )
 
+type blockchain interface {
+	CurrentState() *state.Statedb
+}
+
 // TransactionPool is a thread-safe container for transactions that received
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain.
 type TransactionPool struct {
 	mutex           sync.RWMutex
 	config          TransactionPoolConfig
+	chain           blockchain
 	hashToTxMap     map[common.Hash]*types.Transaction
 	accountToTxsMap map[common.Address]*txCollection // Account address to tx collection mapping.
 }
 
 // NewTransactionPool creates and returns a transaction pool.
-func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
+func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
 	pool := &TransactionPool{
 		config:          config,
+		chain:           chain,
 		hashToTxMap:     make(map[common.Hash]*types.Transaction),
 		accountToTxsMap: make(map[common.Address]*txCollection),
 	}
@@ -43,7 +50,8 @@ func NewTransactionPool(config TransactionPoolConfig) *TransactionPool {
 // AddTransaction adds a single transation into the pool if it is valid and return true.
 // Otherwise, return false and concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
-	if err := tx.Validate(); err != nil {
+	statedb := pool.chain.CurrentState()
+	if err := tx.Validate(statedb); err != nil {
 		return err
 	}
 
@@ -98,12 +106,4 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 // Stop terminates the transaction pool.
 func (pool *TransactionPool) Stop() {
 	// TODO remove event listeners
-}
-
-// Pending returns the pending transactions in the transaction pool.
-func (pool *TransactionPool) Pending() ([]*types.Transaction, error) {
-	pool.mutex.Lock()
-	defer pool.mutex.Unlock()
-	// TODO
-	return nil,nil
 }

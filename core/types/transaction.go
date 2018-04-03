@@ -11,16 +11,20 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/merkle"
 )
 
 var (
-	errAmountNil      = errors.New("amount is null")
-	errAmountNegative = errors.New("amount is negative")
-	errHashMismatch   = errors.New("hash mismatch")
-	errSigMissed      = errors.New("signature missed")
-	errSigInvalid     = errors.New("signature is invalid")
+	errAccountNotFound  = errors.New("account not found")
+	errAmountNil        = errors.New("amount is null")
+	errAmountNegative   = errors.New("amount is negative")
+	errBalanceNotEnough = errors.New("balance not enough")
+	errNonceTooLow      = errors.New("nonce too low")
+	errHashMismatch     = errors.New("hash mismatch")
+	errSigMissed        = errors.New("signature missed")
+	errSigInvalid       = errors.New("signature is invalid")
 
 	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
 )
@@ -71,7 +75,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 }
 
 // Validate returns true if the transation is valid, otherwise false.
-func (tx *Transaction) Validate() error {
+func (tx *Transaction) Validate(statedb *state.Statedb) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
 		return errAmountNil
 	}
@@ -80,8 +84,23 @@ func (tx *Transaction) Validate() error {
 		return errAmountNegative
 	}
 
-	// TODO tx.Data.Amount <= account.Balance
-	// TODO validate tx.Data.AccountNonce against account.Nonce
+	balance, found := statedb.GetAmount(tx.Data.From)
+	if !found {
+		return errAccountNotFound
+	}
+
+	if tx.Data.Amount.Cmp(balance) > 0 {
+		return errBalanceNotEnough
+	}
+
+	accountNonce, found := statedb.GetNonce(tx.Data.From)
+	if !found {
+		return errAccountNotFound
+	}
+
+	if tx.Data.AccountNonce < accountNonce {
+		return errNonceTooLow
+	}
 
 	if tx.Signature == nil {
 		return errSigMissed
