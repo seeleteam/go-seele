@@ -14,4 +14,7 @@ const (
 
 	// BlockChainDir blockchain data directory based on config.DataRoot
 	BlockChainDir = "/db/blockchain"
+
+	// AccountStateDir account state info directory based on config.DataRoot
+	AccountStateDir = "/db/accountState"
 )

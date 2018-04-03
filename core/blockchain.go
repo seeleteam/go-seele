@@ -9,8 +9,10 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
 )
 
 // ErrBlockHashMismatch is returned when block hash does not match the header hash.
@@ -24,18 +26,22 @@ var ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch"
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure.
 type Blockchain struct {
-	mutex       sync.RWMutex
-	bcStore     store.BlockchainStore
-	headerChain *HeaderChain
+	mutex          sync.RWMutex
+	bcStore        store.BlockchainStore
+	accountStateDB database.Database
+	headerChain    *HeaderChain
 
 	genesisBlock *types.Block
 	currentBlock *types.Block
+
+	currentState *state.Statedb
 }
 
-// NewBlockchain returns a initialized block chain with given store.
-func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
+// NewBlockchain returns a initialized block chain with given store and account state DB.
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
 	bc := &Blockchain{
-		bcStore: bcStore,
+		bcStore:        bcStore,
+		accountStateDB: accountStateDB,
 	}
 
 	var err error
@@ -66,6 +72,12 @@ func NewBlockchain(bcStore store.BlockchainStore) (*Blockchain, error) {
 		return nil, err
 	}
 
+	// Get the state DB of current block
+	bc.currentState, err = state.NewStatedb(bc.currentBlock.Header.StateHash, accountStateDB)
+	if err != nil {
+		return nil, err
+	}
+
 	return bc, nil
 }
 
@@ -86,6 +98,11 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	txsHash := types.MerkleRootHash(block.Transactions)
 	if !txsHash.Equal(block.Header.TxHash) {
 		return ErrBlockTxsHashMismatch
+	}
+
+	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	if err != nil {
+		return err
 	}
 
 	bc.mutex.Lock()
@@ -111,10 +128,20 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	bc.headerChain.currentHeaderHash = bc.currentBlock.HeaderHash
 	bc.headerChain.currentHeader = bc.currentBlock.Header
+	bc.currentState = blockStatedb
 
 	return nil
 }
 
-func (bc *Blockchain) GetBlockChainStore() store.BlockchainStore {
+// GetStore returns the blockchain store instance.
+func (bc *Blockchain) GetStore() store.BlockchainStore {
 	return bc.bcStore
+}
+
+// CurrentState returns the state DB of current block.
+func (bc *Blockchain) CurrentState() *state.Statedb {
+	bc.mutex.RLock()
+	defer bc.mutex.RUnlock()
+
+	return bc.currentState
 }
