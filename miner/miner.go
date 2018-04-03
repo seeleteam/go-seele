@@ -175,7 +175,6 @@ func (miner *Miner) prepareNewBlock() {
 }
 
 func (miner *Miner) saveBlock(result *Result) error {
-	// @
 	ret := miner.seele.BlockChain().WriteBlock(result.block)
 	return ret
 }
