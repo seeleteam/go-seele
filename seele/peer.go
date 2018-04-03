@@ -65,20 +65,20 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
-func (p *peer) SendTransactionHash(tx *types.Transaction) error {
-	if p.knownTxs.Has(tx.Hash) {
+func (p *peer) SendTransactionHash(txHash common.Hash) error {
+	if p.knownTxs.Has(txHash) {
 		return nil
 	}
 
-	return p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(tx.Hash))
+	return p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(txHash))
 }
 
-func (p *peer) SendBlockHash(block *types.Block) error {
-	if p.knownBlocks.Has(block.HeaderHash) {
+func (p *peer) SendBlockHash(blockHash common.Hash) error {
+	if p.knownBlocks.Has(blockHash) {
 		return nil
 	}
 
-	return p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(block.HeaderHash))
+	return p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(blockHash))
 }
 
 func (p *peer) SendTransactionRequest(txHash common.Hash) error {

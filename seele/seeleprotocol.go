@@ -24,7 +24,7 @@ var (
 	blockRequestMsgCode uint16 = 4
 	blockMsgCode        uint16 = 5
 
-	protocolMsgCodeLength uint16 = 5
+	protocolMsgCodeLength uint16 = 6
 )
 
 // SeeleProtocol service implementation of seele
@@ -57,6 +57,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	s.Protocol.DeletePeer = s.handleDelPeer
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
+	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
 	return s, nil
 }
 
@@ -65,9 +66,23 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	tx := e.(*types.Transaction)
 
 	p.peerSet.ForEach(func(peer *peer) bool {
-		p.log.Debug("handle node %s", peer.Node.String())
-		peer.SendTransactionHash(tx)
+		err := peer.SendTransactionHash(tx.Hash)
+		if err != nil {
+			p.log.Warn("send transaction hash failed %s", err.Error())
+		}
+		return true
+	})
+}
 
+func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+	p.log.Debug("find new mined block")
+	block := e.(*types.Block)
+
+	p.peerSet.ForEach(func(peer *peer) bool {
+		err := peer.SendBlockHash(block.HeaderHash)
+		if err != nil {
+			p.log.Warn("send mined block hash failed %s", err.Error())
+		}
 		return true
 	})
 }
@@ -153,6 +168,8 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block hash msg %s", blockHash.ToHex())
+
 			if !peer.knownBlocks.Has(blockHash) {
 				peer.knownBlocks.Add(blockHash)
 				err := peer.SendBlockRequest(blockHash)
@@ -170,6 +187,7 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block request msg %s", blockHash.ToHex())
 			block, err := p.chain.GetBlockChainStore().GetBlock(blockHash)
 			if err != nil {
 				p.log.Warn("not found request block %s", err.Error())
@@ -189,6 +207,7 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got block msg %s", block.HeaderHash.ToHex())
 			// @todo need to make sure WriteBlock handle block fork
 			p.chain.WriteBlock(&block)
 
