@@ -1,7 +1,0 @@
-StaticNodes=[]
-
-[P2PConfig]
-Name="test1"
-ECDSAKey="0x445e92837140929b190e89818c39223d1d2b9c07388d80e907adf2e3ba187563"
-KadAddr="127.0.0.1:39007"
-ListenAddr="0.0.0.0:39007"

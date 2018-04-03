@@ -114,19 +114,28 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 }
 
 // GenerateKeyPair generate public key and private key
-func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error)  {
+func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 	keypair, err := GenerateKey()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	buff := FromECDSAPub(&keypair.PublicKey)
-	id, err := common.NewAddress(buff[1:])
+	id, err := GetAddress(keypair)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return &id, keypair, err
+	return id, keypair, err
+}
+
+func GetAddress(key *ecdsa.PrivateKey) (*common.Address, error) {
+	buff := FromECDSAPub(&key.PublicKey)
+	id, err := common.NewAddress(buff[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	return &id, nil
 }
 
 // GenerateRandomAddress generates and returns a random address.
