@@ -76,6 +76,8 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 // Synchronise try to sync with remote peer.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error {
 	localTD := d.chain.CurrentBlock().Header.Difficulty //TODO get total difficulty
+
+	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(td) >= 0 {
 		return nil
 	}
