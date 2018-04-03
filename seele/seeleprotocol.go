@@ -188,7 +188,7 @@ handler:
 			}
 
 			p.log.Debug("got block request msg %s", blockHash.ToHex())
-			block, err := p.chain.GetBlockChainStore().GetBlock(blockHash)
+			block, err := p.chain.GetStore().GetBlock(blockHash)
 			if err != nil {
 				p.log.Warn("not found request block %s", err.Error())
 				continue
