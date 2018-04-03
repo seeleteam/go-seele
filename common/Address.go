@@ -7,7 +7,6 @@ package common
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
@@ -38,16 +37,25 @@ func (id *Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
-func HexToAddress(id string) Address {
+func HexToAddress(id string) (Address, error) {
 	byte, err := hexutil.HexToBytes(id)
 	if err != nil {
-		log.Fatal(err.Error())
+		return Address{}, err
 	}
 
 	nid, err := NewAddress(byte)
 	if err != nil {
-		log.Fatal(err.Error())
+		return Address{}, err
 	}
 
-	return nid
+	return nid, nil
+}
+
+func HexMustToAddres(id string) Address {
+	a, err := HexToAddress(id)
+	if err != nil {
+		panic(err)
+	}
+
+	return a
 }

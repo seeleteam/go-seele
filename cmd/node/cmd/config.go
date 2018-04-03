@@ -76,7 +76,7 @@ func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Name = config.Name
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
-	nodeConfig.SeeleConfig.Coinbase = common.HexToAddress(config.Coinbase)
+	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
 	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
 	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
 

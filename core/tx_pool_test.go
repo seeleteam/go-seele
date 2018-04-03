@@ -24,7 +24,7 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
-	return privKey, common.HexToAddress(hexAddress)
+	return privKey, common.HexMustToAddres(hexAddress)
 }
 
 func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {

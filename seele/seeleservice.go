@@ -118,7 +118,6 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
-	//TODO add other api interface, for example consensus engine
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",

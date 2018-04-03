@@ -23,7 +23,7 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
-	return privKey, common.HexToAddress(hexAddress)
+	return privKey, common.HexMustToAddres(hexAddress)
 }
 
 func randomAddress(t *testing.T) common.Address {
