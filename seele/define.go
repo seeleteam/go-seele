@@ -5,12 +5,6 @@
 
 package seele
 
-import (
-	"math/big"
-
-	"github.com/seeleteam/go-seele/common"
-)
-
 const (
 	// SeeleProtoName protoName of Seele service
 	SeeleProtoName = "seele"
@@ -24,16 +18,3 @@ const (
 	// AccountStateDir account state info directory based on config.DataRoot
 	AccountStateDir = "/db/accountState"
 )
-
-const (
-	StatusMsg = 0x00
-)
-
-// statusData the structure for peers to exchange status
-type statusData struct {
-	ProtocolVersion uint32
-	NetworkID       uint64
-	TD              *big.Int
-	CurrentBlock    common.Hash
-	GenesisBlock    common.Hash
-}
