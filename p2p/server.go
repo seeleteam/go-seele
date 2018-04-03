@@ -36,8 +36,8 @@ const (
 
 	defaultDialTimeout = 15 * time.Second
 
-	// Maximum amount of time allowed for writing a complete message.
-	frameWriteTimeout = 20 * time.Second
+	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
+	connWriteTimeout = 10 * time.Second
 
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
