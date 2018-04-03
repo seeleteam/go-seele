@@ -17,19 +17,19 @@ var (
 
 type peerSet struct {
 	peers map[common.Address]*peer
-	lock  sync.Mutex
+	lock  sync.RWMutex
 }
 
 func newPeerSet() *peerSet {
 	return &peerSet{
 		peers: make(map[common.Address]*peer),
-		lock:  sync.Mutex{},
+		lock:  sync.RWMutex{},
 	}
 }
 
 func (p *peerSet) Find(address common.Address) *peer {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 
 	return p.peers[address]
 }
@@ -58,6 +58,9 @@ func (p *peerSet) Add(pe *peer) {
 }
 
 func (p *peerSet) ForEach(handle func(*peer) bool) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
 	for _, v := range p.peers {
 		if !handle(v) {
 			break

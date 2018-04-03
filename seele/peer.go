@@ -79,7 +79,12 @@ func (p *peer) SendTransactionHash(tx *types.Transaction) error {
 		return nil
 	}
 
-	return p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(tx.Hash))
+	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(tx.Hash))
+	if err == nil {
+		p.knownTxs.Add(tx.Hash)
+	}
+
+	return err
 }
 
 func (p *peer) SendBlockHash(block *types.Block) error {
@@ -87,7 +92,12 @@ func (p *peer) SendBlockHash(block *types.Block) error {
 		return nil
 	}
 
-	return p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(block.HeaderHash))
+	err := p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(block.HeaderHash))
+	if err == nil {
+		p.knownBlocks.Add(block.HeaderHash)
+	}
+
+	return err
 }
 
 func (p *peer) SendTransactionRequest(txHash common.Hash) error {
