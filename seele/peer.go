@@ -98,6 +98,14 @@ func (p *peer) SendBlockRequest(blockHash common.Hash) error {
 	return p2p.SendMessage(p.rw, blockRequestMsgCode, common.SerializePanic(blockHash))
 }
 
+func (p *peer) SendTransaction(tx *types.Transaction) error {
+	return p2p.SendMessage(p.rw, transactionMsgCode, common.SerializePanic(tx))
+}
+
+func (p *peer) SendBlock(block *types.Block) error {
+	return p2p.SendMessage(p.rw, blockMsgCode, common.SerializePanic(block))
+}
+
 // Head retrieves a copy of the current head hash and total difficulty.
 func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	p.lock.RLock()
