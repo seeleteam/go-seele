@@ -13,6 +13,8 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"path/filepath"
+	"os"
 )
 
 // Config aggregate all configs here that exposed to users
@@ -85,7 +87,7 @@ func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 
-	nodeConfig.DataDir = config.DataDir
+	nodeConfig.DataDir = filepath.Join(os.TempDir(), config.DataDir)
 	return nodeConfig, nil
 }
 

@@ -67,7 +67,7 @@ var startCmd = &cobra.Command{
 		}
 
 		seeleNode.Start()
-		startMiner(seeleService, nCfg, slog)
+		//startMiner(seeleService, nCfg, slog)
 
 		// this is for test
 		time.Sleep(3 * time.Second)

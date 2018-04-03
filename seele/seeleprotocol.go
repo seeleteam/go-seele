@@ -14,6 +14,19 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
+var (
+	transactionHashMsgCode uint16 = 0
+	blockHashMsgCode       uint16 = 1
+
+	transactionRequestMsgCode uint16 = 2
+	transactionMsgCode        uint16 = 3
+
+	blockRequestMsgCode uint16 = 4
+	blockMsgCode        uint16 = 5
+
+	protocolMsgCodeLength uint16 = 5
+)
+
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
@@ -31,9 +44,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		Protocol: p2p.Protocol{
 			Name:       SeeleProtoName,
 			Version:    SeeleVersion,
-			Length:     1,
-			AddPeer:    s.handleAddPeer,
-			DeletePeer: s.handleDelPeer,
+			Length:     protocolMsgCodeLength,
 		},
 		networkID: seele.networkID,
 		txPool:    seele.TxPool(),
@@ -41,6 +52,9 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		log:       log,
 		peerSet:   newPeerSet(),
 	}
+
+	s.Protocol.AddPeer = s.handleAddPeer
+	s.Protocol.DeletePeer = s.handleDelPeer
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	return s, nil
@@ -52,8 +66,6 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 	p.peerSet.ForEach(func(peer *peer) bool {
 		p.log.Debug("handle node %s", peer.Node.String())
-
-		p.log.Debug("send tx")
 		peer.SendTransactionHash(tx)
 
 		return true
@@ -94,6 +106,8 @@ handler:
 				continue
 			}
 
+			p.log.Debug("got tx hash %s", txHash.ToHex())
+
 			if !peer.knownTxs.Has(txHash) {
 				peer.knownTxs.Add(txHash) //update peer known transaction
 				err := peer.SendTransactionRequest(txHash)
@@ -110,6 +124,8 @@ handler:
 				p.log.Warn("deserialize transaction request msg failed %s", err.Error())
 				continue
 			}
+
+			p.log.Debug("got tx request %s", txHash.ToHex())
 
 			tx := p.txPool.GetTransaction(txHash)
 			err = peer.SendTransaction(tx)

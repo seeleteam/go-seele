@@ -19,15 +19,6 @@ import (
 const (
 	// DiscHandShakeErr peer handshake error
 	DiscHandShakeErr = 100
-
-	transactionHashMsgCode uint16 = 0
-	blockHashMsgCode       uint16 = 1
-
-	transactionRequestMsgCode uint16 = 2
-	transactionMsgCode        uint16 = 3
-
-	blockRequestMsgCode uint16 = 4
-	blockMsgCode        uint16 = 5
 )
 
 // PeerInfo represents a short summary of a connected peer.
