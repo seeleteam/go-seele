@@ -25,10 +25,9 @@ const (
 	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 
 	txsyncPackSize = 100 * 1024
-)
 
-const (
-	StatusMsg = 0x00
+	// AccountStateDir account state info directory based on config.DataRoot
+	AccountStateDir = "/db/accountState"
 )
 
 // statusData the structure for peers to exchange status

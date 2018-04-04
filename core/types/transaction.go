@@ -11,18 +11,30 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/merkle"
 )
 
+const (
+	defaultMaxPayloadSize = 32 * 1024
+)
+
 var (
-	errAmountNil      = errors.New("amount is null")
-	errAmountNegative = errors.New("amount is negative")
-	errHashMismatch   = errors.New("hash mismatch")
-	errSigMissed      = errors.New("signature missed")
-	errSigInvalid     = errors.New("signature is invalid")
+	errAccountNotFound  = errors.New("account not found")
+	errAmountNegative   = errors.New("amount is negative")
+	errAmountNil        = errors.New("amount is null")
+	errBalanceNotEnough = errors.New("balance not enough")
+	errHashMismatch     = errors.New("hash mismatch")
+	errNonceTooLow      = errors.New("nonce too low")
+	errPayloadOversized = errors.New("oversized payload")
+	errSigInvalid       = errors.New("signature is invalid")
+	errSigMissed        = errors.New("signature missed")
 
 	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
+
+	// MaxPayloadSize limits the payload size to prevent malicious transations.
+	MaxPayloadSize = defaultMaxPayloadSize
 )
 
 // TransactionData wraps the data in a transaction.
@@ -31,6 +43,7 @@ type TransactionData struct {
 	To           *common.Address // nil for contract creation transaction.
 	Amount       *big.Int
 	AccountNonce uint64
+	Payload      []byte
 }
 
 // Transaction represents a transaction in the blockchain.
@@ -44,6 +57,11 @@ type Transaction struct {
 // The transaction data hash is also calculated.
 // Panics if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Transaction {
+	tx, _ := newTx(from, &to, amount, nonce, nil)
+	return tx
+}
+
+func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
 	if amount == nil {
 		panic("Failed to create tx, amount is nil.")
 	}
@@ -52,16 +70,36 @@ func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Tra
 		panic("Failed to create tx, amount is negative.")
 	}
 
+	if len(payload) > MaxPayloadSize {
+		return nil, errPayloadOversized
+	}
+
 	txData := &TransactionData{
 		From:         from,
-		To:           &to,
-		Amount:       new(big.Int),
+		To:           to,
+		Amount:       new(big.Int).Set(amount),
 		AccountNonce: nonce,
 	}
 
-	txData.Amount.Set(amount)
+	if len(payload) > 0 {
+		cloned := make([]byte, len(payload))
+		copy(cloned, payload)
+		txData.Payload = cloned
+	} else {
+		txData.Payload = make([]byte, 0)
+	}
 
-	return &Transaction{crypto.MustHash(txData), txData, nil}
+	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
+}
+
+// NewContractTransaction returns a transation to create a smart contract.
+func NewContractTransaction(from common.Address, amount *big.Int, nonce uint64, code []byte) (*Transaction, error) {
+	return newTx(from, nil, amount, nonce, code)
+}
+
+// NewMessageTransaction returns a transation with specified message.
+func NewMessageTransaction(from, to common.Address, amount *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
+	return newTx(from, &to, amount, nonce, msg)
 }
 
 // Sign signs the transaction with private key.
@@ -71,7 +109,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 }
 
 // Validate returns true if the transation is valid, otherwise false.
-func (tx *Transaction) Validate() error {
+func (tx *Transaction) Validate(statedb *state.Statedb) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
 		return errAmountNil
 	}
@@ -80,8 +118,27 @@ func (tx *Transaction) Validate() error {
 		return errAmountNegative
 	}
 
-	// TODO tx.Data.Amount <= account.Balance
-	// TODO validate tx.Data.AccountNonce against account.Nonce
+	balance, found := statedb.GetAmount(tx.Data.From)
+	if !found {
+		return errAccountNotFound
+	}
+
+	if tx.Data.Amount.Cmp(balance) > 0 {
+		return errBalanceNotEnough
+	}
+
+	accountNonce, found := statedb.GetNonce(tx.Data.From)
+	if !found {
+		return errAccountNotFound
+	}
+
+	if tx.Data.AccountNonce < accountNonce {
+		return errNonceTooLow
+	}
+
+	if len(tx.Data.Payload) > MaxPayloadSize {
+		return errPayloadOversized
+	}
 
 	if tx.Signature == nil {
 		return errSigMissed

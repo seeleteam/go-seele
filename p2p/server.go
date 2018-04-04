@@ -36,8 +36,8 @@ const (
 
 	defaultDialTimeout = 15 * time.Second
 
-	// Maximum amount of time allowed for writing a complete message.
-	frameWriteTimeout = 20 * time.Second
+	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
+	connWriteTimeout = 10 * time.Second
 
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
@@ -145,7 +145,7 @@ func (srv *Server) Start() (err error) {
 		return err
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s][%s]", srv.MyNodeID, addr)
-	srv.kadDB = discovery.StartService(common.HexToAddress(srv.MyNodeID), addr, srv.StaticNodes)
+	srv.kadDB = discovery.StartService(common.HexMustToAddres(srv.MyNodeID), addr, srv.StaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -335,7 +335,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 // doHandShake Communicate each other
 func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
 	handshakeMsg := &ProtoHandShake{Caps: caps}
-	nodeID := common.HexToAddress(srv.MyNodeID)
+	nodeID := common.HexMustToAddres(srv.MyNodeID)
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
 
 	if flags == outboundConn {

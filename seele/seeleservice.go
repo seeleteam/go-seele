@@ -27,9 +27,10 @@ type SeeleService struct {
 	log           *log.SeeleLog
 	coinbase      common.Address // account address that mining rewards will be send to.
 
-	txPool  *core.TransactionPool
-	chain   *core.Blockchain
-	chainDB database.Database
+	txPool         *core.TransactionPool
+	chain          *core.Blockchain
+	chainDB        database.Database // database used to store blocks.
+	accountStateDB database.Database // database used to store account state info.
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -56,35 +57,49 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 	}
 	s.coinbase = conf.Coinbase
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
-	dbPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
-	log.Info("NewSeeleService BlockChain datadir is %s", dbPath)
-	s.chainDB, err = leveldb.NewLevelDB(dbPath)
+
+	// Initialize blockchain DB.
+	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
+	log.Info("NewSeeleService BlockChain datadir is %s", chainDBPath)
+	s.chainDB, err = leveldb.NewLevelDB(chainDBPath)
+	if err != nil {
+		log.Error("NewSeeleService Create BlockChain err. %s", err)
+		return nil, err
+	}
+
+	// Initialize account state info DB.
+	accountStateDBPath := filepath.Join(serviceContext.DataDir, AccountStateDir)
+	log.Info("NewSeeleService account state datadir is %s", accountStateDBPath)
+	s.accountStateDB, err = leveldb.NewLevelDB(accountStateDBPath)
 	if err != nil {
 		s.chainDB.Close()
-		log.Error("NewSeeleService Create BlockChain err. %s", err)
+		log.Error("NewSeeleService Create BlockChain err: failed to create account state DB, %s", err)
 		return nil, err
 	}
 
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
 	genesis := core.DefaultGenesis(bcStore)
-	err = genesis.Initialize(s.chainDB)
+	err = genesis.Initialize(s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
+		s.accountStateDB.Close()
 		log.Error("NewSeeleService genesis.Initialize err. %s", err)
 		return nil, err
 	}
 
-	s.chain, err = core.NewBlockchain(bcStore)
+	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
+		s.accountStateDB.Close()
 		log.Error("NewSeeleService init chain failed. %s", err)
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.TxConf)
+	s.txPool = core.NewTransactionPool(conf.TxConf, s.chain)
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()
+		s.accountStateDB.Close()
 		log.Error("NewSeeleService create seeleProtocol err. %s", err)
 		return nil, err
 	}
@@ -113,12 +128,12 @@ func (s *SeeleService) Stop() error {
 	// s.txPool.Stop() s.chain.Stop()
 	// retries? leave it to future
 	s.chainDB.Close()
+	s.accountStateDB.Close()
 	return nil
 }
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
-	//TODO add other api interface, for example consensus engine
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",

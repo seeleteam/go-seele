@@ -7,8 +7,11 @@ package seele
 
 import (
 	"errors"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 var (
@@ -31,5 +34,29 @@ func (api *PublicSeeleAPI) Coinbase(input interface{}, addr *common.Address) err
 		return errAPIInvalidParams
 	}
 	*addr = api.s.coinbase
+	return nil
+}
+
+type AddTxArgs struct {
+	To     common.Address
+	Amount uint64
+}
+
+// AddTx add a transaction to this node
+func (api *PublicSeeleAPI) AddTx(args *AddTxArgs, result *bool) error {
+	from, privateKey, err := crypto.GenerateKeyPair() // @todo actually we should use coinbase, but we could find coinbase's private key now
+
+	var number big.Int
+	number.SetUint64(args.Amount)
+	tx := types.NewTransaction(*from, args.To, &number, 0) // @todo we also need to find the latest nonce
+	tx.Sign(privateKey)
+
+	err = api.s.txPool.AddTransaction(tx)
+	if err != nil {
+		*result = false
+		return err
+	}
+
+	*result = true
 	return nil
 }

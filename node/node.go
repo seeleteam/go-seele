@@ -78,6 +78,7 @@ func (n *Node) Start() error {
 	for _, service := range n.services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
+
 	if err := running.Start(); err != nil {
 		return ErrServiceStartFailed
 	}
@@ -145,13 +146,11 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 	n.log.Debug("Listerner address %s", listerner.Addr().String())
 	go func() {
 		for {
-			n.log.Debug("Before accept")
 			conn, err := listerner.Accept()
 			if err != nil {
 				n.log.Error("RPC accept failed", "err", err)
 				continue
 			}
-			n.log.Debug("After accept")
 			go handler.ServeCodec(rpc.NewJsonCodec(conn))
 		}
 	}()

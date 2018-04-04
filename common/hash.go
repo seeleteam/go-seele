@@ -7,6 +7,8 @@ package common
 
 import (
 	"bytes"
+
+	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
 const (
@@ -49,4 +51,8 @@ func (a Hash) String() string {
 // Equal returns a boolean reporting whether this hash a is equal to the input hash b.
 func (a Hash) Equal(b Hash) bool {
 	return bytes.Equal(a[:], b[:])
+}
+
+func (a Hash) ToHex() string {
+	return hexutil.BytesToHex(a[:])
 }

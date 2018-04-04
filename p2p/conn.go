@@ -7,6 +7,7 @@ package p2p
 
 import (
 	"encoding/binary"
+	"errors"
 	"net"
 	"sync"
 	"time"
@@ -18,6 +19,10 @@ const (
 	headBuffSizeEnd   = 4
 	headBuffCodeStart = 4
 	headBuffCodeEnd   = 6
+)
+
+var (
+	errConnWriteTimeout = errors.New("Connection writes timeout")
 )
 
 // connection TODO add bandwidth meter for connection
@@ -45,6 +50,33 @@ func (c *connection) readFull(outBuf []byte) (err error) {
 	}
 
 	return nil
+}
+
+// writeFull write to fd till all outBuf is sended,
+// if no data is writed (with deadline of connWriteTimeout), returns errConnWriteTimeout.
+func (c *connection) writeFull(outBuf []byte) (err error) {
+	needLen, curPos := len(outBuf), 0
+	for needLen > 0 {
+		c.fd.SetWriteDeadline(time.Now().Add(connWriteTimeout))
+		var curSend int
+		curSend, err = c.fd.Write(outBuf[curPos:])
+		if err != nil {
+			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+				if curSend == 0 {
+					err = errConnWriteTimeout
+					break
+				}
+				needLen -= curSend
+				curPos += curSend
+				continue
+			}
+			break
+		}
+		needLen -= curSend
+		curPos += curSend
+	}
+
+	return err
 }
 
 func (c *connection) close() {
@@ -84,9 +116,8 @@ func (c *connection) WriteMsg(msg Message) error {
 	b := make([]byte, headBuffLegth)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
-	c.fd.SetWriteDeadline(time.Now().Add(frameWriteTimeout))
 
-	_, err := c.fd.Write(b)
+	err := c.writeFull(b)
 	if err != nil {
 		return err
 	}

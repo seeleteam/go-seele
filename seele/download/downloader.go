@@ -75,7 +75,11 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 
 // Synchronise try to sync with remote peer.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error {
-	localTD := d.chain.CurrentBlock().Header.Difficulty //TODO get total difficulty
+	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(d.chain.CurrentBlock().HeaderHash)
+	if err != nil {
+		d.log.Error("downloader.Synchronise GetBlockTotalDifficulty err.[%s]", err)
+		return err
+	}
 
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(td) >= 0 {
@@ -98,7 +102,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 		return errPeerNotFound
 	}
 
-	err := d.doSynchronise(p, head, td)
+	err = d.doSynchronise(p, head, td, localTD)
 	d.lock.Lock()
 	d.syncStatus = statusNone
 	d.sessionWG.Wait()
@@ -107,7 +111,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 	return err
 }
 
-func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int) (err error) {
+func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
@@ -128,8 +132,6 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		return err
 	}
 
-	// need download blocks from number origin to height.
-	localTD := d.chain.CurrentBlock().Header.Difficulty //TODO get total difficulty
 	tm := newTaskMgr(d, d.masterPeer, origin, height)
 	d.tm = tm
 	d.lock.Lock()

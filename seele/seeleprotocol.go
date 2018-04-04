@@ -7,9 +7,6 @@ package seele
 
 import (
 	"errors"
-	"fmt"
-	"math"
-	"math/big"
 	"sync"
 	"time"
 
@@ -26,12 +23,23 @@ var (
 	errSyncFinished = errors.New("Sync Finished!")
 )
 
+var (
+	transactionHashMsgCode uint16 = 0
+	blockHashMsgCode       uint16 = 1
+
+	transactionRequestMsgCode uint16 = 2
+	transactionMsgCode        uint16 = 3
+
+	blockRequestMsgCode uint16 = 4
+	blockMsgCode        uint16 = 5
+
+	protocolMsgCodeLength uint16 = 6
+)
+
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
-	peers     map[string]*peer // peers map. peerID=>peer
-	peersCan  map[string]*peer // candidate peers, holding peers before handshaking
-	peersLock sync.RWMutex
+	peerSet *peerSet
 
 	networkID  uint64
 	downloader *downloader.Downloader
@@ -44,40 +52,41 @@ type SeeleProtocol struct {
 	log    *log.SeeleLog
 }
 
-// NewSeeleService create SeeleProtocol
+// NewSeeleProtocol create SeeleProtocol
 func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:       SeeleProtoName,
-			Version:    SeeleVersion,
-			Length:     1,
-			AddPeer:    s.handleAddPeer,
-			DeletePeer: s.handleDelPeer,
+			Name:    SeeleProtoName,
+			Version: SeeleVersion,
+			Length:  protocolMsgCodeLength,
 		},
 		networkID:  seele.networkID,
 		txPool:     seele.TxPool(),
 		chain:      seele.BlockChain(),
 		downloader: downloader.NewDownloader(seele.BlockChain()),
 		log:        log,
-		peers:      make(map[string]*peer),
-		peersCan:   make(map[string]*peer),
 		quitCh:     make(chan struct{}),
 		syncCh:     make(chan struct{}),
+
+		peerSet: newPeerSet(),
 	}
 
+	s.Protocol.AddPeer = s.handleAddPeer
+	s.Protocol.DeletePeer = s.handleDelPeer
+
+	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
+	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
 	return s, nil
 }
 
 func (sp *SeeleProtocol) Start() {
-	event.BlockMinedEventManager.AddListener(sp.NewBlockCB)
-	event.TransactionInsertedEventManager.AddListener(sp.NewTxCB)
 	go sp.syncer()
 }
 
 // Stop stops protocol, called when seeleService quits.
 func (sp *SeeleProtocol) Stop() {
-	event.BlockMinedEventManager.RemoveListener(sp.NewBlockCB)
-	event.TransactionInsertedEventManager.RemoveListener(sp.NewTxCB)
+	event.BlockMinedEventManager.RemoveListener(sp.handleNewMinedBlock)
+	event.TransactionInsertedEventManager.RemoveListener(sp.handleNewTx)
 	close(sp.quitCh)
 	close(sp.syncCh)
 	sp.wg.Wait()
@@ -93,76 +102,25 @@ func (sp *SeeleProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
-			go sp.synchronise(sp.bestPeer())
+			go sp.synchronise(sp.peerSet.bestPeer())
 		case <-forceSync.C:
-			go sp.synchronise(sp.bestPeer())
+			go sp.synchronise(sp.peerSet.bestPeer())
 		case <-sp.quitCh:
 			return
 		}
 	}
 }
 
-func (sp *SeeleProtocol) bestPeer() *peer {
-	sp.peersLock.RLock()
-	defer sp.peersLock.RUnlock()
-	var (
-		bestPeer *peer
-		bestTd   *big.Int
-	)
-	for _, p := range sp.peers {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = p, td
-		}
-	}
-	return bestPeer
-}
-
-func (sp *SeeleProtocol) peersWithoutBlock(hash common.Hash) []*peer {
-	sp.peersLock.RLock()
-	defer sp.peersLock.RUnlock()
-	list := make([]*peer, 0, len(sp.peers))
-	for _, p := range sp.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p)
-		}
-	}
-	return list
-}
-
 func (sp *SeeleProtocol) synchronise(p *peer) {
 	//TODO
-}
-
-// NewBlockCB callback when a block is mined.
-func (sp *SeeleProtocol) NewBlockCB(e event.Event) {
-	block := e.(*types.Block)
-	hash := block.HeaderHash
-	peers := sp.peersWithoutBlock(hash)
-
-	// send block hash to peers first
-	for _, p := range peers {
-		p.sendNewBlockHash(block)
-	}
-
-	// TODO calculate td
-	var td *big.Int
-	// Send the block to a subset of our peers
-	transfer := peers[:int(math.Sqrt(float64(len(peers))))]
-	for _, p := range transfer {
-		p.sendNewBlock(block, td)
-	}
-}
-
-// NewTxCB callback when tx recved.
-func (sp *SeeleProtocol) NewTxCB(e event.Event) {
-	// TODO
 }
 
 // syncTransactions sends pending transactions to remote peer.
 func (sp *SeeleProtocol) syncTransactions(p *peer) {
 	defer sp.wg.Done()
 
-	pending, _ := sp.txPool.Pending()
+	//pending, _ := sp.txPool.Pending()
+	var pending []*types.Transaction //TODO get pending transactions from txPool
 	if len(pending) == 0 {
 		return
 	}
@@ -202,30 +160,161 @@ loopOut:
 	close(resultCh)
 }
 
-func (sp *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
-	newPeer := newPeer(SeeleVersion, p2pPeer)
+func (p *SeeleProtocol) handleNewTx(e event.Event) {
+	p.log.Debug("find new tx")
+	tx := e.(*types.Transaction)
+
+	p.peerSet.ForEach(func(peer *peer) bool {
+
+		err := peer.SendTransactionHash(tx.Hash)
+		if err != nil {
+			p.log.Warn("send transaction hash failed %s", err.Error())
+		}
+		return true
+	})
+}
+
+func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+	p.log.Debug("find new mined block")
+	block := e.(*types.Block)
+
+	p.peerSet.ForEach(func(peer *peer) bool {
+		err := peer.SendBlockHash(block.HeaderHash)
+		if err != nil {
+			p.log.Warn("send mined block hash failed %s", err.Error())
+		}
+		return true
+	})
+}
+
+func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
+	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
 	if err := newPeer.HandShake(); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
-		sp.log.Error("handleAddPeer err. %s", err)
+		p.log.Error("handleAddPeer err. %s", err)
 		return
 	}
 
-	// insert to peers map
-	sp.peersLock.Lock()
-	sp.peers[newPeer.peerID] = newPeer
-	sp.peersLock.Unlock()
-	sp.syncCh <- struct{}{}
+	p.peerSet.Add(newPeer)
+	go p.handleMsg(newPeer)
 }
 
-func (sp *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-	sp.peersLock.Lock()
-	peerID := fmt.Sprintf("%x", p2pPeer.Node.ID[:8])
-	delete(sp.peers, peerID)
-	sp.peersLock.Unlock()
+func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+	p.peerSet.Remove(p2pPeer.Node.ID)
 }
 
-func (sp *SeeleProtocol) handleMsg(peer *p2p.Peer, write p2p.MsgWriter, msg p2p.Message) {
-	//TODO add handle msg
-	sp.log.Debug("SeeleProtocol readmsg. Code[%d]", msg.Code)
-	return
+func (p *SeeleProtocol) handleMsg(peer *peer) {
+handler:
+	for {
+		msg, err := peer.rw.ReadMsg()
+		if err != nil {
+			p.log.Error("get error when read msg from %s, %s", peer.peerID.ToHex(), err)
+			break
+		}
+
+		switch msg.Code {
+		case transactionHashMsgCode:
+			var txHash common.Hash
+			err := common.Deserialize(msg.Payload, &txHash)
+			if err != nil {
+				p.log.Warn("deserialize transaction hash msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got tx hash %s", txHash.ToHex())
+
+			if !peer.knownTxs.Has(txHash) {
+				peer.knownTxs.Add(txHash) //update peer known transaction
+				err := peer.SendTransactionRequest(txHash)
+				if err != nil {
+					p.log.Warn("send transaction request msg failed %s", err.Error())
+					break handler
+				}
+			}
+
+		case transactionRequestMsgCode:
+			var txHash common.Hash
+			err := common.Deserialize(msg.Payload, &txHash)
+			if err != nil {
+				p.log.Warn("deserialize transaction request msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got tx request %s", txHash.ToHex())
+
+			tx := p.txPool.GetTransaction(txHash)
+			err = peer.SendTransaction(tx)
+			if err != nil {
+				p.log.Warn("send transaction msg failed %s", err.Error())
+				break handler
+			}
+
+		case transactionMsgCode:
+			var tx types.Transaction
+			err := common.Deserialize(msg.Payload, &tx)
+			if err != nil {
+				p.log.Warn("deserialize transaction msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got transaction msg %s", tx.Hash.ToHex())
+			p.txPool.AddTransaction(&tx)
+
+		case blockHashMsgCode:
+			var blockHash common.Hash
+			err := common.Deserialize(msg.Payload, &blockHash)
+			if err != nil {
+				p.log.Warn("deserialize block hash msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got block hash msg %s", blockHash.ToHex())
+
+			if !peer.knownBlocks.Has(blockHash) {
+				peer.knownBlocks.Add(blockHash)
+				err := peer.SendBlockRequest(blockHash)
+				if err != nil {
+					p.log.Warn("send block request msg failed %s", err.Error())
+					break handler
+				}
+			}
+
+		case blockRequestMsgCode:
+			var blockHash common.Hash
+			err := common.Deserialize(msg.Payload, &blockHash)
+			if err != nil {
+				p.log.Warn("deserialize block request msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got block request msg %s", blockHash.ToHex())
+			block, err := p.chain.GetStore().GetBlock(blockHash)
+			if err != nil {
+				p.log.Warn("not found request block %s", err.Error())
+				continue
+			}
+
+			err = peer.SendBlock(block)
+			if err != nil {
+				p.log.Warn("send block msg failed %s", err.Error())
+			}
+
+		case blockMsgCode:
+			var block types.Block
+			err := common.Deserialize(msg.Payload, &block)
+			if err != nil {
+				p.log.Warn("deserialize block msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got block msg %s", block.HeaderHash.ToHex())
+			// @todo need to make sure WriteBlock handle block fork
+			p.chain.WriteBlock(&block)
+
+		default:
+			p.log.Warn("unknown code %s", msg.Code)
+		}
+	}
+
+	p.peerSet.Remove(peer.peerID)
 }

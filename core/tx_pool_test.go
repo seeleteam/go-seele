@@ -12,6 +12,7 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -24,7 +25,7 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
-	return privKey, common.HexToAddress(hexAddress)
+	return privKey, common.HexMustToAddres(hexAddress)
 }
 
 func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
@@ -37,9 +38,34 @@ func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
 	return tx
 }
 
+type mockBlockchain struct {
+	statedb *state.Statedb
+}
+
+func newMockBlockchain() *mockBlockchain {
+	statedb, err := state.NewStatedb(common.EmptyHash, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	return &mockBlockchain{statedb}
+}
+
+func (chain mockBlockchain) CurrentState() *state.Statedb {
+	return chain.statedb
+}
+
+func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint64) {
+	stateObj := chain.statedb.GetOrNewStateObject(addr)
+	stateObj.SetAmount(new(big.Int).SetUint64(balance))
+	stateObj.SetNonce(nonce)
+}
+
 func Test_TransactionPool_Add_ValidTx(t *testing.T) {
-	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
 	tx := newTestTx(t, 10, 100)
+	chain.addAccount(tx.Data.From, 20, 100)
 
 	err := pool.AddTransaction(tx)
 
@@ -48,8 +74,10 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 }
 
 func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
-	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
 	tx := newTestTx(t, 10, 100)
+	chain.addAccount(tx.Data.From, 20, 100)
 
 	// Change the amount in tx.
 	tx.Data.Amount.SetInt64(20)
@@ -61,8 +89,10 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 }
 
 func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
-	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
 	tx := newTestTx(t, 10, 100)
+	chain.addAccount(tx.Data.From, 20, 100)
 
 	err := pool.AddTransaction(tx)
 	assert.Equal(t, err, error(nil))
@@ -74,10 +104,13 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	config := DefaultTxPoolConfig()
 	config.Capacity = 1
-	pool := NewTransactionPool(*config)
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*config, chain)
 
 	tx1 := newTestTx(t, 10, 100)
+	chain.addAccount(tx1.Data.From, 20, 100)
 	tx2 := newTestTx(t, 20, 101)
+	chain.addAccount(tx2.Data.From, 20, 101)
 
 	err := pool.AddTransaction(tx1)
 	assert.Equal(t, err, error(nil))
@@ -87,8 +120,11 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 }
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
-	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
 	tx := newTestTx(t, 10, 100)
+	chain.addAccount(tx.Data.From, 20, 100)
+
 	pool.AddTransaction(tx)
 
 	assert.Equal(t, pool.GetTransaction(tx.Hash), tx)
@@ -115,9 +151,12 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 }
 
 func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
-	pool := NewTransactionPool(*DefaultTxPoolConfig())
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
 	account1, txs1 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{9, 5, 7})
+	chain.addAccount(account1, 10, 5)
 	account2, txs2 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{7, 9, 5})
+	chain.addAccount(account2, 10, 5)
 
 	for _, tx := range append(txs1, txs2...) {
 		pool.AddTransaction(tx)
