@@ -149,3 +149,17 @@ func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, errNonceTooLow)
 }
+
+func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
+	from := crypto.MustGenerateRandomAddress()
+	to := crypto.MustGenerateRandomAddress()
+	msg := make([]byte, MaxPayloadSize+1)
+	tx := NewMessageTransaction(*from, *to, big.NewInt(100), 38, msg)
+
+	statedb := newTestStateDB(map[common.Address]state.Account{
+		tx.Data.From: state.Account{38, big.NewInt(200)},
+	})
+
+	err := tx.Validate(statedb)
+	assert.Equal(t, err, errPayloadOversized)
+}
