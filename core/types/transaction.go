@@ -74,6 +74,7 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 		To:           to,
 		Amount:       new(big.Int).Set(amount),
 		AccountNonce: nonce,
+		Payload:      make([]byte, 0),
 	}
 
 	if len(payload) > 0 {
