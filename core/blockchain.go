@@ -7,7 +7,6 @@ package core
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -15,26 +14,34 @@ import (
 	"github.com/seeleteam/go-seele/database"
 )
 
-// ErrBlockHashMismatch is returned when block hash does not match the header hash.
-var ErrBlockHashMismatch = errors.New("block header hash mismatch")
+var (
+	// ErrBlockHashMismatch is returned when block hash does not match the header hash.
+	ErrBlockHashMismatch = errors.New("block header hash mismatch")
 
-// ErrBlockTxsHashMismatch is returned when block transations hash does not match
-// the transaction root hash in header.
-var ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch")
+	// ErrBlockTxsHashMismatch is returned when block transations hash does not match
+	// the transaction root hash in header.
+	ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch")
+
+	// ErrBlockInvalidParentHash is returned when insert a new header with invalid parent block hash.
+	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
+
+	// ErrBlockInvalidHeight is returned when insert a new header with invalid block height.
+	ErrBlockInvalidHeight = errors.New("invalid block height")
+
+	// ErrBlockAlreadyExist is returned when inserted block already exist
+	ErrBlockAlreadyExist = errors.New("block already exist")
+)
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
-// This is a thread safe structure.
+// This is a thread safe structure. we must keep all of its parameter are thread safe too.
 type Blockchain struct {
-	mutex          sync.RWMutex
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
 	headerChain    *HeaderChain
+	genesisBlock   *types.Block
 
-	genesisBlock *types.Block
-	currentBlock *types.Block
-
-	currentState *state.Statedb
+	blockleaf *BlockLeaf
 }
 
 // NewBlockchain returns a initialized block chain with given store and account state DB.
@@ -67,30 +74,89 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash)
+	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
+	if err != nil {
+		return nil, err
+	}
+
+	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the state DB of current block
-	bc.currentState, err = state.NewStatedb(bc.currentBlock.Header.StateHash, accountStateDB)
+	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
 	if err != nil {
 		return nil, err
 	}
+
+	blockIndex := NewBlockIndex(currentState, currentBlock, td)
+	bc.blockleaf = NewBlockLeaf()
+	bc.blockleaf.Add(blockIndex)
 
 	return bc, nil
 }
 
 // CurrentBlock returns the HEAD block of blockchain.
-func (bc *Blockchain) CurrentBlock() *types.Block {
-	bc.mutex.RLock()
-	defer bc.mutex.RUnlock()
+func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
+	index := bc.blockleaf.GetBestBlockIndex()
+	if index == nil {
+		return nil, nil
+	}
 
-	return bc.currentBlock
+	return index.currentBlock, index.state
+}
+
+func (bc *Blockchain) CurrentState() *state.Statedb {
+	_, state := bc.CurrentBlock()
+	return state
 }
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	_, err := bc.bcStore.GetBlock(block.HeaderHash)
+	if err == nil {
+		return ErrBlockAlreadyExist
+	}
+
+	err = bc.ValidateBlock(block)
+	if err != nil {
+		return err
+	}
+
+	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	if err != nil {
+		return err
+	}
+
+	currentBlock := &types.Block{
+		HeaderHash:   block.HeaderHash,
+		Header:       block.Header.Clone(),
+		Transactions: make([]*types.Transaction, len(block.Transactions)),
+	}
+	copy(currentBlock.Transactions, block.Transactions)
+
+	td, err := bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
+	isHead := bc.blockleaf.IsBestBlockIndex(blockIndex)
+
+	err = bc.bcStore.PutBlock(block, td, isHead)
+	if err != nil {
+		return err
+	}
+
+	bc.headerChain.WriteHeader(currentBlock.Header)
+	bc.blockleaf.RemoveByHash(block.Header.PreviousBlockHash)
+	bc.blockleaf.Add(blockIndex)
+
+	return nil
+}
+
+func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -100,48 +166,20 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return ErrBlockTxsHashMismatch
 	}
 
-	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	// @todo transaction validation
+
+	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
 	if err != nil {
-		return err
+		return ErrBlockInvalidParentHash
 	}
 
-	bc.mutex.Lock()
-	defer bc.mutex.Unlock()
-
-	newTd, err := bc.headerChain.validateNewHeader(block.Header)
-	if err != nil {
-		return err
+	if block.Header.Height != preBlock.Header.Height+1 {
+		return ErrBlockInvalidHeight
 	}
-
-	err = bc.bcStore.PutBlock(block, newTd, true)
-	if err != nil {
-		return err
-	}
-
-	bc.currentBlock = &types.Block{
-		HeaderHash:   block.HeaderHash,
-		Header:       block.Header.Clone(),
-		Transactions: make([]*types.Transaction, len(block.Transactions)),
-	}
-
-	copy(bc.currentBlock.Transactions, block.Transactions)
-
-	bc.headerChain.currentHeaderHash = bc.currentBlock.HeaderHash
-	bc.headerChain.currentHeader = bc.currentBlock.Header
-	bc.currentState = blockStatedb
 
 	return nil
 }
 
-// GetStore returns the blockchain store instance.
 func (bc *Blockchain) GetStore() store.BlockchainStore {
 	return bc.bcStore
-}
-
-// CurrentState returns the state DB of current block.
-func (bc *Blockchain) CurrentState() *state.Statedb {
-	bc.mutex.RLock()
-	defer bc.mutex.RUnlock()
-
-	return bc.currentState
 }

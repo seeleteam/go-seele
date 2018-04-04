@@ -130,7 +130,7 @@ func (miner *Miner) prepareNewBlock() {
 	miner.log.Debug("start mining new block")
 
 	timestamp := time.Now().Unix()
-	parent := miner.seele.BlockChain().CurrentBlock()
+	parent, _ := miner.seele.BlockChain().CurrentBlock()
 
 	if parent.Header.CreateTimestamp.Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
 		timestamp = parent.Header.CreateTimestamp.Int64() + 1
