@@ -16,6 +16,7 @@ import (
 type BlockHeader struct {
 	PreviousBlockHash common.Hash
 	Creator           common.Address
+	StateHash         common.Hash // State tree root hash
 	TxHash            common.Hash // Transaction tree root hash
 	Difficulty        *big.Int    // Mining difficulty of current block
 	Height            uint64
@@ -60,10 +61,8 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	}
 
 	// Copy the transactions and update the transaction trie root hash.
-	if len(txs) == 0 {
-		block.Header.TxHash = emptyTxRootHash
-	} else {
-		block.Header.TxHash = MerkleRootHash(txs)
+	block.Header.TxHash = MerkleRootHash(txs)
+	if len(txs) > 0 {
 		block.Transactions = make([]*Transaction, len(txs))
 		copy(block.Transactions, txs)
 	}

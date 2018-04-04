@@ -81,3 +81,8 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 
 	assert.Equal(t, tx.Validate(), errSigInvalid)
 }
+
+func Test_MerkleRootHash_Empty(t *testing.T) {
+	hash := MerkleRootHash(nil)
+	assert.Equal(t, hash, emptyTxRootHash)
+}

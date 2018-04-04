@@ -22,7 +22,7 @@ var (
 	errSigMissed      = errors.New("signature missed")
 	errSigInvalid     = errors.New("signature is invalid")
 
-	emptyTxRootHash = MerkleRootHash([]*Transaction{})
+	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
 )
 
 // TransactionData wraps the data in a transaction.
@@ -116,7 +116,7 @@ func (tx *Transaction) Equals(other merkle.Content) bool {
 // If the given transactions is empty, return empty hash.
 func MerkleRootHash(txs []*Transaction) common.Hash {
 	if len(txs) == 0 {
-		return common.EmptyHash
+		return emptyTxRootHash
 	}
 
 	contents := make([]merkle.Content, len(txs))

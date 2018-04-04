@@ -67,7 +67,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
 	genesis := core.DefaultGenesis(bcStore)
-	err = genesis.Initialize()
+	err = genesis.Initialize(s.chainDB)
 	if err != nil {
 		s.chainDB.Close()
 		log.Error("NewSeeleService genesis.Initialize err. %s", err)
