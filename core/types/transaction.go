@@ -21,15 +21,15 @@ const (
 )
 
 var (
-	errPayloadOversized = errors.New("oversized payload")
 	errAccountNotFound  = errors.New("account not found")
-	errAmountNil        = errors.New("amount is null")
 	errAmountNegative   = errors.New("amount is negative")
+	errAmountNil        = errors.New("amount is null")
 	errBalanceNotEnough = errors.New("balance not enough")
-	errNonceTooLow      = errors.New("nonce too low")
 	errHashMismatch     = errors.New("hash mismatch")
-	errSigMissed        = errors.New("signature missed")
+	errNonceTooLow      = errors.New("nonce too low")
+	errPayloadOversized = errors.New("oversized payload")
 	errSigInvalid       = errors.New("signature is invalid")
+	errSigMissed        = errors.New("signature missed")
 
 	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
 
@@ -57,10 +57,11 @@ type Transaction struct {
 // The transaction data hash is also calculated.
 // Panics if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Transaction {
-	return newTx(from, &to, amount, nonce, nil)
+	tx, _ := newTx(from, &to, amount, nonce, nil)
+	return tx
 }
 
-func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint64, payload []byte) *Transaction {
+func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
 	if amount == nil {
 		panic("Failed to create tx, amount is nil.")
 	}
@@ -69,30 +70,35 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 		panic("Failed to create tx, amount is negative.")
 	}
 
+	if len(payload) > MaxPayloadSize {
+		return nil, errPayloadOversized
+	}
+
 	txData := &TransactionData{
 		From:         from,
 		To:           to,
 		Amount:       new(big.Int).Set(amount),
 		AccountNonce: nonce,
-		Payload:      make([]byte, 0),
 	}
 
 	if len(payload) > 0 {
 		cloned := make([]byte, len(payload))
 		copy(cloned, payload)
 		txData.Payload = cloned
+	} else {
+		txData.Payload = make([]byte, 0)
 	}
 
-	return &Transaction{crypto.MustHash(txData), txData, nil}
+	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
 }
 
 // NewContractTransaction returns a transation to create a smart contract.
-func NewContractTransaction(from common.Address, amount *big.Int, nonce uint64, code []byte) *Transaction {
+func NewContractTransaction(from common.Address, amount *big.Int, nonce uint64, code []byte) (*Transaction, error) {
 	return newTx(from, nil, amount, nonce, code)
 }
 
 // NewMessageTransaction returns a transation with specified message.
-func NewMessageTransaction(from, to common.Address, amount *big.Int, nonce uint64, msg []byte) *Transaction {
+func NewMessageTransaction(from, to common.Address, amount *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
 	return newTx(from, &to, amount, nonce, msg)
 }
 
