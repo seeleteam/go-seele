@@ -20,12 +20,11 @@ import (
 )
 
 const (
-	// reserves msgcode [1-79] for messages defined in seele module
-	GetBlockHeadersMsg = 0x81
-	BlockHeadersMsg    = 0x82
-	GetBlocksMsg       = 0x83
-	BlocksPreMsg       = 0x84 // is sent before BlockMsg, containing block numbers of BlockMsg.
-	BlocksMsg          = 0x85
+	GetBlockHeadersMsg uint16 = 6
+	BlockHeadersMsg    uint16 = 7
+	GetBlocksMsg       uint16 = 8
+	BlocksPreMsg       uint16 = 9 // is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksMsg          uint16 = 10
 )
 
 var (
@@ -220,7 +219,7 @@ func (d *Downloader) DeliverMsg(peerID string, msg *p2p.Message) {
 	if !ok {
 		return
 	}
-	peerConn.deliverMsg(int(msg.Code), msg)
+	peerConn.deliverMsg(msg.Code, msg)
 	return
 }
 

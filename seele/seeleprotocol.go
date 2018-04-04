@@ -33,7 +33,7 @@ var (
 	blockRequestMsgCode uint16 = 4
 	blockMsgCode        uint16 = 5
 
-	protocolMsgCodeLength uint16 = 6
+	protocolMsgCodeLength uint16 = 11
 )
 
 // SeeleProtocol service implementation of seele

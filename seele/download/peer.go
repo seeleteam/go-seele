@@ -28,8 +28,8 @@ type Peer interface {
 type peerConn struct {
 	peerID         string
 	peer           Peer
-	waitingMsgMap  map[int]chan *p2p.Message //
-	lockForWaiting sync.RWMutex              //
+	waitingMsgMap  map[uint16]chan *p2p.Message //
+	lockForWaiting sync.RWMutex                 //
 
 	quitCh chan struct{}
 }
@@ -38,7 +38,7 @@ func newPeerConn(p Peer, peerID string) *peerConn {
 	return &peerConn{
 		peerID:        peerID,
 		peer:          p,
-		waitingMsgMap: make(map[int]chan *p2p.Message),
+		waitingMsgMap: make(map[uint16]chan *p2p.Message),
 		quitCh:        make(chan struct{}),
 	}
 }
@@ -47,7 +47,7 @@ func (p *peerConn) close() {
 	close(p.quitCh)
 }
 
-func (p *peerConn) waitMsg(msgCode int, cancelCh chan struct{}) (*p2p.Message, error) {
+func (p *peerConn) waitMsg(msgCode uint16, cancelCh chan struct{}) (*p2p.Message, error) {
 	rcvCh := make(chan *p2p.Message)
 	p.lockForWaiting.Lock()
 	p.waitingMsgMap[msgCode] = rcvCh
@@ -69,7 +69,7 @@ func (p *peerConn) waitMsg(msgCode int, cancelCh chan struct{}) (*p2p.Message, e
 	}
 }
 
-func (p *peerConn) deliverMsg(msgCode int, msg *p2p.Message) {
+func (p *peerConn) deliverMsg(msgCode uint16, msg *p2p.Message) {
 	p.lockForWaiting.Lock()
 	ch, ok := p.waitingMsgMap[msgCode]
 	p.lockForWaiting.Unlock()
