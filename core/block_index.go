@@ -90,7 +90,7 @@ func (bf *BlockLeaf) GetBestBlockIndex() *BlockIndex {
 
 func (bf *BlockLeaf) updateBestIndexWhenRemove(index *BlockIndex) {
 	bf.lock.Lock()
-	if bf.bestIndex.currentBlock.HeaderHash == index.currentBlock.HeaderHash {
+	if bf.bestIndex != nil && bf.bestIndex.currentBlock.HeaderHash == index.currentBlock.HeaderHash {
 		bf.bestIndex = bf.findBestBlockHash()
 	}
 	bf.lock.Unlock()
@@ -98,7 +98,7 @@ func (bf *BlockLeaf) updateBestIndexWhenRemove(index *BlockIndex) {
 
 func (bf *BlockLeaf) updateBestIndexWhenAdd(index *BlockIndex) {
 	bf.lock.Lock()
-	if bf.bestIndex.totalDifficult.Cmp(index.totalDifficult) < 0 {
+	if bf.bestIndex == nil || bf.bestIndex.totalDifficult.Cmp(index.totalDifficult) < 0 {
 		bf.bestIndex = index
 	}
 	bf.lock.Unlock()
