@@ -148,6 +148,12 @@
 			"revisionTime": "2018-02-03T10:28:30Z"
 		},
 		{
+			"checksumSHA1": "F1UnLQuOkkFCUVk+cg3/mcMBkoE=",
+			"path": "github.com/orcaman/concurrent-map",
+			"revision": "a05df785d2dcc16310fb997ee1702100d047cfe1",
+			"revisionTime": "2018-03-19T14:43:42Z"
+		},
+		{
 			"checksumSHA1": "U0nKxIYyFnQh7oAt9FlsXwGvgM0=",
 			"path": "github.com/pelletier/go-toml",
 			"revision": "acdc4509485b587f5e675510c4f2c63e90ff68a8",

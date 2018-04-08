@@ -6,24 +6,17 @@
 package core
 
 import (
-	"errors"
-	"math/big"
+	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-var (
-	// ErrHeaderChainInvalidParentHash is returned when insert a new header with invalid parent block hash.
-	ErrHeaderChainInvalidParentHash = errors.New("invalid parent block hash")
-	// ErrHeaderChainInvalidHeight is returned when insert a new header with invalid block height.
-	ErrHeaderChainInvalidHeight = errors.New("invalid block height")
-)
-
 // HeaderChain represents the block header chain that is shared by archive node and light node.
 // This is a non-thread safe structure.
 type HeaderChain struct {
+	lock    sync.Mutex
 	bcStore store.BlockchainStore
 
 	genesisHeader     *types.BlockHeader
@@ -59,42 +52,19 @@ func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 		return nil, err
 	}
 
+	hc.lock = sync.Mutex{}
+
 	return &hc, nil
-}
-
-func (hc *HeaderChain) validateNewHeader(newHeader *types.BlockHeader) (*big.Int, error) {
-	if !newHeader.PreviousBlockHash.Equal(hc.currentHeaderHash) {
-		return nil, ErrHeaderChainInvalidParentHash
-	}
-
-	if newHeader.Height != hc.currentHeader.Height+1 {
-		return nil, ErrHeaderChainInvalidHeight
-	}
-
-	// TODO validate the nonce via consensus engine.
-
-	currentTd, err := hc.bcStore.GetBlockTotalDifficulty(hc.currentHeaderHash)
-	if err != nil {
-		return nil, err
-	}
-
-	return new(big.Int).Add(currentTd, newHeader.Difficulty), nil
 }
 
 // WriteHeader writes a block new header into the header chain.
 // It requires the new header's parent header is the HEAD header
 // in the chain.
 func (hc *HeaderChain) WriteHeader(newHeader *types.BlockHeader) error {
-	newTd, err := hc.validateNewHeader(newHeader)
-	if err != nil {
-		return err
-	}
+	hc.lock.Lock()
+	defer hc.lock.Unlock()
 
 	newHeaderHash := newHeader.Hash()
-	if err = hc.bcStore.PutBlockHeader(newHeaderHash, newHeader, newTd, true); err != nil {
-		return err
-	}
-
 	hc.currentHeaderHash, hc.currentHeader = newHeaderHash, newHeader.Clone()
 
 	return nil
