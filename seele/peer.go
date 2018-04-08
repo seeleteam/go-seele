@@ -139,14 +139,6 @@ func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amoun
 	return nil
 }
 
-func (p *peer) sendNewBlockHash(block *types.Block) {
-	// TODO
-}
-
-func (p *peer) sendNewBlock(block *types.Block, td *big.Int) {
-	// TODO
-}
-
 func (p *peer) sendTransactions([]*types.Transaction) error {
 	// TODO
 	return nil

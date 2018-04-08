@@ -125,7 +125,7 @@ func (sp *SeeleProtocol) syncTransactions(p *peer) {
 		return
 	}
 	var (
-		resultCh = make(chan error)
+		resultCh = make(chan error, 1)
 		curPos   = 0
 	)
 
