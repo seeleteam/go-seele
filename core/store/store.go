@@ -36,4 +36,7 @@ type BlockchainStore interface {
 
 	// GetBlock retrieves the block for the specified block hash.
 	GetBlock(hash common.Hash) (*types.Block, error)
+
+	// HashBlock check if the block with this hash exist.
+	HashBlock(hash common.Hash) bool
 }

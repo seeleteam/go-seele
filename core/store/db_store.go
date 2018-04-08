@@ -86,6 +86,11 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 	return header, nil
 }
 
+func (store *blockchainDatabase) HashBlock(hash common.Hash) bool {
+	_, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
+	return err == nil
+}
+
 func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error {
 	return store.putBlockInternal(hash, header, nil, td, isHead)
 }

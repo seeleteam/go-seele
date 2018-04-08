@@ -193,13 +193,13 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 
 	currentBlock, _ := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
-	assert.Equal(t, bc.blockleaf.Count(), 1)
+	assert.Equal(t, bc.blockLeaves.Count(), 1)
 
 	block2 := newTestBlock(t, bc.genesisBlock.HeaderHash, 1, db, 2, 3)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
-	assert.Equal(t, bc.blockleaf.Count(), 2)
+	assert.Equal(t, bc.blockLeaves.Count(), 2)
 }
 
 func Test_BlockChain_InvalidParent(t *testing.T) {

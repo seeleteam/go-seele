@@ -21,7 +21,7 @@ func getTestBlock(t *testing.T, difficult int64) *types.Block {
 	return newTestBlock(t, bc.genesisBlock.HeaderHash, 1, db, 1, difficult)
 }
 
-func Test_BlockLeaf_CRUD(t *testing.T) {
+func Test_BlockLeaf_Add_Remove(t *testing.T) {
 	bf := NewBlockLeaf()
 
 	index := NewBlockIndex(nil, getTestBlock(t, 1), big.NewInt(1))

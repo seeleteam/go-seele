@@ -8,6 +8,8 @@ package core
 import (
 	"errors"
 
+	"sync"
+
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -40,8 +42,9 @@ type Blockchain struct {
 	accountStateDB database.Database
 	headerChain    *HeaderChain
 	genesisBlock   *types.Block
+	lock           sync.Mutex // lock for update blockchain info. for example write block
 
-	blockleaf *BlockLeaf
+	blockLeaves *BlockLeaves
 }
 
 // NewBlockchain returns a initialized block chain with given store and account state DB.
@@ -91,15 +94,15 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 
 	blockIndex := NewBlockIndex(currentState, currentBlock, td)
-	bc.blockleaf = NewBlockLeaf()
-	bc.blockleaf.Add(blockIndex)
+	bc.blockLeaves = NewBlockLeaf()
+	bc.blockLeaves.Add(blockIndex)
 
 	return bc, nil
 }
 
 // CurrentBlock returns the HEAD block of blockchain.
 func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
-	index := bc.blockleaf.GetBestBlockIndex()
+	index := bc.blockLeaves.GetBestBlockIndex()
 	if index == nil {
 		return nil, nil
 	}
@@ -114,12 +117,12 @@ func (bc *Blockchain) CurrentState() *state.Statedb {
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
-	_, err := bc.bcStore.GetBlock(block.HeaderHash)
-	if err == nil {
+	exist := bc.bcStore.HashBlock(block.HeaderHash)
+	if exist {
 		return ErrBlockAlreadyExist
 	}
 
-	err = bc.ValidateBlock(block)
+	err := bc.ValidateBlock(block)
 	if err != nil {
 		return err
 	}
@@ -142,16 +145,18 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
-	isHead := bc.blockleaf.IsBestBlockIndex(blockIndex)
+
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
+	bc.blockLeaves.Add(blockIndex)
+	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
+	bc.headerChain.WriteHeader(currentBlock.Header)
 
 	err = bc.bcStore.PutBlock(block, td, isHead)
 	if err != nil {
 		return err
 	}
-
-	bc.headerChain.WriteHeader(currentBlock.Header)
-	bc.blockleaf.RemoveByHash(block.Header.PreviousBlockHash)
-	bc.blockleaf.Add(blockIndex)
 
 	return nil
 }
