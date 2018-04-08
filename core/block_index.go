@@ -7,7 +7,6 @@ package core
 
 import (
 	"math/big"
-	"sync"
 
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
