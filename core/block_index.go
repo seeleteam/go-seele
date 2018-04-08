@@ -12,8 +12,10 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
+	"sync"
 )
 
+// BlockIndex index of the block chain
 type BlockIndex struct {
 	state          *state.Statedb
 	currentBlock   *types.Block
@@ -31,6 +33,9 @@ func NewBlockIndex(state *state.Statedb, block *types.Block, td *big.Int) *Block
 // BlockLeaf block leafs used for block fork
 type BlockLeaf struct {
 	blockIndexMap cmap.ConcurrentMap //block hash -> blockIndex
+
+	lock sync.Mutex // lock for bestIndex
+	bestIndex *BlockIndex // the first and largest total difficult block index
 }
 
 func NewBlockLeaf() *BlockLeaf {
@@ -40,14 +45,21 @@ func NewBlockLeaf() *BlockLeaf {
 }
 
 func (bf *BlockLeaf) Remove(old *BlockIndex) {
+	bf.updateBestIndexWhenRemove(old)
 	bf.blockIndexMap.Remove(old.currentBlock.HeaderHash.String())
 }
 
 func (bf *BlockLeaf) Add(index *BlockIndex) {
+	bf.updateBestIndexWhenAdd(index)
 	bf.blockIndexMap.Set(index.currentBlock.HeaderHash.String(), index)
 }
 
 func (bf *BlockLeaf) RemoveByHash(hash common.Hash) {
+	index := bf.GetBlockIndexByHash(hash)
+	if index != nil {
+		bf.updateBestIndexWhenRemove(index)
+	}
+
 	bf.blockIndexMap.Remove(hash.String())
 }
 
@@ -73,6 +85,26 @@ func (bf *BlockLeaf) Count() int {
 }
 
 func (bf *BlockLeaf) GetBestBlockIndex() *BlockIndex {
+	return bf.bestIndex
+}
+
+func (bf *BlockLeaf) updateBestIndexWhenRemove(index *BlockIndex) {
+	bf.lock.Lock()
+	if bf.bestIndex.currentBlock.HeaderHash == index.currentBlock.HeaderHash {
+		bf.bestIndex = bf.findBestBlockHash()
+	}
+	bf.lock.Unlock()
+}
+
+func (bf *BlockLeaf) updateBestIndexWhenAdd(index *BlockIndex)  {
+	bf.lock.Lock()
+	if bf.bestIndex.totalDifficult.Cmp(index.totalDifficult) < 0 {
+		bf.bestIndex = index
+	}
+	bf.lock.Unlock()
+}
+
+func (bf *BlockLeaf) findBestBlockHash() *BlockIndex {
 	maxTD := big.NewInt(0)
 	var result *BlockIndex
 	for item := range bf.blockIndexMap.IterBuffered() {
