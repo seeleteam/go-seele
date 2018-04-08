@@ -117,7 +117,7 @@ func (bc *Blockchain) CurrentState() *state.Statedb {
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
-	exist := bc.bcStore.HashBlock(block.HeaderHash)
+	exist, _ := bc.bcStore.HashBlock(block.HeaderHash)
 	if exist {
 		return ErrBlockAlreadyExist
 	}

@@ -38,5 +38,5 @@ type BlockchainStore interface {
 	GetBlock(hash common.Hash) (*types.Block, error)
 
 	// HashBlock check if the block with this hash exist.
-	HashBlock(hash common.Hash) bool
+	HashBlock(hash common.Hash) (bool, error)
 }

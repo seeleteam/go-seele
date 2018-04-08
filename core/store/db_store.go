@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var (
@@ -86,9 +87,17 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 	return header, nil
 }
 
-func (store *blockchainDatabase) HashBlock(hash common.Hash) bool {
+func (store *blockchainDatabase) HashBlock(hash common.Hash) (bool, error) {
 	_, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
-	return err == nil
+	if err == errors.ErrNotFound {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error {

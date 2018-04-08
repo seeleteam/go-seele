@@ -31,10 +31,10 @@ func NewBlockIndex(state *state.Statedb, block *types.Block, td *big.Int) *Block
 }
 
 // BlockLeaves block leafs used for block fork
+// Note BlockLeaves is not thread safe
 type BlockLeaves struct {
 	blockIndexMap cmap.ConcurrentMap //block hash -> blockIndex
 
-	lock      sync.Mutex  // lock for bestIndex
 	bestIndex *BlockIndex // the first and largest total difficult block index
 }
 
@@ -88,19 +88,15 @@ func (bf *BlockLeaves) GetBestBlockIndex() *BlockIndex {
 }
 
 func (bf *BlockLeaves) updateBestIndexWhenRemove(index *BlockIndex) {
-	bf.lock.Lock()
 	if bf.bestIndex != nil && bf.bestIndex.currentBlock.HeaderHash == index.currentBlock.HeaderHash {
 		bf.bestIndex = bf.findBestBlockHash()
 	}
-	bf.lock.Unlock()
 }
 
 func (bf *BlockLeaves) updateBestIndexWhenAdd(index *BlockIndex) {
-	bf.lock.Lock()
 	if bf.bestIndex == nil || bf.bestIndex.totalDifficult.Cmp(index.totalDifficult) < 0 {
 		bf.bestIndex = index
 	}
-	bf.lock.Unlock()
 }
 
 func (bf *BlockLeaves) findBestBlockHash() *BlockIndex {
