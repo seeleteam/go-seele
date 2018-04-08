@@ -7,12 +7,12 @@ package core
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
-	"sync"
 )
 
 // BlockIndex index of the block chain
@@ -34,7 +34,7 @@ func NewBlockIndex(state *state.Statedb, block *types.Block, td *big.Int) *Block
 type BlockLeaf struct {
 	blockIndexMap cmap.ConcurrentMap //block hash -> blockIndex
 
-	lock sync.Mutex // lock for bestIndex
+	lock      sync.Mutex  // lock for bestIndex
 	bestIndex *BlockIndex // the first and largest total difficult block index
 }
 
@@ -96,7 +96,7 @@ func (bf *BlockLeaf) updateBestIndexWhenRemove(index *BlockIndex) {
 	bf.lock.Unlock()
 }
 
-func (bf *BlockLeaf) updateBestIndexWhenAdd(index *BlockIndex)  {
+func (bf *BlockLeaf) updateBestIndexWhenAdd(index *BlockIndex) {
 	bf.lock.Lock()
 	if bf.bestIndex.totalDifficult.Cmp(index.totalDifficult) < 0 {
 		bf.bestIndex = index
