@@ -20,11 +20,11 @@ import (
 )
 
 const (
-	GetBlockHeadersMsg uint16 = 6
-	BlockHeadersMsg    uint16 = 7
-	GetBlocksMsg       uint16 = 8
-	BlocksPreMsg       uint16 = 9 // is sent before BlockMsg, containing block numbers of BlockMsg.
-	BlocksMsg          uint16 = 10
+	GetBlockHeadersMsg uint16 = 8
+	BlockHeadersMsg    uint16 = 9
+	GetBlocksMsg       uint16 = 10
+	BlocksPreMsg       uint16 = 11 // is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksMsg          uint16 = 12
 )
 
 var (
@@ -34,10 +34,11 @@ var (
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
 
-	statusNone      = 1 // no sync session
-	statusPreparing = 2 // sync session is preparing
-	statusFetching  = 3 // sync session is downloading
-	statusCleaning  = 4 // sync session is cleaning
+	MaxMessageLength = 8 * 1024 * 1024
+	statusNone       = 1 // no sync session
+	statusPreparing  = 2 // sync session is preparing
+	statusFetching   = 3 // sync session is downloading
+	statusCleaning   = 4 // sync session is cleaning
 )
 
 var (
@@ -73,18 +74,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 }
 
 // Synchronise try to sync with remote peer.
-func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error {
-	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(d.chain.CurrentBlock().HeaderHash)
-	if err != nil {
-		d.log.Error("downloader.Synchronise GetBlockTotalDifficulty err.[%s]", err)
-		return err
-	}
-
-	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
-	if localTD.Cmp(td) >= 0 {
-		return nil
-	}
-
+func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, localTD *big.Int) error {
 	// Make sure only one routine can pass at once
 	d.lock.Lock()
 	if d.syncStatus != statusNone {
@@ -101,7 +91,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error
 		return errPeerNotFound
 	}
 
-	err = d.doSynchronise(p, head, td, localTD)
+	err := d.doSynchronise(p, head, td, localTD)
 	d.lock.Lock()
 	d.syncStatus = statusNone
 	d.sessionWG.Wait()
