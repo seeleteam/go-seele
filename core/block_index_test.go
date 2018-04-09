@@ -18,7 +18,7 @@ func getTestBlock(t *testing.T, difficult int64) *types.Block {
 	defer dispose()
 
 	bc := newTestBlockchain(db)
-	return newTestBlock(t, bc.genesisBlock.HeaderHash, 1, db, 1, difficult)
+	return newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
 }
 
 func Test_BlockLeaf_Add_Remove(t *testing.T) {

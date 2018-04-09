@@ -10,6 +10,7 @@ import (
 
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -138,13 +139,18 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
+	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
+	if err != nil {
+		return ErrBlockInvalidParentHash
+	}
+
 	// Ensure the specified block is valid to insert.
-	if err = bc.ValidateBlock(block); err != nil {
+	if err = bc.validateBlock(block, preBlock); err != nil {
 		return err
 	}
 
 	// Process the txs in block and check the state root hash.
-	blockStatedb, err := bc.applyTxs(block)
+	blockStatedb, err := bc.applyTxs(block, preBlock)
 	if err != nil {
 		return err
 	}
@@ -154,7 +160,10 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
-	if !stateRootHash.Equal(block.Header.StateHash) {
+	if block.Header.StateHash.Equal(common.EmptyHash) {
+		block.Header.StateHash = stateRootHash
+		block.HeaderHash = block.Header.Hash()
+	} else if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
 	}
 
@@ -192,9 +201,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	return batch.Commit()
 }
 
-// ValidateBlock validates the specified block for insertion.
-// If validation failed, return error to indicate what went wrong.
-func (bc *Blockchain) ValidateBlock(block *types.Block) error {
+func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -202,11 +209,6 @@ func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 	txsHash := types.MerkleRootHash(block.Transactions)
 	if !txsHash.Equal(block.Header.TxHash) {
 		return ErrBlockTxsHashMismatch
-	}
-
-	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
-	if err != nil {
-		return ErrBlockInvalidParentHash
 	}
 
 	if block.Header.Height != preBlock.Header.Height+1 {
@@ -223,7 +225,7 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 
 // applyTxs process the txs in block and return the new state DB of block.
 // This method suppose the specified block is validated.
-func (bc *Blockchain) applyTxs(block *types.Block) (*state.Statedb, error) {
+func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
 	if len(block.Transactions) == 0 {
 		panic("txs in block is empty.")
 	}
@@ -237,7 +239,7 @@ func (bc *Blockchain) applyTxs(block *types.Block) (*state.Statedb, error) {
 		panic("tx amount in miner reward is invalid")
 	}
 
-	statedb, err := state.NewStatedb(block.Header.PreviousBlockHash, bc.accountStateDB)
+	statedb, err := state.NewStatedb(preBlock.Header.StateHash, bc.accountStateDB)
 	if err != nil {
 		return nil, err
 	}
@@ -255,15 +257,6 @@ func (bc *Blockchain) applyTxs(block *types.Block) (*state.Statedb, error) {
 		// Will support smart contract creation in case of nil To address in tx.
 		if tx.Data.To == nil {
 			panic("smart contract not supported yet.")
-		}
-
-		balance, exists := statedb.GetAmount(*tx.Data.To)
-		if !exists {
-			return nil, types.ErrAccountNotFound
-		}
-
-		if balance.Cmp(tx.Data.Amount) < 0 {
-			return nil, types.ErrBalanceNotEnough
 		}
 
 		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
