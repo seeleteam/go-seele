@@ -77,7 +77,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 		tx.Data.From: state.Account{38, big.NewInt(200)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errSigMissed)
+	assert.Equal(t, err, ErrSigMissed)
 }
 
 // Validate failed if transaction Hash value changed.
@@ -88,7 +88,7 @@ func Test_Transaction_Validate_HashChanged(t *testing.T) {
 		tx.Data.From: state.Account{38, big.NewInt(200)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errHashMismatch)
+	assert.Equal(t, err, ErrHashMismatch)
 }
 
 // Validate failed if transation data changed.
@@ -99,7 +99,7 @@ func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
 		tx.Data.From: state.Account{38, big.NewInt(200)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errHashMismatch)
+	assert.Equal(t, err, ErrHashMismatch)
 }
 
 // Validate failed if transaction data changed along with Hash updated.
@@ -115,7 +115,7 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 	})
 	err := tx.Validate(statedb)
 
-	assert.Equal(t, err, errSigInvalid)
+	assert.Equal(t, err, ErrSigInvalid)
 }
 
 func Test_MerkleRootHash_Empty(t *testing.T) {
@@ -129,7 +129,7 @@ func Test_Transaction_Validate_AccountNotFound(t *testing.T) {
 		*tx.Data.To: state.Account{38, big.NewInt(200)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errAccountNotFound)
+	assert.Equal(t, err, ErrAccountNotFound)
 }
 
 func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
@@ -138,7 +138,7 @@ func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
 		tx.Data.From: state.Account{38, big.NewInt(50)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errBalanceNotEnough)
+	assert.Equal(t, err, ErrBalanceNotEnough)
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 		tx.Data.From: state.Account{40, big.NewInt(200)},
 	})
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, errNonceTooLow)
+	assert.Equal(t, err, ErrNonceTooLow)
 }
 
 func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
@@ -156,7 +156,7 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 
 	// Cannot create a tx with oversized payload.
 	tx, err := NewMessageTransaction(*from, *to, big.NewInt(100), 38, make([]byte, MaxPayloadSize+1))
-	assert.Equal(t, err, errPayloadOversized)
+	assert.Equal(t, err, ErrPayloadOversized)
 
 	// Create a tx with valid payload
 	tx, err = NewMessageTransaction(*from, *to, big.NewInt(100), 38, []byte("hello"))
@@ -168,5 +168,5 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 	})
 
 	err = tx.Validate(statedb)
-	assert.Equal(t, err, errPayloadOversized)
+	assert.Equal(t, err, ErrPayloadOversized)
 }

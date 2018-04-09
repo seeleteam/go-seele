@@ -32,6 +32,10 @@ var (
 
 	// ErrBlockAlreadyExist is returned when inserted block already exist
 	ErrBlockAlreadyExist = errors.New("block already exist")
+
+	// ErrBlockStateHashMismatch is returned when the calculated account state hash of block
+	// does not match the state root hash in block header.
+	ErrBlockStateHashMismatch = errors.New("block state hash mismatch")
 )
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
@@ -121,6 +125,7 @@ func (bc *Blockchain) CurrentState() *state.Statedb {
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	// Do not write block if already exists.
 	exist, err := bc.bcStore.HashBlock(block.HeaderHash)
 	if err != nil {
 		return err
@@ -130,15 +135,30 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return ErrBlockAlreadyExist
 	}
 
-	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	bc.lock.Lock()
+	defer bc.lock.Unlock()
+
+	// Ensure the specified block is valid to insert.
+	if err = bc.ValidateBlock(block); err != nil {
+		return err
+	}
+
+	// Process the txs in block and check the state root hash.
+	blockStatedb, err := bc.applyTxs(block)
 	if err != nil {
 		return err
 	}
 
-	if err = bc.ValidateBlock(block, blockStatedb); err != nil {
+	stateRootHash, err := blockStatedb.Commit(nil)
+	if err != nil {
 		return err
 	}
 
+	if !stateRootHash.Equal(block.Header.StateHash) {
+		return ErrBlockStateHashMismatch
+	}
+
+	// Update block leaves and write block into store.
 	currentBlock := &types.Block{
 		HeaderHash:   block.HeaderHash,
 		Header:       block.Header.Clone(),
@@ -153,20 +173,28 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
 
-	bc.lock.Lock()
-	defer bc.lock.Unlock()
-
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
 	bc.blockLeaves.Add(blockIndex)
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
-	return bc.bcStore.PutBlock(block, td, isHead)
+	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
+		return err
+	}
+
+	// FIXME: write block and update account state in a batch.
+	// Otherwise, restore the account state during service startup.
+	batch := bc.accountStateDB.NewBatch()
+	if _, err = blockStatedb.Commit(batch); err != nil {
+		return err
+	}
+
+	return batch.Commit()
 }
 
 // ValidateBlock validates the specified block for insertion.
 // If validation failed, return error to indicate what went wrong.
-func (bc *Blockchain) ValidateBlock(block *types.Block, statedb *state.Statedb) error {
+func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -174,12 +202,6 @@ func (bc *Blockchain) ValidateBlock(block *types.Block, statedb *state.Statedb) 
 	txsHash := types.MerkleRootHash(block.Transactions)
 	if !txsHash.Equal(block.Header.TxHash) {
 		return ErrBlockTxsHashMismatch
-	}
-
-	for _, tx := range block.Transactions {
-		if err := tx.Validate(statedb); err != nil {
-			return err
-		}
 	}
 
 	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
@@ -197,4 +219,60 @@ func (bc *Blockchain) ValidateBlock(block *types.Block, statedb *state.Statedb) 
 // GetStore returns the blockchain store instance.
 func (bc *Blockchain) GetStore() store.BlockchainStore {
 	return bc.bcStore
+}
+
+// applyTxs process the txs in block and return the new state DB of block.
+// This method suppose the specified block is validated.
+func (bc *Blockchain) applyTxs(block *types.Block) (*state.Statedb, error) {
+	if len(block.Transactions) == 0 {
+		panic("txs in block is empty.")
+	}
+
+	minerRewardTx := block.Transactions[0]
+	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
+		panic("Tx to address in miner reward is invalid")
+	}
+
+	if minerRewardTx.Data.Amount == nil || minerRewardTx.Data.Amount.Sign() < 0 {
+		panic("tx amount in miner reward is invalid")
+	}
+
+	statedb, err := state.NewStatedb(block.Header.PreviousBlockHash, bc.accountStateDB)
+	if err != nil {
+		return nil, err
+	}
+
+	// process miner rewrad
+	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
+	stateObj.AddAmount(minerRewardTx.Data.Amount)
+
+	// process other txs
+	for _, tx := range block.Transactions[1:] {
+		if err = tx.Validate(statedb); err != nil {
+			return nil, err
+		}
+
+		// Will support smart contract creation in case of nil To address in tx.
+		if tx.Data.To == nil {
+			panic("smart contract not supported yet.")
+		}
+
+		balance, exists := statedb.GetAmount(*tx.Data.To)
+		if !exists {
+			return nil, types.ErrAccountNotFound
+		}
+
+		if balance.Cmp(tx.Data.Amount) < 0 {
+			return nil, types.ErrBalanceNotEnough
+		}
+
+		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
+		fromStateObj.SubAmount(tx.Data.Amount)
+		fromStateObj.SetNonce(fromStateObj.GetNonce() + 1)
+
+		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
+		toStateObj.AddAmount(tx.Data.Amount)
+	}
+
+	return statedb, nil
 }

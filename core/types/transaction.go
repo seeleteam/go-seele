@@ -21,15 +21,32 @@ const (
 )
 
 var (
-	errAccountNotFound  = errors.New("account not found")
-	errAmountNegative   = errors.New("amount is negative")
-	errAmountNil        = errors.New("amount is null")
-	errBalanceNotEnough = errors.New("balance not enough")
-	errHashMismatch     = errors.New("hash mismatch")
-	errNonceTooLow      = errors.New("nonce too low")
-	errPayloadOversized = errors.New("oversized payload")
-	errSigInvalid       = errors.New("signature is invalid")
-	errSigMissed        = errors.New("signature missed")
+	// ErrAccountNotFound is returned when account not found in state DB.
+	ErrAccountNotFound = errors.New("account not found")
+
+	// ErrAmountNegative is returned when transaction amount is negative.
+	ErrAmountNegative = errors.New("amount is negative")
+
+	// ErrAmountNil is returned when transation amount is nil.
+	ErrAmountNil = errors.New("amount is null")
+
+	// ErrBalanceNotEnough is returned when account balance is not enough to transfer to another account.
+	ErrBalanceNotEnough = errors.New("balance not enough")
+
+	// ErrHashMismatch is returned when transaction hash and data mismatch.
+	ErrHashMismatch = errors.New("hash mismatch")
+
+	// ErrNonceTooLow is returned when transaction nonce is lower than account nonce.
+	ErrNonceTooLow = errors.New("nonce too low")
+
+	// ErrPayloadOversized is returned when payload is larger than the MaxPayloadSize.
+	ErrPayloadOversized = errors.New("oversized payload")
+
+	// ErrSigInvalid is returned when transaction signature is invalid.
+	ErrSigInvalid = errors.New("signature is invalid")
+
+	// ErrSigMissed is returned when transaction signature missed.
+	ErrSigMissed = errors.New("signature missed")
 
 	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
 
@@ -71,7 +88,7 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 	}
 
 	if len(payload) > MaxPayloadSize {
-		return nil, errPayloadOversized
+		return nil, ErrPayloadOversized
 	}
 
 	txData := &TransactionData{
@@ -111,46 +128,46 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 // Validate returns true if the transation is valid, otherwise false.
 func (tx *Transaction) Validate(statedb *state.Statedb) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
-		return errAmountNil
+		return ErrAmountNil
 	}
 
 	if tx.Data.Amount.Sign() < 0 {
-		return errAmountNegative
+		return ErrAmountNegative
 	}
 
 	balance, found := statedb.GetAmount(tx.Data.From)
 	if !found {
-		return errAccountNotFound
+		return ErrAccountNotFound
 	}
 
 	if tx.Data.Amount.Cmp(balance) > 0 {
-		return errBalanceNotEnough
+		return ErrBalanceNotEnough
 	}
 
 	accountNonce, found := statedb.GetNonce(tx.Data.From)
 	if !found {
-		return errAccountNotFound
+		return ErrAccountNotFound
 	}
 
 	if tx.Data.AccountNonce < accountNonce {
-		return errNonceTooLow
+		return ErrNonceTooLow
 	}
 
 	if len(tx.Data.Payload) > MaxPayloadSize {
-		return errPayloadOversized
+		return ErrPayloadOversized
 	}
 
 	if tx.Signature == nil {
-		return errSigMissed
+		return ErrSigMissed
 	}
 
 	txDataHash := crypto.MustHash(tx.Data)
 	if !txDataHash.Equal(tx.Hash) {
-		return errHashMismatch
+		return ErrHashMismatch
 	}
 
 	if !tx.Signature.Verify(&tx.Data.From, txDataHash.Bytes()) {
-		return errSigInvalid
+		return ErrSigInvalid
 	}
 
 	return nil
