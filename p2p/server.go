@@ -77,13 +77,10 @@ type Config struct {
 	// pre-configured nodes.
 	StaticNodes []*discovery.Node
 
-	// KadAddr udp addr for Kad network
-	KadAddr string
-
 	// Protocols should contain the protocols supported by the server.
 	Protocols []Protocol `toml:"-"`
 
-	// p2p.server will listen for incoming tcp connections.
+	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string
 }
 
@@ -140,7 +137,7 @@ func (srv *Server) Start() (err error) {
 	srv.log.Debug("my ecdsa key: %s", srv.ECDSAKey)
 
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
-	addr, err := net.ResolveUDPAddr("udp", srv.KadAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
 	if err != nil {
 		return err
 	}
