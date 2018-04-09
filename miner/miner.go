@@ -175,13 +175,7 @@ func (miner *Miner) prepareNewBlock() {
 }
 
 func (miner *Miner) saveBlock(result *Result) error {
-	miner.log.Debug("block:%s", result.block.Transactions[0].Data.Amount)
-
 	ret := miner.seele.BlockChain().WriteBlock(result.block)
-
-	a, _ := miner.seele.BlockChain().CurrentState().GetAmount(miner.seele.Coinbase)
-	miner.log.Debug("coinbase amount %s", a)
-
 	return ret
 }
 

@@ -135,9 +135,9 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
- 	blockStatedb, err := bc.getUpdatedState(block, parent)
- 	if err != nil {
- 		return err
+	blockStatedb, err := bc.getUpdatedState(block, parent)
+	if err != nil {
+		return err
 	}
 
 	currentBlock := &types.Block{
