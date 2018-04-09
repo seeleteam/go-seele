@@ -78,6 +78,7 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
+// markTransaction marks hash in knownTxs set
 func (p *peer) markTransaction(hash common.Hash) {
 	// If we reached the memory allowance, drop a previously known transaction hash
 	for p.knownTxs.Size() >= maxKnownTxs {
