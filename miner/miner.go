@@ -149,7 +149,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(5), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(2000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{
