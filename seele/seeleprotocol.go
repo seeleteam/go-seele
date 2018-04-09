@@ -6,12 +6,21 @@
 package seele
 
 import (
+	"errors"
+	"sync"
+	"time"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/seele/download"
+)
+
+var (
+	errSyncFinished = errors.New("Sync Finished!")
 )
 
 var (
@@ -24,7 +33,7 @@ var (
 	blockRequestMsgCode uint16 = 4
 	blockMsgCode        uint16 = 5
 
-	protocolMsgCodeLength uint16 = 6
+	protocolMsgCodeLength uint16 = 11
 )
 
 // SeeleProtocol service implementation of seele
@@ -32,10 +41,15 @@ type SeeleProtocol struct {
 	p2p.Protocol
 	peerSet *peerSet
 
-	networkID uint64
-	txPool    *core.TransactionPool //same instance with seeleService tx pool
-	chain     *core.Blockchain      //same instance with seeleService chain
-	log       *log.SeeleLog
+	networkID  uint64
+	downloader *downloader.Downloader
+	txPool     *core.TransactionPool
+	chain      *core.Blockchain
+
+	wg     sync.WaitGroup
+	quitCh chan struct{}
+	syncCh chan struct{}
+	log    *log.SeeleLog
 }
 
 // NewSeeleProtocol create SeeleProtocol
@@ -46,11 +60,15 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 			Version: SeeleVersion,
 			Length:  protocolMsgCodeLength,
 		},
-		networkID: seele.networkID,
-		txPool:    seele.TxPool(),
-		chain:     seele.BlockChain(),
-		log:       log,
-		peerSet:   newPeerSet(),
+		networkID:  seele.networkID,
+		txPool:     seele.TxPool(),
+		chain:      seele.BlockChain(),
+		downloader: downloader.NewDownloader(seele.BlockChain()),
+		log:        log,
+		quitCh:     make(chan struct{}),
+		syncCh:     make(chan struct{}),
+
+		peerSet: newPeerSet(),
 	}
 
 	s.Protocol.AddPeer = s.handleAddPeer
@@ -61,11 +79,93 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	return s, nil
 }
 
+func (sp *SeeleProtocol) Start() {
+	go sp.syncer()
+}
+
+// Stop stops protocol, called when seeleService quits.
+func (sp *SeeleProtocol) Stop() {
+	event.BlockMinedEventManager.RemoveListener(sp.handleNewMinedBlock)
+	event.TransactionInsertedEventManager.RemoveListener(sp.handleNewTx)
+	close(sp.quitCh)
+	close(sp.syncCh)
+	sp.wg.Wait()
+}
+
+// syncer try to synchronise with remote peer
+func (sp *SeeleProtocol) syncer() {
+	defer sp.downloader.Terminate()
+	defer sp.wg.Done()
+	sp.wg.Add(1)
+
+	forceSync := time.NewTicker(forceSyncInterval)
+	for {
+		select {
+		case <-sp.syncCh:
+			go sp.synchronise(sp.peerSet.bestPeer())
+		case <-forceSync.C:
+			go sp.synchronise(sp.peerSet.bestPeer())
+		case <-sp.quitCh:
+			return
+		}
+	}
+}
+
+func (sp *SeeleProtocol) synchronise(p *peer) {
+	//TODO
+}
+
+// syncTransactions sends pending transactions to remote peer.
+func (sp *SeeleProtocol) syncTransactions(p *peer) {
+	defer sp.wg.Done()
+
+	//pending, _ := sp.txPool.Pending()
+	var pending []*types.Transaction //TODO get pending transactions from txPool
+	if len(pending) == 0 {
+		return
+	}
+	var (
+		resultCh = make(chan error, 1)
+		curPos   = 0
+	)
+
+	send := func(pos int) {
+		// sends txs from pos
+		needSend := len(pending) - pos
+		if needSend > txsyncPackSize {
+			needSend = txsyncPackSize
+		}
+
+		if needSend == 0 {
+			resultCh <- errSyncFinished
+			return
+		}
+		curPos = curPos + needSend
+		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend]) }()
+	}
+
+	resultCh <- nil
+loopOut:
+	for {
+		select {
+		case err := <-resultCh:
+			if err == errSyncFinished || err != nil {
+				break loopOut
+			}
+			send(curPos)
+		case <-sp.quitCh:
+			break loopOut
+		}
+	}
+	close(resultCh)
+}
+
 func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	p.log.Debug("find new tx")
 	tx := e.(*types.Transaction)
 
 	p.peerSet.ForEach(func(peer *peer) bool {
+
 		err := peer.SendTransactionHash(tx.Hash)
 		if err != nil {
 			p.log.Warn("send transaction hash failed %s", err.Error())
@@ -217,9 +317,4 @@ handler:
 	}
 
 	p.peerSet.Remove(peer.peerID)
-}
-
-// Stop stops protocol, called when seeleService quits.
-func (p SeeleProtocol) Stop() {
-	//TODO add a quit channel
 }
