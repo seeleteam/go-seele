@@ -8,14 +8,12 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	"os/user"
 )
 
 // Config aggregate all configs here that exposed to users
