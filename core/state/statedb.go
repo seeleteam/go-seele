@@ -36,6 +36,19 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}, nil
 }
 
+// This is a memory copy of state db, please note Do NOT commit it.
+func (s *Statedb) GetCopy() *Statedb {
+	copies := make(map[common.Address]*StateObject)
+	for k, v := range s.stateObjects {
+		copies[k] = v.GetCopy()
+	}
+
+	return &Statedb{
+		trie:         s.trie,
+		stateObjects: copies,
+	}
+}
+
 // GetAmount get amount of account
 func (s *Statedb) GetAmount(addr common.Address) (*big.Int, bool) {
 	object := s.getStateObject(addr)

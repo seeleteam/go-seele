@@ -6,13 +6,13 @@
 package miner
 
 import (
-	"github.com/seeleteam/go-seele/common"
+	"errors"
+	"time"
+
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/seele"
-
-	"errors"
-	"time"
 )
 
 var ErrNotEnoughTransactions = errors.New("not enough transactions")
@@ -26,14 +26,17 @@ type Task struct {
 }
 
 // applyTransactions TODO need check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele *seele.SeeleService, coinbase common.Address, txs []*types.Transaction, log *log.SeeleLog) error {
+func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
 	for _, tx := range txs {
-		// execute tx
-		err := seele.ApplyTransaction(coinbase, tx)
+		err := tx.Validate(statedb)
 		if err != nil {
 			log.Error("exec tx failed, cause for %s", err)
 			continue
 		}
+
+		statedb.SubAmount(tx.Data.From, tx.Data.Amount)
+		statedb.AddAmount(*tx.Data.To, tx.Data.Amount)
+		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce)
 
 		task.txs = append(task.txs, tx)
 	}
