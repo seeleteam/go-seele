@@ -43,11 +43,11 @@ var (
 var (
 	errInvalidAncestor     = errors.New("Ancestor is invalid")
 	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
-	errIsSynchronising     = errors.New("Is synchronising")
-	errPeerNotFound        = errors.New("Peer not found")
+	errSyncErr             = errors.New("Err occurs when syncing")
 	errHashNotMatch        = errors.New("Hash not match")
 	errInvalidPacketRecved = errors.New("Invalid packet received")
-	errSyncErr             = errors.New("Err occurs when syncing")
+	errIsSynchronising     = errors.New("Is synchronising")
+	errPeerNotFound        = errors.New("Peer not found")
 )
 
 // Downloader sync block chain with remote peer
@@ -130,7 +130,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	}
 	height := latest.Height
 
-	origin, err := d.findAncestor(conn, height)
+	origin, err := d.findCommonAncestorHeight(conn, height)
 	if err != nil {
 		return err
 	}
@@ -186,8 +186,8 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 	return &headers[0], nil
 }
 
-// findAncestor finds the common ancestor
-func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error) {
+// findCommonAncestorHeight finds the common ancestor height
+func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (uint64, error) {
 	// Get the top height
 	block, _ := d.chain.CurrentBlock()
 	localHeight := block.Header.Height
@@ -198,22 +198,30 @@ func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error)
 		top = height
 	}
 
+	// get maximum chain reorganisation
+	var maxFetchAncestry int
+	if top >= uint64(MaxForkAncestry) {
+		maxFetchAncestry = MaxForkAncestry
+	} else {
+		maxFetchAncestry = int(top)
+	}
+
 	// Compare the peer and local block head hash and return the ancestor height
 	var cmpCount = 0
 	for {
 		localTop := top - uint64(cmpCount)
 		var fetchCount = 0
-		if (MaxForkAncestry - cmpCount) >= MaxHeaderFetch {
+		if (maxFetchAncestry - cmpCount) >= MaxHeaderFetch {
 			fetchCount = MaxHeaderFetch
 		} else {
-			fetchCount = MaxForkAncestry - cmpCount
+			fetchCount = maxFetchAncestry - cmpCount
 		}
 		if fetchCount == 0 {
 			return 0, errMaxForkAncestor
 		}
 
 		// Get peer block headers
-		go conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, localTop, fetchCount, true)
+		go conn.peer.RequestHeadersByHashOrNumber(common.EmptyHash, localTop, fetchCount, true)
 		msg, err := conn.waitMsg(BlockHeadersMsg, d.cancelCh)
 		if err != nil {
 			return 0, err
