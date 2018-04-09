@@ -42,6 +42,7 @@ var (
 
 var (
 	errInvalidAncestor     = errors.New("Ancestor is invalid")
+	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
 	errIsSynchronising     = errors.New("Is synchronising")
 	errPeerNotFound        = errors.New("Peer not found")
 	errHashNotMatch        = errors.New("Hash not match")
@@ -208,7 +209,7 @@ func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error)
 			fetchCount = MaxForkAncestry - cmpCount
 		}
 		if fetchCount == 0 {
-			return 0, errInvalidAncestor
+			return 0, errMaxForkAncestor
 		}
 
 		// Get peer block headers
