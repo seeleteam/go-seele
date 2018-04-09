@@ -41,6 +41,7 @@ var (
 )
 
 var (
+	errInvalidAncestor     = errors.New("Ancestor is invalid")
 	errIsSynchronising     = errors.New("Is synchronising")
 	errPeerNotFound        = errors.New("Peer not found")
 	errHashNotMatch        = errors.New("Hash not match")
@@ -63,6 +64,7 @@ type Downloader struct {
 	lock      sync.RWMutex
 }
 
+// NewDownloader create Downloader
 func NewDownloader(chain *core.Blockchain) *Downloader {
 	d := &Downloader{
 		peers: make(map[string]*peerConn),
@@ -74,7 +76,8 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 
 // Synchronise try to sync with remote peer.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error {
-	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(d.chain.CurrentBlock().HeaderHash)
+	block, _ := d.chain.CurrentBlock()
+	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		d.log.Error("downloader.Synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return err
@@ -184,8 +187,50 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 
 // findAncestor finds the common ancestor
 func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error) {
-	//TODO
-	return 0, nil
+	// Get the top height
+	block, _ := d.chain.CurrentBlock()
+	localHeight := block.Header.Height
+	var top uint64
+	if localHeight <= height {
+		top = localHeight
+	} else {
+		top = height
+	}
+
+	// Compare the peer and local block head hash and return the ancestor height
+	var cmpCount = 0
+	for {
+		go conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, top, MaxHeaderFetch, true)
+		msg, err := conn.waitMsg(BlockHeadersMsg, d.cancelCh)
+		if err != nil {
+			return 0, err
+		}
+
+		var headers []types.BlockHeader
+		if err := common.Deserialize(msg.Payload, headers); err != nil {
+			return 0, err
+		}
+
+		if len(headers) == 0 {
+			return 0, errInvalidAncestor
+		}
+
+		// Is ancenstor found
+		for i := len(headers) - 1; i >= 0; i-- {
+			cmpHeight := headers[i].Height
+			localHash, err := d.chain.GetStore().GetBlockHash(cmpHeight)
+			if err != nil {
+				return 0, err
+			}
+			cmpCount++
+			if cmpCount > MaxForkAncestry {
+				return 0, errInvalidAncestor
+			}
+			if localHash == headers[i].Hash() {
+				return cmpHeight, nil
+			}
+		}
+	}
 }
 
 // RegisterPeer add peer to download routine
