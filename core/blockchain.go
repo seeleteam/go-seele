@@ -42,7 +42,7 @@ type Blockchain struct {
 	accountStateDB database.Database
 	headerChain    *HeaderChain
 	genesisBlock   *types.Block
-	lock           sync.Mutex // lock for update blockchain info. for example write block
+	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves *BlockLeaves
 }
@@ -102,6 +102,9 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 
 // CurrentBlock returns the HEAD block of blockchain.
 func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
 	index := bc.blockLeaves.GetBestBlockIndex()
 	if index == nil {
 		return nil, nil
@@ -110,6 +113,7 @@ func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
 	return index.currentBlock, index.state
 }
 
+// CurrentState returns state DB of current block.
 func (bc *Blockchain) CurrentState() *state.Statedb {
 	_, state := bc.CurrentBlock()
 	return state
@@ -148,6 +152,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
+
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
 	bc.blockLeaves.Add(blockIndex)
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
@@ -161,6 +166,8 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	return nil
 }
 
+// ValidateBlock validates the specified block for insertion.
+// If validation failed, return error to indicate what went wrong.
 func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
@@ -185,6 +192,7 @@ func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 	return nil
 }
 
+// GetStore returns the blockchain store instance.
 func (bc *Blockchain) GetStore() store.BlockchainStore {
 	return bc.bcStore
 }
