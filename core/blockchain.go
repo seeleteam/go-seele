@@ -121,18 +121,21 @@ func (bc *Blockchain) CurrentState() *state.Statedb {
 
 // WriteBlock writes the block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
-	exist, _ := bc.bcStore.HashBlock(block.HeaderHash)
-	if exist {
-		return ErrBlockAlreadyExist
-	}
-
-	err := bc.ValidateBlock(block)
+	exist, err := bc.bcStore.HashBlock(block.HeaderHash)
 	if err != nil {
 		return err
 	}
 
+	if exist {
+		return ErrBlockAlreadyExist
+	}
+
 	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 	if err != nil {
+		return err
+	}
+
+	if err = bc.ValidateBlock(block, blockStatedb); err != nil {
 		return err
 	}
 
@@ -158,17 +161,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
-	err = bc.bcStore.PutBlock(block, td, isHead)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return bc.bcStore.PutBlock(block, td, isHead)
 }
 
 // ValidateBlock validates the specified block for insertion.
 // If validation failed, return error to indicate what went wrong.
-func (bc *Blockchain) ValidateBlock(block *types.Block) error {
+func (bc *Blockchain) ValidateBlock(block *types.Block, statedb *state.Statedb) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -178,7 +176,11 @@ func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 		return ErrBlockTxsHashMismatch
 	}
 
-	// @todo transaction validation
+	for _, tx := range block.Transactions {
+		if err := tx.Validate(statedb); err != nil {
+			return err
+		}
+	}
 
 	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
 	if err != nil {
