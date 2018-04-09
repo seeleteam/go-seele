@@ -32,6 +32,9 @@ var (
 
 	// ErrBlockAlreadyExist is returned when inserted block already exist
 	ErrBlockAlreadyExist = errors.New("block already exist")
+
+	// ErrBlockStateHashInvalid is returned when block state hash is invalid
+	ErrBlockStateHashInvalid = errors.New("block state root hash is invalid")
 )
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
@@ -122,14 +125,19 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return ErrBlockAlreadyExist
 	}
 
-	err := bc.ValidateBlock(block)
+	parent, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
+	if err != nil {
+		return ErrBlockInvalidParentHash
+	}
+
+	err = bc.ValidateBlock(block, parent)
 	if err != nil {
 		return err
 	}
 
-	blockStatedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
-	if err != nil {
-		return err
+ 	blockStatedb, err := bc.getUpdatedState(block, parent)
+ 	if err != nil {
+ 		return err
 	}
 
 	currentBlock := &types.Block{
@@ -161,7 +169,42 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	return nil
 }
 
-func (bc *Blockchain) ValidateBlock(block *types.Block) error {
+func (bc *Blockchain) getUpdatedState(block *types.Block, parent *types.Block) (*state.Statedb, error) {
+	blockStatedb, err := state.NewStatedb(parent.Header.StateHash, bc.accountStateDB)
+	if err != nil {
+		return nil, err
+	}
+
+	for index, tx := range block.Transactions {
+		// block miner reward transaction
+		if index == 0 {
+			blockStatedb.AddAmount(*tx.Data.To, tx.Data.Amount)
+			continue
+		}
+
+		blockStatedb.SubAmount(tx.Data.From, tx.Data.Amount)
+		blockStatedb.AddAmount(*tx.Data.To, tx.Data.Amount)
+	}
+
+	batch := bc.accountStateDB.NewBatch()
+	root, err := blockStatedb.Commit(batch)
+	if err != nil {
+		return nil, err
+	}
+
+	err = batch.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	if root != block.Header.StateHash {
+		return nil, ErrBlockStateHashInvalid
+	}
+
+	return blockStatedb, nil
+}
+
+func (bc *Blockchain) ValidateBlock(block *types.Block, parent *types.Block) error {
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -173,12 +216,7 @@ func (bc *Blockchain) ValidateBlock(block *types.Block) error {
 
 	// @todo transaction validation
 
-	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
-	if err != nil {
-		return ErrBlockInvalidParentHash
-	}
-
-	if block.Header.Height != preBlock.Header.Height+1 {
+	if block.Header.Height != parent.Header.Height+1 {
 		return ErrBlockInvalidHeight
 	}
 

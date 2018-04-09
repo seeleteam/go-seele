@@ -387,6 +387,7 @@ func (t *Trie) loadNode(hash []byte) (noder, error) {
 	key := append(t.dbprefix, hash...)
 	val, err := t.db.Get(key)
 	if err != nil || len(val) == 0 {
+		panic(errNodeNotExist)
 		return nil, errNodeNotExist
 	}
 	return t.decodeNode(hash, val)

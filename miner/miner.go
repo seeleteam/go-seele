@@ -149,7 +149,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(5), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(2000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{
@@ -175,7 +175,13 @@ func (miner *Miner) prepareNewBlock() {
 }
 
 func (miner *Miner) saveBlock(result *Result) error {
+	miner.log.Debug("block:%s", result.block.Transactions[0].Data.Amount)
+
 	ret := miner.seele.BlockChain().WriteBlock(result.block)
+
+	a, _ := miner.seele.BlockChain().CurrentState().GetAmount(miner.seele.Coinbase)
+	miner.log.Debug("coinbase amount %s", a)
+
 	return ret
 }
 
