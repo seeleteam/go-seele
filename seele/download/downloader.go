@@ -200,7 +200,19 @@ func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error)
 	// Compare the peer and local block head hash and return the ancestor height
 	var cmpCount = 0
 	for {
-		go conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, top, MaxHeaderFetch, true)
+		localTop := top - uint64(cmpCount)
+		var fetchCount = 0
+		if (MaxForkAncestry - cmpCount) >= MaxHeaderFetch {
+			fetchCount = MaxHeaderFetch
+		} else {
+			fetchCount = MaxForkAncestry - cmpCount
+		}
+		if fetchCount == 0 {
+			return 0, errInvalidAncestor
+		}
+
+		// Get peer block headers
+		go conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, localTop, fetchCount, true)
 		msg, err := conn.waitMsg(BlockHeadersMsg, d.cancelCh)
 		if err != nil {
 			return 0, err
@@ -214,17 +226,14 @@ func (d *Downloader) findAncestor(conn *peerConn, height uint64) (uint64, error)
 		if len(headers) == 0 {
 			return 0, errInvalidAncestor
 		}
+		cmpCount += len(headers)
 
 		// Is ancenstor found
-		for i := len(headers) - 1; i >= 0; i-- {
+		for i := 0; i < len(headers); i++ {
 			cmpHeight := headers[i].Height
 			localHash, err := d.chain.GetStore().GetBlockHash(cmpHeight)
 			if err != nil {
 				return 0, err
-			}
-			cmpCount++
-			if cmpCount > MaxForkAncestry {
-				return 0, errInvalidAncestor
 			}
 			if localHash == headers[i].Hash() {
 				return cmpHeight, nil
