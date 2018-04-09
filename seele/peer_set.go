@@ -27,6 +27,11 @@ func newPeerSet() *peerSet {
 	}
 }
 
+func (p *peerSet) bestPeer() *peer {
+	// TODO get best peer
+	return nil
+}
+
 func (p *peerSet) Find(address common.Address) *peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()

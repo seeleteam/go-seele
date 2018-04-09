@@ -125,6 +125,25 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 	p.td.Set(td)
 }
 
+// RequestHeadersByHashOrNumber fetches a batch of blocks' headers corresponding to the
+// specified header query, based on the hash of an origin block.
+func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amount int, reverse bool) error {
+	//TODO send GetBlockHeadersMsg
+	return nil
+}
+
+// RequestBlocksByHashOrNumber fetches a batch of blocks corresponding to the
+// specified header query, based on the hash of an origin block.
+func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error {
+	//TODO send GetBlocksMsg
+	return nil
+}
+
+func (p *peer) sendTransactions([]*types.Transaction) error {
+	// TODO
+	return nil
+}
+
 // HandShake exchange networkid td etc between two connected peers.
 func (p *peer) HandShake() error {
 	//TODO add exchange status msg
