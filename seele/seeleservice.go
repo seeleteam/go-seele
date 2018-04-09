@@ -116,7 +116,7 @@ func (s *SeeleService) Protocols() (protos []p2p.Protocol) {
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
 func (s *SeeleService) Start(srvr *p2p.Server) error {
-
+	s.seeleProtocol.Start()
 	return nil
 }
 

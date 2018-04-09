@@ -7,6 +7,7 @@ package seele
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -83,6 +84,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 }
 
 func (sp *SeeleProtocol) Start() {
+	sp.log.Info("SeeleProtocol.Start called!")
 	go sp.syncer()
 }
 
@@ -115,10 +117,11 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
+	sp.log.Info("sp.synchronise called 1")
 	if p == nil {
 		return
 	}
-
+	sp.log.Info("sp.synchronise called 2")
 	block, _ := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
@@ -127,6 +130,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	}
 	pHead, pTd := p.Head()
 
+	fmt.Println("synchronise. localTD=", localTD, pTd)
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
 		return
@@ -254,7 +258,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		p.log.Error("handleAddPeer err. %s", err)
 		return
 	}
-
+	p.log.Info("newPeer.HandShake ok")
 	p.peerSet.Add(newPeer)
 	go p.handleMsg(newPeer)
 }
