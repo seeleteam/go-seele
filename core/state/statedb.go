@@ -51,7 +51,7 @@ func (s *Statedb) GetCopy() *Statedb {
 
 // GetAmount get amount of account
 func (s *Statedb) GetAmount(addr common.Address) (*big.Int, bool) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		return object.GetAmount(), true
 	}
@@ -60,7 +60,7 @@ func (s *Statedb) GetAmount(addr common.Address) (*big.Int, bool) {
 
 // SetAmount set amount of account
 func (s *Statedb) SetAmount(addr common.Address, amount *big.Int) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		object.SetAmount(amount)
 	}
@@ -68,7 +68,7 @@ func (s *Statedb) SetAmount(addr common.Address, amount *big.Int) {
 
 // AddAmount add amount for account
 func (s *Statedb) AddAmount(addr common.Address, amount *big.Int) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		object.AddAmount(amount)
 	}
@@ -76,7 +76,7 @@ func (s *Statedb) AddAmount(addr common.Address, amount *big.Int) {
 
 // SubAmount sub amount for account
 func (s *Statedb) SubAmount(addr common.Address, amount *big.Int) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		object.SubAmount(amount)
 	}
@@ -84,7 +84,7 @@ func (s *Statedb) SubAmount(addr common.Address, amount *big.Int) {
 
 // GetNonce get nonce of account
 func (s *Statedb) GetNonce(addr common.Address) (uint64, bool) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		return object.GetNonce(), true
 	}
@@ -93,7 +93,7 @@ func (s *Statedb) GetNonce(addr common.Address) (uint64, bool) {
 
 // SetNonce set nonce of account
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		object.SetNonce(nonce)
 	}
