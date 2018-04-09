@@ -24,18 +24,14 @@ var (
 )
 
 var (
-	transactionHashMsgCode uint16 = 0
-	blockHashMsgCode       uint16 = 1
+	transactionsMsgCode uint16 = 1
+	blockHashMsgCode    uint16 = 2
+	blockRequestMsgCode uint16 = 3
+	blockMsgCode        uint16 = 4
 
-	transactionRequestMsgCode uint16 = 2
-	transactionsMsgCode       uint16 = 3
+	statusDataMsgCode      uint16 = 5
+	statusChainHeadMsgCode uint16 = 6
 
-	blockRequestMsgCode uint16 = 4
-	blockMsgCode        uint16 = 5
-
-	statusDataMsgCode      uint16 = 6
-	statusChainHeadMsgCode uint16 = 7
-	//transactionMsgCode uint16 = 8
 	protocolMsgCodeLength uint16 = 13
 )
 
