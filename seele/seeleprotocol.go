@@ -24,13 +24,15 @@ var (
 )
 
 var (
-	transactionsMsgCode uint16 = 1
-	blockHashMsgCode    uint16 = 2
-	blockRequestMsgCode uint16 = 3
-	blockMsgCode        uint16 = 4
+	transactionHashMsgCode    uint16 = 0
+	transactionRequestMsgCode uint16 = 1
+	transactionsMsgCode       uint16 = 2
+	blockHashMsgCode          uint16 = 3
+	blockRequestMsgCode       uint16 = 4
+	blockMsgCode              uint16 = 5
 
-	statusDataMsgCode      uint16 = 5
-	statusChainHeadMsgCode uint16 = 6
+	statusDataMsgCode      uint16 = 6
+	statusChainHeadMsgCode uint16 = 7
 
 	protocolMsgCodeLength uint16 = 13
 )
@@ -214,7 +216,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 	p.peerSet.ForEach(func(peer *peer) bool {
 
-		if err := peer.sendTransaction(tx); err != nil {
+		if err := peer.sendTransactionHash(tx.Hash); err != nil {
 			p.log.Warn("send transaction failed %s", err.Error())
 		}
 		return true
@@ -246,7 +248,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 	//genenis TODO get genenis from blockchain
-	if err := newPeer.HandShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
+	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
 		p.log.Error("handleAddPeer err. %s", err)
 		return
@@ -270,6 +272,42 @@ handler:
 		}
 
 		switch msg.Code {
+		case transactionHashMsgCode:
+			var txHash common.Hash
+			err := common.Deserialize(msg.Payload, &txHash)
+			if err != nil {
+				p.log.Warn("deserialize transaction hash msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got tx hash %s", txHash.ToHex())
+
+			if !peer.knownTxs.Has(txHash) {
+				peer.knownTxs.Add(txHash) //update peer known transaction
+				err := peer.sendTransactionRequest(txHash)
+				if err != nil {
+					p.log.Warn("send transaction request msg failed %s", err.Error())
+					break handler
+				}
+			}
+
+		case transactionRequestMsgCode:
+			var txHash common.Hash
+			err := common.Deserialize(msg.Payload, &txHash)
+			if err != nil {
+				p.log.Warn("deserialize transaction request msg failed %s", err.Error())
+				continue
+			}
+
+			p.log.Debug("got tx request %s", txHash.ToHex())
+
+			tx := p.txPool.GetTransaction(txHash)
+			err = peer.sendTransaction(tx)
+			if err != nil {
+				p.log.Warn("send transaction msg failed %s", err.Error())
+				break handler
+			}
+
 		case transactionsMsgCode:
 			var txs []*types.Transaction
 			err := common.Deserialize(msg.Payload, &txs)

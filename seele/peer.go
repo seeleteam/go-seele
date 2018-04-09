@@ -87,6 +87,23 @@ func (p *peer) markTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
+func (p *peer) sendTransactionHash(txHash common.Hash) error {
+	if p.knownTxs.Has(txHash) {
+		return nil
+	}
+
+	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(txHash))
+	if err == nil {
+		p.knownTxs.Add(txHash)
+	}
+
+	return err
+}
+
+func (p *peer) sendTransactionRequest(txHash common.Hash) error {
+	return p2p.SendMessage(p.rw, transactionRequestMsgCode, common.SerializePanic(txHash))
+}
+
 func (p *peer) sendTransaction(tx *types.Transaction) error {
 	if p.knownTxs.Has(tx.Hash) {
 		return nil
@@ -176,8 +193,8 @@ func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
 	return p2p.SendMessage(p.rw, statusChainHeadMsgCode, common.SerializePanic(msg))
 }
 
-// HandShake exchange networkid td etc between two connected peers.
-func (p *peer) HandShake(networkID uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+// handShake exchange networkid td etc between two connected peers.
+func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
 	msg := &statusData{
 		ProtocolVersion: uint32(SeeleVersion),
 		NetworkID:       networkID,
