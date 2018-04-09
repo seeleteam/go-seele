@@ -77,8 +77,8 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 
 // Synchronise try to sync with remote peer.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int) error {
-	block, _ := d.chain.CurrentBlock()
-	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	currentBlock, _ := d.chain.CurrentBlock()
+	localTD, err := d.chain.GetStore().GetBlockTotalDifficulty(currentBlock.HeaderHash)
 	if err != nil {
 		d.log.Error("downloader.Synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return err

@@ -29,6 +29,16 @@ func newStateObject() *StateObject {
 	}
 }
 
+func (s *StateObject) GetCopy() *StateObject {
+	return &StateObject{
+		account: Account{
+			Nonce:  s.account.Nonce,
+			Amount: big.NewInt(0).Set(s.account.Amount),
+		},
+		dirty: s.dirty,
+	}
+}
+
 // SetNonce set nonce of account
 func (s *StateObject) SetNonce(nonce uint64) {
 	s.account.Nonce = nonce
