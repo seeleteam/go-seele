@@ -86,19 +86,6 @@ func (p *peer) markTransaction(hash common.Hash) {
 	p.knownTxs.Add(hash)
 }
 
-func (p *peer) SendTransactionHash(txHash common.Hash) error {
-	if p.knownTxs.Has(txHash) {
-		return nil
-	}
-
-	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(txHash))
-	if err == nil {
-		p.knownTxs.Add(txHash)
-	}
-
-	return err
-}
-
 func (p *peer) sendTransaction(tx *types.Transaction) error {
 	if p.knownTxs.Has(tx.Hash) {
 		return nil

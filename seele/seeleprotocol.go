@@ -7,7 +7,6 @@ package seele
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -117,11 +116,10 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
-	sp.log.Info("sp.synchronise called 1")
+	sp.log.Info("sp.synchronise called")
 	if p == nil {
 		return
 	}
-	sp.log.Info("sp.synchronise called 2")
 	block, _ := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
@@ -130,7 +128,6 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	}
 	pHead, pTd := p.Head()
 
-	fmt.Println("synchronise. localTD=", localTD, pTd)
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
 		return
