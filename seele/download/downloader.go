@@ -41,13 +41,13 @@ var (
 )
 
 var (
-	errInvalidAncestor     = errors.New("Ancestor is invalid")
-	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
-	errSyncErr             = errors.New("Err occurs when syncing")
 	errHashNotMatch        = errors.New("Hash not match")
+	errInvalidAncestor     = errors.New("Ancestor is invalid")
 	errInvalidPacketRecved = errors.New("Invalid packet received")
 	errIsSynchronising     = errors.New("Is synchronising")
+	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
 	errPeerNotFound        = errors.New("Peer not found")
+	errSyncErr             = errors.New("Err occurs when syncing")
 )
 
 // Downloader sync block chain with remote peer
