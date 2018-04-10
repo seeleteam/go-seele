@@ -34,7 +34,7 @@ func (engine Engine) ValidateHeader(blockHeader *types.BlockHeader) error {
 	var hashInt big.Int
 	hashInt.SetBytes(headerHash.Bytes())
 
-	target := new(big.Int).Div(maxUint256, blockHeader.Difficulty)
+	target := GetMiningTarget(blockHeader.Difficulty)
 
 	if hashInt.Cmp(target) > 0 {
 		return errBlockNonceInvalid
