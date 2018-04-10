@@ -25,7 +25,7 @@ type SeeleService struct {
 	networkID     uint64
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
-	coinbase      common.Address // account address that mining rewards will be send to.
+	Coinbase      common.Address // account address that mining rewards will be send to.
 
 	txPool         *core.TransactionPool
 	chain          *core.Blockchain
@@ -55,7 +55,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		networkID: conf.NetworkID,
 		log:       log,
 	}
-	s.coinbase = conf.Coinbase
+	s.Coinbase = conf.Coinbase
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
 
 	// Initialize blockchain DB.

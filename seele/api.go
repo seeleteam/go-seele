@@ -33,7 +33,7 @@ func (api *PublicSeeleAPI) Coinbase(input interface{}, addr *common.Address) err
 	if addr == nil {
 		return errAPIInvalidParams
 	}
-	*addr = api.s.coinbase
+	*addr = api.s.Coinbase
 	return nil
 }
 
@@ -58,5 +58,12 @@ func (api *PublicSeeleAPI) AddTx(args *AddTxArgs, result *bool) error {
 	}
 
 	*result = true
+	return nil
+}
+
+func (api *PublicSeeleAPI) GetBalance(args interface{}, result *big.Int) error {
+	state := api.s.chain.CurrentState()
+	amount, _ := state.GetAmount(api.s.Coinbase)
+	result.Set(amount)
 	return nil
 }

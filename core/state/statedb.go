@@ -36,7 +36,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}, nil
 }
 
-// This is a memory copy of state db, please note Do NOT commit it.
+// This is a memory copy of state db.
 func (s *Statedb) GetCopy() *Statedb {
 	copies := make(map[common.Address]*StateObject)
 	for k, v := range s.stateObjects {

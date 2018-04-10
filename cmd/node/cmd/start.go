@@ -8,12 +8,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sync"
-	"time"
 
-	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
@@ -69,10 +65,6 @@ var startCmd = &cobra.Command{
 		seeleNode.Start()
 		startMiner(seeleService, nCfg, slog)
 
-		// this is for test
-		time.Sleep(3 * time.Second)
-		go addTx(seeleService)
-
 		wg.Add(1)
 		wg.Wait()
 	},
@@ -81,22 +73,6 @@ var startCmd = &cobra.Command{
 func startMiner(seele *seele.SeeleService, nodeConfig *node.Config, log *log.SeeleLog) {
 	miner := miner.NewMiner(nodeConfig.SeeleConfig.Coinbase, seele, log)
 	go miner.Start()
-}
-
-// for test
-func addTx(seele *seele.SeeleService) {
-	from, privateKey, _ := crypto.GenerateKeyPair()
-	to := crypto.MustGenerateRandomAddress()
-	tx := types.NewTransaction(*from, *to, big.NewInt(0), 0)
-
-	tx.Sign(privateKey)
-
-	err := seele.TxPool().AddTransaction(tx)
-	if err != nil {
-		fmt.Println("add transaction error ", err.Error())
-	}
-
-	fmt.Println("add transaction done")
 }
 
 func init() {
