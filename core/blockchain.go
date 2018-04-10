@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
-
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
