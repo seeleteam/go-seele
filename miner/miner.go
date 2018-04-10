@@ -130,7 +130,7 @@ func (miner *Miner) prepareNewBlock() {
 	miner.log.Debug("start mining new block")
 
 	timestamp := time.Now().Unix()
-	parent, _ := miner.seele.BlockChain().CurrentBlock()
+	parent, stateDB := miner.seele.BlockChain().CurrentBlock()
 
 	if parent.Header.CreateTimestamp.Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
 		timestamp = parent.Header.CreateTimestamp.Int64() + 1
@@ -149,7 +149,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(5), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(2000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{
@@ -163,7 +163,7 @@ func (miner *Miner) prepareNewBlock() {
 		txSlice = append(txSlice, value...)
 	}
 
-	err := miner.current.applyTransactions(miner.seele, miner.coinbase, txSlice, miner.log)
+	err := miner.current.applyTransactions(miner.seele, stateDB.GetCopy(), txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
