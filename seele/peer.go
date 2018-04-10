@@ -94,7 +94,7 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 
 	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(txHash))
 	if err == nil {
-		p.knownTxs.Add(txHash)
+		p.markTransaction(txHash)
 	}
 
 	return err

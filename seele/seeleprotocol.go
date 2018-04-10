@@ -255,6 +255,8 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	}
 	p.log.Info("newPeer.HandShake ok")
 	p.peerSet.Add(newPeer)
+
+	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
 }
 
