@@ -112,7 +112,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 	return tx
 }
 
-func newTestBlock(parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
+func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
 	minerAccount := newTestAccount(50, 0)
 	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
@@ -122,10 +122,27 @@ func newTestBlock(parentHash common.Hash, blockHeight, txNum, startNonce uint64)
 		txs = append(txs, newTestBlockTx(0, 1, startNonce+i))
 	}
 
+	stateRootHash := common.EmptyHash
+	parentBlock, err := bc.bcStore.GetBlock(parentHash)
+	if err == nil {
+		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
+		if err != nil {
+			panic(err)
+		}
+
+		if err = updateStatedb(statedb, rewardTx, txs[1:]); err != nil {
+			panic(err)
+		}
+
+		if stateRootHash, err = statedb.Commit(nil); err != nil {
+			panic(err)
+		}
+	}
+
 	header := &types.BlockHeader{
 		PreviousBlockHash: parentHash,
 		Creator:           minerAccount.addr,
-		StateHash:         common.EmptyHash,
+		StateHash:         stateRootHash,
 		TxHash:            types.MerkleRootHash(txs),
 		Height:            blockHeight,
 		Difficulty:        big.NewInt(1),
@@ -146,7 +163,7 @@ func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	newBlock := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.HeaderHash = common.EmptyHash
 
 	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockHashMismatch)
@@ -158,7 +175,7 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	newBlock := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.Header.TxHash = common.EmptyHash
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
@@ -171,7 +188,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	newBlock := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.Header.Height = 10
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
@@ -184,7 +201,7 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	newBlock := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(newBlock), error(nil))
 
 	currentBlock, _ := bc.CurrentBlock()
@@ -204,7 +221,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	newBlock := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 
 	err := bc.WriteBlock(newBlock)
 	assert.Equal(t, err, error(nil))
@@ -222,14 +239,14 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	block1 := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	block1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
 	currentBlock, _ := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 
-	block2 := newTestBlock(block1.HeaderHash, 2, 3, 3)
+	block2 := newTestBlock(bc, block1.HeaderHash, 2, 3, 3)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
@@ -243,7 +260,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	block1 := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	block1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
@@ -251,7 +268,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 	assert.Equal(t, currentBlock, block1)
 	assert.Equal(t, bc.blockLeaves.Count(), 1)
 
-	block2 := newTestBlock(bc.genesisBlock.HeaderHash, 1, 3, 0)
+	block2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
@@ -264,7 +281,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	block := newTestBlock(common.EmptyHash, 1, 3, 0)
+	block := newTestBlock(bc, common.EmptyHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidParentHash)
 }
 
@@ -274,6 +291,6 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	block := newTestBlock(bc.genesisBlock.HeaderHash, 0, 3, 0)
+	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
 	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidHeight)
 }

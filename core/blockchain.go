@@ -6,7 +6,9 @@
 package core
 
 import (
+	"bytes"
 	"errors"
+	"math/big"
 
 	"sync"
 
@@ -37,6 +39,18 @@ var (
 	// ErrBlockStateHashMismatch is returned when the calculated account state hash of block
 	// does not match the state root hash in block header.
 	ErrBlockStateHashMismatch = errors.New("block state hash mismatch")
+
+	// ErrBlockEmptyTxs is returned when write a block with empty transactions.
+	ErrBlockEmptyTxs = errors.New("empty transactions in block")
+
+	// ErrBlockInvalidToAddress is returned when the to address of miner reward tx is nil.
+	ErrBlockInvalidToAddress = errors.New("invalid to address")
+
+	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
+	// the creator address in block header.
+	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
+
+	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
@@ -139,8 +153,8 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
-	preBlock, err := bc.bcStore.GetBlock(block.Header.PreviousBlockHash)
-	if err != nil {
+	var preBlock *types.Block
+	if preBlock, err = bc.bcStore.GetBlock(block.Header.PreviousBlockHash); err != nil {
 		return ErrBlockInvalidParentHash
 	}
 
@@ -150,20 +164,25 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	// Process the txs in block and check the state root hash.
-	blockStatedb, err := bc.applyTxs(block, preBlock)
-	if err != nil {
+	var blockStatedb *state.Statedb
+	if blockStatedb, err = bc.applyTxs(block, preBlock); err != nil {
 		return err
 	}
 
-	stateRootHash, err := blockStatedb.Commit(nil)
-	if err != nil {
+	batch := bc.accountStateDB.NewBatch()
+	committed := false
+	defer func() {
+		if !committed {
+			batch.Rollback()
+		}
+	}()
+
+	var stateRootHash common.Hash
+	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
 		return err
 	}
 
-	if block.Header.StateHash.Equal(common.EmptyHash) {
-		block.Header.StateHash = stateRootHash
-		block.HeaderHash = block.Header.Hash()
-	} else if !stateRootHash.Equal(block.Header.StateHash) {
+	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
 	}
 
@@ -175,8 +194,8 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 	copy(currentBlock.Transactions, block.Transactions)
 
-	td, err := bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash)
-	if err != nil {
+	var td *big.Int
+	if td, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
 		return err
 	}
 
@@ -193,12 +212,13 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	// FIXME: write block and update account state in a batch.
 	// Otherwise, restore the account state during service startup.
-	batch := bc.accountStateDB.NewBatch()
-	if _, err = blockStatedb.Commit(batch); err != nil {
+	if err = batch.Commit(); err != nil {
 		return err
 	}
 
-	return batch.Commit()
+	committed = true
+
+	return nil
 }
 
 func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
@@ -215,6 +235,8 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockInvalidHeight
 	}
 
+	// @todo validate nonce via miner engine.
+
 	return nil
 }
 
@@ -226,17 +248,9 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 // applyTxs process the txs in block and return the new state DB of block.
 // This method suppose the specified block is validated.
 func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
-	if len(block.Transactions) == 0 {
-		panic("txs in block is empty.")
-	}
-
-	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
-		panic("Tx to address in miner reward is invalid")
-	}
-
-	if minerRewardTx.Data.Amount == nil || minerRewardTx.Data.Amount.Sign() < 0 {
-		panic("tx amount in miner reward is invalid")
+	minerRewardTx, err := validateMinerRewardTx(block)
+	if err != nil {
+		return nil, err
 	}
 
 	statedb, err := state.NewStatedb(preBlock.Header.StateHash, bc.accountStateDB)
@@ -244,19 +258,53 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, er
 		return nil, err
 	}
 
-	// process miner rewrad
+	if err := updateStatedb(statedb, minerRewardTx, block.Transactions[1:]); err != nil {
+		return nil, err
+	}
+
+	return statedb, nil
+}
+
+func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
+	if len(block.Transactions) == 0 {
+		return nil, ErrBlockEmptyTxs
+	}
+
+	minerRewardTx := block.Transactions[0]
+	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
+		return nil, ErrBlockInvalidToAddress
+	}
+
+	if !bytes.Equal(minerRewardTx.Data.To.Bytes(), block.Header.Creator.Bytes()) {
+		return nil, ErrBlockCoinbaseMismatch
+	}
+
+	if minerRewardTx.Data.Amount == nil {
+		return nil, types.ErrAmountNil
+	}
+
+	if minerRewardTx.Data.Amount.Sign() < 0 {
+		return nil, types.ErrAmountNegative
+	}
+
+	// @todo verify the amount via miner engine.
+
+	return minerRewardTx, nil
+}
+
+func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction) error {
+	// process miner reward
 	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
 	// process other txs
-	for _, tx := range block.Transactions[1:] {
-		if err = tx.Validate(statedb); err != nil {
-			return nil, err
+	for _, tx := range txs {
+		if err := tx.Validate(statedb); err != nil {
+			return err
 		}
 
-		// Will support smart contract creation in case of nil To address in tx.
 		if tx.Data.To == nil {
-			panic("smart contract not supported yet.")
+			return errContractCreationNotSupported
 		}
 
 		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
@@ -267,5 +315,5 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, er
 		toStateObj.AddAmount(tx.Data.Amount)
 	}
 
-	return statedb, nil
+	return nil
 }
