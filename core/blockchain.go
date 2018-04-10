@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
@@ -52,12 +53,23 @@ var (
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
 
+type consensusEngine interface {
+	// ValidateHeader validates the specified header and return error if validation failed.
+	// Generally, need to validate the block nonce.
+	ValidateHeader(blockHeader *types.BlockHeader) error
+
+	// ValidateRewardAmount validates the specified amount and return error if validation failed.
+	// The amount of miner reward will change over time.
+	ValidateRewardAmount(amount *big.Int) error
+}
+
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure. we must keep all of its parameter are thread safe too.
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
+	engine         consensusEngine
 	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
@@ -70,6 +82,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
+		engine:         &pow.Engine{},
 	}
 
 	var err error
@@ -234,9 +247,7 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockInvalidHeight
 	}
 
-	// @todo validate nonce via miner engine.
-
-	return nil
+	return bc.engine.ValidateHeader(block.Header)
 }
 
 // GetStore returns the blockchain store instance.
@@ -247,7 +258,7 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 // applyTxs process the txs in block and return the new state DB of block.
 // This method suppose the specified block is validated.
 func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
-	minerRewardTx, err := validateMinerRewardTx(block)
+	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +275,7 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, er
 	return statedb, nil
 }
 
-func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
+func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 	if len(block.Transactions) == 0 {
 		return nil, ErrBlockEmptyTxs
 	}
@@ -286,7 +297,9 @@ func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 		return nil, types.ErrAmountNegative
 	}
 
-	// @todo verify the amount via miner engine.
+	if err := bc.engine.ValidateRewardAmount(minerRewardTx.Data.Amount); err != nil {
+		return nil, err
+	}
 
 	return minerRewardTx, nil
 }

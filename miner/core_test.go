@@ -13,6 +13,7 @@ import (
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var logger = log.GetLogger("test", true)
@@ -34,7 +35,7 @@ func Test_Worker(t *testing.T) {
 
 	select {
 	case found := <-result:
-		target := new(big.Int).Div(maxUint256, task.header.Difficulty)
+		target := pow.GetMiningTarget(task.header.Difficulty)
 
 		assert.Equal(t, found.task, task)
 

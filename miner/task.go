@@ -15,13 +15,11 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/seeleteam/go-seele/seele"
 )
 
 var ErrNotEnoughTransactions = errors.New("not enough transactions")
-
-// miner reward amount when miner generate a new block
-const minerRewardAmount = 10
 
 // Task is a mining work for engine, it contains block header, transactions, and transaction receipts.
 type Task struct {
@@ -34,7 +32,7 @@ type Task struct {
 // applyTransactions TODO need check more about the transactions, such as gas limit
 func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	rewardValue := big.NewInt(minerRewardAmount)
+	rewardValue := big.NewInt(pow.MinerRewardAmount)
 	reward := types.NewTransaction(common.Address{}, seele.Coinbase, rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
 	statedb.AddAmount(seele.Coinbase, rewardValue)
