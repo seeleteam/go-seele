@@ -37,7 +37,8 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 	rewardValue := big.NewInt(minerRewardAmount)
 	reward := types.NewTransaction(common.Address{}, seele.Coinbase, rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
-	statedb.AddAmount(seele.Coinbase, rewardValue)
+	stateObj := statedb.GetOrNewStateObject(seele.Coinbase)
+	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
 	for _, tx := range txs {
@@ -47,9 +48,12 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 			continue
 		}
 
-		statedb.SubAmount(tx.Data.From, tx.Data.Amount)
-		statedb.AddAmount(*tx.Data.To, tx.Data.Amount)
-		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce)
+		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
+		fromStateObj.SubAmount(tx.Data.Amount)
+		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
+
+		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
+		toStateObj.AddAmount(tx.Data.Amount)
 
 		task.txs = append(task.txs, tx)
 	}

@@ -308,7 +308,7 @@ func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs
 
 		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
 		fromStateObj.SubAmount(tx.Data.Amount)
-		fromStateObj.SetNonce(fromStateObj.GetNonce() + 1)
+		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
 
 		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
 		toStateObj.AddAmount(tx.Data.Amount)

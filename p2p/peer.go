@@ -35,6 +35,7 @@ type Peer struct {
 }
 
 func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
+	closed := make(chan struct{})
 	offset := baseProtoCode
 	protoMap := make(map[string]protocolRW)
 	for _, p := range protocols {
@@ -43,6 +44,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 			offset:   offset,
 			Protocol: p,
 			in:       make(chan Message, 1),
+			close:closed,
 		}
 
 		protoMap[p.cap().String()] = protoRW
@@ -53,7 +55,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 		rw:            conn,
 		protocolMap:   protoMap,
 		disconnection: make(chan uint),
-		closed:        make(chan struct{}),
+		closed:        closed,
 		log:           log,
 		protocolErr:   make(chan error),
 		Node:          node,
@@ -199,6 +201,7 @@ type protocolRW struct {
 	offset uint16
 	in     chan Message // read message channel, message will be transferred here when it is a protocol message
 	rw     MsgReadWriter
+	close chan struct{}
 }
 
 func (rw *protocolRW) WriteMsg(msg Message) (err error) {
@@ -217,5 +220,7 @@ func (rw *protocolRW) ReadMsg() (Message, error) {
 		msg.Code -= rw.offset
 
 		return msg, nil
+	case <-rw.close:
+		return Message{}, errors.New("peer connection closed")
 	}
 }
