@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 type testAccount struct {
@@ -113,7 +114,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	minerAccount := newTestAccount(50, 0)
+	minerAccount := newTestAccount(pow.MinerRewardAmount, 0)
 	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
 
