@@ -8,7 +8,6 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -48,10 +47,7 @@ type Config struct {
 	// static nodes when node start, it will connect with them to find more nodes
 	StaticNodes []string
 
-	// Kademila protocol use UDP address
-	KadAddr string
-
-	// core msg interaction TCP address
+	// core msg interaction TCP address and Kademila protocol used UDP address
 	ListenAddr string
 }
 
@@ -87,7 +83,7 @@ func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 
-	nodeConfig.DataDir = filepath.Join(os.TempDir(), config.DataDir)
+	nodeConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.DataDir)
 	return nodeConfig, nil
 }
 
@@ -107,7 +103,6 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 	}
 
 	p2pConfig.ECDSAKey = config.ECDSAKey
-	p2pConfig.KadAddr = config.KadAddr
 	p2pConfig.ListenAddr = config.ListenAddr
 	return p2pConfig, nil
 }
