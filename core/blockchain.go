@@ -218,6 +218,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
+	if isHead {
+		if err = bc.updateHashByHeight(block); err != nil {
+			return err
+		}
+	}
+
 	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
 		return err
 	}
@@ -325,6 +331,50 @@ func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs
 
 		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
 		toStateObj.AddAmount(tx.Data.Amount)
+	}
+
+	return nil
+}
+
+func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
+	// Delete canonical height-to-hash entries above the new head
+	for i := block.Header.Height + 1; ; i++ {
+		deleted, err := bc.bcStore.DeleteBlockHash(i)
+		if err != nil {
+			return err
+		}
+
+		if !deleted {
+			break
+		}
+	}
+
+	// Overwrite stale canonical height-to-hash entries
+	headerHash := block.Header.PreviousBlockHash
+	header, err := bc.bcStore.GetBlockHeader(headerHash)
+	if err != nil {
+		return err
+	}
+
+	canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
+	if err != nil {
+		return err
+	}
+
+	for !headerHash.Equal(canonicalHash) {
+		if err = bc.bcStore.PutBlockHash(header.Height, headerHash); err != nil {
+			return err
+		}
+
+		headerHash = header.PreviousBlockHash
+
+		if header, err = bc.bcStore.GetBlockHeader(headerHash); err != nil {
+			return err
+		}
+
+		if canonicalHash, err = bc.bcStore.GetBlockHash(header.Height); err != nil {
+			return err
+		}
 	}
 
 	return nil
