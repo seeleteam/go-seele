@@ -72,7 +72,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		peers: make(map[string]*peerConn),
 		chain: chain,
 	}
-	d.log = log.GetLogger("download", true)
+	d.log = log.GetLogger("download", common.PrintLog)
 	return d
 }
 
