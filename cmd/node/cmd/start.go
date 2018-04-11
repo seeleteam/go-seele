@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
@@ -28,14 +29,16 @@ var startCmd = &cobra.Command{
 		start a node.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
 		var wg sync.WaitGroup
-
-		nCfg, err := GetNodeConfigFromFile(*seeleNodeConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
 		if err != nil {
 			fmt.Printf("read config file failed %s", err.Error())
 			return
 		}
+
+		// print some config info
+		fmt.Printf("log folder %s\n", log.LogFolder)
+		fmt.Printf("data folder %s\n", nCfg.DataDir)
 
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
@@ -44,7 +47,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", true)
+		slog := log.GetLogger("seele", common.PrintLog)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.DataDir,
 		}

@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	// logFolder the default folder to write log
-	logFolder = filepath.Join(common.GetTempFolder(), "Log")
+	// LogFolder the default folder to write log
+	LogFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
 // SeeleLog wrapped log class
@@ -81,13 +81,13 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	if bConsole {
 		log.Out = os.Stdout
 	} else {
-		err := os.MkdirAll(logFolder, os.ModePerm)
+		err := os.MkdirAll(LogFolder, os.ModePerm)
 		if err != nil {
 			panic(fmt.Sprintf("create log file failed %s", err))
 		}
 
 		logFileName := logName + ".log"
-		logFullPath := filepath.Join(logFolder, logFileName)
+		logFullPath := filepath.Join(LogFolder, logFileName)
 		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			panic(fmt.Sprintf("create log file failed %s", err))
@@ -96,7 +96,12 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.Out = file
 	}
 
-	log.SetLevel(logrus.DebugLevel)
+	if common.IsDebug {
+		log.SetLevel(logrus.DebugLevel)
+	} else {
+		log.SetLevel(logrus.InfoLevel)
+	}
+
 	log.AddHook(&CallerHook{}) // add caller hook to print caller's file & line number
 	curLog = &SeeleLog{
 		log: log,
