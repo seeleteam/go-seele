@@ -122,12 +122,12 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	}
 	height := latest.Height
 
-	origin, err := d.findCommonAncestorHeight(conn, height)
+	ancestor, err := d.findCommonAncestorHeight(conn, height)
 	if err != nil {
 		return err
 	}
-
-	tm := newTaskMgr(d, d.masterPeer, origin+1, height)
+	d.log.Debug("Downloader.findCommonAncestorHeight start, ancestor=%d", ancestor)
+	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
@@ -220,7 +220,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 		}
 
 		var headers []types.BlockHeader
-		if err := common.Deserialize(msg.Payload, headers); err != nil {
+		if err := common.Deserialize(msg.Payload, &headers); err != nil {
 			return 0, err
 		}
 

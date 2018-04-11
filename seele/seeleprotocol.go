@@ -148,8 +148,10 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
+		sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
 		return
 	}
+
 	status := &chainHeadStatus{
 		TD:           localTD,
 		CurrentBlock: head,
@@ -173,6 +175,7 @@ func (sp *SeeleProtocol) syncTransactions(p *peer) {
 		pending = append(pending, value...)
 	}
 
+	sp.log.Debug("syncTransactions peerid:%s pending length:%d", p.peerStrID, len(pending))
 	if len(pending) == 0 {
 		return
 	}
@@ -196,7 +199,6 @@ func (sp *SeeleProtocol) syncTransactions(p *peer) {
 		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend]) }()
 	}
 
-	//resultCh <- struct{}{}
 	send(curPos)
 loopOut:
 	for {
@@ -238,6 +240,9 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		return true
 	})
 
+	p.log.Debug("handleNewMinedBlock broadcast chainhead changed")
+	p.log.Debug("new block: %d %s <- %s ", block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
+
 	p.broadcastChainHead()
 }
 
@@ -271,7 +276,7 @@ handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			p.log.Error("get error when read msg from %s, %s", peer.peerID, err)
+			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 

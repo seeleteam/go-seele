@@ -103,17 +103,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		log.Error("NewSeeleService create seeleProtocol err. %s", err)
 		return nil, err
 	}
-	//
-	for num := uint64(0); num < 16; num++ {
-		hash, _ := s.chain.GetStore().GetBlockHash(num)
-		var block *types.Block
-		var err error
-		if block, err = s.chain.GetStore().GetBlock(hash); err != nil {
-			s.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
-			break
-		}
-		s.log.Debug("%d %s <- %s ", block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
-	}
+
 	return s, nil
 }
 
