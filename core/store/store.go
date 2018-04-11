@@ -14,8 +14,14 @@ import (
 
 // BlockchainStore is the interface that wraps the atomic CRUD methods of blockchain.
 type BlockchainStore interface {
-	// GetBlockHash retrieves the block hash for the specified block height.
+	// GetBlockHash retrieves the block hash for the specified canonical block height.
 	GetBlockHash(height uint64) (common.Hash, error)
+
+	// PutBlockHash writes the height-to-blockHash entry in the canonical chain.
+	PutBlockHash(height uint64, hash common.Hash) error
+
+	// DeleteBlockHash deletes the block hash of the specified canonical block height.
+	DeleteBlockHash(height uint64) (bool, error)
 
 	// GetHeadBlockHash retrieves the HEAD block hash.
 	GetHeadBlockHash() (common.Hash, error)
