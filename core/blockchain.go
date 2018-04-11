@@ -350,31 +350,26 @@ func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
 	}
 
 	// Overwrite stale canonical height-to-hash entries
-	headerHash := block.Header.PreviousBlockHash
-	header, err := bc.bcStore.GetBlockHeader(headerHash)
-	if err != nil {
-		return err
-	}
+	for headerHash := block.Header.PreviousBlockHash; !headerHash.Equal(common.EmptyHash); {
+		header, err := bc.bcStore.GetBlockHeader(headerHash)
+		if err != nil {
+			return err
+		}
 
-	canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
-	if err != nil {
-		return err
-	}
+		canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return err
+		}
 
-	for !headerHash.Equal(canonicalHash) {
+		if headerHash.Equal(canonicalHash) {
+			break
+		}
+
 		if err = bc.bcStore.PutBlockHash(header.Height, headerHash); err != nil {
 			return err
 		}
 
 		headerHash = header.PreviousBlockHash
-
-		if header, err = bc.bcStore.GetBlockHeader(headerHash); err != nil {
-			return err
-		}
-
-		if canonicalHash, err = bc.bcStore.GetBlockHash(header.Height); err != nil {
-			return err
-		}
 	}
 
 	return nil
