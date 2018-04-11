@@ -7,7 +7,6 @@ package seele
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -127,7 +126,6 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	}
 	pHead, pTd := p.Head()
 
-	fmt.Println("SeeleProtocol.synchronise", localTD, pTd)
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
 		return
@@ -393,7 +391,7 @@ handler:
 			var headL []*types.BlockHeader
 			var head *types.BlockHeader
 			orgNum := query.Number
-			fmt.Println(query)
+
 			if query.Hash != common.EmptyHash {
 				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
 					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
