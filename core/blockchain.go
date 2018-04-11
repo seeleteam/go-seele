@@ -218,6 +218,8 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
 	if isHead {
 		if err = bc.updateHashByHeight(block); err != nil {
 			return err
@@ -336,8 +338,9 @@ func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs
 	return nil
 }
 
+// updateHashByHeight updates the height-to-hash mapping for the specified new HEAD block in canonical chain.
 func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
-	// Delete canonical height-to-hash entries above the new head
+	// Delete height-to-hash mappings above the height of new HEAD block in canonical chain.
 	for i := block.Header.Height + 1; ; i++ {
 		deleted, err := bc.bcStore.DeleteBlockHash(i)
 		if err != nil {
@@ -349,7 +352,7 @@ func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
 		}
 	}
 
-	// Overwrite stale canonical height-to-hash entries
+	// Overwrite stale canonical height-to-hash mappings
 	for headerHash := block.Header.PreviousBlockHash; !headerHash.Equal(common.EmptyHash); {
 		header, err := bc.bcStore.GetBlockHeader(headerHash)
 		if err != nil {
