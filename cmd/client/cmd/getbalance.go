@@ -32,15 +32,17 @@ var getbalanceCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var address common.Address
+		var address *common.Address
 		if account == nil || *account == "" {
-			address = common.Address{}
+			address = nil
 		} else {
-			address, err = common.HexToAddress(*account)
+			result, err := common.HexToAddress(*account)
 			if err != nil {
 				fmt.Printf("invalid account address. %s\n", err.Error())
 				return
 			}
+
+			address = &result
 		}
 
 		amount := big.NewInt(0)
@@ -49,7 +51,11 @@ var getbalanceCmd = &cobra.Command{
 			fmt.Printf("get balance failed %s\n", err.Error())
 		}
 
-		fmt.Printf("account balance: %s", amount)
+		if address == nil {
+			fmt.Printf("Didn't find your account. Get coinbase balance: %s\n", amount)
+		} else {
+			fmt.Printf("Account %s\nBalance: %s\n", address.ToHex(), amount)
+		}
 	},
 }
 
