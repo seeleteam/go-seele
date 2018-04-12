@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// getinfo represents the getcoinbase command
+// getinfo represents the getinfo command
 var getinfo = &cobra.Command{
 	Use:   "getinfo",
 	Short: "get miner info",

@@ -147,7 +147,7 @@ func (p TestPeer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, am
 	return nil
 }
 
-func Test_findCommonAncestorHeight_errMaxForkAncestor(t *testing.T) {
+func Test_findCommonAncestorHeight_localHeightIsZero(t *testing.T) {
 	db, dispose := newTestDatabase()
 	defer dispose()
 	dl := newTestDownloader(db)
@@ -155,6 +155,6 @@ func Test_findCommonAncestorHeight_errMaxForkAncestor(t *testing.T) {
 	var testPeer TestPeer
 	p := newPeerConn(testPeer, "test")
 	ancestorHeight, err := dl.findCommonAncestorHeight(p, height)
-	assert.Equal(t, errMaxForkAncestor, err)
+	assert.Equal(t, nil, err)
 	assert.Equal(t, uint64(0), ancestorHeight)
 }

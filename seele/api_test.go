@@ -42,10 +42,10 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	}
 
 	api := NewPublicSeeleAPI(ss)
-	var addr common.Address
-	api.Coinbase(nil, &addr)
+	var info MinerInfo
+	api.GetInfo(nil, &info)
 
-	if !bytes.Equal(conf.Coinbase[0:], addr[0:]) {
+	if !bytes.Equal(conf.Coinbase[0:], info.Coinbase[0:]) {
 		t.Fail()
 	}
 }
