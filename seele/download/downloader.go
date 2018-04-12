@@ -183,6 +183,10 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 	// Get the top height
 	block, _ := d.chain.CurrentBlock()
 	localHeight := block.Header.Height
+	if localHeight == 0 {
+		return 0, nil
+	}
+
 	var top uint64
 	if localHeight <= height {
 		top = localHeight
@@ -195,7 +199,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 	if top >= uint64(MaxForkAncestry) {
 		maxFetchAncestry = MaxForkAncestry
 	} else {
-		maxFetchAncestry = int(top)
+		maxFetchAncestry = int(top) + 1
 	}
 
 	// Compare the peer and local block head hash and return the ancestor height
