@@ -107,7 +107,6 @@ func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	}
 
 	delete(pool.hashToTxMap, txHash)
-	return
 }
 
 // GetProcessableTransactions retrieves all processable transactions. The returned transactions
