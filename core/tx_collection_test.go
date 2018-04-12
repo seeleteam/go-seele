@@ -32,6 +32,16 @@ func Test_txCollection_add_txsWithSameNonce(t *testing.T) {
 	assert.Equal(t, txs[0].Data.Amount.Int64(), int64(3))
 }
 
+func Test_txCollection_Remove(t *testing.T) {
+	collection := newTxCollection()
+	tx := newTestTx(t, 1, 2)
+	collection.add(tx)
+
+	assert.Equal(t, collection.count(), 1)
+	collection.remove(tx.Data.AccountNonce)
+	assert.Equal(t, collection.count(), 0)
+}
+
 func Test_txCollection_getTxsOrderByNonceAsc(t *testing.T) {
 	collection := newTxCollection()
 	collection.add(newTestTx(t, 3, 9))

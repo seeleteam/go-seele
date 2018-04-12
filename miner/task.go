@@ -40,6 +40,8 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 	task.txs = append(task.txs, reward)
 
 	for _, tx := range txs {
+		seele.TxPool().RemoveTransaction(tx.Hash)
+
 		err := tx.Validate(statedb)
 		if err != nil {
 			log.Error("exec tx failed, cause for %s", err)

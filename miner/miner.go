@@ -37,12 +37,12 @@ type Miner struct {
 // NewMiner construct a miner, return a Miner instance
 func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog) *Miner {
 	miner := &Miner{
-		coinbase: addr,
-		canStart: 1,
-		seele:    seele,
-		stopChan: make(chan struct{}, 1),
-		recv:     make(chan *Result, 1),
-		log:      log,
+		coinbase:          addr,
+		canStart:          1,
+		seele:             seele,
+		stopChan:          make(chan struct{}, 1),
+		recv:              make(chan *Result, 1),
+		log:               log,
 		isFirstDownloader: 1,
 	}
 
