@@ -105,9 +105,6 @@ func (p *peer) sendTransactionRequest(txHash common.Hash) error {
 }
 
 func (p *peer) sendTransaction(tx *types.Transaction) error {
-	if p.knownTxs.Has(tx.Hash) {
-		return nil
-	}
 	return p2p.SendMessage(p.rw, transactionsMsgCode, common.SerializePanic([]*types.Transaction{tx}))
 }
 

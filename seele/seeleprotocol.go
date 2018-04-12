@@ -296,6 +296,8 @@ handler:
 					p.log.Warn("send transaction request msg failed %s", err.Error())
 					break handler
 				}
+			} else {
+				p.log.Debug("already have this tx %s", txHash.ToHex())
 			}
 
 		case transactionRequestMsgCode:
@@ -323,7 +325,7 @@ handler:
 				break
 			}
 
-			p.log.Debug("sendTransactionsMsgCode recved %s")
+			p.log.Debug("received %d transactions", len(txs))
 			for _, tx := range txs {
 				p.txPool.AddTransaction(tx)
 				peer.markTransaction(tx.Hash)

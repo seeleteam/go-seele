@@ -88,6 +88,24 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return pool.hashToTxMap[txHash]
 }
 
+func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+
+	tx := pool.hashToTxMap[txHash]
+	if tx == nil {
+		return
+	}
+
+	collection := pool.accountToTxsMap[tx.Data.From]
+	if collection != nil {
+		collection.remove(tx.Data.AccountNonce)
+	}
+
+	delete(pool.hashToTxMap, txHash)
+	return
+}
+
 // GetProcessableTransactions retrieves all processable transactions. The returned transactions
 // are grouped by origin account address and sorted by nonce ASC.
 func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*types.Transaction {
