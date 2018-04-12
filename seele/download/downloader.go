@@ -190,6 +190,10 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 		top = height
 	}
 
+	if top == 0 {
+		return top, nil
+	}
+
 	// get maximum chain reorganisation
 	var maxFetchAncestry int
 	if top >= uint64(MaxForkAncestry) {

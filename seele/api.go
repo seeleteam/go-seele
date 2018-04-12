@@ -61,9 +61,27 @@ func (api *PublicSeeleAPI) AddTx(args *AddTxArgs, result *bool) error {
 	return nil
 }
 
-func (api *PublicSeeleAPI) GetBalance(args interface{}, result *big.Int) error {
+func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) error {
+	if account == nil || account.Equal(common.Address{}) {
+		*account = api.s.Coinbase
+	}
+
 	state := api.s.chain.CurrentState()
-	amount, _ := state.GetAmount(api.s.Coinbase)
+	amount, _ := state.GetAmount(*account)
 	result.Set(amount)
+	return nil
+}
+
+func (api *PublicSeeleAPI) GenerateTx(args *types.Transaction, result *bool) error {
+	api.s.txPool.AddTransaction(args)
+	*result = true
+
+	return nil
+}
+
+func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint64) error {
+	state := api.s.chain.CurrentState()
+	*nonce, _ = state.GetNonce(*account)
+
 	return nil
 }

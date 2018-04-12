@@ -30,6 +30,8 @@ type Miner struct {
 
 	seele *seele.SeeleService
 	log   *log.SeeleLog
+
+	isFirstDownloader int32
 }
 
 // NewMiner construct a miner, return a Miner instance
@@ -41,6 +43,7 @@ func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog)
 		stopChan: make(chan struct{}, 1),
 		recv:     make(chan *Result, 1),
 		log:      log,
+		isFirstDownloader: 1,
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -86,6 +89,10 @@ func (miner *Miner) IsMining() bool {
 }
 
 func (miner *Miner) downloadEventCallback(e event.Event) {
+	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
+		return
+	}
+
 	eventType := e.(int)
 	switch eventType {
 	case event.DownloaderStartEvent:
@@ -94,6 +101,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 		atomic.StoreInt32(&miner.canStart, 1)
 		miner.Start()
 	}
@@ -157,7 +165,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(9000000), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(10000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{

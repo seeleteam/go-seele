@@ -11,6 +11,11 @@ import (
 	"github.com/spf13/cobra"
 	"net/rpc/jsonrpc"
 	"math/big"
+	"github.com/seeleteam/go-seele/common"
+)
+
+var (
+	account *string
 )
 
 // getbalanceCmd represents the getbalance command
@@ -27,15 +32,29 @@ var getbalanceCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		amount := big.NewInt(0)
-		err = client.Call("seele.GetBalance", nil, amount)
-		if err != nil {
-			fmt.Println(err)
+		var address common.Address
+		if account == nil || *account == "" {
+			address = common.Address{}
+		} else {
+			address, err = common.HexToAddress(*account)
+			if err != nil {
+				fmt.Printf("invalid account address. %s\n", err.Error())
+				return
+			}
 		}
-		fmt.Printf("coinbase balance: %s", amount)
+
+		amount := big.NewInt(0)
+		err = client.Call("seele.GetBalance", &address, amount)
+		if err != nil {
+			fmt.Printf("get balance failed %s\n", err.Error())
+		}
+
+		fmt.Printf("account balance: %s", amount)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getbalanceCmd)
+
+	account = getbalanceCmd.Flags().StringP("account", "t", "", "account address")
 }

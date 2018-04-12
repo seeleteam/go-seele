@@ -60,6 +60,8 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 		return ErrNotEnoughTransactions
 	}
 
+	log.Info("miner transaction number %d", len(task.txs))
+
 	root, err := statedb.Commit(nil)
 	if err != nil {
 		return err
