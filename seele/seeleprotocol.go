@@ -114,7 +114,7 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
-	sp.log.Info("sp.synchronise called. %p", p)
+	sp.log.Info("sp.synchronise called.")
 	if p == nil {
 		return
 	}
