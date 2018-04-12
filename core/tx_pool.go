@@ -88,6 +88,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return pool.hashToTxMap[txHash]
 }
 
+// RemoveTransaction remove a transaction by its hash
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
@@ -100,6 +101,9 @@ func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
 		collection.remove(tx.Data.AccountNonce)
+		if collection.count() == 0 {
+			delete(pool.accountToTxsMap, tx.Data.From)
+		}
 	}
 
 	delete(pool.hashToTxMap, txHash)

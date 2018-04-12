@@ -175,3 +175,21 @@ func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 	assert.Equal(t, processableTxs[account2][1], txs2[0])
 	assert.Equal(t, processableTxs[account2][2], txs2[1])
 }
+
+func Test_TransactionPool_Remove(t *testing.T) {
+	config := DefaultTxPoolConfig()
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*config, chain)
+
+	tx := newTestTx(t, 10, 100)
+	chain.addAccount(tx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(tx)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	pool.RemoveTransaction(tx.Hash)
+	assert.Equal(t, len(pool.hashToTxMap), 0)
+	assert.Equal(t, len(pool.accountToTxsMap), 0)
+}
