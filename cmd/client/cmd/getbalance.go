@@ -7,11 +7,11 @@ package cmd
 
 import (
 	"fmt"
-
-	"github.com/spf13/cobra"
-	"net/rpc/jsonrpc"
 	"math/big"
+	"net/rpc/jsonrpc"
+
 	"github.com/seeleteam/go-seele/common"
+	"github.com/spf13/cobra"
 )
 
 var (
