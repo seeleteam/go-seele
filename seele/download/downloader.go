@@ -69,8 +69,9 @@ type Downloader struct {
 // NewDownloader create Downloader
 func NewDownloader(chain *core.Blockchain) *Downloader {
 	d := &Downloader{
-		peers: make(map[string]*peerConn),
-		chain: chain,
+		peers:      make(map[string]*peerConn),
+		chain:      chain,
+		syncStatus: statusNone,
 	}
 	d.log = log.GetLogger("download", common.PrintLog)
 	return d
@@ -86,13 +87,15 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	}
 	d.syncStatus = statusPreparing
 	d.cancelCh = make(chan struct{})
-	d.lock.Unlock()
-
 	d.masterPeer = id
 	p, ok := d.peers[id]
 	if !ok {
+		close(d.cancelCh)
+		d.syncStatus = statusNone
+		d.lock.Unlock()
 		return errPeerNotFound
 	}
+	d.lock.Unlock()
 
 	err := d.doSynchronise(p, head, td, localTD)
 	d.lock.Lock()
@@ -112,19 +115,19 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 			event.BlockDownloaderEventManager.Fire(event.DownloaderDoneEvent)
 		}
 	}()
-
+	d.log.Debug("Downloader.doSynchronise start")
 	latest, err := d.fetchHeight(conn)
 	if err != nil {
 		return err
 	}
 	height := latest.Height
 
-	origin, err := d.findCommonAncestorHeight(conn, height)
+	ancestor, err := d.findCommonAncestorHeight(conn, height)
 	if err != nil {
 		return err
 	}
-
-	tm := newTaskMgr(d, d.masterPeer, origin, height)
+	d.log.Debug("Downloader.findCommonAncestorHeight start, ancestor=%d", ancestor)
+	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
@@ -163,7 +166,7 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 		return nil, err
 	}
 	var headers []types.BlockHeader
-	if err := common.Deserialize(msg.Payload, headers); err != nil {
+	if err := common.Deserialize(msg.Payload, &headers); err != nil {
 		return nil, err
 	}
 	if len(headers) != 1 {
@@ -217,7 +220,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 		}
 
 		var headers []types.BlockHeader
-		if err := common.Deserialize(msg.Payload, headers); err != nil {
+		if err := common.Deserialize(msg.Payload, &headers); err != nil {
 			return 0, err
 		}
 
@@ -298,6 +301,7 @@ func (d *Downloader) Terminate() {
 // peerDownload peer download routine
 func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
 	defer d.sessionWG.Done()
+	d.log.Debug("Downloader.peerDownload start")
 	bMaster := (conn.peerID == d.masterPeer)
 	peerID := conn.peerID
 	var err error
@@ -305,6 +309,7 @@ outLoop:
 	for !tm.isDone() {
 		hasReqData := false
 		if startNo, amount := tm.getReqHeaderInfo(conn); amount > 0 {
+			d.log.Debug("tm.getReqHeaderInfo. %d %d", startNo, amount)
 			hasReqData = true
 			if err = conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, startNo, amount, false); err != nil {
 				d.log.Info("RequestHeadersByHashOrNumber err!")
@@ -316,7 +321,7 @@ outLoop:
 				break
 			}
 			var headers []*types.BlockHeader
-			if err = common.Deserialize(msg.Payload, headers); err != nil {
+			if err = common.Deserialize(msg.Payload, &headers); err != nil {
 				d.log.Info("peerDownload Deserialize err! %s", err)
 				break
 			}
@@ -328,6 +333,7 @@ outLoop:
 		}
 
 		if startNo, amount := tm.getReqBlocks(conn); amount > 0 {
+			d.log.Debug("download.peerdown getReqBlocks startNo=%d amount=%d", startNo, amount)
 			hasReqData = true
 			if err = conn.peer.RequestBlocksByHashOrNumber(common.Hash{}, startNo, amount); err != nil {
 				d.log.Info("RequestBlocksByHashOrNumber err!")
@@ -341,7 +347,7 @@ outLoop:
 			}
 
 			var blockNums []uint64
-			if err = common.Deserialize(msg.Payload, blockNums); err != nil {
+			if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
 				d.log.Info("peerDownload Deserialize err! %s", err)
 				break
 			}
@@ -354,7 +360,7 @@ outLoop:
 			}
 
 			var blocks []*types.Block
-			if err = common.Deserialize(msg.Payload, blocks); err != nil {
+			if err = common.Deserialize(msg.Payload, &blocks); err != nil {
 				d.log.Info("peerDownload Deserialize err! %s", err)
 				break
 			}
@@ -363,6 +369,8 @@ outLoop:
 		if hasReqData {
 			continue
 		}
+
+	outFor:
 		for {
 			select {
 			case <-d.cancelCh:
@@ -370,7 +378,8 @@ outLoop:
 			case <-conn.quitCh:
 				break outLoop
 			case <-time.After(peerIdleTime):
-				break
+				d.log.Debug("peerDownload peerIdleTime timeout")
+				break outFor
 			}
 		}
 	}
@@ -379,12 +388,19 @@ outLoop:
 	if bMaster {
 		d.Cancel()
 	}
+	d.log.Debug("Downloader.peerDownload end")
 }
 
 // processBlocks writes blocks to the blockchain.
 func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
+
 	for _, h := range headInfos {
-		if err := d.chain.WriteBlock(h.block); err != nil {
+		d.log.Debug("%d %s <- %s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
+	}
+
+	for _, h := range headInfos {
+		d.log.Debug("d.processBlock %d", h.block.Header.Height)
+		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExist {
 			d.log.Error("downloader processBlocks err. %s", err)
 			d.Cancel()
 			break

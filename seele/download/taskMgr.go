@@ -112,30 +112,29 @@ func (t *taskMgr) close() {
 
 // getReqHeaderInfo gets header request information, returns the start block number and amount of headers.
 func (t *taskMgr) getReqHeaderInfo(conn *peerConn) (uint64, int) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	headInfo, ok := t.peersHeaderMap[conn.peerID]
+	if !ok {
+		headInfo = newPeerHeadInfo()
+		t.peersHeaderMap[conn.peerID] = headInfo
+		t.log.Debug("getReqHeaderInfo. create headInfo for peer: %s", conn.peerID)
+	}
+
+	// try remove headers that already downloaded
+	for no := range headInfo.headers {
+		if no < t.curNo {
+			delete(headInfo.headers, no)
+		}
+	}
+
 	var startNo uint64
 	if conn.peerID == t.masterPeer {
-		t.lock.RLock()
 		startNo = t.fromNo + uint64(len(t.masterHeaderList))
-		t.lock.RUnlock()
 		if startNo-t.curNo > maxBlocksWaiting {
 			return 0, 0
 		}
 	} else {
-		t.lock.Lock()
-		headInfo, ok := t.peersHeaderMap[conn.peerID]
-		if !ok {
-			headInfo = newPeerHeadInfo()
-			t.peersHeaderMap[conn.peerID] = headInfo
-		}
-		t.lock.Unlock()
-
-		// try remove headers that already downloaded
-		for no := range headInfo.headers {
-			if no < t.curNo {
-				delete(headInfo.headers, no)
-			}
-		}
-
 		startNo = headInfo.maxNo + 1
 		if len(headInfo.headers) == 0 {
 			headInfo.maxNo = 0
@@ -149,7 +148,7 @@ func (t *taskMgr) getReqHeaderInfo(conn *peerConn) (uint64, int) {
 	}
 
 	amount := MaxHeaderFetch
-	if uint64(MaxHeaderFetch) < (t.toNo + 1 - startNo) {
+	if uint64(MaxHeaderFetch) > (t.toNo + 1 - startNo) {
 		amount = int(t.toNo - startNo + 1)
 	}
 	return startNo, amount
@@ -165,19 +164,35 @@ func (t *taskMgr) getReqBlocks(conn *peerConn) (uint64, int) {
 		return 0, 0
 	}
 	var startNo uint64
+	var amount int
+	// find the first block that not requested yet and exists in conn
 	for _, masterHead := range t.masterHeaderList[t.curNo-t.fromNo:] {
 		if masterHead.status != taskStatusIdle {
 			continue
 		}
+		curHeight := masterHead.header.Height
+		peerHead, ok := headInfo.headers[curHeight]
+		if !ok || peerHead.Hash() != masterHead.header.Hash() {
+			continue
+		}
+
 		startNo = masterHead.header.Height
 		masterHead.status = taskStatusDownloading
 		masterHead.peerID = conn.peerID
+		amount = 1
 		break
 	}
-	amount := 1
+	if amount == 0 {
+		return 0, 0
+	}
 
 	for _, masterHead := range t.masterHeaderList[startNo+1-t.fromNo:] {
 		if masterHead.status == taskStatusIdle {
+			peerHead, ok := headInfo.headers[startNo+uint64(amount)]
+			// if block is not found in headers or hash not match, then breaks the loop
+			if !ok || peerHead.Hash() != masterHead.header.Hash() {
+				break
+			}
 			if amount < MaxBlockFetch {
 				amount++
 				masterHead.status = taskStatusDownloading
@@ -217,7 +232,8 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	defer t.lock.Unlock()
 	if peerID == t.masterPeer {
 		lastNo := t.fromNo + uint64(len(t.masterHeaderList))
-		if lastNo+1 != headers[0].Height {
+		t.log.Debug("masterPeer deliverHeaderMsg. lastNo=%d fromNo:%d header.height:%d", lastNo, t.fromNo, headers[0].Height)
+		if lastNo != headers[0].Height {
 			return errMasterHeadersNotMatch
 		}
 		for _, h := range headers {
@@ -226,7 +242,6 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 				status: taskStatusIdle,
 			})
 		}
-		return nil
 	}
 
 	headInfo, ok := t.peersHeaderMap[peerID]

@@ -160,7 +160,7 @@ func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amou
 	query := &blockHeadersQuery{
 		Hash:    origin,
 		Number:  num,
-		Amount:  amount,
+		Amount:  uint64(amount),
 		Reverse: reverse,
 	}
 	return p2p.SendMessage(p.rw, downloader.GetBlockHeadersMsg, common.SerializePanic(query))
@@ -176,7 +176,7 @@ func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amoun
 	query := &blocksQuery{
 		Hash:   origin,
 		Number: num,
-		Amount: amount,
+		Amount: uint64(amount),
 	}
 	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, common.SerializePanic(query))
 }

@@ -114,7 +114,7 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
-	sp.log.Info("sp.synchronise called")
+	sp.log.Info("sp.synchronise called. %p", p)
 	if p == nil {
 		return
 	}
@@ -146,8 +146,10 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
+		sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
 		return
 	}
+
 	status := &chainHeadStatus{
 		TD:           localTD,
 		CurrentBlock: head,
@@ -164,13 +166,14 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 // syncTransactions sends pending transactions to remote peer.
 func (sp *SeeleProtocol) syncTransactions(p *peer) {
 	defer sp.wg.Done()
-
+	sp.wg.Add(1)
 	txs := sp.txPool.GetProcessableTransactions()
 	pending := make([]*types.Transaction, 0)
 	for _, value := range txs {
 		pending = append(pending, value...)
 	}
 
+	sp.log.Debug("syncTransactions peerid:%s pending length:%d", p.peerStrID, len(pending))
 	if len(pending) == 0 {
 		return
 	}
@@ -194,7 +197,7 @@ func (sp *SeeleProtocol) syncTransactions(p *peer) {
 		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend]) }()
 	}
 
-	resultCh <- nil
+	send(curPos)
 loopOut:
 	for {
 		select {
@@ -235,6 +238,9 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		return true
 	})
 
+	p.log.Debug("handleNewMinedBlock broadcast chainhead changed")
+	p.log.Debug("new block: %d %s <- %s ", block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
+
 	p.broadcastChainHead()
 }
 
@@ -255,13 +261,12 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	}
 	p.log.Info("newPeer.HandShake ok")
 	p.peerSet.Add(newPeer)
-
+	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
 }
 
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-	p.peerSet.Remove(p2pPeer.Node.ID)
 }
 
 func (p *SeeleProtocol) handleMsg(peer *peer) {
@@ -269,7 +274,7 @@ handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			p.log.Error("get error when read msg from %s, %s", peer.peerID, err)
+			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 
@@ -386,6 +391,7 @@ handler:
 			var headL []*types.BlockHeader
 			var head *types.BlockHeader
 			orgNum := query.Number
+
 			if query.Hash != common.EmptyHash {
 				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
 					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
@@ -394,12 +400,12 @@ handler:
 				orgNum = head.Height
 			}
 
-			for cnt := 0; cnt < query.Amount; cnt++ {
+			for cnt := uint64(0); cnt < query.Amount; cnt++ {
 				var curNum uint64
 				if query.Reverse {
-					curNum = orgNum - uint64(cnt)
+					curNum = orgNum - cnt
 				} else {
-					curNum = orgNum + uint64(cnt)
+					curNum = orgNum + cnt
 				}
 
 				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
@@ -414,7 +420,7 @@ handler:
 				p.log.Error("HandleMsg sendBlockHeaders err. %s", err)
 				break handler
 			}
-			p.log.Debug("send downloader.sendBlockHeaders")
+			p.log.Debug("send downloader.sendBlockHeaders. len=%d", len(headL))
 
 		case downloader.GetBlocksMsg:
 			p.log.Debug("Recved downloader.GetBlocksMsg")
@@ -439,8 +445,8 @@ handler:
 
 			totalLen := 0
 			var numL []uint64
-			for cnt := 0; cnt < query.Amount; cnt++ {
-				curNum := orgNum + uint64(cnt)
+			for cnt := uint64(0); cnt < query.Amount; cnt++ {
+				curNum := orgNum + cnt
 				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
 				if block, err = p.chain.GetStore().GetBlock(hash); err != nil {
 					p.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
@@ -489,4 +495,6 @@ handler:
 	}
 
 	p.peerSet.Remove(peer.peerID)
+	p.downloader.UnRegisterPeer(peer.peerStrID)
+	p.log.Debug("seele.peer.run out!")
 }
