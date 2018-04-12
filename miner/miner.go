@@ -72,7 +72,12 @@ func (miner *Miner) Start() bool {
 // Stop function is used to stop miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
+	miner.stopChan <- struct{}{}
+}
+
+func (miner *Miner) Close() {
 	close(miner.stopChan)
+	close(miner.recv)
 }
 
 // IsMining returns true if miner is started, return false if not
@@ -97,7 +102,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 func (miner *Miner) newTxCallback(e event.Event) {
 	miner.log.Debug("got new tx event")
 	// if not mining, start mining
-	if atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
+	if atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		miner.prepareNewBlock()
 	}
 }
@@ -120,6 +125,9 @@ out:
 			miner.log.Info("found a new mined block, notify to p2p")
 			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast block
 			atomic.StoreInt32(&miner.mining, 0)
+
+			// loop mining after mining complete
+			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
 			break out
 		}
@@ -149,7 +157,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(2000000), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(9000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{

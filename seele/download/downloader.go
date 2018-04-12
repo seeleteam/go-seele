@@ -73,7 +73,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		chain:      chain,
 		syncStatus: statusNone,
 	}
-	d.log = log.GetLogger("download", true)
+	d.log = log.GetLogger("download", common.PrintLog)
 	return d
 }
 

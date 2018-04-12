@@ -7,8 +7,8 @@ package common
 
 import (
 	"os"
-	"path/filepath"
 	"os/user"
+	"path/filepath"
 )
 
 var (
@@ -17,6 +17,12 @@ var (
 
 	// defaultDataFolder used to store persist data info. such as database and keystore
 	defaultDataFolder string
+
+	// PrintLog default is false. If it is true, it will not print all the logs in the console. otherwise, will write log in file.
+	PrintLog = false
+
+	// IsDebug default is false. If it is true, the log level is set to DebugLevel. otherwise, the log level is set to InfoLevel
+	IsDebug = false
 )
 
 func init() {
@@ -37,4 +43,3 @@ func GetTempFolder() string {
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
 }
-

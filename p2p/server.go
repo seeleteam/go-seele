@@ -112,7 +112,7 @@ func (srv *Server) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.log = log.GetLogger("p2p", true)
+	srv.log = log.GetLogger("p2p", common.PrintLog)
 	if srv.log == nil {
 		return errors.New("p2p Create logger error")
 	}

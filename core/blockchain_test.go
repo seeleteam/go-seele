@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 type testAccount struct {
@@ -113,7 +114,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	minerAccount := newTestAccount(50, 0)
+	minerAccount := newTestAccount(pow.MinerRewardAmount, 0)
 	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
 
@@ -293,4 +294,50 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
 	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidHeight)
+}
+
+func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	assertCanonicalHash(t, bc, 0, bc.genesisBlock.HeaderHash)
+
+	// genesis <- block11
+	block11 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	assert.Equal(t, bc.WriteBlock(block11), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+
+	// genesis <- block11 <- block12
+	block12 := newTestBlock(bc, block11.HeaderHash, 2, 3, 3)
+	assert.Equal(t, bc.WriteBlock(block12), error(nil))
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12 (canonical)
+	//         <- block21
+	block21 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	assert.Equal(t, bc.WriteBlock(block21), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12 (canonical)
+	//         <- block21 <- block22
+	block22 := newTestBlock(bc, block21.HeaderHash, 2, 3, 3)
+	assert.Equal(t, bc.WriteBlock(block22), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12
+	//         <- block21 <- block22 <- block23 (canonical)
+	block23 := newTestBlock(bc, block22.HeaderHash, 3, 3, 6)
+	assert.Equal(t, bc.WriteBlock(block23), error(nil))
+	assertCanonicalHash(t, bc, 1, block21.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block22.HeaderHash)
+	assertCanonicalHash(t, bc, 3, block23.HeaderHash)
+}
+
+func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHash common.Hash) {
+	hash, err := bc.bcStore.GetBlockHash(height)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, hash, expectedHash)
 }

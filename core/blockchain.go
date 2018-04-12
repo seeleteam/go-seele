@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
@@ -52,12 +53,23 @@ var (
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
 
+type consensusEngine interface {
+	// ValidateHeader validates the specified header and return error if validation failed.
+	// Generally, need to validate the block nonce.
+	ValidateHeader(blockHeader *types.BlockHeader) error
+
+	// ValidateRewardAmount validates the specified amount and return error if validation failed.
+	// The amount of miner reward will change over time.
+	ValidateRewardAmount(amount *big.Int) error
+}
+
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure. we must keep all of its parameter are thread safe too.
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
+	engine         consensusEngine
 	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
@@ -70,6 +82,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
+		engine:         &pow.Engine{},
 	}
 
 	var err error
@@ -205,6 +218,14 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
+	if isHead {
+		if err = bc.updateHashByHeight(block); err != nil {
+			return err
+		}
+	}
+
 	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
 		return err
 	}
@@ -234,9 +255,7 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockInvalidHeight
 	}
 
-	// @todo validate nonce via miner engine.
-
-	return nil
+	return bc.engine.ValidateHeader(block.Header)
 }
 
 // GetStore returns the blockchain store instance.
@@ -247,7 +266,7 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 // applyTxs process the txs in block and return the new state DB of block.
 // This method suppose the specified block is validated.
 func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
-	minerRewardTx, err := validateMinerRewardTx(block)
+	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +283,7 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, er
 	return statedb, nil
 }
 
-func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
+func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 	if len(block.Transactions) == 0 {
 		return nil, ErrBlockEmptyTxs
 	}
@@ -286,7 +305,9 @@ func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 		return nil, types.ErrAmountNegative
 	}
 
-	// @todo verify the amount via miner engine.
+	if err := bc.engine.ValidateRewardAmount(minerRewardTx.Data.Amount); err != nil {
+		return nil, err
+	}
 
 	return minerRewardTx, nil
 }
@@ -312,6 +333,46 @@ func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs
 
 		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
 		toStateObj.AddAmount(tx.Data.Amount)
+	}
+
+	return nil
+}
+
+// updateHashByHeight updates the height-to-hash mapping for the specified new HEAD block in canonical chain.
+func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
+	// Delete height-to-hash mappings above the height of new HEAD block in canonical chain.
+	for i := block.Header.Height + 1; ; i++ {
+		deleted, err := bc.bcStore.DeleteBlockHash(i)
+		if err != nil {
+			return err
+		}
+
+		if !deleted {
+			break
+		}
+	}
+
+	// Overwrite stale canonical height-to-hash mappings
+	for headerHash := block.Header.PreviousBlockHash; !headerHash.Equal(common.EmptyHash); {
+		header, err := bc.bcStore.GetBlockHeader(headerHash)
+		if err != nil {
+			return err
+		}
+
+		canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return err
+		}
+
+		if headerHash.Equal(canonicalHash) {
+			break
+		}
+
+		if err = bc.bcStore.PutBlockHash(header.Height, headerHash); err != nil {
+			return err
+		}
+
+		headerHash = header.PreviousBlockHash
 	}
 
 	return nil

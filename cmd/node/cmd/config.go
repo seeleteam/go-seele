@@ -49,6 +49,12 @@ type Config struct {
 
 	// core msg interaction TCP address and Kademila protocol used UDP address
 	ListenAddr string
+
+	// If IsDebug is true, the log level will be DebugLevel. otherwise, log level is InfoLevel
+	IsDebug bool
+
+	// If PrintLog is true, it will print all the log file in the console. otherwise, will store the log in file.
+	PrintLog bool
 }
 
 // GetConfigFromFile unmarshal config from a file
@@ -63,8 +69,8 @@ func GetConfigFromFile(filepath string) (Config, error) {
 	return config, err
 }
 
-// GetNodeConfigFromFile get node config from a file
-func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
+// LoadConfigFromFile get node config from a file
+func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	config, err := GetConfigFromFile(configFile)
 	if err != nil {
 		return nil, err
@@ -83,6 +89,8 @@ func GetNodeConfigFromFile(configFile string) (*node.Config, error) {
 		return nil, err
 	}
 
+	common.PrintLog = config.PrintLog
+	common.IsDebug = config.IsDebug
 	nodeConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.DataDir)
 	return nodeConfig, nil
 }
