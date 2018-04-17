@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele/download"
 )
 
 // SeeleService implements full node service.
@@ -139,6 +140,12 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "seele",
 			Version:   "1.0",
 			Service:   NewPublicSeeleAPI(s),
+			Public:    true,
+		},
+		{
+			Namespace: "download",
+			Version:   "1.0",
+			Service:   downloader.NewPublicdownloaderAPI(s.seeleProtocol.downloader),
 			Public:    true,
 		},
 	}...)
