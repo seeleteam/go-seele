@@ -7,11 +7,15 @@ package miner
 
 import (
 	"errors"
+	"math/big"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -27,16 +31,29 @@ type Task struct {
 
 // applyTransactions TODO need check more about the transactions, such as gas limit
 func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
+	// the reward tx will always be at the first of the block's transactions
+	rewardValue := big.NewInt(pow.MinerRewardAmount)
+	reward := types.NewTransaction(common.Address{}, seele.Coinbase, rewardValue, 0)
+	reward.Signature = &crypto.Signature{}
+	stateObj := statedb.GetOrNewStateObject(seele.Coinbase)
+	stateObj.AddAmount(rewardValue)
+	task.txs = append(task.txs, reward)
+
 	for _, tx := range txs {
+		seele.TxPool().RemoveTransaction(tx.Hash)
+
 		err := tx.Validate(statedb)
 		if err != nil {
 			log.Error("exec tx failed, cause for %s", err)
 			continue
 		}
 
-		statedb.SubAmount(tx.Data.From, tx.Data.Amount)
-		statedb.AddAmount(*tx.Data.To, tx.Data.Amount)
-		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce)
+		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
+		fromStateObj.SubAmount(tx.Data.Amount)
+		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
+
+		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
+		toStateObj.AddAmount(tx.Data.Amount)
 
 		task.txs = append(task.txs, tx)
 	}
@@ -44,6 +61,14 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 	if len(task.txs) == 0 {
 		return ErrNotEnoughTransactions
 	}
+
+	log.Info("miner transaction number %d", len(task.txs))
+
+	root, err := statedb.Commit(nil)
+	if err != nil {
+		return err
+	}
+	task.header.StateHash = root
 
 	return nil
 }

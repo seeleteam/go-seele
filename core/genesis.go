@@ -43,28 +43,29 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 		common.HexMustToAddres("0x3acdcc24c04c893280823715c4046df9d28d1f5ee362ad70e066932ee2c3b836b264d3897d1a9b788884362a75e7da0a89669f6f86ce52f2b73858a8e3f065d8"): state.Account{0, big.NewInt(30000)},
 	}
 
-	statedb, err := state.NewStatedb(common.EmptyHash, nil)
-	if err != nil {
-		panic(err)
-	}
+	// Will enable this feature later
+	//statedb, err := state.NewStatedb(common.EmptyHash, nil)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//for addr, account := range defaultAccounts {
+	//	stateObj := statedb.GetOrNewStateObject(addr)
+	//	stateObj.SetNonce(account.Nonce)
+	//	stateObj.SetAmount(account.Amount)
+	//}
 
-	for addr, account := range defaultAccounts {
-		stateObj := statedb.GetOrNewStateObject(addr)
-		stateObj.SetNonce(account.Nonce)
-		stateObj.SetAmount(account.Amount)
-	}
-
-	stateRootHash, err := statedb.Commit(nil)
-	if err != nil {
-		panic(err)
-	}
+	//stateRootHash, err := statedb.Commit(nil)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	return &Genesis{
 		bcStore: bcStore,
 		header: &types.BlockHeader{
 			PreviousBlockHash: common.EmptyHash,
 			Creator:           common.Address{},
-			StateHash:         stateRootHash,
+			StateHash:         common.EmptyHash,
 			TxHash:            types.MerkleRootHash(nil),
 			Difficulty:        big.NewInt(1),
 			Height:            genesisBlockHeight,

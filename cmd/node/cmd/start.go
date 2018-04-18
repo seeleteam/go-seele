@@ -8,12 +8,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"sync"
-	"time"
 
-	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
@@ -32,14 +29,16 @@ var startCmd = &cobra.Command{
 		start a node.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start called")
 		var wg sync.WaitGroup
-
-		nCfg, err := GetNodeConfigFromFile(*seeleNodeConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
 		if err != nil {
 			fmt.Printf("read config file failed %s", err.Error())
 			return
 		}
+
+		// print some config info
+		fmt.Printf("log folder %s\n", log.LogFolder)
+		fmt.Printf("data folder %s\n", nCfg.DataDir)
 
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
@@ -48,7 +47,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", true)
+		slog := log.GetLogger("seele", common.PrintLog)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.DataDir,
 		}
@@ -69,10 +68,6 @@ var startCmd = &cobra.Command{
 		seeleNode.Start()
 		startMiner(seeleService, nCfg, slog)
 
-		// this is for test
-		time.Sleep(3 * time.Second)
-		go addTx(seeleService)
-
 		wg.Add(1)
 		wg.Wait()
 	},
@@ -81,22 +76,6 @@ var startCmd = &cobra.Command{
 func startMiner(seele *seele.SeeleService, nodeConfig *node.Config, log *log.SeeleLog) {
 	miner := miner.NewMiner(nodeConfig.SeeleConfig.Coinbase, seele, log)
 	go miner.Start()
-}
-
-// for test
-func addTx(seele *seele.SeeleService) {
-	from, privateKey, _ := crypto.GenerateKeyPair()
-	to := crypto.MustGenerateRandomAddress()
-	tx := types.NewTransaction(*from, *to, big.NewInt(0), 0)
-
-	tx.Sign(privateKey)
-
-	err := seele.TxPool().AddTransaction(tx)
-	if err != nil {
-		fmt.Println("add transaction error ", err.Error())
-	}
-
-	fmt.Println("add transaction done")
 }
 
 func init() {

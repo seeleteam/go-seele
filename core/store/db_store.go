@@ -57,6 +57,27 @@ func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error
 	return common.BytesToHash(hashBytes), nil
 }
 
+func (store *blockchainDatabase) PutBlockHash(height uint64, hash common.Hash) error {
+	return store.db.Put(heightToHashKey(height), hash.Bytes())
+}
+
+func (store *blockchainDatabase) DeleteBlockHash(height uint64) (bool, error) {
+	key := heightToHashKey(height)
+
+	_, err := store.db.Get(key)
+	if err == errors.ErrNotFound {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	if err = store.db.Delete(key); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // encodeBlockHeight encodes a block height as big endian uint64
 func encodeBlockHeight(height uint64) []byte {
 	encoded := make([]byte, 8)
@@ -117,7 +138,6 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	hashBytes := hash.Bytes()
 
 	batch := store.db.NewBatch()
-	batch.Put(heightToHashKey(header.Height), hashBytes)
 	batch.Put(hashToHeaderKey(hashBytes), headerBytes)
 	batch.Put(hashToTDKey(hashBytes), common.SerializePanic(td))
 
@@ -126,6 +146,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	}
 
 	if isHead {
+		batch.Put(heightToHashKey(header.Height), hashBytes)
 		batch.Put(keyHeadBlockHash, hashBytes)
 	}
 

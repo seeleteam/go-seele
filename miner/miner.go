@@ -30,17 +30,20 @@ type Miner struct {
 
 	seele *seele.SeeleService
 	log   *log.SeeleLog
+
+	isFirstDownloader int32
 }
 
 // NewMiner construct a miner, return a Miner instance
 func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog) *Miner {
 	miner := &Miner{
-		coinbase: addr,
-		canStart: 1,
-		seele:    seele,
-		stopChan: make(chan struct{}, 1),
-		recv:     make(chan *Result, 1),
-		log:      log,
+		coinbase:          addr,
+		canStart:          1,
+		seele:             seele,
+		stopChan:          make(chan struct{}, 1),
+		recv:              make(chan *Result, 1),
+		log:               log,
+		isFirstDownloader: 1,
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -72,7 +75,12 @@ func (miner *Miner) Start() bool {
 // Stop function is used to stop miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
+	miner.stopChan <- struct{}{}
+}
+
+func (miner *Miner) Close() {
 	close(miner.stopChan)
+	close(miner.recv)
 }
 
 // IsMining returns true if miner is started, return false if not
@@ -81,6 +89,10 @@ func (miner *Miner) IsMining() bool {
 }
 
 func (miner *Miner) downloadEventCallback(e event.Event) {
+	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
+		return
+	}
+
 	eventType := e.(int)
 	switch eventType {
 	case event.DownloaderStartEvent:
@@ -89,6 +101,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 		atomic.StoreInt32(&miner.canStart, 1)
 		miner.Start()
 	}
@@ -97,7 +110,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 func (miner *Miner) newTxCallback(e event.Event) {
 	miner.log.Debug("got new tx event")
 	// if not mining, start mining
-	if atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
+	if atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		miner.prepareNewBlock()
 	}
 }
@@ -120,6 +133,9 @@ out:
 			miner.log.Info("found a new mined block, notify to p2p")
 			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast block
 			atomic.StoreInt32(&miner.mining, 0)
+
+			// loop mining after mining complete
+			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
 			break out
 		}
@@ -149,7 +165,7 @@ func (miner *Miner) prepareNewBlock() {
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(5), //TODO find a way to decide difficulty
+		Difficulty:        big.NewInt(10000000), //TODO find a way to decide difficulty
 	}
 
 	miner.current = &Task{
