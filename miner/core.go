@@ -10,11 +10,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/log"
-)
-
-var (
-	// maxUint256 is a big integer representing 2^256
-	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 // StartMining start calculate nonce for the block.
@@ -26,7 +22,7 @@ func StartMining(task *Task, seed uint64, result chan<- *Result, abort <-chan st
 
 	var nonce = seed
 	var hashInt big.Int
-	target := new(big.Int).Div(maxUint256, block.Header.Difficulty)
+	target := pow.GetMiningTarget(block.Header.Difficulty)
 
 miner:
 	for {

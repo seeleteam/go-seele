@@ -35,6 +35,14 @@ func (collection *txCollection) getTxs() []*types.Transaction {
 	return txs
 }
 
+func (collection *txCollection) remove(nonce uint64) {
+	delete(collection.nonceToTxMap, nonce)
+}
+
+func (collection *txCollection) count() int {
+	return len(collection.nonceToTxMap)
+}
+
 func (collection *txCollection) getTxsOrderByNonceAsc() []*types.Transaction {
 	txs := collection.getTxs()
 

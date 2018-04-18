@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"bytes"
 )
 
 const (
@@ -35,6 +36,10 @@ func (id *Address) Bytes() []byte {
 
 func (id *Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
+}
+
+func (id *Address) Equal(b Address) bool {
+	return bytes.Equal(id[:], b[:])
 }
 
 func HexToAddress(id string) (Address, error) {

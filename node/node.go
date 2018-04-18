@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
@@ -48,7 +49,7 @@ type Node struct {
 func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
-	nlog := log.GetLogger("node", true)
+	nlog := log.GetLogger("node", common.PrintLog)
 
 	return &Node{
 		config:   conf,

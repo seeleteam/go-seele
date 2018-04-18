@@ -6,6 +6,7 @@
 package seele
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -28,8 +29,19 @@ func newPeerSet() *peerSet {
 }
 
 func (p *peerSet) bestPeer() *peer {
-	// TODO get best peer
-	return nil
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	var (
+		bestPeer *peer
+		bestTd   *big.Int
+	)
+	for _, p := range p.peers {
+		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+			bestPeer, bestTd = p, td
+		}
+	}
+
+	return bestPeer
 }
 
 func (p *peerSet) Find(address common.Address) *peer {

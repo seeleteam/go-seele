@@ -24,16 +24,17 @@ var (
 )
 
 var (
-	transactionHashMsgCode uint16 = 0
-	blockHashMsgCode       uint16 = 1
+	transactionHashMsgCode    uint16 = 0
+	transactionRequestMsgCode uint16 = 1
+	transactionsMsgCode       uint16 = 2
+	blockHashMsgCode          uint16 = 3
+	blockRequestMsgCode       uint16 = 4
+	blockMsgCode              uint16 = 5
 
-	transactionRequestMsgCode uint16 = 2
-	transactionMsgCode        uint16 = 3
+	statusDataMsgCode      uint16 = 6
+	statusChainHeadMsgCode uint16 = 7
 
-	blockRequestMsgCode uint16 = 4
-	blockMsgCode        uint16 = 5
-
-	protocolMsgCodeLength uint16 = 11
+	protocolMsgCodeLength uint16 = 13
 )
 
 // SeeleProtocol service implementation of seele
@@ -83,6 +84,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 }
 
 func (sp *SeeleProtocol) Start() {
+	sp.log.Info("SeeleProtocol.Start called!")
 	go sp.syncer()
 }
 
@@ -115,15 +117,66 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
-	//TODO
+	sp.log.Info("sp.synchronise called.")
+	if p == nil {
+		return
+	}
+	block, _ := sp.chain.CurrentBlock()
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	if err != nil {
+		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		return
+	}
+	pHead, pTd := p.Head()
+
+	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
+	if localTD.Cmp(pTd) >= 0 {
+		return
+	}
+
+	err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
+	if err != nil {
+		sp.log.Error("synchronise err. %s", err)
+		return
+	}
+
+	//broadcast chain head
+	sp.broadcastChainHead()
+}
+
+func (sp *SeeleProtocol) broadcastChainHead() {
+	block, _ := sp.chain.CurrentBlock()
+	head := block.HeaderHash
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
+	if err != nil {
+		sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
+		return
+	}
+
+	status := &chainHeadStatus{
+		TD:           localTD,
+		CurrentBlock: head,
+	}
+	sp.peerSet.ForEach(func(peer *peer) bool {
+		err := peer.sendHeadStatus(status)
+		if err != nil {
+			sp.log.Warn("send transaction hash failed %s", err.Error())
+		}
+		return true
+	})
 }
 
 // syncTransactions sends pending transactions to remote peer.
 func (sp *SeeleProtocol) syncTransactions(p *peer) {
 	defer sp.wg.Done()
+	sp.wg.Add(1)
+	txs := sp.txPool.GetProcessableTransactions()
+	pending := make([]*types.Transaction, 0)
+	for _, value := range txs {
+		pending = append(pending, value...)
+	}
 
-	//pending, _ := sp.txPool.Pending()
-	var pending []*types.Transaction //TODO get pending transactions from txPool
+	sp.log.Debug("syncTransactions peerid:%s pending length:%d", p.peerStrID, len(pending))
 	if len(pending) == 0 {
 		return
 	}
@@ -147,7 +200,7 @@ func (sp *SeeleProtocol) syncTransactions(p *peer) {
 		go func() { resultCh <- p.sendTransactions(pending[pos : pos+needSend]) }()
 	}
 
-	resultCh <- nil
+	send(curPos)
 loopOut:
 	for {
 		select {
@@ -169,9 +222,8 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 	p.peerSet.ForEach(func(peer *peer) bool {
 
-		err := peer.SendTransactionHash(tx.Hash)
-		if err != nil {
-			p.log.Warn("send transaction hash failed %s", err.Error())
+		if err := peer.sendTransactionHash(tx.Hash); err != nil {
+			p.log.Warn("send transaction failed %s", err.Error())
 		}
 		return true
 	})
@@ -188,22 +240,36 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		}
 		return true
 	})
+
+	p.log.Debug("handleNewMinedBlock broadcast chainhead changed")
+	p.log.Debug("new block: %d %s <- %s ", block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
+
+	p.broadcastChainHead()
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
-	if err := newPeer.HandShake(); err != nil {
+
+	block, _ := p.chain.CurrentBlock()
+	head := block.HeaderHash
+	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
+	if err != nil {
+		return
+	}
+	//genenis TODO get genenis from blockchain
+	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
 		p.log.Error("handleAddPeer err. %s", err)
 		return
 	}
-
+	p.log.Info("newPeer.HandShake ok")
 	p.peerSet.Add(newPeer)
+	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
+	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
 }
 
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
-	p.peerSet.Remove(p2pPeer.Node.ID)
 }
 
 func (p *SeeleProtocol) handleMsg(peer *peer) {
@@ -211,7 +277,7 @@ handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			p.log.Error("get error when read msg from %s, %s", peer.peerID.ToHex(), err)
+			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 
@@ -228,11 +294,13 @@ handler:
 
 			if !peer.knownTxs.Has(txHash) {
 				peer.knownTxs.Add(txHash) //update peer known transaction
-				err := peer.SendTransactionRequest(txHash)
+				err := peer.sendTransactionRequest(txHash)
 				if err != nil {
 					p.log.Warn("send transaction request msg failed %s", err.Error())
 					break handler
 				}
+			} else {
+				p.log.Debug("already have this tx %s", txHash.ToHex())
 			}
 
 		case transactionRequestMsgCode:
@@ -246,22 +314,25 @@ handler:
 			p.log.Debug("got tx request %s", txHash.ToHex())
 
 			tx := p.txPool.GetTransaction(txHash)
-			err = peer.SendTransaction(tx)
+			err = peer.sendTransaction(tx)
 			if err != nil {
 				p.log.Warn("send transaction msg failed %s", err.Error())
 				break handler
 			}
 
-		case transactionMsgCode:
-			var tx types.Transaction
-			err := common.Deserialize(msg.Payload, &tx)
+		case transactionsMsgCode:
+			var txs []*types.Transaction
+			err := common.Deserialize(msg.Payload, &txs)
 			if err != nil {
 				p.log.Warn("deserialize transaction msg failed %s", err.Error())
-				continue
+				break
 			}
 
-			p.log.Debug("got transaction msg %s", tx.Hash.ToHex())
-			p.txPool.AddTransaction(&tx)
+			p.log.Debug("received %d transactions", len(txs))
+			for _, tx := range txs {
+				p.txPool.AddTransaction(tx)
+				peer.markTransaction(tx.Hash)
+			}
 
 		case blockHashMsgCode:
 			var blockHash common.Hash
@@ -314,10 +385,121 @@ handler:
 			// @todo need to make sure WriteBlock handle block fork
 			p.chain.WriteBlock(&block)
 
+		case downloader.GetBlockHeadersMsg:
+			var query blockHeadersQuery
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				p.log.Error("deserialize downloader.GetBlockHeadersMsg failed, quit! %s", err.Error())
+				break
+			}
+			p.log.Debug("Recved downloader.GetBlockHeadersMsg")
+			var headL []*types.BlockHeader
+			var head *types.BlockHeader
+			orgNum := query.Number
+
+			if query.Hash != common.EmptyHash {
+				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
+					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
+					break
+				}
+				orgNum = head.Height
+			}
+
+			for cnt := uint64(0); cnt < query.Amount; cnt++ {
+				var curNum uint64
+				if query.Reverse {
+					curNum = orgNum - cnt
+				} else {
+					curNum = orgNum + cnt
+				}
+
+				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
+				if head, err = p.chain.GetStore().GetBlockHeader(hash); err != nil {
+					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
+					break handler
+				}
+				headL = append(headL, head)
+			}
+
+			if err = peer.sendBlockHeaders(headL); err != nil {
+				p.log.Error("HandleMsg sendBlockHeaders err. %s", err)
+				break handler
+			}
+			p.log.Debug("send downloader.sendBlockHeaders. len=%d", len(headL))
+
+		case downloader.GetBlocksMsg:
+			p.log.Debug("Recved downloader.GetBlocksMsg")
+			var query blocksQuery
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				p.log.Error("deserialize downloader.GetBlocksMsg failed, quit! %s", err.Error())
+				break
+			}
+
+			var blocksL []*types.Block
+			var head *types.BlockHeader
+			var block *types.Block
+			orgNum := query.Number
+			if query.Hash != common.EmptyHash {
+				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
+					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
+					break
+				}
+				orgNum = head.Height
+			}
+
+			totalLen := 0
+			var numL []uint64
+			for cnt := uint64(0); cnt < query.Amount; cnt++ {
+				curNum := orgNum + cnt
+				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
+				if block, err = p.chain.GetStore().GetBlock(hash); err != nil {
+					p.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
+					break handler
+				}
+
+				curLen := len(common.SerializePanic(block))
+				if totalLen > 0 && (totalLen+curLen) > downloader.MaxMessageLength {
+					break
+				}
+				totalLen += curLen
+				blocksL = append(blocksL, block)
+				numL = append(numL, curNum)
+			}
+
+			if err = peer.sendPreBlocksMsg(numL); err != nil {
+				p.log.Error("HandleMsg GetBlocksMsg sendPreBlocksMsg err. %s", err)
+				break handler
+			}
+
+			if err = peer.sendBlocks(blocksL); err != nil {
+				p.log.Error("HandleMsg GetBlocksMsg sendBlocks err. %s", err)
+				break handler
+			}
+			p.log.Debug("send downloader.sendBlockHeaders")
+
+		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
+			p.log.Debug("Recved downloader Msg. %d", msg.Code)
+			p.downloader.DeliverMsg(peer.peerStrID, &msg)
+
+		case statusChainHeadMsgCode:
+			var status chainHeadStatus
+			err := common.Deserialize(msg.Payload, &status)
+			if err != nil {
+				p.log.Error("deserialize statusChainHeadMsgCode failed, quit! %s", err.Error())
+				break
+			}
+
+			p.log.Debug("Recved statusChainHeadMsgCode")
+			peer.SetHead(status.CurrentBlock, status.TD)
+			p.syncCh <- struct{}{}
+
 		default:
 			p.log.Warn("unknown code %s", msg.Code)
 		}
 	}
 
 	p.peerSet.Remove(peer.peerID)
+	p.downloader.UnRegisterPeer(peer.peerStrID)
+	p.log.Debug("seele.peer.run out!")
 }
