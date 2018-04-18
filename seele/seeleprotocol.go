@@ -52,6 +52,9 @@ type SeeleProtocol struct {
 	log    *log.SeeleLog
 }
 
+// Downloader return a pointer of the downloader
+func (s *SeeleProtocol) Downloader() *downloader.Downloader { return s.downloader }
+
 // NewSeeleProtocol create SeeleProtocol
 func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
