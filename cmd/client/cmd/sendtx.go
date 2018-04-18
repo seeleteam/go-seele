@@ -11,15 +11,16 @@ import (
 	"net/rpc/jsonrpc"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 )
 
 type txInfo struct {
-	amount *uint64
-	to     *string
-	from   *string
+	amount *uint64 // transaction coin amount
+	to     *string // to public address
+	from   *string // from key file
 }
 
 var parameter = txInfo{}
@@ -30,8 +31,8 @@ var sendtxCmd = &cobra.Command{
 	Short: "send tx to miner",
 	Long: `send tx to miner
   For example:
-    client.exe sendtx -m 0 -t 0x{public address} -f 0x{private key} 
-    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x{public address} -f 0x{private key} `,
+    client.exe sendtx -m 0 -t 0x{public address} -f keyfile
+    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x{public address} -f keyfile `,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -46,13 +47,13 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		privateKey, err := crypto.LoadECDSAFromString(*parameter.from)
+		key, err := keystore.GetKey(*parameter.from)
 		if err != nil {
-			fmt.Printf("invalid from key. it should be a private key. %s\n", err.Error())
+			fmt.Printf("invalid from key file. it should be a private key. %s\n", err.Error())
 			return
 		}
 
-		from, err := crypto.GetAddress(privateKey)
+		from, err := crypto.GetAddress(key.PrivateKey)
 		if err != nil {
 			fmt.Printf("generate address failed, %s\n", err.Error())
 			return
@@ -69,7 +70,7 @@ var sendtxCmd = &cobra.Command{
 
 		amount := big.NewInt(0).SetUint64(*parameter.amount)
 		tx := types.NewTransaction(*from, toAddr, amount, nonce)
-		tx.Sign(privateKey)
+		tx.Sign(key.PrivateKey)
 
 		var result bool
 		err = client.Call("seele.AddTx", &tx, &result)
@@ -91,6 +92,6 @@ func init() {
 	parameter.amount = sendtxCmd.Flags().Uint64P("amount", "m", 0, "the number of the transaction value")
 	sendtxCmd.MarkFlagRequired("amount")
 
-	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "from user's private key")
+	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "from user's key file")
 	sendtxCmd.MarkFlagRequired("from")
 }
