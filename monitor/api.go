@@ -6,7 +6,15 @@
 package monitor
 
 import (
+	"errors"
 	"runtime"
+)
+
+// error infos
+var (
+	ErrP2PServerInfoFailed = errors.New("get p2p server infos failed")
+	ErrNodeInfoFailed      = errors.New("get node info failed")
+	ErrMinerInfoFailed     = errors.New("get miner info failed")
 )
 
 // PublicMonitorAPI provides an API to monitor service
@@ -39,6 +47,18 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 
 // NodeStats return the information about the local node.
 func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
+	if api.s.p2pServer == nil {
+		return ErrP2PServerInfoFailed
+	}
+
+	if api.s.seeleNode == nil {
+		return ErrNodeInfoFailed
+	}
+
+	if api.s.seeleNode.Miner() == nil {
+		return ErrMinerInfoFailed
+	}
+
 	var (
 		mining  bool
 		syncing bool
@@ -47,7 +67,7 @@ func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
 	mining = api.s.seeleNode.Miner().IsMining()
 	syncing = true
 
-	result = &NodeStats{
+	*result = NodeStats{
 		Active:   true,
 		Syncing:  syncing,
 		Mining:   mining,

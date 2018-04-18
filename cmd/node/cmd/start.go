@@ -59,7 +59,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// monitor service
-		monitorService, err := monitor.New(seeleService, seeleNode, nCfg, slog, "Test monitor")
+		monitorService, err := monitor.NewMonitorService(seeleService, seeleNode, nCfg, slog, "Test monitor")
 		if err != nil {
 			fmt.Println(err)
 			return

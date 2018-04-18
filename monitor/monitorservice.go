@@ -26,8 +26,8 @@ type MonitorService struct {
 	version string // version
 }
 
-// New returns a rpc service
-func New(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Config, slog *log.SeeleLog, name string) (*MonitorService, error) {
+// NewMonitorService returns a rpc service
+func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Config, slog *log.SeeleLog, name string) (*MonitorService, error) {
 	return &MonitorService{
 		seele:     seeleService,
 		seeleNode: seeleNode,
