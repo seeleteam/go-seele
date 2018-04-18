@@ -59,7 +59,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// monitor service
-		monitorService, err := monitor.New(seeleService, seeleNode, nCfg, "Test monitor")
+		monitorService, err := monitor.New(seeleService, seeleNode, nCfg, slog, "Test monitor")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -76,7 +76,7 @@ var startCmd = &cobra.Command{
 		err = seeleNode.StartMiner(seeleService)
 		if err != nil {
 			fmt.Println("Start miner failed: ", err)
-			// go on
+			return
 		}
 
 		wg.Add(1)

@@ -6,19 +6,19 @@
 package monitor
 
 import (
-	"fmt"
-
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// Service implement some rpc interfaces used by a monitor server
-type Service struct {
+// MonitorService implement some rpc interfaces used by a monitor server
+type MonitorService struct {
 	p2pServer *p2p.Server         // Peer-to-Peer server infos
 	seele     *seele.SeeleService // seele full node service
 	seeleNode *node.Node          // seele node
+	log       *log.SeeleLog
 
 	rpcAddr string // listening port
 	name    string // name display on the moitor
@@ -27,10 +27,11 @@ type Service struct {
 }
 
 // New returns a rpc service
-func New(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Config, name string) (*Service, error) {
-	return &Service{
+func New(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Config, slog *log.SeeleLog, name string) (*MonitorService, error) {
+	return &MonitorService{
 		seele:     seeleService,
 		seeleNode: seeleNode,
+		log:       slog,
 		name:      name,
 		rpcAddr:   conf.RPCAddr,
 		node:      conf.Name,
@@ -39,24 +40,25 @@ func New(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Conf
 }
 
 // Protocols implements node.Service, nil as it dosn't use p2pservice
-func (s *Service) Protocols() []p2p.Protocol { return nil }
+func (s *MonitorService) Protocols() []p2p.Protocol { return nil }
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
-func (s *Service) Start(srvr *p2p.Server) error {
+func (s *MonitorService) Start(srvr *p2p.Server) error {
 	s.p2pServer = srvr
 
-	fmt.Println("monitor rpc service start")
+	s.log.Info("monitor rpc service start")
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines.
-func (s *Service) Stop() error {
+func (s *MonitorService) Stop() error {
 
 	return nil
 }
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
-func (s *Service) APIs() (apis []rpc.API) {
+func (s *MonitorService) APIs() (apis []rpc.API) {
 	return append(apis, []rpc.API{
 		{
 			Namespace: "monitor",

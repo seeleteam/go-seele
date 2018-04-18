@@ -20,12 +20,12 @@ import (
 
 // error infos
 var (
+	ErrConfigIsNull       = errors.New("config info is null")
+	ErrLogIsNull          = errors.New("SeeleLog is null")
 	ErrNodeRunning        = errors.New("node is already running")
 	ErrNodeStopped        = errors.New("node is not started")
 	ErrServiceStartFailed = errors.New("node service start failed")
 	ErrServiceStopFailed  = errors.New("node service stop failed")
-	ErrConfigIsNull       = errors.New("config info is null")
-	ErrLogIsNull          = errors.New("SeeleLog is null")
 )
 
 // Node is a container for registering services.
