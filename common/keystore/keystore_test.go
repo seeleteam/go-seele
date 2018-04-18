@@ -6,11 +6,12 @@
 package keystore
 
 import (
-	"testing"
 	"io/ioutil"
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/magiconair/properties/assert"
 	"path/filepath"
+	"testing"
+
+	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func Test_KeyStore(t *testing.T) {
@@ -26,7 +27,7 @@ func Test_KeyStore(t *testing.T) {
 	}
 
 	key := &Key{
-		PrivateKey:keypair,
+		PrivateKey: keypair,
 	}
 
 	err = StoreKey(fileName, key)
