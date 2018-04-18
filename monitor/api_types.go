@@ -27,6 +27,6 @@ type NodeStats struct {
 	Mining   bool `json:"mining"`
 	Hashrate int  `json:"hashrate"`
 	Peers    int  `json:"peers"`
-	Price    int  `json:"gasPrice"`
+	Price    int  `json:"price"`
 	Uptime   int  `json:"uptime"`
 }
