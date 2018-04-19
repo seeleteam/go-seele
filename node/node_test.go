@@ -15,14 +15,13 @@ import (
 
 var (
 	testNodeKey, _ = crypto.GenerateKey()
-	testECDSAKey   = "0x445e92837140929b190e89818c39223d1d2b9c07388d80e907adf2e3ba187563"
 )
 
 func testNodeConfig() *Config {
 	return &Config{
 		Name:    "test node",
 		Version: "test version",
-		P2P:     p2p.Config{PrivateKey: testNodeKey, ECDSAKey: testECDSAKey},
+		P2P:     p2p.Config{PrivateKey: testNodeKey},
 	}
 }
 
