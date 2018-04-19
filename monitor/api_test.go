@@ -32,13 +32,13 @@ func getTmpConfig() *seele.Config {
 
 func createTestAPI() *PublicMonitorAPI {
 	seeleConf := getTmpConfig()
-
+	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
 		Name:    "Node for test",
 		Version: "Test 1.0",
 		DataDir: "node1",
 		P2P: p2p.Config{
-			ECDSAKey:   "0x6d05f8df3278d8937668f0fd5af7aea6ece8129e615e8586535a021f1626416d",
+			PrivateKey: key,
 			ListenAddr: "0.0.0.0:39007",
 		},
 		RPCAddr:     "127.0.0.1:55027",
@@ -88,24 +88,27 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 
 	testConf := node.Config{}
 	if errBranch == 1 {
+
+		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
 			Name:    "Node for test2",
 			Version: "Test 1.0",
 			DataDir: "node1",
 			P2P: p2p.Config{
-				ECDSAKey:   "0x8ea132a88e64aa450aedd93531c6b7153f45eacef32a1fb9628b9f3cb6281414",
+				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39008",
 			},
 			RPCAddr:     "127.0.0.1:55028",
 			SeeleConfig: *seeleConf,
 		}
 	} else {
+		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
 			Name:    "Node for test3",
 			Version: "Test 1.0",
 			DataDir: "node1",
 			P2P: p2p.Config{
-				ECDSAKey:   "0x6ea132a88e64aa450aedd93531c6b7153f45eacef32a1fb9628b9f3cb6281414",
+				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39008",
 			},
 			RPCAddr:     "127.0.0.1:55028",
