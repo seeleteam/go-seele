@@ -12,9 +12,9 @@ import (
 
 // error infos
 var (
-	ErrP2PServerInfoFailed = errors.New("get p2p server infos failed")
-	ErrNodeInfoFailed      = errors.New("get node info failed")
 	ErrMinerInfoFailed     = errors.New("get miner info failed")
+	ErrNodeInfoFailed      = errors.New("get node info failed")
+	ErrP2PServerInfoFailed = errors.New("get p2p server infos failed")
 )
 
 // PublicMonitorAPI provides an API to monitor service

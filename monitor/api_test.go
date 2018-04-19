@@ -41,7 +41,7 @@ func createTestAPI() *PublicMonitorAPI {
 			ECDSAKey:   "0x6d05f8df3278d8937668f0fd5af7aea6ece8129e615e8586535a021f1626416d",
 			ListenAddr: "0.0.0.0:39007",
 		},
-		RPCAddr:     "127.0.0.1:8080",
+		RPCAddr:     "127.0.0.1:55027",
 		SeeleConfig: *seeleConf,
 	}
 
@@ -83,14 +83,105 @@ func createTestAPI() *PublicMonitorAPI {
 	return api
 }
 
+func createTestAPIErr(errBranch int) *PublicMonitorAPI {
+	seeleConf := getTmpConfig()
+
+	testConf := node.Config{}
+	if errBranch == 1 {
+		testConf = node.Config{
+			Name:    "Node for test2",
+			Version: "Test 1.0",
+			DataDir: "node1",
+			P2P: p2p.Config{
+				ECDSAKey:   "0x8ea132a88e64aa450aedd93531c6b7153f45eacef32a1fb9628b9f3cb6281414",
+				ListenAddr: "0.0.0.0:39008",
+			},
+			RPCAddr:     "127.0.0.1:55028",
+			SeeleConfig: *seeleConf,
+		}
+	} else {
+		testConf = node.Config{
+			Name:    "Node for test3",
+			Version: "Test 1.0",
+			DataDir: "node1",
+			P2P: p2p.Config{
+				ECDSAKey:   "0x6ea132a88e64aa450aedd93531c6b7153f45eacef32a1fb9628b9f3cb6281414",
+				ListenAddr: "0.0.0.0:39008",
+			},
+			RPCAddr:     "127.0.0.1:55028",
+			SeeleConfig: *seeleConf,
+		}
+	}
+
+	serviceContext := seele.ServiceContext{
+		DataDir: common.GetTempFolder(),
+	}
+
+	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
+	dataDir := ctx.Value("ServiceContext").(seele.ServiceContext).DataDir
+	defer os.RemoveAll(dataDir)
+	log := log.GetLogger("seele", true)
+
+	seeleNode, err := node.New(&testConf)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	seeleService, err := seele.NewSeeleService(ctx, seeleConf, log)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	monitorService, _ := NewMonitorService(seeleService, seeleNode, &testConf, log, "run test")
+
+	seeleNode.Register(monitorService)
+	seeleNode.Register(seeleService)
+
+	api := NewPublicMonitorAPI(monitorService)
+
+	if errBranch != 1 {
+		seeleNode.Start()
+	} else {
+		seeleNode.StartMiner(seeleService)
+	}
+
+	return api
+}
+
 func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	api := createTestAPI()
 	if api == nil {
 		t.Fatal()
 	}
 	nodeInfo := NodeInfo{}
-	api.NodeInfo(0, &nodeInfo)
+	if err := api.NodeInfo(0, &nodeInfo); err != nil {
+		t.Fatalf("get nodeInfo failed: %v", err)
+	}
 
 	nodeStats := NodeStats{}
-	api.NodeStats(0, &nodeStats)
+	if err := api.NodeStats(0, &nodeStats); err != nil {
+		t.Fatalf("get nodeStats failed: %v", err)
+	}
+}
+
+func Test_PublicMonitorAPI_Err(t *testing.T) {
+	api := createTestAPIErr(1)
+	if api == nil {
+		t.Fatal()
+	}
+	nodeStats := NodeStats{}
+	if err := api.NodeStats(0, &nodeStats); err == nil {
+		t.Fatalf("error branch is not covered")
+	}
+
+	api2 := createTestAPIErr(2)
+	if api2 == nil {
+		t.Fatal()
+	}
+	nodeStats2 := NodeStats{}
+	if err := api2.NodeStats(0, &nodeStats2); err == nil {
+		t.Fatalf("error branch is not covered")
+	}
 }
