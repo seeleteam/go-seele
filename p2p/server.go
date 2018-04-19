@@ -57,9 +57,6 @@ type Config struct {
 	// Name node's name
 	Name string //`toml:"-"`
 
-	// ECDSAKey dumped string of Node's ecdsa.PrivateKey
-	ECDSAKey string
-
 	// PrivateKey Node's ecdsa.PrivateKey
 	PrivateKey *ecdsa.PrivateKey
 
@@ -136,13 +133,6 @@ func (srv *Server) Start() (err error) {
 	srv.quit = make(chan struct{})
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
-
-	srv.PrivateKey, err = crypto.LoadECDSAFromString(srv.ECDSAKey)
-	if err != nil {
-		return err
-	}
-
-	srv.log.Debug("my ecdsa key: %s", srv.ECDSAKey)
 
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)

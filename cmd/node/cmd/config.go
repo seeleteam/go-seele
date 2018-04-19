@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -31,9 +32,9 @@ type Config struct {
 	// JSON API address
 	RPCAddr string
 
-	// private key of the node for p2p module
+	// private key file of the node for p2p module
 	// @TODO need to remove it as keep private key in memory is very risk
-	ECDSAKey string
+	KeyFile string
 
 	// network id, not using for now, @TODO maybe remove or just use Version
 	NetworkID uint64
@@ -110,7 +111,12 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 		}
 	}
 
-	p2pConfig.ECDSAKey = config.ECDSAKey
+	key, err := keystore.GetKey(config.KeyFile)
+	if err != nil {
+		return p2pConfig, err
+	}
+
+	p2pConfig.PrivateKey = key.PrivateKey
 	p2pConfig.ListenAddr = config.ListenAddr
 	return p2pConfig, nil
 }
