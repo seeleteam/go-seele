@@ -12,9 +12,10 @@ import (
 
 // error infos
 var (
-	ErrMinerInfoFailed     = errors.New("get miner info failed")
-	ErrNodeInfoFailed      = errors.New("get node info failed")
-	ErrP2PServerInfoFailed = errors.New("get p2p server infos failed")
+	ErrBlockchainInfoFailed = errors.New("get blockchain info failed")
+	ErrMinerInfoFailed      = errors.New("get miner info failed")
+	ErrNodeInfoFailed       = errors.New("get node info failed")
+	ErrP2PServerInfoFailed  = errors.New("get p2p server info failed")
 )
 
 // PublicMonitorAPI provides an API to monitor service
@@ -59,22 +60,13 @@ func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
 		return ErrMinerInfoFailed
 	}
 
-	var (
-		mining  bool
-		syncing bool
-	)
-
-	mining = api.s.seeleNode.Miner().IsMining()
-	syncing = true
+	mining := api.s.seeleNode.Miner().IsMining()
 
 	*result = NodeStats{
-		Active:   true,
-		Syncing:  syncing,
-		Mining:   mining,
-		Hashrate: 20,
-		Peers:    api.s.p2pServer.PeerCount(),
-		Price:    10,
-		Uptime:   100,
+		Active:  true,
+		Syncing: true,
+		Mining:  mining,
+		Peers:   api.s.p2pServer.PeerCount(),
 	}
 
 	return nil

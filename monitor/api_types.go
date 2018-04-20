@@ -22,11 +22,8 @@ type NodeInfo struct {
 
 // NodeStats is the information about the local node.
 type NodeStats struct {
-	Active   bool `json:"active"`
-	Syncing  bool `json:"syncing"`
-	Mining   bool `json:"mining"`
-	Hashrate int  `json:"hashrate"`
-	Peers    int  `json:"peers"`
-	Price    int  `json:"price"`
-	Uptime   int  `json:"uptime"`
+	Active  bool `json:"active"`
+	Syncing bool `json:"syncing"`
+	Mining  bool `json:"mining"`
+	Peers   int  `json:"peers"`
 }
