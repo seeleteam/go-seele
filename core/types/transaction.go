@@ -61,7 +61,7 @@ type TransactionData struct {
 	To           *common.Address // nil for contract creation transaction.
 	Amount       *big.Int
 	AccountNonce uint64
-	Timestamp    uint64 // unix clock
+	Timestamp    uint64 // unix nano time
 	Payload      []byte
 }
 
@@ -97,7 +97,7 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 		From:         from,
 		To:           to,
 		Amount:       new(big.Int).Set(amount),
-		Timestamp:    uint64(time.Now().Unix()),
+		Timestamp:    uint64(time.Now().UnixNano()),
 		AccountNonce: nonce,
 	}
 
