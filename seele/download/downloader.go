@@ -107,7 +107,6 @@ func (d *Downloader) getSyncInfo(info *SyncInfo) {
 	info.StartNum = d.tm.fromNo
 	info.Amount = d.tm.toNo - d.tm.fromNo + 1
 	info.Downloaded = d.tm.downloadedNum
-	return
 }
 
 // Synchronise try to sync with remote peer.
