@@ -17,7 +17,7 @@ type LevelDB struct {
 	db *leveldb.DB
 }
 
-// NewLevelDB new database interface of level db
+// NewLevelDB news database interface of level db
 func NewLevelDB(path string) (database.Database, error) {
 	db, err := leveldb.OpenFile(path, nil)
 
@@ -36,7 +36,7 @@ func NewLevelDB(path string) (database.Database, error) {
 	return result, nil
 }
 
-// Close don't forget close db when not use
+// Close don't forget to close db when not use
 func (db *LevelDB) Close() {
 	db.db.Close()
 }
@@ -63,12 +63,12 @@ func (db *LevelDB) PutString(key string, value string) error {
 	return db.Put([]byte(key), []byte(value))
 }
 
-// Has returns true if the DB does contains the given key.
+// Has returns true if the DB does contain the given key.
 func (db *LevelDB) Has(key []byte) (ret bool, err error) {
 	return db.db.Has(key, nil)
 }
 
-// HasString returns true if the DB does contains the given key.
+// HasString returns true if the DB does contain the given key.
 func (db *LevelDB) HasString(key string) (ret bool, err error) {
 	return db.Has([]byte(key))
 }
@@ -83,7 +83,7 @@ func (db *LevelDB) DeleteSring(key string) error {
 	return db.Delete([]byte(key))
 }
 
-// NewBatch new a batch operator
+// NewBatch news a batch operator
 func (db *LevelDB) NewBatch() database.Batch {
 	batch := &Batch{
 		leveldb: db.db,
