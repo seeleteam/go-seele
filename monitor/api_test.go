@@ -167,6 +167,11 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	if err := api.NodeStats(0, &nodeStats); err != nil {
 		t.Fatalf("get nodeStats failed: %v", err)
 	}
+
+	curBlock := CurrentBlock{}
+	if err := api.CurrentBlock(0, &curBlock); err != nil {
+		t.Fatalf("get current block failed: %v", err)
+	}
 }
 
 func Test_PublicMonitorAPI_Err(t *testing.T) {

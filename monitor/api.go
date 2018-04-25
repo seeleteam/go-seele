@@ -29,7 +29,7 @@ func NewPublicMonitorAPI(s *MonitorService) *PublicMonitorAPI {
 }
 
 // NodeInfo return NodeInfo struct of the local node
-func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
+func (api *PublicMonitorAPI) NodeInfo(arg interface{}, result *NodeInfo) error {
 	*result = NodeInfo{
 		Name:       api.s.name,
 		Node:       api.s.node,
@@ -47,7 +47,7 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 }
 
 // NodeStats return the information about the local node.
-func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
+func (api *PublicMonitorAPI) NodeStats(arg interface{}, result *NodeStats) error {
 	if api.s.p2pServer == nil {
 		return ErrP2PServerInfoFailed
 	}
@@ -67,6 +67,26 @@ func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
 		Syncing: true,
 		Mining:  mining,
 		Peers:   api.s.p2pServer.PeerCount(),
+	}
+
+	return nil
+}
+
+// CurrentBlock return the best block of the blockchain
+func (api *PublicMonitorAPI) CurrentBlock(arg interface{}, result *CurrentBlock) error {
+	if api.s.seele.BlockChain() == nil {
+		return ErrBlockchainInfoFailed
+	}
+
+	curblock, _ := api.s.seele.BlockChain().CurrentBlock()
+
+	*result = CurrentBlock{
+		HeadHash:  curblock.HeaderHash,
+		Height:    curblock.Header.Height,
+		Timestamp: curblock.Header.CreateTimestamp,
+		Difficult: curblock.Header.Difficulty,
+		Creator:   curblock.Header.Creator,
+		TxCount:   len(curblock.Transactions),
 	}
 
 	return nil
