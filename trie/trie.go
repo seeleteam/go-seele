@@ -29,6 +29,30 @@ type Trie struct {
 	root     noder     // root node of the Trie
 	dbprefix []byte    // db prefix of Trie node
 	sha      hash.Hash // hash calc for trie
+	rootHash common.Hash
+}
+
+// CopyTrie returns a copy of the given trie.
+func CopyTrie(t *Trie) (*Trie, error) {
+	trie := &Trie{
+		db:       t.db,
+		dbprefix: t.dbprefix,
+		sha:      t.sha,
+		rootHash: t.rootHash,
+	}
+
+	if t.rootHash == common.EmptyHash {
+		trie.root = t.root
+	} else {
+		rootnode, err := trie.loadNode(t.rootHash.Bytes())
+		if err != nil {
+			return nil, err
+		}
+
+		trie.root = rootnode
+	}
+
+	return trie, nil
 }
 
 // NewTrie new a trie tree
@@ -39,6 +63,7 @@ func NewTrie(root common.Hash, dbprefix []byte, db database.Database) (*Trie, er
 		db:       db,
 		dbprefix: dbprefix,
 		sha:      sha3.NewKeccak256(),
+		rootHash: root,
 	}
 
 	if root != common.EmptyHash {
