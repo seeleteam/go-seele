@@ -58,10 +58,6 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 		task.txs = append(task.txs, tx)
 	}
 
-	if len(task.txs) == 0 {
-		return ErrNotEnoughTransactions
-	}
-
 	log.Info("miner transaction number %d", len(task.txs))
 
 	root, err := statedb.Commit(nil)
