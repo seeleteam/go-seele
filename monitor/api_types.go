@@ -5,6 +5,12 @@
 
 package monitor
 
+import (
+	"math/big"
+
+	"github.com/seeleteam/go-seele/common"
+)
+
 // NodeInfo is the collection of metainformation about a node that is displayed
 // on the monitoring page.
 type NodeInfo struct {
@@ -26,4 +32,14 @@ type NodeStats struct {
 	Syncing bool `json:"syncing"`
 	Mining  bool `json:"mining"`
 	Peers   int  `json:"peers"`
+}
+
+// CurrentBlock is the informations about the best block
+type CurrentBlock struct {
+	HeadHash  common.Hash    `json:"headHash"`
+	Height    uint64         `json:"height"`
+	Timestamp *big.Int       `json:"timestamp"`
+	Difficult *big.Int       `json:"difficult"`
+	Creator   common.Address `json:"creator"`
+	TxCount   int            `json:"txcount"`
 }
