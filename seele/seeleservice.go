@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele/download"
 )
 
 // SeeleService implements full node service.
@@ -41,6 +42,9 @@ type ServiceContext struct {
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
+func (s *SeeleService) Downloader() *downloader.Downloader {
+	return s.seeleProtocol.Downloader()
+}
 
 // ApplyTransaction applys a transaction
 // Check if this transaction is valid in the state db
