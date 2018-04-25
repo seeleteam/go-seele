@@ -32,7 +32,7 @@ var startCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
 		if err != nil {
-			fmt.Printf("read config file failed %s", err.Error())
+			fmt.Printf("read config file failed %s\n", err.Error())
 			return
 		}
 
