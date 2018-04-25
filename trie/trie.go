@@ -32,7 +32,7 @@ type Trie struct {
 	rootHash common.Hash
 }
 
-// CopyTrie returns a copy of the given trie by root.
+// CopyTrie returns a copy of the given trie.
 func CopyTrie(t *Trie) (*Trie, error) {
 	trie := &Trie{
 		db:       t.db,
