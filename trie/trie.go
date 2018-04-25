@@ -530,6 +530,24 @@ func keybytesToHex(str []byte) []byte {
 	return nibbles
 }
 
+func hexToKeybytes(hex []byte) []byte {
+	if hasTerm(hex) {
+		hex = hex[:len(hex)-1]
+	}
+	if len(hex)&1 != 0 {
+		panic("can't convert hex key of odd length")
+	}
+	key := make([]byte, (len(hex)+1)/2)
+	decodeNibbles(hex, key)
+	return key
+}
+
+func decodeNibbles(nibbles []byte, bytes []byte) {
+	for bi, ni := 0, 0; ni < len(nibbles); bi, ni = bi+1, ni+2 {
+		bytes[bi] = nibbles[ni]<<4 | nibbles[ni+1]
+	}
+}
+
 func matchkeyLen(a, b []byte) int {
 	length := len(a)
 	lengthb := len(b)
@@ -543,4 +561,13 @@ func matchkeyLen(a, b []byte) int {
 		}
 	}
 	return i
+}
+
+// hasTerm returns whether a hex key has the terminator flag.
+func hasTerm(s []byte) bool {
+	return len(s) > 0 && s[len(s)-1] == 16
+}
+
+func (t *Trie) NodeIterator(start []byte) NodeIterator {
+	return newNodeIterator(t, start)
 }
