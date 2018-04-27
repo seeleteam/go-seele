@@ -12,6 +12,8 @@
   ],
   "RPCAddr":      "127.0.0.1:55028",
   "HTTPAddr":     "127.0.0.1:65028",
+  "HTTPCors":     ["*"],
+  "HTTPWhiteHost": ["*"],
   "IsDebug":      true,
   "PrintLog":     true
 }

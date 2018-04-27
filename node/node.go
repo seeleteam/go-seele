@@ -129,7 +129,7 @@ func (n *Node) Start() error {
 	}
 
 	// Start RPC server
-	if err := n.startRPC(n.services); err != nil {
+	if err := n.startRPC(n.services, n.config); err != nil {
 		for _, service := range n.services {
 			service.Stop()
 		}
@@ -142,7 +142,7 @@ func (n *Node) Start() error {
 }
 
 // startRPC starts all RPC
-func (n *Node) startRPC(services []Service) error {
+func (n *Node) startRPC(services []Service, conf *Config) error {
 	apis := []rpc.API{}
 	for _, service := range services {
 		apis = append(apis, service.APIs()...)
@@ -153,7 +153,7 @@ func (n *Node) startRPC(services []Service) error {
 		return err
 	}
 
-	if err := n.startHTTPRPC(apis, []string{"*"}, []string{"*"}); err != nil {
+	if err := n.startHTTPRPC(apis, conf.HTTPWhiteHost, conf.HTTPCors); err != nil {
 		n.log.Error("start http rpc err", err)
 		return err
 	}

@@ -26,6 +26,7 @@ func Test_WhiteList(t *testing.T) {
 	testWhiteList(t, whiteList_domains, "http://www.test.com", true)
 	testWhiteList(t, whiteList_domains, "http://www.test.com:1234", true)
 	testWhiteList(t, whiteList_domains, "http://127.0.0.1", true)
+	testWhiteList(t, whiteList_domains, "http://seele.com/test/666", true)
 }
 
 func testWhiteList(t *testing.T, list []string, host string, expected bool) {

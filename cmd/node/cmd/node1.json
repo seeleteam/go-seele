@@ -10,6 +10,8 @@
   "StaticNodes":  [],
   "RPCAddr":      "127.0.0.1:55027",
   "HTTPAddr":     "127.0.0.1:65027",
+  "HTTPCors":     ["*"],
+  "HTTPWhiteHost": ["*"],
   "IsDebug":      true,
   "PrintLog":     true
 }

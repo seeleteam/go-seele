@@ -35,6 +35,14 @@ type Config struct {
 	// HTTP rpc address
 	HTTPAddr string
 
+	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
+	// clients. Please be aware that CORS is a browser enforced security, it's fully
+	// useless for custom HTTP clients.
+	HTTPCors []string
+
+	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
+	HTTPWhiteHost []string
+
 	// private key file of the node for p2p module
 	// @TODO need to remove it as keep private key in memory is very risk
 	KeyFile string
@@ -85,6 +93,8 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
 	nodeConfig.HTTPAddr = config.HTTPAddr
+	nodeConfig.HTTPCors = config.HTTPCors
+	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
 	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
 	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
