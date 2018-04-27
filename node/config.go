@@ -27,6 +27,9 @@ type Config struct {
 	// The RPCAddr is the address on which to start RPC server.
 	RPCAddr string
 
+	// The HTTPAddr is the address of HTTP rpc service
+	HTTPAddr string
+
 	// The SeeleConfig is the configuration to create seele service.
 	SeeleConfig seele.Config
 }

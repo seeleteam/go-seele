@@ -32,6 +32,9 @@ type Config struct {
 	// JSON API address
 	RPCAddr string
 
+	// HTTP rpc address
+	HTTPAddr string
+
 	// private key file of the node for p2p module
 	// @TODO need to remove it as keep private key in memory is very risk
 	KeyFile string
@@ -81,6 +84,7 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Name = config.Name
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
+	nodeConfig.HTTPAddr = config.HTTPAddr
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
 	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
 	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
