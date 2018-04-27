@@ -109,9 +109,9 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 			DataDir: "node1",
 			P2P: p2p.Config{
 				PrivateKey: key,
-				ListenAddr: "0.0.0.0:39008",
+				ListenAddr: "0.0.0.0:39009",
 			},
-			RPCAddr:     "127.0.0.1:55028",
+			RPCAddr:     "127.0.0.1:55029",
 			SeeleConfig: *seeleConf,
 		}
 	}
@@ -169,22 +169,13 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	}
 }
 
-// func Test_PublicMonitorAPI_Err(t *testing.T) {
-// 	api := createTestAPIErr(1)
-// 	if api == nil {
-// 		t.Fatal()
-// 	}
-// 	nodeStats := NodeStats{}
-// 	if err := api.NodeStats(0, &nodeStats); err == nil {
-// 		t.Fatalf("error branch is not covered")
-// 	}
-
-// 	api2 := createTestAPIErr(2)
-// 	if api2 == nil {
-// 		t.Fatal()
-// 	}
-// 	nodeStats2 := NodeStats{}
-// 	if err := api2.NodeStats(0, &nodeStats2); err == nil {
-// 		t.Fatalf("error branch is not covered")
-// 	}
-// }
+func Test_PublicMonitorAPI_Err(t *testing.T) {
+	api := createTestAPIErr(1)
+	if api == nil {
+		t.Fatal()
+	}
+	nodeStats := NodeStats{}
+	if err := api.NodeStats(0, &nodeStats); err == nil {
+		t.Fatalf("error branch is not covered")
+	}
+}
