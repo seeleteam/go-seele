@@ -22,6 +22,12 @@
 			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
+			"checksumSHA1": "9gjJriV7ecKSsbA72845rYwo+Jc=",
+			"path": "github.com/ethereum/go-ethereum/common",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
+		},
+		{
 			"checksumSHA1": "Zda1/QlYkX6WzOntMLWdPF0pfg4=",
 			"path": "github.com/ethereum/go-ethereum/common/math",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
