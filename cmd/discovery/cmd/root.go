@@ -17,14 +17,14 @@ import (
 var cfgFile string
 
 var (
-	id *string //specific node id, will ignore addr if set
+	id *string //specified node id. if set, the node address will be ignored
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "discovery",
-	Short: "discovery command for find node and detect node",
-	Long:  `use "discovery help [command]" for detail usage`,
+	Short: "discovery command for finding nodes and detecting nodes",
+	Long:  `use "discovery help [<command>]" for detailed usage`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -34,7 +34,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }
@@ -54,20 +54,20 @@ func init() {
 	id = rootCmd.PersistentFlags().StringP("id", "i", "", "node id")
 }
 
-// initConfig reads in config file and ENV variables if set.
+// initConfig reads in the config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
-		// Use config file from the flag.
+		// Use cfgFile as the config file.
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".discovery" (without extension).
+		// Search the config file in home directory with name ".discovery" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".discovery")
 	}
@@ -76,6 +76,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		fmt.Printf("Using the config file: %s\n", viper.ConfigFileUsed())
 	}
 }

@@ -32,17 +32,17 @@ var startCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
 		if err != nil {
-			fmt.Printf("read config file failed %s", err.Error())
+			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
 		}
 
-		// print some config info
-		fmt.Printf("log folder %s\n", log.LogFolder)
-		fmt.Printf("data folder %s\n", nCfg.DataDir)
+		// print some config infos
+		fmt.Printf("log folder: %s\n", log.LogFolder)
+		fmt.Printf("data folder: %s\n", nCfg.DataDir)
 
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			return
 		}
 
@@ -54,28 +54,28 @@ var startCmd = &cobra.Command{
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 		seeleService, err := seele.NewSeeleService(ctx, &nCfg.SeeleConfig, slog)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			return
 		}
 
 		// monitor service
 		monitorService, err := monitor.NewMonitorService(seeleService, seeleNode, nCfg, slog, "Test monitor")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			return
 		}
 
 		services := []node.Service{seeleService, monitorService}
 		for _, service := range services {
 			if err := seeleNode.Register(service); err != nil {
-				fmt.Println(err)
+				fmt.Println(err.Error())
 			}
 		}
 
 		seeleNode.Start()
 		err = seeleNode.StartMiner(seeleService)
 		if err != nil {
-			fmt.Println("Start miner failed: ", err)
+			fmt.Printf("Starting the miner failed: %s\n", err.Error())
 			return
 		}
 
@@ -93,8 +93,8 @@ func init() {
 
 /*
 ecdsa private-public key pairs used for test.
-The shorter one is the private key, and the other is public key.
-The length of public key is 65, has fix prefix '04' which can remove in some case.
+The shorter one is the private key, and the other is the public key.
+The length of public key is 65, with the fixed prefix '04' which can be removed in some cases.
 29
 key00   692e7dcb0efebc71bd544755baebb41a6b7245efd78799e836d56ef02f417efa
 key00   040548d0b1a3297fea072284f86b9fd39a9f1273c46fba8951b62de5b95cd3dd846278057ec4df598a0b089a0bdc0c8fd3aa601cf01a9f30a60292ea0769388d1f

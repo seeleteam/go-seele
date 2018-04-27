@@ -12,11 +12,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "node",
-	Short: "node command for start a node",
-	Long:  `use "node help [command]" for detail usage`,
+	Short: "node command for starting a node",
+	Long:  `use "node help [<command>]" for detailed usage`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }

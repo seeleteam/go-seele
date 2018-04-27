@@ -18,7 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// Miner defines base elements of miner
+// Miner defines base elements of the miner
 type Miner struct {
 	coinbase common.Address
 	mining   int32
@@ -34,7 +34,7 @@ type Miner struct {
 	isFirstDownloader int32
 }
 
-// NewMiner construct a miner, return a Miner instance
+// NewMiner constructs and returns a miner instance
 func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog) *Miner {
 	miner := &Miner{
 		coinbase:          addr,
@@ -52,7 +52,7 @@ func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog)
 	return miner
 }
 
-// Start function is used to start miner
+// Start is used to start the miner
 func (miner *Miner) Start() bool {
 	if atomic.LoadInt32(&miner.mining) == 1 {
 		miner.log.Info("Miner is running")
@@ -60,7 +60,7 @@ func (miner *Miner) Start() bool {
 	}
 
 	if atomic.LoadInt32(&miner.canStart) == 0 {
-		miner.log.Info("Can not start miner when syncing")
+		miner.log.Info("Can not start the miner when syncing")
 		return false
 	}
 
@@ -72,29 +72,30 @@ func (miner *Miner) Start() bool {
 	return true
 }
 
-// Stop function is used to stop miner
+// Stop is used to stop the miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
 	miner.stopChan <- struct{}{}
 }
 
+// Close closes the miner
 func (miner *Miner) Close() {
 	close(miner.stopChan)
 	close(miner.recv)
 }
 
-// IsMining returns true if miner is started, return false if not
+// IsMining returns true if the miner is started, otherwise false
 func (miner *Miner) IsMining() bool {
 	return atomic.LoadInt32(&miner.mining) == 1
 }
 
+// downloadEventCallback handles events which indicate the downloader state
 func (miner *Miner) downloadEventCallback(e event.Event) {
 	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
 		return
 	}
 
-	eventType := e.(int)
-	switch eventType {
+	switch e.(int) {
 	case event.DownloaderStartEvent:
 		atomic.StoreInt32(&miner.canStart, 0)
 		if miner.IsMining() {
@@ -107,14 +108,16 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 	}
 }
 
+// newTxCallback handles the new tx event
 func (miner *Miner) newTxCallback(e event.Event) {
-	miner.log.Debug("got new tx event")
+	miner.log.Debug("got the new tx event")
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		miner.prepareNewBlock()
 	}
 }
 
+// waitBlock waits for blocks to be mined continuously
 func (miner *Miner) waitBlock() {
 out:
 	for {
@@ -126,15 +129,15 @@ out:
 
 			ret := miner.saveBlock(result)
 			if ret != nil {
-				miner.log.Error("saveBlock failed, cause for %s", ret)
+				miner.log.Error("saving the block failed, for %s", ret.Error())
 				continue
 			}
 
-			miner.log.Info("found a new mined block, notify to p2p")
-			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast block
+			miner.log.Info("found a new mined block and notify p2p")
+			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 			atomic.StoreInt32(&miner.mining, 0)
 
-			// loop mining after mining complete
+			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
 			break out
@@ -142,8 +145,9 @@ out:
 	}
 }
 
+// prepareNewBlock prepares a new block to be mined
 func (miner *Miner) prepareNewBlock() {
-	miner.log.Debug("start mining new block")
+	miner.log.Debug("starting mining the new block")
 
 	timestamp := time.Now().Unix()
 	parent, stateDB := miner.seele.BlockChain().CurrentBlock()
@@ -155,7 +159,7 @@ func (miner *Miner) prepareNewBlock() {
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); timestamp > now+1 {
 		wait := time.Duration(timestamp-now) * time.Second
-		miner.log.Info("Mining too far in the future, wait for %s", wait)
+		miner.log.Info("Mining too far in the future. waiting for %s", wait)
 		time.Sleep(wait)
 	}
 
@@ -186,15 +190,17 @@ func (miner *Miner) prepareNewBlock() {
 		return
 	}
 
-	miner.log.Info("commit a new task to engine, height=%d", header.Height)
+	miner.log.Info("committing a new task to engine, height=%d", header.Height)
 	miner.commitTask(miner.current)
 }
 
+// saveBlock saves the block in the given result to the blockchain
 func (miner *Miner) saveBlock(result *Result) error {
 	ret := miner.seele.BlockChain().WriteBlock(result.block)
 	return ret
 }
 
+// commitTask commits the given task to the miner
 func (miner *Miner) commitTask(task *Task) {
 	if atomic.LoadInt32(&miner.mining) != 1 {
 		return
