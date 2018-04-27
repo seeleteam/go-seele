@@ -155,3 +155,16 @@ func MustGenerateRandomAddress() *common.Address {
 
 	return address
 }
+
+// CreateAddress return a new address with the specified address and nonce.
+// Generally, it's used to create the contract address based on account
+// address and nonce.
+func CreateAddress(addr common.Address, nonce uint64) common.Address {
+	addrHash := MustHash(addr)
+	nonceHash := MustHash(nonce)
+
+	hashBytes := addrHash.Bytes()
+	hashBytes = append(hashBytes, nonceHash.Bytes()...)
+
+	return common.BytesToAddress(hashBytes)
+}
