@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	// ErrInvalidHost defines the error msgs of the host is not in whitelist
+	// ErrInvalidHost will be returned when the host is not in the whitelist
 	ErrInvalidHost = errors.New("Invalid host name.")
 )
 
@@ -54,15 +54,14 @@ func NewHTTPServer(whitehosts []string, corsList []string) (*HTTPServer, *hostFi
 // POST handles requests from the browser
 // CONNECT handles requests form other go rpc.Client
 func (server *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodConnect {
+	switch req.Method {
+	case http.MethodConnect:
 		server.Server.ServeHTTP(w, req)
-
-	} else if req.Method == http.MethodPost {
+	case http.MethodPost:
 		w.Header().Set("Content-Type", "application/json")
 		conn := &httpReadWriteCloser{req.Body, w}
 		server.ServeRequest(NewJsonCodec(conn))
-
-	} else {
+	default:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		io.WriteString(w, "405 must POST or CONNECT\n")
@@ -94,7 +93,6 @@ func (h *hostFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, ErrInvalidHost.Error(), http.StatusForbidden)
 	}
-
 }
 
 func (h *hostFilter) isValideHost(r *http.Request) bool {
