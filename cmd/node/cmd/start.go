@@ -75,7 +75,7 @@ var startCmd = &cobra.Command{
 		seeleNode.Start()
 		err = seeleNode.StartMiner(seeleService)
 		if err != nil {
-			fmt.Printf("Starting the miner failed: %s\n", err.Error())
+			fmt.Println("Starting the miner failed: ", err.Error())
 			return
 		}
 

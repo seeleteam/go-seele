@@ -159,7 +159,7 @@ func (miner *Miner) prepareNewBlock() {
 	// this will ensure we're not going off too far in the future
 	if now := time.Now().Unix(); timestamp > now+1 {
 		wait := time.Duration(timestamp-now) * time.Second
-		miner.log.Info("Mining too far in the future. waiting for %s", wait)
+		miner.log.Info("Mining too far in the future, waiting for %s", wait)
 		time.Sleep(wait)
 	}
 

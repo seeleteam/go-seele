@@ -23,7 +23,7 @@ var (
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "discovery",
-	Short: "discovery command for finding nodes and detecting nodes",
+	Short: "discovery command for finding and detecting nodes",
 	Long:  `use "discovery help [<command>]" for detailed usage`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -76,6 +76,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Printf("Using the config file: %s\n", viper.ConfigFileUsed())
+		fmt.Println("Using the config file:", viper.ConfigFileUsed())
 	}
 }

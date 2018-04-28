@@ -20,7 +20,7 @@ import (
 type txInfo struct {
 	amount *uint64 // amount specifies the coin amount to be transferred 
 	to     *string // to is the public address of the receiver
-	from   *string // from is the key file name of the sender
+	from   *string // from is the key file path of the sender
 }
 
 var parameter = txInfo{}
@@ -75,11 +75,11 @@ var sendtxCmd = &cobra.Command{
 		var result bool
 		err = client.Call("seele.AddTx", &tx, &result)
 		if !result || err != nil {
-			fmt.Printf("adding tx failed: %s\n", err.Error())
+			fmt.Printf("adding the tx failed: %s\n", err.Error())
 			return
 		}
 
-		fmt.Println("adding tx succeeded.")
+		fmt.Println("adding the tx succeeded.")
 	},
 }
 
@@ -92,6 +92,6 @@ func init() {
 	parameter.amount = sendtxCmd.Flags().Uint64P("amount", "m", 0, "the amount of the transferred coins")
 	sendtxCmd.MarkFlagRequired("amount")
 
-	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "key file of the sender")
+	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "key file path of the sender")
 	sendtxCmd.MarkFlagRequired("from")
 }

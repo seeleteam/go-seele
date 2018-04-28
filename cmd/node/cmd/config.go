@@ -39,16 +39,16 @@ type Config struct {
 	// network id, not used now. @TODO maybe be removed or just use Version
 	NetworkID uint64
 
-	// coinbase that the miner uses
+	// coinbase used by the miner
 	Coinbase string
 
-	// capacity of transaction pool
+	// capacity of the transaction pool
 	Capacity uint
 
 	// static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string
 
-	// core msg interaction TCP address and Kademila protocol used UDP address
+	// core msg interaction uses TCP address and Kademila protocol uses UDP address
 	ListenAddr string
 
 	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel

@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"errors"
 	"math/big"
 	"time"
 
@@ -42,7 +41,7 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 
 		err := tx.Validate(statedb)
 		if err != nil {
-			log.Error("validating tx failed, caused by: %s", err.Error())
+			log.Error("validating tx failed, for %s", err.Error())
 			continue
 		}
 
