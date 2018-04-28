@@ -13,8 +13,8 @@ import (
 	"github.com/magiconair/properties/assert"
 )
 
-func Test_DoesFileOrFolderExist(t *testing.T) {
-	assert.Equal(t, DoesFileOrFolderExist("notexist"), false)
+func Test_FileOrFolderExists(t *testing.T) {
+	assert.Equal(t, FileOrFolderExists("notexist"), false)
 
 	file := filepath.Join(os.TempDir(), "existfile")
 	result, err := os.Create(file)
@@ -24,5 +24,5 @@ func Test_DoesFileOrFolderExist(t *testing.T) {
 
 	result.Close()
 
-	assert.Equal(t, DoesFileOrFolderExist(file), true)
+	assert.Equal(t, FileOrFolderExists(file), true)
 }

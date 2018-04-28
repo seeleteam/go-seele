@@ -9,8 +9,8 @@ import (
 	"os"
 )
 
-// DoesFileOrFolderExist checks if a file or folder exists
-func DoesFileOrFolderExist(fileOrFolder string) bool {
+// FileOrFolderExists checks if a file or folder exists
+func FileOrFolderExists(fileOrFolder string) bool {
 	_, err := os.Stat(fileOrFolder)
 	return !os.IsNotExist(err)
 }
