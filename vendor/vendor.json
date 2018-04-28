@@ -28,6 +28,12 @@
 			"revisionTime": "2018-04-24T07:39:03Z"
 		},
 		{
+			"checksumSHA1": "O5Jjl4oFf/4KuEc24vQnoi9Kd4M=",
+			"path": "github.com/ethereum/go-ethereum/common/hexutil",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
+		},
+		{
 			"checksumSHA1": "Zda1/QlYkX6WzOntMLWdPF0pfg4=",
 			"path": "github.com/ethereum/go-ethereum/common/math",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
@@ -38,6 +44,12 @@
 			"path": "github.com/ethereum/go-ethereum/crypto/randentropy",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
 			"revisionTime": "2018-01-16T16:23:41Z"
+		},
+		{
+			"checksumSHA1": "jNVlZbBM0ebOzCf36pBJ733JKpU=",
+			"path": "github.com/ethereum/go-ethereum/params",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
 		},
 		{
 			"checksumSHA1": "k0AFFj8B5/xCAw1+mF85+p8pJ1U=",
