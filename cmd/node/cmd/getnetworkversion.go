@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// getinfo represents the getinfo command
+// getNetworkVersion represents the getinfo command
 var getNetworkVersion = &cobra.Command{
 	Use:   "networkversion",
 	Short: "get current protocol version",
