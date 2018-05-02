@@ -181,7 +181,8 @@ func (miner *Miner) prepareNewBlock() {
 
 	cpyStateDB, err := stateDB.GetCopy()
 	if err != nil {
-		miner.log.Error(err.Error())
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
 		return
 	}
 	err = miner.current.applyTransactions(miner.seele, cpyStateDB, txSlice, miner.log)
