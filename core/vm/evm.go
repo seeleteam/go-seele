@@ -21,14 +21,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
 // deployed contract addresses (relevant after the account abstraction).
-var emptyCodeHash = crypto.Keccak256Hash(nil)
+var emptyCodeHash = crypto.HashBytes(nil)
 
 type (
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
@@ -344,7 +344,7 @@ func (evm *EVM) Create(caller ContractRef, code []byte, gas uint64, value *big.I
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	contract := NewContract(caller, AccountRef(contractAddr), value, gas)
-	contract.SetCallCode(&contractAddr, crypto.Keccak256Hash(code), code)
+	contract.SetCallCode(&contractAddr, crypto.HashBytes(code), code)
 
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, contractAddr, gas, nil

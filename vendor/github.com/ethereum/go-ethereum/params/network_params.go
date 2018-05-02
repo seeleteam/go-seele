@@ -14,23 +14,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package vm
+package params
 
-import "testing"
+// These are network parameters that need to be constant between clients, but
+// aren't necesarilly consensus related.
 
-func TestMemoryGasCost(t *testing.T) {
-	//size := uint64(math.MaxUint64 - 64)
-	size := uint64(0xffffffffe0)
-	v, err := memoryGasCost(&Memory{}, size)
-	if err != nil {
-		t.Error("didn't expect error:", err)
-	}
-	if v != 36028899963961341 {
-		t.Errorf("Expected: 36028899963961341, got %d", v)
-	}
-
-	_, err = memoryGasCost(&Memory{}, size+1)
-	if err == nil {
-		t.Error("expected error")
-	}
-}
+const (
+	// BloomBitsBlocks is the number of blocks a single bloom bit section vector
+	// contains.
+	BloomBitsBlocks uint64 = 4096
+)

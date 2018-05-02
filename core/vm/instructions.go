@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 var (
@@ -136,8 +137,8 @@ func opSignExtend(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 	if back.Cmp(big.NewInt(31)) < 0 {
 		bit := uint(back.Uint64()*8 + 7)
 		num := stack.pop()
-		mask := back.Lsh(common.Big1, bit)
-		mask.Sub(mask, common.Big1)
+		mask := back.Lsh(ethCommon.Big1, bit)
+		mask.Sub(mask, ethCommon.Big1)
 		if num.Bit(int(bit)) > 0 {
 			num.Or(num, mask.Not(mask))
 		} else {
@@ -274,7 +275,7 @@ func opXor(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 
 func opByte(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	th, val := stack.pop(), stack.peek()
-	if th.Cmp(common.Big32) < 0 {
+	if th.Cmp(ethCommon.Big32) < 0 {
 		b := math.Byte(val, 32, int(th.Int64()))
 		val.SetUint64(uint64(b))
 	} else {
@@ -318,7 +319,7 @@ func opSHL(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 	shift, value := math.U256(stack.pop()), math.U256(stack.peek())
 	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
 
-	if shift.Cmp(common.Big256) >= 0 {
+	if shift.Cmp(ethCommon.Big256) >= 0 {
 		value.SetUint64(0)
 		return nil, nil
 	}
@@ -336,7 +337,7 @@ func opSHR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 	shift, value := math.U256(stack.pop()), math.U256(stack.peek())
 	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
 
-	if shift.Cmp(common.Big256) >= 0 {
+	if shift.Cmp(ethCommon.Big256) >= 0 {
 		value.SetUint64(0)
 		return nil, nil
 	}
@@ -354,7 +355,7 @@ func opSAR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 	shift, value := math.U256(stack.pop()), math.S256(stack.pop())
 	defer evm.interpreter.intPool.put(shift) // First operand back into the pool
 
-	if shift.Cmp(common.Big256) >= 0 {
+	if shift.Cmp(ethCommon.Big256) >= 0 {
 		if value.Sign() > 0 {
 			value.SetUint64(0)
 		} else {
@@ -373,12 +374,12 @@ func opSAR(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 func opSha3(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	offset, size := stack.pop(), stack.pop()
 	data := memory.Get(offset.Int64(), size.Int64())
-	hash := crypto.Keccak256(data)
+	hash := crypto.HashBytes(data)
 
 	if evm.vmConfig.EnablePreimageRecording {
-		evm.StateDB.AddPreimage(common.BytesToHash(hash), data)
+		evm.StateDB.AddPreimage(hash, data)
 	}
-	stack.push(evm.interpreter.intPool.get().SetBytes(hash))
+	stack.push(evm.interpreter.intPool.get().SetBytes(hash.Bytes()))
 
 	evm.interpreter.intPool.put(offset, size)
 	return nil, nil
@@ -504,7 +505,7 @@ func opGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 func opBlockhash(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	num := stack.pop()
 
-	n := evm.interpreter.intPool.get().Sub(evm.BlockNumber, common.Big257)
+	n := evm.interpreter.intPool.get().Sub(evm.BlockNumber, ethCommon.Big257)
 	if num.Cmp(n) > 0 && num.Cmp(evm.BlockNumber) < 0 {
 		stack.push(evm.GetHash(num.Uint64()).Big())
 	} else {
@@ -843,7 +844,7 @@ func makePush(size uint64, pushByteSize int) executionFunc {
 		}
 
 		integer := evm.interpreter.intPool.get()
-		stack.push(integer.SetBytes(common.RightPadBytes(contract.Code[startMin:endMin], pushByteSize)))
+		stack.push(integer.SetBytes(ethCommon.RightPadBytes(contract.Code[startMin:endMin], pushByteSize)))
 
 		*pc += size
 		return nil, nil

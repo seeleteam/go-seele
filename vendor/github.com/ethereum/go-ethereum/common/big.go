@@ -1,4 +1,4 @@
-// Copyright 2015 The go-ethereum Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -14,11 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-/*
-Package vm implements the Ethereum Virtual Machine.
+package common
 
-The vm package implements one EVM, a byte code VM. The BC (Byte Code) VM loops
-over a set of bytes and executes them according to the set of rules defined
-in the Ethereum yellow paper.
-*/
-package vm
+import "math/big"
+
+// Common big integers often used
+var (
+	Big1   = big.NewInt(1)
+	Big2   = big.NewInt(2)
+	Big3   = big.NewInt(3)
+	Big0   = big.NewInt(0)
+	Big32  = big.NewInt(32)
+	Big256 = big.NewInt(256)
+	Big257 = big.NewInt(257)
+)
