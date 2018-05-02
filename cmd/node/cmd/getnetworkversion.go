@@ -15,14 +15,14 @@ import (
 // getNetworkVersion represents the networkversion command
 var getNetworkVersion = &cobra.Command{
 	Use:   "networkversion",
-	Short: "get current protocol version",
-	Long: `get current protocol version
+	Short: "get current network version",
+	Long: `get current network version
 	  For example:
-		  node.exe networkversion -a 127.0.0.1:55027`,
+		  node.exe networkversion [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Failed to connect to the node %s, error:%s\n", rpcAddr, err.Error())
 			return
 		}
 		defer client.Close()
@@ -31,9 +31,9 @@ var getNetworkVersion = &cobra.Command{
 		err = client.Call("network.GetNetworkVersion", nil, &networkVersion)
 		if err != nil {
 			fmt.Printf("get network version failed %s\n", err.Error())
+		} else {
+			fmt.Printf("network version: %d\n", networkVersion)
 		}
-
-		fmt.Printf("network version: %d\n", networkVersion)
 	},
 }
 

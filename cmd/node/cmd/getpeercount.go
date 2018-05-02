@@ -18,11 +18,11 @@ var getPeerCount = &cobra.Command{
 	Short: "get count of connected peers",
 	Long: `get count of connected peers
 	 For example:
-		 node.exe peercount -a 127.0.0.1:55027`,
+		 node.exe peercount [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Failed to connect to the node %s, error:%s\n", rpcAddr, err.Error())
 			return
 		}
 		defer client.Close()
@@ -31,9 +31,9 @@ var getPeerCount = &cobra.Command{
 		err = client.Call("network.GetPeerCount", nil, &peerCount)
 		if err != nil {
 			fmt.Printf("get peer count failed %s\n", err.Error())
+		} else {
+			fmt.Printf("peer count: %d\n", peerCount)
 		}
-
-		fmt.Printf("peer count: %d\n", peerCount)
 	},
 }
 
