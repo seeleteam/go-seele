@@ -31,26 +31,16 @@ type Trie struct {
 	sha      hash.Hash // hash calc for trie
 }
 
-// CopyTrie returns a copy of the given trie.
-func CopyTrie(t *Trie) (*Trie, error) {
-	trie := &Trie{
-		db:       t.db,
-		dbprefix: t.dbprefix,
-		sha:      t.sha,
-	}
-
+// ShallowCopyTrie returns a new trie with the same root.
+func (t *Trie) ShallowCopyTrie() (*Trie, error) {
+	var rootHash common.Hash
 	if t.root == nil {
-		trie.root = t.root
+		rootHash = common.EmptyHash
 	} else {
-		rootnode, err := trie.loadNode(t.root.Hash())
-		if err != nil {
-			return nil, err
-		}
-
-		trie.root = rootnode
+		rootHash = common.BytesToHash(t.root.Hash())
 	}
 
-	return trie, nil
+	return NewTrie(rootHash, t.dbprefix, t.db)
 }
 
 // NewTrie new a trie tree

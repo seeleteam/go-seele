@@ -36,14 +36,14 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}, nil
 }
 
-// This is a memory copy of state db.
+// GetCopy is a memory copy of state db.
 func (s *Statedb) GetCopy() (*Statedb, error) {
 	copies := make(map[common.Address]*StateObject)
 	for k, v := range s.stateObjects {
 		copies[k] = v.GetCopy()
 	}
 
-	cpyTrie, err := trie.CopyTrie(s.trie)
+	cpyTrie, err := s.trie.ShallowCopyTrie()
 	if err != nil {
 		return nil, err
 	}
