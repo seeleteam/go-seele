@@ -6,10 +6,9 @@
 package common
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
-
-	"bytes"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
