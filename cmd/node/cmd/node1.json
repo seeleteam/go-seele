@@ -1,8 +1,6 @@
 {
   "Name":         "seele node1",
   "Version":      "1.0",
-  "NetworkID":    1,
-  "Capacity":     1024,
   "DataDir":      "node1",
   "ListenAddr":   "0.0.0.0:39007",
   "KeyFile":      "../client/keyfile/key1",
@@ -13,5 +11,11 @@
   "HTTPCors":     ["*"],
   "HTTPWhiteHost": ["*"],
   "IsDebug":      true,
-  "PrintLog":     true
+  "PrintLog":     true,
+  "SeeleConfig": {
+      "NetworkID": 1,
+      "TxConf": {
+          "Capacity": 1024
+      }
+  }
 }

@@ -12,11 +12,9 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
-	"github.com/seeleteam/go-seele/seele"
 )
 
 // Config aggregate all configs here that exposed to users
@@ -28,14 +26,8 @@ type Config struct {
 	// @TODO need to remove it as keep private key in memory is very risk
 	KeyFile string
 
-	// network id, not using for now, @TODO maybe remove or just use Version
-	NetworkID uint64
-
 	// coinbase that miner use
 	Coinbase string
-
-	// capacity of trasaction pool
-	Capacity uint
 
 	// static nodes when node start, it will connect with them to find more nodes
 	StaticNodes []string
@@ -76,11 +68,9 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.HTTPAddr = config.HTTPAddr
 	nodeConfig.HTTPCors = config.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
-
-	nodeConfig.SeeleConfig, err = GetSeeleConfig(config)
-	if err != nil {
-		return nil, err
-	}
+	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
+	nodeConfig.SeeleConfig.NetworkID = config.SeeleConfig.NetworkID
+	nodeConfig.SeeleConfig.TxConf.Capacity = config.SeeleConfig.TxConf.Capacity
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
@@ -91,17 +81,6 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	common.IsDebug = config.IsDebug
 	nodeConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.DataDir)
 	return nodeConfig, nil
-}
-
-// GetSeeleConfig get seele module config
-func GetSeeleConfig(config Config) (seele.Config, error) {
-	return seele.Config{
-		Coinbase:  common.HexMustToAddres(config.Coinbase),
-		NetworkID: config.NetworkID,
-		TxConf: core.TransactionPoolConfig{
-			Capacity: config.Capacity,
-		},
-	}, nil
 }
 
 // GetP2pConfig get p2p module config from config
