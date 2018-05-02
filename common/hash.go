@@ -7,6 +7,7 @@ package common
 
 import (
 	"bytes"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
@@ -57,3 +58,14 @@ func (a Hash) Equal(b Hash) bool {
 func (a Hash) ToHex() string {
 	return hexutil.BytesToHex(a[:])
 }
+
+// IsEmpty return true if this hash is empty. Otherwise, false.
+func (a Hash) IsEmpty() bool {
+	return a == EmptyHash
+}
+
+// BigToHash converts a big int to Hash.
+func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
+
+// Big converts this Hash to a big int.
+func (a Hash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }

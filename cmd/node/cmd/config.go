@@ -20,17 +20,7 @@ import (
 // Config aggregates all configs exposed to users
 // Note to add enough comments for every field
 type Config struct {
-	// The name of the node
-	Name string
-
-	// The version of the node
-	Version string
-
-	// The folder used to store block data
-	DataDir string
-
-	// JSON API address
-	RPCAddr string
+	node.Config
 
 	// private key file of the node for p2p module
 	// @TODO need to remove it as keeping private key in memory is very risky
@@ -39,13 +29,13 @@ type Config struct {
 	// network id, not used now. @TODO maybe be removed or just use Version
 	NetworkID uint64
 
-	// coinbase used by the miner
-	Coinbase string
-
 	// capacity of the transaction pool
 	Capacity uint
 
-	// static nodes which will be connected to find more nodes when the node starts
+	// coinbase used by the miner
+	Coinbase string
+
+  // static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string
 
 	// core msg interaction uses TCP address and Kademila protocol uses UDP address
@@ -81,9 +71,12 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Name = config.Name
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
+	nodeConfig.HTTPAddr = config.HTTPAddr
+	nodeConfig.HTTPCors = config.HTTPCors
+	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
-	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
+	nodeConfig.SeeleConfig.NetworkID = config.SeeleConfig.NetworkID
+	nodeConfig.SeeleConfig.TxConf.Capacity = config.SeeleConfig.TxConf.Capacity
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
