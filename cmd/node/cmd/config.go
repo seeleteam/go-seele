@@ -20,30 +20,14 @@ import (
 // Config aggregate all configs here that exposed to users
 // Note add enough comments for every parameter
 type Config struct {
-	// The name of the node
-	Name string
-
-	// The version of the node
-	Version string
-
-	// The folder used to store block data
-	DataDir string
-
-	// JSON API address
-	RPCAddr string
+	node.Config
 
 	// private key file of the node for p2p module
 	// @TODO need to remove it as keep private key in memory is very risk
 	KeyFile string
 
-	// network id, not using for now, @TODO maybe remove or just use Version
-	NetworkID uint64
-
 	// coinbase that miner use
 	Coinbase string
-
-	// capacity of trasaction pool
-	Capacity uint
 
 	// static nodes when node start, it will connect with them to find more nodes
 	StaticNodes []string
@@ -81,9 +65,12 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Name = config.Name
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
+	nodeConfig.HTTPAddr = config.HTTPAddr
+	nodeConfig.HTTPCors = config.HTTPCors
+	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
-	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
+	nodeConfig.SeeleConfig.NetworkID = config.SeeleConfig.NetworkID
+	nodeConfig.SeeleConfig.TxConf.Capacity = config.SeeleConfig.TxConf.Capacity
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
