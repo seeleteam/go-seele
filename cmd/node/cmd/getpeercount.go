@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// getPeerCount represents the getinfo command
+// getPeerCount represents the peercount command
 var getPeerCount = &cobra.Command{
 	Use:   "peercount",
 	Short: "get count of connected peers",
