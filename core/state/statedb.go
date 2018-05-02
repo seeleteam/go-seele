@@ -116,17 +116,14 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 }
 
 // Commit commit memory state object to db
-func (s *Statedb) Commit(batch database.Batch) (root common.Hash, err error) {
+func (s *Statedb) Commit(batch database.Batch) common.Hash {
 	for _, key := range s.stateObjects.Keys() {
 		value, ok := s.stateObjects.Peek(key)
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
 			if object.dirty {
-				err := s.commitOne(addr, object)
-				if err != nil {
-					return common.Hash{}, err
-				}
+				s.commitOne(addr, object)
 				object.dirty = false
 			}
 		}
@@ -134,14 +131,25 @@ func (s *Statedb) Commit(batch database.Batch) (root common.Hash, err error) {
 	return s.trie.Commit(batch)
 }
 
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject) error {
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject) {
 	data, err := rlp.EncodeToBytes(obj.account)
 	if err != nil {
-		return err
+		panic(err) // must encode because object account is a deterministic struct
 	}
 	s.trie.Put(addr[:], data)
+}
 
-	return nil
+func (s *Statedb) cache(addr common.Address, obj *StateObject) {
+	if s.stateObjects.Len() == StateCacheCapacity {
+		s.Commit(nil)
+
+		// clear a quarter of the cached state info to avoid frequency commit
+		for i := 0; i < StateCacheCapacity/4; i++ {
+			s.stateObjects.RemoveOldest()
+		}
+	}
+
+	s.stateObjects.Add(addr, obj)
 }
 
 // GetOrNewStateObject get or new a state object
@@ -150,11 +158,7 @@ func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	if object == nil {
 		object = newStateObject()
 		object.SetNonce(0)
-		if s.stateObjects.Len() == StateCacheCapacity {
-			s.Commit(nil)
-		}
-
-		s.stateObjects.Add(addr, object)
+		s.cache(addr, object)
 	}
 
 	return object
@@ -176,6 +180,6 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	if err := rlp.DecodeBytes(val, &object.account); err != nil {
 		return nil
 	}
-	s.stateObjects.Add(addr, object)
+	s.cache(addr, object)
 	return object
 }
