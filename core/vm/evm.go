@@ -28,7 +28,7 @@ import (
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
 // deployed contract addresses (relevant after the account abstraction).
-var emptyCodeHash = crypto.HashBytes(nil) //crypto.Keccak256Hash(nil)
+var emptyCodeHash = crypto.HashBytes(nil)
 
 type (
 	CanTransferFunc func(StateDB, common.Address, *big.Int) bool
