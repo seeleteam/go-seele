@@ -12,36 +12,17 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // Config aggregate all configs here that exposed to users
 // Note add enough comments for every parameter
 type Config struct {
-	// The name of the node
-	Name string
-
-	// The version of the node
-	Version string
-
-	// The folder used to store block data
-	DataDir string
-
-	// JSON API address
-	RPCAddr string
-
-	// HTTP rpc address
-	HTTPAddr string
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	HTTPCors []string
-
-	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
-	HTTPWhiteHost []string
+	node.Config
 
 	// private key file of the node for p2p module
 	// @TODO need to remove it as keep private key in memory is very risk
@@ -95,9 +76,11 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.HTTPAddr = config.HTTPAddr
 	nodeConfig.HTTPCors = config.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
-	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
-	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
+
+	nodeConfig.SeeleConfig, err = GetSeeleConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
@@ -108,6 +91,17 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	common.IsDebug = config.IsDebug
 	nodeConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.DataDir)
 	return nodeConfig, nil
+}
+
+// GetSeeleConfig get seele module config
+func GetSeeleConfig(config Config) (seele.Config, error) {
+	return seele.Config{
+		Coinbase:  common.HexMustToAddres(config.Coinbase),
+		NetworkID: config.NetworkID,
+		TxConf: core.TransactionPoolConfig{
+			Capacity: config.Capacity,
+		},
+	}, nil
 }
 
 // GetP2pConfig get p2p module config from config
