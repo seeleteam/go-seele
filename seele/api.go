@@ -50,8 +50,8 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 	}
 
 	state := api.s.chain.CurrentState()
-	balance, _ := state.GetBalance(*account)
-	result.Set(balance)
+	amount, _ := state.GetAmount(*account)
+	result.Set(amount)
 	return nil
 }
 

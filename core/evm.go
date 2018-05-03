@@ -18,8 +18,7 @@ import (
 // newEVMContext creates a new context for use in the EVM.
 func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
-		balance, found := db.GetBalance(addr)
-		return found && balance.Cmp(amount) >= 0
+		return db.GetBalance(addr).Cmp(amount) >= 0
 	}
 
 	transferFunc := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
