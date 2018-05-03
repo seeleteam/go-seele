@@ -9,10 +9,14 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/trie"
 )
+
+// StateCacheCapacity state cache capacity
+const StateCacheCapacity = 1000
 
 var (
 	stateAmount0 = big.NewInt(0)
@@ -21,7 +25,7 @@ var (
 // Statedb use to store account with the MPT tee
 type Statedb struct {
 	trie         *trie.Trie
-	stateObjects map[common.Address]*StateObject // add LRU for this?
+	stateObjects *lru.Cache // account address (common.Address) -> state object (*StateObject)
 }
 
 // NewStatedb new a statedb
@@ -30,17 +34,30 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	stateCache, err := lru.New(StateCacheCapacity)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Statedb{
 		trie:         trie,
-		stateObjects: make(map[common.Address]*StateObject),
+		stateObjects: stateCache,
 	}, nil
 }
 
 // This is a memory copy of state db.
 func (s *Statedb) GetCopy() *Statedb {
-	copies := make(map[common.Address]*StateObject)
-	for k, v := range s.stateObjects {
-		copies[k] = v.GetCopy()
+	copies, err := lru.New(StateCacheCapacity)
+	if err != nil {
+		panic(err) // only get err when StateCacheCapacity is negative, if so panic
+	}
+
+	for _, k := range s.stateObjects.Keys() {
+		v, ok := s.stateObjects.Peek(k)
+		if ok {
+			copies.Add(k, v)
+		}
 	}
 
 	return &Statedb{
@@ -100,18 +117,40 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 }
 
 // Commit commit memory state object to db
-func (s *Statedb) Commit(batch database.Batch) (root common.Hash, err error) {
-	for addr, object := range s.stateObjects {
-		if object.dirty {
-			data, err := rlp.EncodeToBytes(object.account)
-			if err != nil {
-				return common.Hash{}, err
+func (s *Statedb) Commit(batch database.Batch) common.Hash {
+	for _, key := range s.stateObjects.Keys() {
+		value, ok := s.stateObjects.Peek(key)
+		if ok {
+			addr := key.(common.Address)
+			object := value.(*StateObject)
+			if object.dirty {
+				s.commitOne(addr, object)
+				object.dirty = false
 			}
-			s.trie.Put(addr[:], data)
-			object.dirty = false
 		}
 	}
 	return s.trie.Commit(batch)
+}
+
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject) {
+	data, err := rlp.EncodeToBytes(obj.account)
+	if err != nil {
+		panic(err) // must encode because object account is a deterministic struct
+	}
+	s.trie.Put(addr[:], data)
+}
+
+func (s *Statedb) cache(addr common.Address, obj *StateObject) {
+	if s.stateObjects.Len() == StateCacheCapacity {
+		s.Commit(nil)
+
+		// clear a quarter of the cached state info to avoid frequency commit
+		for i := 0; i < StateCacheCapacity/4; i++ {
+			s.stateObjects.RemoveOldest()
+		}
+	}
+
+	s.stateObjects.Add(addr, obj)
 }
 
 // GetOrNewStateObject get or new a state object
@@ -120,23 +159,28 @@ func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	if object == nil {
 		object = newStateObject()
 		object.SetNonce(0)
-		s.stateObjects[addr] = object
+		s.cache(addr, object)
 	}
+
 	return object
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *StateObject {
-	if object := s.stateObjects[addr]; object != nil {
+	value, ok := s.stateObjects.Get(addr)
+	if ok {
+		object := value.(*StateObject)
 		return object
 	}
+
 	object := newStateObject()
 	val, _ := s.trie.Get(addr[:])
 	if len(val) == 0 {
 		return nil
 	}
+
 	if err := rlp.DecodeBytes(val, &object.account); err != nil {
 		return nil
 	}
-	s.stateObjects[addr] = object
+	s.cache(addr, object)
 	return object
 }
