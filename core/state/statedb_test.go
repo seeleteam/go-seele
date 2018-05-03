@@ -35,9 +35,7 @@ func newTestStateDB() (database.Database, func()) {
 }
 
 func BytesToAddressForTest(b []byte) common.Address {
-	var a common.Address
-	copy(a[:], b)
-	return a
+	return common.BytesToAddress(b)
 }
 
 func Test_Statedb_Operate(t *testing.T) {
@@ -167,7 +165,7 @@ func teststatedbsetmount(root common.Hash, db database.Database) common.Hash {
 }
 
 func getAddr(a int) common.Address {
-	return BytesToAddressForTest([]byte(strconv.Itoa(a)))
+	return common.BytesToAddress([]byte(strconv.Itoa(a)))
 }
 
 func TestStatedb_Cache(t *testing.T) {

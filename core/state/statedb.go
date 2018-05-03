@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+// StateCacheCapacity state cache capacity
 const StateCacheCapacity = 1000
 
 var (
