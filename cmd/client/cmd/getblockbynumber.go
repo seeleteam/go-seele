@@ -6,21 +6,25 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/rpc/jsonrpc"
 
-	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
-var number *string
+var (
+	number *int64
+	tx     *string
+)
 
 // getblockbynumberCmd represents the get block by number command
 var getblockbynumberCmd = &cobra.Command{
 	Use:   "getblockbynumber",
 	Short: "get block info by block number",
 	Long: `For example:
-	client.exe getblockbynumber -n -1`,
+	client.exe getblockbynumber -n -1 [-f true] [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -29,37 +33,31 @@ var getblockbynumberCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var block types.Block
-		err = client.Call("seele.GetBlockByNumber", &number, &block)
+		hashRequest := seele.GetBlockByNumberRequest{
+			Number: *number,
+			FullTx: *tx == "true",
+		}
+		var result map[string]interface{}
+		err = client.Call("seele.GetBlockByNumber", &hashRequest, &result)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		fmt.Printf("block hash: %s\n", block.HeaderHash.ToHex())
-		fmt.Printf("block height: %d\n", block.Header.Height)
-		fmt.Printf("block creator: %s\n", block.Header.Creator.ToHex())
-		fmt.Printf("block previousBlockHash: %s\n", block.Header.PreviousBlockHash.ToHex())
-		fmt.Printf("block stateHash: %s\n", block.Header.StateHash.ToHex())
-		fmt.Printf("block txHash: %s\n", block.Header.TxHash.ToHex())
-		fmt.Printf("block nonce: %d\n", block.Header.Nonce)
-		fmt.Printf("block difficulty: %d\n", block.Header.Difficulty)
-		fmt.Printf("block createTimestamp: %d\n", block.Header.CreateTimestamp)
-		for index, transaction := range block.Transactions {
-			fmt.Printf("block transaction %d hash: %s\n", index, transaction.Hash.ToHex())
-			fmt.Printf("block transaction %d from: %s\n", index, transaction.Data.From.ToHex())
-			fmt.Printf("block transaction %d to: %s\n", index, transaction.Data.To.ToHex())
-			fmt.Printf("block transaction %d amount: %d\n", index, transaction.Data.Amount)
-			fmt.Printf("block transaction %d payload: %d\n", index, transaction.Data.Payload)
-			fmt.Printf("block transaction %d nonce: %d\n", index, transaction.Data.AccountNonce)
-			fmt.Printf("block transaction %d timestamp: %d\n", index, transaction.Data.Timestamp)
+		jsonResult, err := json.Marshal(result)
+		if err != nil {
+			fmt.Println(err)
+			return
 		}
+		fmt.Printf("block : %s\n", string(jsonResult))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getblockbynumberCmd)
 
-	number = getblockbynumberCmd.Flags().StringP("number", "n", "", "block number")
+	number = getblockbynumberCmd.Flags().Int64P("number", "n", -1, "block number")
 	getblockbynumberCmd.MarkFlagRequired("number")
+
+	tx = getblockbynumberCmd.Flags().StringP("fulltx", "f", "false", "is add full tx, default is false")
 }

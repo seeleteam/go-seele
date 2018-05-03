@@ -7,7 +7,6 @@ package seele
 
 import (
 	"math/big"
-	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -85,46 +84,110 @@ func (api *PublicSeeleAPI) GetBlockNumber(input interface{}, number *uint64) err
 	return nil
 }
 
+// GetBlockByNumberRequest request param for GetBlockByNumber api
+type GetBlockByNumberRequest struct {
+	Number int64
+	FullTx bool
+}
+
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByNumber(numberStr string, block *types.Block) error {
+func (api *PublicSeeleAPI) GetBlockByNumber(request *GetBlockByNumberRequest, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
-	if numberStr == "-1" {
-		pBlock, _ := api.s.chain.CurrentBlock()
-		*block = *pBlock
-		return nil
+	var block *types.Block
+	if request.Number < 0 {
+		block, _ = api.s.chain.CurrentBlock()
+	} else {
+		hash, err := store.GetBlockHash(uint64(request.Number))
+		if err != nil {
+			return err
+		}
+		var er error
+		block, er = store.GetBlock(hash)
+		if er != nil {
+			return er
+		}
 	}
-	number, err := strconv.ParseUint(numberStr, 10, 64)
+	response, err := rpcOutputBlock(block, request.FullTx)
 	if err != nil {
 		return err
 	}
-	hash, err := store.GetBlockHash(number)
-	if err != nil {
-		return err
-	}
-	pBlock, err := store.GetBlock(hash)
-	if err != nil {
-		return err
-	}
-	*block = *pBlock
+	*result = response
 	return nil
+}
+
+// GetBlockByHashRequest request param for GetBlockByHash api
+type GetBlockByHashRequest struct {
+	HashHex string
+	FullTx  bool
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, block *types.Block) error {
+func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(hashHex)
+	hashByte, err := hexutil.HexToBytes(request.HashHex)
 	if err != nil {
 		return err
 	}
 	hash := common.BytesToHash(hashByte)
-	pBlock, err := store.GetBlock(hash)
+	block, err := store.GetBlock(hash)
 	if err != nil {
 		return err
 	}
-	*block = *pBlock
+	response, err := rpcOutputBlock(block, request.FullTx)
+	if err != nil {
+		return err
+	}
+	*result = response
 	return nil
+}
+
+// rpcOutputBlock converts the given block to the RPC output which depends on fullTx
+func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error) {
+	head := b.Header
+	fields := map[string]interface{}{
+		"number":     head.Height,
+		"hash":       b.HeaderHash.ToHex(),
+		"parentHash": head.PreviousBlockHash.ToHex(),
+		"nonce":      head.Nonce,
+		"stateHash":  head.StateHash.ToHex(),
+		"txHash":     head.TxHash.ToHex(),
+		"creator":    head.Creator.ToHex(),
+		"timestamp":  head.CreateTimestamp,
+		"difficulty": head.Difficulty,
+	}
+
+	formatTx := func(tx *types.Transaction) (interface{}, error) {
+		return tx.Hash.ToHex(), nil
+	}
+
+	if fullTx {
+		formatTx = func(tx *types.Transaction) (interface{}, error) {
+			transaction := map[string]interface{}{
+				"hash":         tx.Hash.ToHex(),
+				"from":         tx.Data.From.ToHex(),
+				"to":           tx.Data.To.ToHex(),
+				"amount":       tx.Data.Amount,
+				"accountNonce": tx.Data.AccountNonce,
+				"payload":      tx.Data.Payload,
+				"timestamp":    tx.Data.Timestamp,
+			}
+			return transaction, nil
+		}
+	}
+
+	txs := b.Transactions
+	transactions := make([]interface{}, len(txs))
+	var err error
+	for i, tx := range txs {
+		if transactions[i], err = formatTx(tx); err != nil {
+			return nil, err
+		}
+	}
+	fields["transactions"] = transactions
+
+	return fields, nil
 }
 
 // PublicNetworkAPI provides an API to access network information.
