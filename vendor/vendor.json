@@ -22,6 +22,18 @@
 			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
+			"checksumSHA1": "9gjJriV7ecKSsbA72845rYwo+Jc=",
+			"path": "github.com/ethereum/go-ethereum/common",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
+		},
+		{
+			"checksumSHA1": "O5Jjl4oFf/4KuEc24vQnoi9Kd4M=",
+			"path": "github.com/ethereum/go-ethereum/common/hexutil",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
+		},
+		{
 			"checksumSHA1": "Zda1/QlYkX6WzOntMLWdPF0pfg4=",
 			"path": "github.com/ethereum/go-ethereum/common/math",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
@@ -32,6 +44,18 @@
 			"path": "github.com/ethereum/go-ethereum/crypto/randentropy",
 			"revision": "02aeb3d76652a4c0451e5c3734e6881aefe46249",
 			"revisionTime": "2018-01-16T16:23:41Z"
+		},
+		{
+			"checksumSHA1": "9BXdjbACsHoHZZfY3b8bMc76R7w=",
+			"path": "github.com/ethereum/go-ethereum/crypto/sha3",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
+		},
+		{
+			"checksumSHA1": "jNVlZbBM0ebOzCf36pBJ733JKpU=",
+			"path": "github.com/ethereum/go-ethereum/params",
+			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
+			"revisionTime": "2018-04-24T07:39:03Z"
 		},
 		{
 			"checksumSHA1": "k0AFFj8B5/xCAw1+mF85+p8pJ1U=",
@@ -56,6 +80,18 @@
 			"path": "github.com/google/uuid",
 			"revision": "dec09d789f3dba190787f8b4454c7d3c936fed9e",
 			"revisionTime": "2017-11-29T19:10:14Z"
+		},
+		{
+			"checksumSHA1": "sZBC82LlCP+qEu9/4rzKzgfEdIc=",
+			"path": "github.com/hashicorp/golang-lru",
+			"revision": "0fb14efe8c47ae851c0034ed7a448854d3d34cf3",
+			"revisionTime": "2018-02-01T23:52:37Z"
+		},
+		{
+			"checksumSHA1": "BBPs41SjdH2T+Kos+L4KbjmDsJk=",
+			"path": "github.com/hashicorp/golang-lru/simplelru",
+			"revision": "0fb14efe8c47ae851c0034ed7a448854d3d34cf3",
+			"revisionTime": "2018-02-01T23:52:37Z"
 		},
 		{
 			"checksumSHA1": "35UiDOE3TlLfiuF+EFu5HB2dGF8=",
@@ -165,6 +201,12 @@
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "be8372ae8ec5c6daaed3cc28ebf73c54b737c240",
 			"revisionTime": "2018-02-02T15:35:43Z"
+		},
+		{
+			"checksumSHA1": "92dUWJPlL97eTKBNibbY8vPVxWY=",
+			"path": "github.com/rs/cors",
+			"revision": "12972ae4e7775151d0d53aaad277be85133ce445",
+			"revisionTime": "2018-04-17T22:52:04Z"
 		},
 		{
 			"checksumSHA1": "M2DUp/DFDbt//z8237GdM79+61s=",
@@ -291,6 +333,12 @@
 			"path": "github.com/syndtr/goleveldb/leveldb/util",
 			"revision": "211f780988068502fe874c44dae530528ebd840f",
 			"revisionTime": "2018-01-28T14:04:16Z"
+		},
+		{
+			"checksumSHA1": "TQoVgHqUD72/5ALzi9p5W3oyaug=",
+			"path": "golang.org/x/crypto/ripemd160",
+			"revision": "b49d69b5da943f7ef3c9cf91c8777c1f78a0cc3c",
+			"revisionTime": "2018-04-25T14:55:48Z"
 		},
 		{
 			"checksumSHA1": "6U7dCaxxIMjf5V02iWgyAwppczw=",

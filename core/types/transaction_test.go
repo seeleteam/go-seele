@@ -12,7 +12,6 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
@@ -45,27 +44,38 @@ func newTestTx(t *testing.T, amount int64, nonce uint64, sign bool) *Transaction
 	return tx
 }
 
-func newTestStateDB(accounts map[common.Address]state.Account) *state.Statedb {
-	statedb, err := state.NewStatedb(common.EmptyHash, nil)
-	if err != nil {
-		panic(err)
+type mockStateDB struct {
+	balances map[common.Address]*big.Int
+	nonces   map[common.Address]uint64
+}
+
+func (db *mockStateDB) GetBalance(address common.Address) *big.Int {
+	if balance, found := db.balances[address]; found {
+		return balance
 	}
 
-	for addr, account := range accounts {
-		stateObj := statedb.GetOrNewStateObject(addr)
-		stateObj.SetAmount(account.Amount)
-		stateObj.SetNonce(account.Nonce)
+	return big.NewInt(0)
+}
+
+func (db *mockStateDB) GetNonce(address common.Address) uint64 {
+	if nonce, found := db.nonces[address]; found {
+		return nonce
 	}
 
-	return statedb
+	return 0
+}
+
+func newTestStateDB(address common.Address, nonce, balance uint64) stateDB {
+	return &mockStateDB{
+		balances: map[common.Address]*big.Int{address: new(big.Int).SetUint64(balance)},
+		nonces:   map[common.Address]uint64{address: nonce},
+	}
 }
 
 // Validate successfully if no data changed.
 func Test_Transaction_Validate_NoDataChange(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, error(nil))
 }
@@ -73,9 +83,7 @@ func Test_Transaction_Validate_NoDataChange(t *testing.T) {
 // Validate failed if transaction not signed.
 func Test_Transaction_Validate_NotSigned(t *testing.T) {
 	tx := newTestTx(t, 100, 38, false)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrSigMissed)
 }
@@ -84,9 +92,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 func Test_Transaction_Validate_HashChanged(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	tx.Hash = crypto.HashBytes([]byte("test"))
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrHashMismatch)
 }
@@ -95,9 +101,7 @@ func Test_Transaction_Validate_HashChanged(t *testing.T) {
 func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	tx.Data.Amount.SetInt64(200)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrHashMismatch)
 }
@@ -110,9 +114,7 @@ func Test_Transaction_Validate_SignInvalid(t *testing.T) {
 	tx.Data.Amount.SetInt64(200)
 	tx.Hash = crypto.MustHash(tx.Data)
 
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 
 	assert.Equal(t, err, ErrSigInvalid)
@@ -123,29 +125,16 @@ func Test_MerkleRootHash_Empty(t *testing.T) {
 	assert.Equal(t, hash, emptyTxRootHash)
 }
 
-func Test_Transaction_Validate_AccountNotFound(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		*tx.Data.To: state.Account{38, big.NewInt(200)},
-	})
-	err := tx.Validate(statedb)
-	assert.Equal(t, err, ErrAccountNotFound)
-}
-
 func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(50)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 50)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrBalanceNotEnough)
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{40, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrNonceTooLow)
 }
@@ -163,9 +152,7 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 	tx.Data.Payload = make([]byte, MaxPayloadSize+1) // modify the payload to invalid size.
 
-	statedb := newTestStateDB(map[common.Address]state.Account{
-		tx.Data.From: state.Account{38, big.NewInt(200)},
-	})
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
 
 	err = tx.Validate(statedb)
 	assert.Equal(t, err, ErrPayloadOversized)

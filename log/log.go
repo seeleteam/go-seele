@@ -16,11 +16,11 @@ import (
 )
 
 var (
-	// LogFolder the default folder to write log
+	// LogFolder the default folder to write logs
 	LogFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
-// SeeleLog wrapped log class
+// SeeleLog wraps log class
 type SeeleLog struct {
 	log *logrus.Logger
 }
@@ -28,19 +28,19 @@ type SeeleLog struct {
 var logMap map[string]*SeeleLog
 var getLogMutex sync.Mutex
 
-// Panic Level, highest level of severity. Logs and then calls panic with the
+// Panic Level, highest level of severity. Panic logs and then calls panic with the
 // message passed to Debug, Info, ...
 func (p *SeeleLog) Panic(format string, args ...interface{}) {
 	p.log.Panicf(format, args...)
 }
 
-// Fatal Level. Logs and then calls `os.Exit(1)`. It will exit even if the
+// Fatal Level. Fatal logs and then calls `os.Exit(1)`. It will exit even if the
 // logging level is set to Panic.
 func (p *SeeleLog) Fatal(format string, args ...interface{}) {
 	p.log.Fatalf(format, args...)
 }
 
-// Error Level. Logs. Used for errors that should definitely be noted.
+// Error Level. Error logs and is used for errors that should be definitely noted.
 // Commonly used for hooks to send errors to an error tracking service.
 func (p *SeeleLog) Error(format string, args ...interface{}) {
 	p.log.Errorf(format, args...)
@@ -62,7 +62,7 @@ func (p *SeeleLog) Debug(format string, args ...interface{}) {
 	p.log.Debugf(format, args...)
 }
 
-// GetLogger get logrus.Logger object accoring to logName
+// GetLogger gets logrus.Logger object according to logName
 // each module can have it's own logger
 func GetLogger(logName string, bConsole bool) *SeeleLog {
 	getLogMutex.Lock()

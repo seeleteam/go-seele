@@ -112,14 +112,14 @@ func (t *Trie) Hash() common.Hash {
 }
 
 // Commit commit the dirty node to database
-func (t *Trie) Commit(batch database.Batch) (common.Hash, error) {
+func (t *Trie) Commit(batch database.Batch) common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
 		t.sha.Reset()
 		t.hash(t.root, buf, t.sha, batch)
-		return common.BytesToHash(t.root.Hash()), nil
+		return common.BytesToHash(t.root.Hash())
 	}
-	return common.EmptyHash, nil
+	return common.EmptyHash
 }
 
 func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch) []byte {

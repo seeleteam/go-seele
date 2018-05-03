@@ -102,6 +102,14 @@ type Server struct {
 	log   *log.SeeleLog
 }
 
+// PeerCount return the count of peers
+func (srv *Server) PeerCount() int {
+	if srv.peers != nil {
+		return len(srv.peers)
+	}
+	return 0
+}
+
 // Start starts running the server.
 func (srv *Server) Start() (err error) {
 	srv.lock.Lock()

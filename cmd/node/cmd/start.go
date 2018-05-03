@@ -12,7 +12,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner"
+	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
@@ -58,7 +58,14 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		services := []node.Service{seeleService}
+		// monitor service
+		monitorService, err := monitor.NewMonitorService(seeleService, seeleNode, nCfg, slog, "Test monitor")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		services := []node.Service{seeleService, monitorService}
 		for _, service := range services {
 			if err := seeleNode.Register(service); err != nil {
 				fmt.Println(err)
@@ -66,16 +73,15 @@ var startCmd = &cobra.Command{
 		}
 
 		seeleNode.Start()
-		startMiner(seeleService, nCfg, slog)
+		err = seeleNode.StartMiner(seeleService)
+		if err != nil {
+			fmt.Println("Start miner failed: ", err)
+			return
+		}
 
 		wg.Add(1)
 		wg.Wait()
 	},
-}
-
-func startMiner(seele *seele.SeeleService, nodeConfig *node.Config, log *log.SeeleLog) {
-	miner := miner.NewMiner(nodeConfig.SeeleConfig.Coinbase, seele, log)
-	go miner.Start()
 }
 
 func init() {

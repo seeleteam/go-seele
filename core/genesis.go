@@ -113,12 +113,7 @@ func (genesis *Genesis) store(accountStateDB database.Database) error {
 
 	batch := accountStateDB.NewBatch()
 
-	_, err = statedb.Commit(batch)
-	if err != nil {
-		batch.Rollback()
-		return err
-	}
-
+	statedb.Commit(batch)
 	if err = batch.Commit(); err != nil {
 		return err
 	}
