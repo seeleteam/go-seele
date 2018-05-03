@@ -97,3 +97,109 @@ func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) 
 	*result = n.networkVersion
 	return nil
 }
+
+// RPCBlockInfo defines the block infos used by rpc
+type RPCBlockInfo struct {
+	HeadHash        common.Hash    `json:"headHash"`
+	PreHash         common.Hash    `json:"preBlockHash"`
+	Height          uint64         `json:"height"`
+	Timestamp       *big.Int       `json:"timestamp"`
+	Difficulty      *big.Int       `json:"difficulty"`
+	TotleDifficulty *big.Int       `json:"totledifficulty"`
+	Creator         common.Address `json:"creator"`
+	Nonce           uint64         `json:"nonce"`
+	TxCount         int            `json:"txcount"`
+}
+
+// GetBlockByHeight returns block infos by given height
+func (api *PublicSeeleAPI) GetBlockByHeight(h uint64, ret *RPCBlockInfo) error {
+	b, err := api.s.chain.GetBlockByHeight(h)
+	if err == nil {
+		// get totle difficulty
+		td, err := api.s.chain.GetTdByHeight(h)
+		if err != nil {
+			return err
+		}
+
+		*ret = RPCBlockInfo{
+			HeadHash:        b.HeaderHash,
+			PreHash:         b.Header.PreviousBlockHash,
+			Height:          b.Header.Height,
+			Timestamp:       b.Header.CreateTimestamp,
+			Difficulty:      b.Header.Difficulty,
+			TotleDifficulty: td,
+			Creator:         b.Header.Creator,
+			Nonce:           b.Header.Nonce,
+			TxCount:         len(b.Transactions),
+		}
+	}
+	return err
+}
+
+// CurrentBlock return the best block of the blockchain
+func (api *PublicSeeleAPI) CurrentBlock(arg interface{}, ret *RPCBlockInfo) error {
+	curblock, _ := api.s.chain.CurrentBlock()
+	// get totle difficulty
+	td, err := api.s.chain.GetTdByHash(curblock.HeaderHash)
+	if err != nil {
+		return err
+	}
+
+	*ret = RPCBlockInfo{
+		HeadHash:        curblock.HeaderHash,
+		PreHash:         curblock.Header.PreviousBlockHash,
+		Height:          curblock.Header.Height,
+		Timestamp:       curblock.Header.CreateTimestamp,
+		Difficulty:      curblock.Header.Difficulty,
+		TotleDifficulty: td,
+		Creator:         curblock.Header.Creator,
+		Nonce:           curblock.Header.Nonce,
+		TxCount:         len(curblock.Transactions),
+	}
+
+	return nil
+}
+
+// RPCBlockTransactions defines a struct that contains all transactions in the block
+type RPCBlockTransactions struct {
+	BlockHash common.Hash           `json:"blockHash"`
+	Txs       []*RPCTransactionInfo `json:"transactions"`
+}
+
+// RPCTransactionInfo defines transaction info used by rpc
+type RPCTransactionInfo struct {
+	Hash         common.Hash     `json:"hash"`
+	From         common.Address  `json:"from"`
+	To           *common.Address `json:"to"`
+	Amount       *big.Int        `json:"amount"`
+	AccountNonce uint64          `json:"accountNonce"`
+	Timestamp    uint64          `json:"time"`
+}
+
+// getTxs to get the hash array of the all transactions
+func getTxs(txs []*types.Transaction) []*RPCTransactionInfo {
+	ret := make([]*RPCTransactionInfo, len(txs))
+	for i, tx := range txs {
+		ret[i] = &RPCTransactionInfo{
+			Hash:         tx.Hash,
+			From:         tx.Data.From,
+			To:           tx.Data.To,
+			Amount:       tx.Data.Amount,
+			AccountNonce: tx.Data.AccountNonce,
+			Timestamp:    tx.Data.Timestamp,
+		}
+	}
+	return ret
+}
+
+// GetBlockTxsByHeight returns all transactions of a block
+func (api *PublicSeeleAPI) GetBlockTxsByHeight(h uint64, ret *RPCBlockTransactions) error {
+	b, err := api.s.chain.GetBlockByHeight(h)
+	if err == nil {
+		*ret = RPCBlockTransactions{
+			BlockHash: b.HeaderHash,
+			Txs:       getTxs(b.Transactions),
+		}
+	}
+	return err
+}
