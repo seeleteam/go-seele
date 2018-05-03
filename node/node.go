@@ -7,8 +7,9 @@ package node
 
 import (
 	"errors"
-	"fmt"
 	"net"
+	"net/http"
+	netrpc "net/rpc"
 	"reflect"
 	"sync"
 
@@ -32,7 +33,7 @@ var (
 
 // StopError represents an error which is returned when a node fails to stop any registered service
 type StopError struct {
-	Services map[reflect.Type]error // Services contains stop errors of any service registered, mapping `reflect.Type` to `error`
+	Services map[reflect.Type]error
 }
 
 // Error returns a string representation of the stop error.
@@ -131,7 +132,7 @@ func (n *Node) Start() error {
 	for i, service := range n.services {
 		if err := service.Start(running); err != nil {
 			for j := 0; j < i; j++ {
-				n.services[i].Stop()
+				n.services[j].Stop()
 			}
             
 			// stop the p2p server
@@ -142,7 +143,7 @@ func (n *Node) Start() error {
 	}
 
 	// Start RPC server
-	if err := n.startRPC(n.services); err != nil {
+	if err := n.startRPC(n.services, n.config); err != nil {
 		for _, service := range n.services {
 			service.Stop()
 		}
@@ -159,7 +160,7 @@ func (n *Node) Start() error {
 }
 
 // startRPC starts all RPC
-func (n *Node) startRPC(services []Service) error {
+func (n *Node) startRPC(services []Service, conf *Config) error {
 	apis := []rpc.API{}
 	for _, service := range services {
 		apis = append(apis, service.APIs()...)
@@ -167,6 +168,11 @@ func (n *Node) startRPC(services []Service) error {
 
 	if err := n.startJSONRPC(apis); err != nil {
 		n.log.Error("startProc err", err)
+		return err
+	}
+
+	if err := n.startHTTPRPC(apis, conf.HTTPWhiteHost, conf.HTTPCors); err != nil {
+		n.log.Error("start http rpc err", err)
 		return err
 	}
 
@@ -205,6 +211,32 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 			go handler.ServeCodec(rpc.NewJsonCodec(conn))
 		}
 	}()
+
+	return nil
+}
+
+// startHTTPRPC starts http rpc server
+func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []string) error {
+	httpServer, httpHandler := rpc.NewHTTPServer(whitehosts, corsList)
+	for _, api := range apis {
+		if err := httpServer.RegisterName(api.Namespace, api.Service); err != nil {
+			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+			return err
+		}
+		n.log.Debug("Proc registered service namespace %s", api.Namespace)
+	}
+
+	var (
+		listerner net.Listener
+		err       error
+	)
+	httpServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
+	if listerner, err = net.Listen("tcp", n.config.HTTPAddr); err != nil {
+		n.log.Error("HTTP listen failed", "err", err)
+		return err
+	}
+
+	go http.Serve(listerner, httpHandler)
 
 	return nil
 }
