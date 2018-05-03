@@ -33,7 +33,7 @@ var (
 
 // StopError represents an error which is returned when a node fails to stop any registered service
 type StopError struct {
-	Services map[reflect.Type]error
+	Services map[reflect.Type]error // Services is a container mapping the type of services which fail to stop to error
 }
 
 // Error returns a string representation of the stop error.
@@ -134,7 +134,7 @@ func (n *Node) Start() error {
 			for j := 0; j < i; j++ {
 				n.services[j].Stop()
 			}
-            
+			
 			// stop the p2p server
 			running.Stop()
 			
