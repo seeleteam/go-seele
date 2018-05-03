@@ -35,7 +35,7 @@ type (
 	TransferFunc    func(StateDB, common.Address, common.Address, *big.Int)
 	// GetHashFunc returns the nth block hash in the blockchain
 	// and is used by the BLOCKHASH EVM op code.
-	GetHashFunc func(uint64) common.Hash
+	GetHashFunc func(uint64) (common.Hash, error)
 )
 
 // run runs the given contract and takes care of running precompiles with a fallback to the byte code interpreter.

@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/p2p"
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -123,5 +124,28 @@ func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, block *types.Block) er
 		return err
 	}
 	*block = *pBlock
+	return nil
+}
+
+// PublicNetworkAPI provides an API to access network information.
+type PublicNetworkAPI struct {
+	p2pServer      *p2p.Server
+	networkVersion uint64
+}
+
+// NewPublicNetworkAPI creates a new PublicNetworkAPI object for rpc service.
+func NewPublicNetworkAPI(p2pServer *p2p.Server, networkVersion uint64) *PublicNetworkAPI {
+	return &PublicNetworkAPI{p2pServer, networkVersion}
+}
+
+// GetPeerCount returns the count of peers
+func (n *PublicNetworkAPI) GetPeerCount(input interface{}, result *int) error {
+	*result = n.p2pServer.PeerCount()
+	return nil
+}
+
+// GetNetworkVersion returns the network version
+func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
+	*result = n.networkVersion
 	return nil
 }
