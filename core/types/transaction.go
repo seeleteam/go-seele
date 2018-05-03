@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/merkle"
 )
@@ -22,9 +21,6 @@ const (
 )
 
 var (
-	// ErrAccountNotFound is returned when account not found in state DB.
-	ErrAccountNotFound = errors.New("account not found")
-
 	// ErrAmountNegative is returned when transaction amount is negative.
 	ErrAmountNegative = errors.New("amount is negative")
 
@@ -70,6 +66,11 @@ type Transaction struct {
 	Hash      common.Hash // hash on transaction data
 	Data      *TransactionData
 	Signature *crypto.Signature
+}
+
+type stateDB interface {
+	GetBalance(common.Address) *big.Int
+	GetNonce(common.Address) uint64
 }
 
 // NewTransaction creates a new transaction to transfer asset.
@@ -129,7 +130,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 }
 
 // Validate returns true if the transation is valid, otherwise false.
-func (tx *Transaction) Validate(statedb *state.Statedb) error {
+func (tx *Transaction) Validate(statedb stateDB) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
 		return ErrAmountNil
 	}
@@ -138,21 +139,11 @@ func (tx *Transaction) Validate(statedb *state.Statedb) error {
 		return ErrAmountNegative
 	}
 
-	balance, found := statedb.GetAmount(tx.Data.From)
-	if !found {
-		return ErrAccountNotFound
-	}
-
-	if tx.Data.Amount.Cmp(balance) > 0 {
+	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
 		return ErrBalanceNotEnough
 	}
 
-	accountNonce, found := statedb.GetNonce(tx.Data.From)
-	if !found {
-		return ErrAccountNotFound
-	}
-
-	if tx.Data.AccountNonce < accountNonce {
+	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
 		return ErrNonceTooLow
 	}
 
