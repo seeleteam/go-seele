@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	stateAmount0 = big.NewInt(0)
+	stateBalance0 = big.NewInt(0)
 )
 
 // Statedb use to store account with the MPT tee
@@ -49,33 +49,33 @@ func (s *Statedb) GetCopy() *Statedb {
 	}
 }
 
-// GetAmount get amount of account
-func (s *Statedb) GetAmount(addr common.Address) (*big.Int, bool) {
+// GetBalance get balance of account
+func (s *Statedb) GetBalance(addr common.Address) (*big.Int, bool) {
 	object := s.getStateObject(addr)
 	if object != nil {
 		return object.GetAmount(), true
 	}
-	return stateAmount0, false
+	return stateBalance0, false
 }
 
-// SetAmount set amount of account
-func (s *Statedb) SetAmount(addr common.Address, amount *big.Int) {
+// SetBalance set balance of account
+func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		object.SetAmount(amount)
+		object.SetAmount(balance)
 	}
 }
 
-// AddAmount add amount for account
-func (s *Statedb) AddAmount(addr common.Address, amount *big.Int) {
+// AddBalance add balance for account
+func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
 		object.AddAmount(amount)
 	}
 }
 
-// SubAmount sub amount for account
-func (s *Statedb) SubAmount(addr common.Address, amount *big.Int) {
+// SubBalance sub amount for account
+func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
 		object.SubAmount(amount)

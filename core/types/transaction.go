@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/merkle"
 )
@@ -72,6 +71,11 @@ type Transaction struct {
 	Signature *crypto.Signature
 }
 
+type stateDB interface {
+	GetBalance(common.Address) (*big.Int, bool)
+	GetNonce(common.Address) (uint64, bool)
+}
+
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 // Panics if the amount is nil or negative.
@@ -129,7 +133,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 }
 
 // Validate returns true if the transation is valid, otherwise false.
-func (tx *Transaction) Validate(statedb *state.Statedb) error {
+func (tx *Transaction) Validate(statedb stateDB) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
 		return ErrAmountNil
 	}
@@ -138,7 +142,7 @@ func (tx *Transaction) Validate(statedb *state.Statedb) error {
 		return ErrAmountNegative
 	}
 
-	balance, found := statedb.GetAmount(tx.Data.From)
+	balance, found := statedb.GetBalance(tx.Data.From)
 	if !found {
 		return ErrAccountNotFound
 	}
