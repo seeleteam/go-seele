@@ -60,11 +60,7 @@ func newTestGenesis(bcStore store.BlockchainStore) *Genesis {
 		stateObj.SetAmount(account.data.Amount)
 	}
 
-	stateRootHash, err := statedb.Commit(nil)
-	if err != nil {
-		panic(err)
-	}
-
+	stateRootHash := statedb.Commit(nil)
 	genesis := Genesis{
 		bcStore: bcStore,
 		header: &types.BlockHeader{
@@ -135,9 +131,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 			panic(err)
 		}
 
-		if stateRootHash, err = statedb.Commit(nil); err != nil {
-			panic(err)
-		}
+		stateRootHash = statedb.Commit(nil)
 	}
 
 	header := &types.BlockHeader{

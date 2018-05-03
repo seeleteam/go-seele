@@ -190,9 +190,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}()
 
 	var stateRootHash common.Hash
-	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
-		return err
-	}
+	stateRootHash = blockStatedb.Commit(batch)
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
