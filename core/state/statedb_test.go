@@ -10,8 +10,10 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strconv"
 	"testing"
 
+	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
@@ -33,9 +35,7 @@ func newTestStateDB() (database.Database, func()) {
 }
 
 func BytesToAddressForTest(b []byte) common.Address {
-	var a common.Address
-	copy(a[:], b)
-	return a
+	return common.BytesToAddress(b)
 }
 
 func Test_Statedb_Operate(t *testing.T) {
@@ -77,10 +77,7 @@ func teststatedbaddbalance(root common.Hash, db database.Database) common.Hash {
 	}
 
 	batch := db.NewBatch()
-	hash, err := statedb.Commit(batch)
-	if err != nil {
-		panic(err)
-	}
+	hash := statedb.Commit(batch)
 	batch.Commit()
 
 	statedb, err = NewStatedb(hash, db)
@@ -113,10 +110,7 @@ func teststatedbsubbalance(root common.Hash, db database.Database) common.Hash {
 	}
 
 	batch := db.NewBatch()
-	hash, err := statedb.Commit(batch)
-	if err != nil {
-		panic(err)
-	}
+	hash := statedb.Commit(batch)
 	batch.Commit()
 
 	statedb, err = NewStatedb(hash, db)
@@ -149,10 +143,7 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 	}
 
 	batch := db.NewBatch()
-	hash, err := statedb.Commit(batch)
-	if err != nil {
-		panic(err)
-	}
+	hash := statedb.Commit(batch)
 	batch.Commit()
 
 	statedb, err = NewStatedb(hash, db)
@@ -173,4 +164,40 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
 	return hash
+}
+
+func getAddr(a int) common.Address {
+	return common.BytesToAddress([]byte(strconv.Itoa(a)))
+}
+
+func TestStatedb_Cache(t *testing.T) {
+	db, remove := newTestStateDB()
+	defer remove()
+	statedb, err := NewStatedb(common.Hash{}, db)
+	if err != nil {
+		panic(err)
+	}
+
+	i := 0
+	for ; i < StateCacheCapacity; i++ {
+		state := statedb.GetOrNewStateObject(getAddr(i))
+
+		if i == 0 {
+			state.SetAmount(big.NewInt(4))
+		}
+	}
+
+	assert.Equal(t, statedb.stateObjects.Len(), StateCacheCapacity)
+	assert.Equal(t, statedb.trie.Hash(), common.Hash{})
+
+	statedb.GetOrNewStateObject(getAddr(i))
+	empty := statedb.getStateObject(BytesToAddressForTest([]byte{byte(0)}))
+	if empty != nil {
+		t.Error("empty should be nil")
+	}
+
+	assert.Equal(t, statedb.stateObjects.Len(), StateCacheCapacity*3/4+1)
+	if statedb.trie.Hash() == common.EmptyHash {
+		t.Error("trie root hash should changed")
+	}
 }
