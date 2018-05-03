@@ -7,8 +7,10 @@ package seele
 
 import (
 	"math/big"
+	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -71,5 +73,55 @@ func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint6
 	state := api.s.chain.CurrentState()
 	*nonce, _ = state.GetNonce(*account)
 
+	return nil
+}
+
+// GetBlockNumber get the block number of the chain head
+func (api *PublicSeeleAPI) GetBlockNumber(input interface{}, number *uint64) error {
+	block, _ := api.s.chain.CurrentBlock()
+	*number = block.Header.Height
+
+	return nil
+}
+
+// GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
+// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
+func (api *PublicSeeleAPI) GetBlockByNumber(numberStr string, block *types.Block) error {
+	store := api.s.chain.GetStore()
+	if numberStr == "-1" {
+		pBlock, _ := api.s.chain.CurrentBlock()
+		*block = *pBlock
+		return nil
+	}
+	number, err := strconv.ParseUint(numberStr, 10, 64)
+	if err != nil {
+		return err
+	}
+	hash, err := store.GetBlockHash(number)
+	if err != nil {
+		return err
+	}
+	pBlock, err := store.GetBlock(hash)
+	if err != nil {
+		return err
+	}
+	*block = *pBlock
+	return nil
+}
+
+// GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
+// detail, otherwise only the transaction hash is returned
+func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, block *types.Block) error {
+	store := api.s.chain.GetStore()
+	hashByte, err := hexutil.HexToBytes(hashHex)
+	if err != nil {
+		return err
+	}
+	hash := common.BytesToHash(hashByte)
+	pBlock, err := store.GetBlock(hash)
+	if err != nil {
+		return err
+	}
+	*block = *pBlock
 	return nil
 }
