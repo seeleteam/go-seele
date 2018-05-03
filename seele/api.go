@@ -176,7 +176,7 @@ type RPCTransactionInfo struct {
 	Timestamp    uint64          `json:"time"`
 }
 
-// getTxs to get the hash array of the all transactions
+// getTxs to get the transaction array
 func getTxs(txs []*types.Transaction) []*RPCTransactionInfo {
 	ret := make([]*RPCTransactionInfo, len(txs))
 	for i, tx := range txs {
