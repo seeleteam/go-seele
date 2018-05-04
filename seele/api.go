@@ -76,29 +76,29 @@ func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint6
 	return nil
 }
 
-// GetBlockNumber get the block number of the chain head
-func (api *PublicSeeleAPI) GetBlockNumber(input interface{}, number *uint64) error {
+// GetBlockHeight get the block height of the chain head
+func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) error {
 	block, _ := api.s.chain.CurrentBlock()
-	*number = block.Header.Height
+	*height = block.Header.Height
 
 	return nil
 }
 
-// GetBlockByNumberRequest request param for GetBlockByNumber api
-type GetBlockByNumberRequest struct {
-	Number int64
+// GetBlockByHeightRequest request param for GetBlockByHeight api
+type GetBlockByHeightRequest struct {
+	Height int64
 	FullTx bool
 }
 
-// GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
+// GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByNumber(request *GetBlockByNumberRequest, result *map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
 	var block *types.Block
-	if request.Number < 0 {
+	if request.Height < 0 {
 		block, _ = api.s.chain.CurrentBlock()
 	} else {
-		hash, err := store.GetBlockHash(uint64(request.Number))
+		hash, err := store.GetBlockHash(uint64(request.Height))
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error) {
 	head := b.Header
 	fields := map[string]interface{}{
-		"number":     head.Height,
+		"height":     head.Height,
 		"hash":       b.HeaderHash.ToHex(),
 		"parentHash": head.PreviousBlockHash.ToHex(),
 		"nonce":      head.Nonce,

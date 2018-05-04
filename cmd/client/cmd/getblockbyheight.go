@@ -15,16 +15,16 @@ import (
 )
 
 var (
-	number *int64
+	height *int64
 	tx     *string
 )
 
-// getblockbynumberCmd represents the get block by number command
-var getblockbynumberCmd = &cobra.Command{
-	Use:   "getblockbynumber",
-	Short: "get block info by block number",
+// getblockbyheightCmd represents the get block by height command
+var getblockbyheightCmd = &cobra.Command{
+	Use:   "getblockbyheight",
+	Short: "get block info by block height",
 	Long: `For example:
-	client.exe getblockbynumber -n -1 [-f true] [-a 127.0.0.1:55027]`,
+	client.exe getblockbyheight --height -1 [-f true] [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -33,12 +33,12 @@ var getblockbynumberCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		hashRequest := seele.GetBlockByNumberRequest{
-			Number: *number,
+		hashRequest := seele.GetBlockByHeightRequest{
+			Height: *height,
 			FullTx: *tx == "true",
 		}
 		var result map[string]interface{}
-		err = client.Call("seele.GetBlockByNumber", &hashRequest, &result)
+		err = client.Call("seele.GetBlockByHeight", &hashRequest, &result)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -54,10 +54,10 @@ var getblockbynumberCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(getblockbynumberCmd)
+	rootCmd.AddCommand(getblockbyheightCmd)
 
-	number = getblockbynumberCmd.Flags().Int64P("number", "n", -1, "block number")
-	getblockbynumberCmd.MarkFlagRequired("number")
+	height = getblockbyheightCmd.Flags().Int64("height", -1, "block height")
+	getblockbyheightCmd.MarkFlagRequired("height")
 
-	tx = getblockbynumberCmd.Flags().StringP("fulltx", "f", "false", "is add full tx, default is false")
+	tx = getblockbyheightCmd.Flags().StringP("fulltx", "f", "false", "is add full tx, default is false")
 }
