@@ -39,7 +39,7 @@ var savekey = &cobra.Command{
 			PrivateKey: privateKey,
 		}
 
-		keystore.StoreKey(*keyFile, &key)
+		keystore.StoreKey(*keyFile, "", &key)
 	},
 }
 

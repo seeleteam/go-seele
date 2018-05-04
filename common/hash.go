@@ -59,6 +59,16 @@ func (a Hash) ToHex() string {
 	return hexutil.BytesToHex(a[:])
 }
 
+func HexToHash(hex string) (Hash, error) {
+	byte, err := hexutil.HexToBytes(hex)
+	if err != nil {
+		return EmptyHash, err
+	}
+
+	hash := BytesToHash(byte)
+	return hash, nil
+}
+
 // IsEmpty return true if this hash is empty. Otherwise, false.
 func (a Hash) IsEmpty() bool {
 	return a == EmptyHash
