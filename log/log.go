@@ -63,7 +63,7 @@ func (p *SeeleLog) Debug(format string, args ...interface{}) {
 }
 
 // GetLogger gets logrus.Logger object according to logName
-// each module can have it's own logger
+// each module can have its own logger
 func GetLogger(logName string, bConsole bool) *SeeleLog {
 	getLogMutex.Lock()
 	defer getLogMutex.Unlock()
@@ -83,14 +83,14 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	} else {
 		err := os.MkdirAll(LogFolder, os.ModePerm)
 		if err != nil {
-			panic(fmt.Sprintf("create log file failed %s", err))
+			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
 
 		logFileName := logName + ".log"
 		logFullPath := filepath.Join(LogFolder, logFileName)
 		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			panic(fmt.Sprintf("create log file failed %s", err))
+			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
 
 		log.Out = file
@@ -102,7 +102,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.SetLevel(logrus.InfoLevel)
 	}
 
-	log.AddHook(&CallerHook{}) // add caller hook to print caller's file & line number
+	log.AddHook(&CallerHook{}) // add caller hook to print caller's file and line number
 	curLog = &SeeleLog{
 		log: log,
 	}

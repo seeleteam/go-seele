@@ -51,8 +51,8 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 	}
 
 	state := api.s.chain.CurrentState()
-	amount, _ := state.GetAmount(*account)
-	result.Set(amount)
+	balance := state.GetBalance(*account)
+	result.Set(balance)
 	return nil
 }
 
@@ -71,7 +71,7 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint64) error {
 	state := api.s.chain.CurrentState()
-	*nonce, _ = state.GetNonce(*account)
+	*nonce = state.GetNonce(*account)
 
 	return nil
 }

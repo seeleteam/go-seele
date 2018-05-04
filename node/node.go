@@ -7,9 +7,11 @@ package node
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	netrpc "net/rpc"
+	"reflect"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -29,6 +31,16 @@ var (
 	ErrServiceStartFailed = errors.New("node service start failed")
 	ErrServiceStopFailed  = errors.New("node service stop failed")
 )
+
+// StopError represents an error which is returned when a node fails to stop any registered service
+type StopError struct {
+	Services map[reflect.Type]error // Services is a container mapping the type of services which fail to stop to error
+}
+
+// Error returns a string representation of the stop error.
+func (se *StopError) Error() string {
+	return fmt.Sprintf("services: %v", se.Services)
+}
 
 // Node is a container for registering services.
 type Node struct {
@@ -121,9 +133,12 @@ func (n *Node) Start() error {
 	for i, service := range n.services {
 		if err := service.Start(running); err != nil {
 			for j := 0; j < i; j++ {
-				service.Stop()
+				n.services[j].Stop()
 			}
-
+			
+			// stop the p2p server
+			running.Stop()
+			
 			return err
 		}
 	}
@@ -133,6 +148,10 @@ func (n *Node) Start() error {
 		for _, service := range n.services {
 			service.Stop()
 		}
+		
+		// stop the p2p server
+		running.Stop()
+		
 		return err
 	}
 
@@ -231,15 +250,29 @@ func (n *Node) Stop() error {
 	if n.server == nil {
 		return ErrNodeStopped
 	}
+	
+	// stopErr is intended for possible stop errors
+	stopErr := &StopError{
+		Services: make(map[reflect.Type]error),
+	}
+	
 	for _, service := range n.services {
 		if err := service.Stop(); err != nil {
-			return ErrNodeStopped
+			stopErr.Services[reflect.TypeOf(service)] = err
 		}
 	}
-
+    
+	// stop the p2p server
+	n.server.Stop()
+	
 	n.services = nil
 	n.server = nil
-
+    
+	// return the stop errors if any
+	if len(stopErr.Services) > 0 {
+	    return stopErr
+	}
+	
 	return nil
 }
 

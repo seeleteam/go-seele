@@ -46,7 +46,7 @@ func createTestAPI() *PublicMonitorAPI {
 	}
 
 	serviceContext := seele.ServiceContext{
-		DataDir: common.GetTempFolder(),
+		DataDir: common.GetTempFolder() + "/n1/",
 	}
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
@@ -117,7 +117,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 	}
 
 	serviceContext := seele.ServiceContext{
-		DataDir: common.GetTempFolder(),
+		DataDir: common.GetTempFolder() + "/n2/",
 	}
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)

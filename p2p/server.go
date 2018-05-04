@@ -477,3 +477,21 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	srv.log.Info("unPackWrapHSMsg: verify OK!")
 	return
 }
+
+// Stop terminates the execution of the p2p server
+func (srv *Server) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	
+	if !srv.running {
+		return
+	}
+	srv.running = false
+	
+	if srv.listener != nil {
+		srv.listener.Close()
+	}
+	
+	close(srv.quit)
+	srv.Wait()
+}

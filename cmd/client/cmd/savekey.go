@@ -16,17 +16,17 @@ import (
 var keyStr *string
 var keyFile *string
 
-// getinfo represents the getinfo command
+// savekey represents the savekey command
 var savekey = &cobra.Command{
 	Use:   "savekey",
-	Short: "save key",
-	Long: `save private key
+	Short: "save the key",
+	Long: `save the private key
     For example:
-		client.exe savekey -k 0x(privatekey)`,
+		client.exe savekey -k 0x<privatekey>`,
 	Run: func(cmd *cobra.Command, args []string) {
 		privateKey, err := crypto.LoadECDSAFromString(*keyStr)
 		if err != nil {
-			fmt.Printf("invalid key %s\n", err.Error())
+			fmt.Printf("invalid key: %s\n", err.Error())
 			return
 		}
 
