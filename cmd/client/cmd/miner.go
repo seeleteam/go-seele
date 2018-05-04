@@ -8,6 +8,7 @@ package cmd
 import (
 	"fmt"
 	"net/rpc/jsonrpc"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -20,8 +21,8 @@ var minerCmd = &cobra.Command{
 	Use:   "miner",
 	Short: "miner actions",
 	Long: `For example:
-	 client.exe miner -a start
-	 client.exe miner -a stop`,
+	 client.exe miner -o start
+	 client.exe miner -o stop`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -32,7 +33,7 @@ var minerCmd = &cobra.Command{
 
 		var result string
 		var input string
-		switch *operation {
+		switch strings.ToLower(*operation) {
 		case "start":
 			err = client.Call("miner.Start", &threadsNum, &result)
 			if err != nil {
@@ -40,7 +41,6 @@ var minerCmd = &cobra.Command{
 				return
 			}
 			fmt.Println("miner start")
-			return
 		case "stop":
 			err = client.Call("miner.Stop", &input, &result)
 			if err != nil {
@@ -48,11 +48,8 @@ var minerCmd = &cobra.Command{
 				return
 			}
 			fmt.Println("miner stop")
-			return
 		default:
 			fmt.Println("operation is not defined.")
-			return
-
 		}
 	},
 }

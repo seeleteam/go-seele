@@ -21,9 +21,14 @@ import (
 )
 
 var (
+	// ErrMinerIsRunning is returned when start miner is running
 	ErrMinerIsRunning = errors.New("Miner is running")
-	ErrMinerIsStop    = errors.New("Miner is stop")
-	ErrNodeIsSyncing  = errors.New("Can not start miner when syncing")
+
+	// ErrMinerIsStop is returned when stop miner is stopped
+	ErrMinerIsStop = errors.New("Miner is stopped")
+
+	// ErrNodeIsSyncing is returned when start miner is syncing.
+	ErrNodeIsSyncing = errors.New("Can not start miner when syncing")
 )
 
 // SeeleService wraps all methods required for minier.
@@ -105,7 +110,7 @@ func (miner *Miner) Start() error {
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
 	miner.stopChan <- struct{}{}
-	miner.log.Info("Miner is stoped.")
+	miner.log.Info("Miner is stopped.")
 }
 
 // Close closes the miner

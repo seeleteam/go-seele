@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -74,7 +75,7 @@ var startCmd = &cobra.Command{
 		}
 
 		seeleNode.Start()
-		if *miner == "start" {
+		if strings.ToLower(*miner) == "start" {
 			err = seeleService.Miner().Start()
 			if err != nil {
 				fmt.Println("Starting the miner failed: ", err.Error())
