@@ -158,12 +158,12 @@ func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error)
 		"difficulty": head.Difficulty,
 	}
 
-	formatTx := func(tx *types.Transaction) (interface{}, error) {
-		return tx.Hash.ToHex(), nil
+	formatTx := func(tx *types.Transaction) interface{} {
+		return tx.Hash.ToHex()
 	}
 
 	if fullTx {
-		formatTx = func(tx *types.Transaction) (interface{}, error) {
+		formatTx = func(tx *types.Transaction) interface{} {
 			transaction := map[string]interface{}{
 				"hash":         tx.Hash.ToHex(),
 				"from":         tx.Data.From.ToHex(),
@@ -173,17 +173,14 @@ func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error)
 				"payload":      tx.Data.Payload,
 				"timestamp":    tx.Data.Timestamp,
 			}
-			return transaction, nil
+			return transaction
 		}
 	}
 
 	txs := b.Transactions
 	transactions := make([]interface{}, len(txs))
-	var err error
 	for i, tx := range txs {
-		if transactions[i], err = formatTx(tx); err != nil {
-			return nil, err
-		}
+		transactions[i] = formatTx(tx)
 	}
 	fields["transactions"] = transactions
 
