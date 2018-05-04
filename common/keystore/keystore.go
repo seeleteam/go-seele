@@ -6,41 +6,27 @@
 package keystore
 
 import (
-	"crypto/ecdsa"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/seeleteam/go-seele/crypto"
 )
 
-// Key private key info for wallet
-type Key struct {
-	PrivateKey *ecdsa.PrivateKey
-}
-
 // GetKey get private key from a file
-func GetKey(fileName string) (*Key, error) {
+func GetKey(fileName, password string) (*Key, error) {
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
 
-	privateKey, err := crypto.ToECDSA(content)
-	if err != nil {
-		return nil, err
-	}
-
-	key := &Key{
-		PrivateKey: privateKey,
-	}
-
-	return key, nil
+	return DecryptKey(content, password)
 }
 
 // StoreKey store private key in a file. Note it is not encrypted. Need to support it later.
-func StoreKey(fileName string, key *Key) error {
-	content := crypto.FromECDSA(key.PrivateKey)
+func StoreKey(fileName, password string, key *Key) error {
+	content, err := EncryptKey(key, password)
+	if err != nil {
+		return err
+	}
 
 	return writeKeyFile(fileName, content)
 }
