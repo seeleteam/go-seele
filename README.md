@@ -13,6 +13,15 @@ Building Seele project requires both a Go (version 1.7 or later) and a C compile
 make all
 ```
 
+# Contribution
+
+Thank you for considering to help out with our source code. We appreciate your any contribution even the smallest fixes.
+
+Here are some guidelines before you start:
+* Code must adhere to the official Go [formatting](https://golang.org/doc/effective_go.html#formatting) guidelines (i.e. uses [gofmt](https://golang.org/cmd/gofmt/)).
+* Pull requests need to be based on and opened against the `master` branch.
+* We use reviewable.io as our review tool for any pull request. Please submit and follow your comments in this tool. 
+
 # Resources
 
 * [Seele Website](https://seele.pro/)
