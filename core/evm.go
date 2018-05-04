@@ -6,8 +6,10 @@
 package core
 
 import (
+	"math"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -16,7 +18,7 @@ import (
 )
 
 // newEVMContext creates a new context for use in the EVM.
-func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) vm.Context {
+func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 		return db.GetBalance(addr).Cmp(amount) >= 0
 	}
@@ -45,7 +47,7 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 		}
 	}
 
-	return vm.Context{
+	return &vm.Context{
 		CanTransfer: canTransferFunc,
 		Transfer:    transferFunc,
 		GetHash:     getHashFunc,
@@ -60,7 +62,28 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 }
 
 // processContract process the specified contract tx and return the receipt.
-func processContract(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore, statedb *state.Statedb) (*types.Receipt, error) {
-	// @todo
-	return nil, nil
+func processContract(context *vm.Context, tx *types.Transaction, statedb *state.Statedb, chainConfig *params.ChainConfig, vmConfig *vm.Config) (*types.Receipt, error) {
+	evm := vm.NewEVM(*context, statedb, chainConfig, *vmConfig)
+
+	var err error
+	caller := vm.AccountRef(tx.Data.From)
+	receipt := &types.Receipt{TxHash: tx.Hash}
+
+	// Currently, use math.MaxUint64 gas to bypass ErrInsufficientBalance error.
+	if tx.Data.To == nil {
+		receipt.Result, receipt.ContractAddress, _, err = evm.Create(caller, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
+	} else {
+		// @todo ETH: st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+		receipt.Result, _, err = evm.Call(caller, *tx.Data.To, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	receipt.PostState = statedb.Commit(nil)
+
+	// @todo add logs to receipt, which depend on the state DB implementation.
+
+	return receipt, nil
 }
