@@ -6,19 +6,34 @@
 package miner
 
 import (
+	"errors"
 	"math/big"
 	"math/rand"
+	"runtime"
 	"sync/atomic"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/seele"
 )
 
-// Miner defines base elements of the miner
+var (
+	ErrMinerIsRunning = errors.New("Miner is running")
+	ErrMinerIsStop    = errors.New("Miner is stop")
+	ErrNodeIsSyncing  = errors.New("Can not start miner when syncing")
+)
+
+// SeeleService wraps all methods required for minier.
+type SeeleService interface {
+	TxPool() *core.TransactionPool
+	BlockChain() *core.Blockchain
+	GetCoinbase() common.Address
+}
+
+// Miner defines base elements of miner
 type Miner struct {
 	coinbase common.Address
 	mining   int32
@@ -28,22 +43,26 @@ type Miner struct {
 	current  *Task
 	recv     chan *Result
 
-	seele *seele.SeeleService
+	seele SeeleService
 	log   *log.SeeleLog
 
 	isFirstDownloader int32
+
+	threads              int
+	isFirstBlockPrepared int32
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele SeeleService, log *log.SeeleLog) *Miner {
 	miner := &Miner{
-		coinbase:          addr,
-		canStart:          1,
-		seele:             seele,
-		stopChan:          make(chan struct{}, 1),
-		recv:              make(chan *Result, 1),
-		log:               log,
-		isFirstDownloader: 1,
+		coinbase:             addr,
+		canStart:             1,
+		seele:                seele,
+		stopChan:             make(chan struct{}, 1),
+		recv:                 make(chan *Result, 1),
+		log:                  log,
+		isFirstDownloader:    1,
+		isFirstBlockPrepared: 0,
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -52,30 +71,41 @@ func NewMiner(addr common.Address, seele *seele.SeeleService, log *log.SeeleLog)
 	return miner
 }
 
+// SetThreads set the number of mining threads.
+func (miner *Miner) SetThreads(threads int) {
+	miner.threads = threads
+}
+
 // Start is used to start the miner
-func (miner *Miner) Start() bool {
+func (miner *Miner) Start() error {
 	if atomic.LoadInt32(&miner.mining) == 1 {
 		miner.log.Info("Miner is running")
-		return true
+		return ErrMinerIsRunning
 	}
 
 	if atomic.LoadInt32(&miner.canStart) == 0 {
-		miner.log.Info("Can not start the miner when syncing")
-		return false
+		miner.log.Info("Can not start miner when syncing")
+		return ErrNodeIsSyncing
 	}
 
 	atomic.StoreInt32(&miner.mining, 1)
 
 	go miner.waitBlock()
-	miner.prepareNewBlock() // try to prepare the first block
+	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
+		miner.prepareNewBlock() // try to prepare the first block
+		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
+	}
 
-	return true
+	miner.log.Info("Miner is started.")
+
+	return nil
 }
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
 	miner.stopChan <- struct{}{}
+	miner.log.Info("Miner is stoped.")
 }
 
 // Close closes the miner
@@ -206,5 +236,17 @@ func (miner *Miner) commitTask(task *Task) {
 		return
 	}
 
-	go StartMining(task, rand.Uint64(), miner.recv, miner.stopChan, miner.log)
+	threads := miner.threads
+
+	if threads == 0 {
+		threads = runtime.NumCPU()
+	}
+	if threads < 0 {
+		threads = 0
+	}
+	miner.log.Debug("miner threads num:%d", threads)
+
+	for i := 0; i < threads; i++ {
+		go StartMining(task, rand.Uint64(), miner.recv, miner.stopChan, miner.log)
+	}
 }

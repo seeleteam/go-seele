@@ -35,7 +35,7 @@ type Config struct {
 	// coinbase used by the miner
 	Coinbase string
 
-  // static nodes which will be connected to find more nodes when the node starts
+	// static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string
 
 	// core msg interaction uses TCP address and Kademila protocol uses UDP address
