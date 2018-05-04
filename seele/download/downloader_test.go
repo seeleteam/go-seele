@@ -80,11 +80,7 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 	}
 
 	batch := db.NewBatch()
-	stateHash, err := statedb.Commit(batch)
-	if err != nil {
-		t.Fatal()
-	}
-
+	stateHash := statedb.Commit(batch)
 	if err = batch.Commit(); err != nil {
 		t.Fatal()
 	}

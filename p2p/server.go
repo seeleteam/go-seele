@@ -102,6 +102,14 @@ type Server struct {
 	log   *log.SeeleLog
 }
 
+// PeerCount return the count of peers
+func (srv *Server) PeerCount() int {
+	if srv.peers != nil {
+		return len(srv.peers)
+	}
+	return 0
+}
+
 // Start starts running the server.
 func (srv *Server) Start() (err error) {
 	srv.lock.Lock()
@@ -468,4 +476,22 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	}
 	srv.log.Info("unPackWrapHSMsg: verify OK!")
 	return
+}
+
+// Stop terminates the execution of the p2p server
+func (srv *Server) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	
+	if !srv.running {
+		return
+	}
+	srv.running = false
+	
+	if srv.listener != nil {
+		srv.listener.Close()
+	}
+	
+	close(srv.quit)
+	srv.Wait()
 }

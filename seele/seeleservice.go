@@ -24,6 +24,7 @@ import (
 // SeeleService implements full node service.
 type SeeleService struct {
 	networkID     uint64
+	p2pServer     *p2p.Server
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
 	Coinbase      common.Address // account address that mining rewards will be send to.
@@ -42,6 +43,9 @@ type ServiceContext struct {
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
+func (s *SeeleService) Downloader() *downloader.Downloader {
+	return s.seeleProtocol.Downloader()
+}
 
 // ApplyTransaction applys a transaction
 // Check if this transaction is valid in the state db
@@ -117,6 +121,8 @@ func (s *SeeleService) Protocols() (protos []p2p.Protocol) {
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
 func (s *SeeleService) Start(srvr *p2p.Server) error {
+	s.p2pServer = srvr
+
 	s.seeleProtocol.Start()
 	return nil
 }
@@ -146,6 +152,12 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "download",
 			Version:   "1.0",
 			Service:   downloader.NewPublicdownloaderAPI(s.seeleProtocol.downloader),
+			Public:    true,
+		},
+		{
+			Namespace: "network",
+			Version:   "1.0",
+			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),
 			Public:    true,
 		},
 	}...)

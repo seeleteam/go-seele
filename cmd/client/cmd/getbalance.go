@@ -21,13 +21,13 @@ var (
 // getbalanceCmd represents the getbalance command
 var getbalanceCmd = &cobra.Command{
 	Use:   "getbalance",
-	Short: "get balance of the coinbase",
+	Short: "get the balance of an account",
 	Long: `For example:
 	client.exe getbalance`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			return
 		}
 		defer client.Close()
@@ -38,7 +38,7 @@ var getbalanceCmd = &cobra.Command{
 		} else {
 			result, err := common.HexToAddress(*account)
 			if err != nil {
-				fmt.Printf("invalid account address. %s\n", err.Error())
+				fmt.Printf("invalid account address: %s\n", err.Error())
 				return
 			}
 
@@ -48,13 +48,13 @@ var getbalanceCmd = &cobra.Command{
 		amount := big.NewInt(0)
 		err = client.Call("seele.GetBalance", &address, amount)
 		if err != nil {
-			fmt.Printf("get balance failed %s\n", err.Error())
+			fmt.Printf("getting the balance failed: %s\n", err.Error())
 		}
 
 		if address == nil {
-			fmt.Printf("Didn't find your account. Get coinbase balance: %s\n", amount)
+			fmt.Printf("no account is provided. the coinbase balance: %s\n", amount)
 		} else {
-			fmt.Printf("Account %s\nBalance: %s\n", address.ToHex(), amount)
+			fmt.Printf("Account: %s\nBalance: %s\n", address.ToHex(), amount)
 		}
 	},
 }
