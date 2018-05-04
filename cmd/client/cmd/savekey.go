@@ -8,10 +8,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
-	"github.com/seeleteam/go-seele/common"
 )
 
 var keyStr *string
@@ -43,7 +43,7 @@ var savekey = &cobra.Command{
 		}
 
 		key := keystore.Key{
-			Address: *crypto.MustGetAddress(privateKey),
+			Address:    *crypto.MustGetAddress(privateKey),
 			PrivateKey: privateKey,
 		}
 

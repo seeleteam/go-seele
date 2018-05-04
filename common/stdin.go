@@ -6,11 +6,13 @@
 package common
 
 import (
-	"fmt"
-	"github.com/howeyc/gopass"
 	"bytes"
+	"fmt"
+
+	"github.com/howeyc/gopass"
 )
 
+// GetPassword ask user for password interactively
 func GetPassword() (string, error) {
 	fmt.Printf("Please input your key file password: ")
 	pass, err := gopass.GetPasswd()
@@ -21,6 +23,7 @@ func GetPassword() (string, error) {
 	return string(pass), nil
 }
 
+// SetPassword ask user input password twice and get the password interactively
 func SetPassword() (string, error) {
 	fmt.Printf("Password: ")
 	pass, err := gopass.GetPasswd()
