@@ -43,8 +43,6 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 			heightToHashMapping[preHeader.Height-1] = preHeader.PreviousBlockHash
 			preHash = preHeader.PreviousBlockHash
 		}
-
-		return common.EmptyHash, nil
 	}
 
 	return vm.Context{
