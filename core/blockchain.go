@@ -131,6 +131,31 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	return bc, nil
 }
 
+// GetBlockByHeight returns a block by given height
+func (bc *Blockchain) GetBlockByHeight(h uint64) (*types.Block, error) {
+	hash, err := bc.bcStore.GetBlockHash(h)
+	if err != nil {
+		return nil, err
+	}
+
+	return bc.bcStore.GetBlock(hash)
+}
+
+// GetTdByHash returns totle difficuly by given hash
+func (bc *Blockchain) GetTdByHash(hash common.Hash) (*big.Int, error) {
+	return bc.bcStore.GetBlockTotalDifficulty(hash)
+}
+
+// GetTdByHeight returns totle difficuly by given height
+func (bc *Blockchain) GetTdByHeight(height uint64) (*big.Int, error) {
+	hash, err := bc.bcStore.GetBlockHash(height)
+	if err != nil {
+		return nil, err
+	}
+
+	return bc.GetTdByHash(hash)
+}
+
 // CurrentBlock returns the HEAD block of blockchain.
 func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
 	bc.lock.RLock()
