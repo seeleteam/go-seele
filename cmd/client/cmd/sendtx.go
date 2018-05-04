@@ -47,7 +47,13 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		key, err := keystore.GetKey(*parameter.from, "")
+		pass, err := common.GetPassword()
+		if err != nil {
+			fmt.Printf("get password failed %s\n", err.Error())
+			return
+		}
+
+		key, err := keystore.GetKey(*parameter.from, pass)
 		if err != nil {
 			fmt.Printf("invalid sender key file. it should be a private key: %s\n", err.Error())
 			return

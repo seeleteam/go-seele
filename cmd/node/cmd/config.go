@@ -104,7 +104,12 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 		}
 	}
 
-	key, err := keystore.GetKey(config.KeyFile, "")
+	pass, err := common.GetPassword()
+	if err != nil {
+		return p2pConfig, err
+	}
+
+	key, err := keystore.GetKey(config.KeyFile, pass)
 	if err != nil {
 		return p2pConfig, err
 	}

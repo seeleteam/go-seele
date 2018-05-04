@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
+	"github.com/seeleteam/go-seele/common"
 )
 
 var keyStr *string
@@ -35,11 +36,18 @@ var savekey = &cobra.Command{
 			return
 		}
 
+		pass, err := common.SetPassword()
+		if err != nil {
+			fmt.Printf("get password err %s\n", err.Error())
+			return
+		}
+
 		key := keystore.Key{
+			Address: *crypto.MustGetAddress(privateKey),
 			PrivateKey: privateKey,
 		}
 
-		keystore.StoreKey(*keyFile, "", &key)
+		keystore.StoreKey(*keyFile, pass, &key)
 	},
 }
 
