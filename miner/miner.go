@@ -7,6 +7,7 @@ package miner
 
 import (
 	"errors"
+	"math"
 	"math/big"
 	"math/rand"
 	"runtime"
@@ -251,7 +252,18 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 	miner.log.Debug("miner threads num:%d", threads)
 
+	var step uint64
+	seed := uint64(rand.Int63())
+	step = (math.MaxUint64 - seed) / uint64(threads)
 	for i := 0; i < threads; i++ {
-		go StartMining(task, rand.Uint64(), miner.recv, miner.stopChan, miner.log)
+		tSeed := seed + uint64(i)*step
+		var max uint64
+		if i != threads-1 {
+			max = tSeed + step
+		} else {
+			max = math.MaxUint64
+		}
+
+		go StartMining(task, tSeed, max, miner.recv, miner.stopChan, miner.log)
 	}
 }

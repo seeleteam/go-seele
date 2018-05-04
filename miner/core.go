@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/log"
@@ -17,7 +16,7 @@ import (
 // seed is the random start value for the nonce
 // result represents the founded nonce will be set in the result block
 // abort is a channel by closing which you can stop mining
-func StartMining(task *Task, seed uint64, result chan<- *Result, abort <-chan struct{}, log *log.SeeleLog) {
+func StartMining(task *Task, seed uint64, max uint64, result chan<- *Result, abort <-chan struct{}, log *log.SeeleLog) {
 	block := task.generateBlock()
 
 	var nonce = seed
@@ -55,7 +54,7 @@ miner:
 			}
 
 			// outage
-			if nonce == math.MaxUint64 {
+			if nonce == max {
 				select {
 				case <-abort:
 					logAbort(log)
