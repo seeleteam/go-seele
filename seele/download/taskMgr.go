@@ -49,8 +49,9 @@ func newPeerHeadInfo() *peerHeadInfo {
 
 type taskMgr struct {
 	downloader       *Downloader
-	fromNo, toNo     uint64                   // block number range [from, to]
-	curNo            uint64                   // the smallest block number need to recv
+	fromNo, toNo     uint64 // block number range [from, to]
+	curNo            uint64 // the smallest block number need to recv
+	downloadedNum    uint64
 	peersHeaderMap   map[string]*peerHeadInfo // peer's header information
 	masterHeaderList []*masterHeadInfo        // headers for master peer
 
@@ -59,6 +60,7 @@ type taskMgr struct {
 	quitCh     chan struct{}
 	wg         sync.WaitGroup
 	log        *log.SeeleLog
+	startTime  time.Time
 }
 
 func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskMgr {
@@ -68,7 +70,9 @@ func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskM
 		fromNo:           from,
 		toNo:             to,
 		curNo:            from,
+		downloadedNum:    0,
 		masterPeer:       masterPeer,
+		startTime:        time.Now(),
 		peersHeaderMap:   make(map[string]*peerHeadInfo),
 		masterHeaderList: make([]*masterHeadInfo, 0, to-from+1),
 		quitCh:           make(chan struct{}),
@@ -298,5 +302,6 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 
 		headInfo.block = b
 		headInfo.status = taskStatusWaitProcessing
+		t.downloadedNum++
 	}
 }
