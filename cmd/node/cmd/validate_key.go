@@ -19,19 +19,19 @@ var (
 // validatekeyCmd represents the validatekey command
 var validatekeyCmd = &cobra.Command{
 	Use:   "validatekey",
-	Short: "validate private key and generate its public key",
+	Short: "validate the private key and generate its public key",
 	Long: `For example:
 			node.exe validatekey`,
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := crypto.LoadECDSAFromString(*privateKey)
 		if err != nil {
-			fmt.Printf("load private key failed %s", err.Error())
+			fmt.Printf("loading the private key failed: %s\n", err.Error())
 			return
 		}
 
 		addr, err := crypto.GetAddress(key)
 		if err != nil {
-			fmt.Printf("get public address failed %s", err.Error())
+			fmt.Printf("getting the public address failed: %s\n", err.Error())
 			return
 		}
 

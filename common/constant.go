@@ -15,13 +15,13 @@ var (
 	// tempFolder used to store temp file, such as log files
 	tempFolder string
 
-	// defaultDataFolder used to store persist data info. such as database and keystore
+	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
 
-	// PrintLog default is false. If it is true, it will not print all the logs in the console. otherwise, will write log in file.
+	// PrintLog default is false. If it is true, all logs will be printed in the console, otherwise they will be stored in the file.
 	PrintLog = false
 
-	// IsDebug default is false. If it is true, the log level is set to DebugLevel. otherwise, the log level is set to InfoLevel
+	// IsDebug default is false. If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
 	IsDebug = false
 )
 
@@ -35,11 +35,12 @@ func init() {
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
 }
 
-// GetTempFolder use a getter to implement readonly
+// GetTempFolder uses a getter to implement readonly
 func GetTempFolder() string {
 	return tempFolder
 }
 
+// GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
 }

@@ -16,14 +16,14 @@ import (
 // getinfo represents the getinfo command
 var getinfo = &cobra.Command{
 	Use:   "getinfo",
-	Short: "get miner info",
-	Long: `get miner info
+	Short: "get the miner info",
+	Long: `get the miner info
     For example:
 		client.exe getinfo -a 127.0.0.1:55027`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(err.Error())
 			return
 		}
 		defer client.Close()
@@ -31,7 +31,7 @@ var getinfo = &cobra.Command{
 		var info seele.MinerInfo
 		err = client.Call("seele.GetInfo", nil, &info)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("getting the miner info failed: %s\n", err.Error())
 		}
 
 		fmt.Printf("coinbase address: %s\n", info.Coinbase.ToHex())
