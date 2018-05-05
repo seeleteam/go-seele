@@ -13,7 +13,7 @@ type Account struct {
 	Amount *big.Int
 }
 
-// StateObject is state object for statedb
+// StateObject is the state object for statedb
 type StateObject struct {
 	account Account
 	dirty   bool
@@ -29,6 +29,7 @@ func newStateObject() *StateObject {
 	}
 }
 
+// GetCopy gets a copy of the state object
 func (s *StateObject) GetCopy() *StateObject {
 	return &StateObject{
 		account: Account{
@@ -39,23 +40,23 @@ func (s *StateObject) GetCopy() *StateObject {
 	}
 }
 
-// SetNonce set nonce of account
+// SetNonce sets the nonce of the account in the state object
 func (s *StateObject) SetNonce(nonce uint64) {
 	s.account.Nonce = nonce
 	s.dirty = true
 }
 
-// GetNonce get nonce of account
+// GetNonce gets the nonce of the account in the state object
 func (s *StateObject) GetNonce() uint64 {
 	return s.account.Nonce
 }
 
-// GetAmount get nonce of account
+// GetAmount gets the balance amount of the account in the state object
 func (s *StateObject) GetAmount() *big.Int {
 	return new(big.Int).Set(s.account.Amount)
 }
 
-// SetAmount set amount of account
+// SetAmount sets the balance amount of the account in the state object
 func (s *StateObject) SetAmount(amount *big.Int) {
 	if amount.Sign() >= 0 {
 		s.account.Amount.Set(amount)
@@ -63,12 +64,12 @@ func (s *StateObject) SetAmount(amount *big.Int) {
 	}
 }
 
-// AddAmount add amount of account
+// AddAmount adds the specified amount to the balance of the account in the state object
 func (s *StateObject) AddAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Add(s.account.Amount, amount))
 }
 
-// SubAmount sub amount of account
+// SubAmount substracts the specified amount from the balance of the account in the state object
 func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-// HeaderChain represents the block header chain that is shared by archive node and light node.
+// HeaderChain represents the block header chain that is shared by the archive node and light node.
 // This is a non-thread safe structure.
 type HeaderChain struct {
 	lock    sync.Mutex
@@ -24,13 +24,13 @@ type HeaderChain struct {
 	currentHeaderHash common.Hash
 }
 
-// NewHeaderChain returns a new instance of HeaderChain structure.
+// NewHeaderChain returns a new instance of the HeaderChain structure.
 func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 	hc := HeaderChain{
 		bcStore: bcStore,
 	}
 
-	// Get genesis block header from store.
+	// Get the genesis block header from the store.
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 		return nil, err
 	}
 
-	// Get HEAD block header from store.
+	// Get the HEAD block header from the store.
 	hc.currentHeaderHash, err = bcStore.GetHeadBlockHash()
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func NewHeaderChain(bcStore store.BlockchainStore) (*HeaderChain, error) {
 	return &hc, nil
 }
 
-// WriteHeader writes a block new header into the header chain.
+// WriteHeader writes a new block header into the header chain.
 // It requires the new header's parent header is the HEAD header
 // in the chain.
 func (hc *HeaderChain) WriteHeader(newHeader *types.BlockHeader) error {

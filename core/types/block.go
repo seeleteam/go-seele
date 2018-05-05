@@ -14,17 +14,17 @@ import (
 
 // BlockHeader represents the header of a block in the blockchain.
 type BlockHeader struct {
-	PreviousBlockHash common.Hash
-	Creator           common.Address
-	StateHash         common.Hash // State tree root hash
-	TxHash            common.Hash // Transaction tree root hash
-	Difficulty        *big.Int    // Mining difficulty of current block
-	Height            uint64
-	CreateTimestamp   *big.Int
-	Nonce             uint64
+	PreviousBlockHash common.Hash // PreviousBlockHash represents the hash of the parent block 
+	Creator           common.Address // Creator is the coinbase of the miner which mined the block
+	StateHash         common.Hash // StateHash is the root hash of the state trie
+	TxHash            common.Hash // TxHash is the root hash of the transaction trie
+	Difficulty        *big.Int // Difficulty is the difficulty of the block
+	Height            uint64 // Height is the number of the block
+	CreateTimestamp   *big.Int // CreateTimestamp is the timestamp when the block is created
+	Nonce             uint64 // Nonce is the pow of the block
 }
 
-// Clone returns a clone of block header.
+// Clone returns a clone of the block header.
 func (header *BlockHeader) Clone() *BlockHeader {
 	clone := *header
 
@@ -39,19 +39,19 @@ func (header *BlockHeader) Clone() *BlockHeader {
 	return &clone
 }
 
-// Hash calculates and returns the hash of bloch header.
+// Hash calculates and returns the hash of the bloch header.
 func (header *BlockHeader) Hash() common.Hash {
 	return crypto.MustHash(header)
 }
 
 // Block represents a block in the blockchain.
 type Block struct {
-	HeaderHash   common.Hash // Hash on RLP encoded header bytes.
-	Header       *BlockHeader
-	Transactions []*Transaction
+	HeaderHash   common.Hash // HeaderHash is the hash of the RLP encoded header bytes
+	Header       *BlockHeader // Header is the block header
+	Transactions []*Transaction // Transactions is the block payload
 }
 
-// NewBlock creates a new block. The input header is copied,
+// NewBlock creates a new block. The input header is copied so that
 // any change will not affect the block. The input transaction
 // array is copied, but each transaction is not copied.
 // So any change of the input transaction will affect the block.
@@ -73,7 +73,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction) *Block {
 	return block
 }
 
-// FindTransaction returns transaction of specified hash if found. Otherwise, returns nil.
+// FindTransaction returns the transaction of the specified hash if found. Otherwise, it returns nil.
 func (block *Block) FindTransaction(txHash common.Hash) *Transaction {
 	for _, tx := range block.Transactions {
 		if tx.Hash == txHash {

@@ -29,20 +29,20 @@ type BlockchainStore interface {
 	// GetBlockHeader retrieves the block header for the specified block hash.
 	GetBlockHeader(hash common.Hash) (*types.BlockHeader, error)
 
-	// PutBlockHeader serializes a block header with total difficulty (td) into the store.
+	// PutBlockHeader serializes a block header with the specified total difficulty (td) into the store.
 	// The input parameter isHead indicates if the header is a HEAD block header.
 	PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error
 
 	// GetBlockTotalDifficulty retrieves a block's total difficulty for the specified block hash.
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
 
-	// PutBlock serializes a block with total difficulty (td) into the store.
-	// The input parameter isHead indicates if the header is a HEAD block header.
+	// PutBlock serializes the given block with the given total difficulty (td) into the store.
+	// The input parameter isHead indicates if the given block is a HEAD block.
 	PutBlock(block *types.Block, td *big.Int, isHead bool) error
 
 	// GetBlock retrieves the block for the specified block hash.
 	GetBlock(hash common.Hash) (*types.Block, error)
 
-	// HashBlock check if the block with this hash exist.
-	HashBlock(hash common.Hash) (bool, error)
+	// HasBlock checks if the block with the specified hash exists.
+	HasBlock(hash common.Hash) (bool, error)
 }

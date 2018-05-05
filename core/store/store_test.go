@@ -70,11 +70,11 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, td, header.Difficulty)
 
-		exist, err := bcStore.HashBlock(headerHash)
+		exist, err := bcStore.HasBlock(headerHash)
 		assert.Equal(t, exist, true)
 		assert.Equal(t, err, nil)
 
-		exist, err = bcStore.HashBlock(common.EmptyHash)
+		exist, err = bcStore.HasBlock(common.EmptyHash)
 		assert.Equal(t, exist, false)
 		assert.Equal(t, err, nil)
 	})

@@ -13,7 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-func getTestBlock(t *testing.T, difficult int64) *types.Block {
+func getTestBlock(t *testing.T, difficulty int64) *types.Block {
 	db, dispose := newTestDatabase()
 	defer dispose()
 
@@ -22,7 +22,7 @@ func getTestBlock(t *testing.T, difficult int64) *types.Block {
 }
 
 func Test_BlockLeaf_Add_Remove(t *testing.T) {
-	bf := NewBlockLeaf()
+	bf := NewBlockLeaves()
 
 	index := NewBlockIndex(nil, getTestBlock(t, 1), big.NewInt(1))
 	bf.Add(index)
@@ -43,7 +43,7 @@ func Test_BlockLeaf_Add_Remove(t *testing.T) {
 }
 
 func Test_BlockLeaf_Get(t *testing.T) {
-	bf := NewBlockLeaf()
+	bf := NewBlockLeaves()
 	index := NewBlockIndex(nil, getTestBlock(t, 1), big.NewInt(1))
 	bf.Add(index)
 	index2 := NewBlockIndex(nil, getTestBlock(t, 2), big.NewInt(2))

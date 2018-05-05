@@ -21,51 +21,51 @@ const (
 )
 
 var (
-	// ErrAmountNegative is returned when transaction amount is negative.
+	// ErrAmountNegative is returned when the transaction amount is negative.
 	ErrAmountNegative = errors.New("amount is negative")
 
-	// ErrAmountNil is returned when transation amount is nil.
+	// ErrAmountNil is returned when the transation amount is nil.
 	ErrAmountNil = errors.New("amount is null")
 
-	// ErrBalanceNotEnough is returned when account balance is not enough to transfer to another account.
+	// ErrBalanceNotEnough is returned when the account balance is not enough to transfer to another account.
 	ErrBalanceNotEnough = errors.New("balance not enough")
 
-	// ErrHashMismatch is returned when transaction hash and data mismatch.
+	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
 
-	// ErrNonceTooLow is returned when transaction nonce is lower than account nonce.
+	// ErrNonceTooLow is returned when the transaction nonce is lower than the account nonce.
 	ErrNonceTooLow = errors.New("nonce too low")
 
-	// ErrPayloadOversized is returned when payload is larger than the MaxPayloadSize.
+	// ErrPayloadOversized is returned when the payload size is larger than the MaxPayloadSize.
 	ErrPayloadOversized = errors.New("oversized payload")
 
-	// ErrSigInvalid is returned when transaction signature is invalid.
+	// ErrSigInvalid is returned when the transaction signature is invalid.
 	ErrSigInvalid = errors.New("signature is invalid")
 
-	// ErrSigMissed is returned when transaction signature missed.
-	ErrSigMissed = errors.New("signature missed")
+	// ErrSigMissing is returned when the transaction signature is missing.
+	ErrSigMissing = errors.New("signature missing")
 
 	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
 
-	// MaxPayloadSize limits the payload size to prevent malicious transations.
+	// MaxPayloadSize limits the payload size to prevent malicious transactions.
 	MaxPayloadSize = defaultMaxPayloadSize
 )
 
 // TransactionData wraps the data in a transaction.
 type TransactionData struct {
-	From         common.Address
-	To           *common.Address // nil for contract creation transaction.
-	Amount       *big.Int
-	AccountNonce uint64
-	Timestamp    uint64 // unix nano time
-	Payload      []byte
+	From         common.Address // From is the address of the sender
+	To           *common.Address // To is the receiver address, which is nil for contract creation transaction
+	Amount       *big.Int // Amount is the amount to be transferred
+	AccountNonce uint64 // AccountNonce is the nonce of the sender account
+	Timestamp    uint64 // Timestamp is unix nano time when the transaction is created
+	Payload      []byte // Payload is the extra data of the transaction
 }
 
 // Transaction represents a transaction in the blockchain.
 type Transaction struct {
-	Hash      common.Hash // hash on transaction data
-	Data      *TransactionData
-	Signature *crypto.Signature
+	Hash      common.Hash // Hash is the hash of the transaction data
+	Data      *TransactionData // Data is the transaction data
+	Signature *crypto.Signature // Signature is the signature of the transaction
 }
 
 type stateDB interface {
@@ -75,7 +75,7 @@ type stateDB interface {
 
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
-// Panics if the amount is nil or negative.
+// panic if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Transaction {
 	tx, _ := newTx(from, &to, amount, nonce, nil)
 	return tx
@@ -113,23 +113,23 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
 }
 
-// NewContractTransaction returns a transation to create a smart contract.
+// NewContractTransaction returns a transaction to create a smart contract.
 func NewContractTransaction(from common.Address, amount *big.Int, nonce uint64, code []byte) (*Transaction, error) {
 	return newTx(from, nil, amount, nonce, code)
 }
 
-// NewMessageTransaction returns a transation with specified message.
+// NewMessageTransaction returns a transation with the specified message.
 func NewMessageTransaction(from, to common.Address, amount *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
 	return newTx(from, &to, amount, nonce, msg)
 }
 
-// Sign signs the transaction with private key.
+// Sign signs the transaction with the specified private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Hash = crypto.MustHash(tx.Data)
 	tx.Signature = crypto.NewSignature(privKey, tx.Hash.Bytes())
 }
 
-// Validate returns true if the transation is valid, otherwise false.
+// Validate returns true if the transaction is valid, otherwise false.
 func (tx *Transaction) Validate(statedb stateDB) error {
 	if tx.Data == nil || tx.Data.Amount == nil {
 		return ErrAmountNil
@@ -152,7 +152,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if tx.Signature == nil {
-		return ErrSigMissed
+		return ErrSigMissing
 	}
 
 	txDataHash := crypto.MustHash(tx.Data)
@@ -173,7 +173,7 @@ func (tx *Transaction) CalculateHash() common.Hash {
 	return crypto.MustHash(tx.Data)
 }
 
-// Equals returns if the transaction is equals to the specified content.
+// Equals indicates if the transaction is equal to the specified content.
 // This is to implement the merkle.Content interface.
 func (tx *Transaction) Equals(other merkle.Content) bool {
 	otherTx, ok := other.(*Transaction)
@@ -181,7 +181,7 @@ func (tx *Transaction) Equals(other merkle.Content) bool {
 }
 
 // MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
-// If the given transactions is empty, return empty hash.
+// If the given transactions are empty, return empty hash.
 func MerkleRootHash(txs []*Transaction) common.Hash {
 	if len(txs) == 0 {
 		return emptyTxRootHash

@@ -85,7 +85,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 	tx := newTestTx(t, 100, 38, false)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, ErrSigMissed)
+	assert.Equal(t, err, ErrSigMissing)
 }
 
 // Validate failed if transaction Hash value changed.
@@ -97,7 +97,7 @@ func Test_Transaction_Validate_HashChanged(t *testing.T) {
 	assert.Equal(t, err, ErrHashMismatch)
 }
 
-// Validate failed if transation data changed.
+// Validate failed if transaction data changed.
 func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	tx.Data.Amount.SetInt64(200)
