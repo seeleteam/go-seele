@@ -56,6 +56,7 @@ type Miner struct {
 
 	threads              int
 	isFirstBlockPrepared int32
+	isNonceFound         *int32
 }
 
 // NewMiner constructs and returns a miner instance
@@ -69,6 +70,7 @@ func NewMiner(addr common.Address, seele SeeleService, log *log.SeeleLog) *Miner
 		log:                  log,
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
+		isNonceFound:         new(int32),
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -95,7 +97,6 @@ func (miner *Miner) Start() error {
 	}
 
 	atomic.StoreInt32(&miner.mining, 1)
-
 	go miner.waitBlock()
 	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
 		miner.prepareNewBlock() // try to prepare the first block
@@ -110,7 +111,9 @@ func (miner *Miner) Start() error {
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
-	miner.stopChan <- struct{}{}
+	for i := 0; i < miner.threads; i++ {
+		miner.stopChan <- struct{}{}
+	}
 	miner.log.Info("Miner is stopped.")
 }
 
@@ -246,6 +249,7 @@ func (miner *Miner) commitTask(task *Task) {
 
 	if threads == 0 {
 		threads = runtime.NumCPU()
+		miner.threads = threads
 	}
 	if threads < 0 {
 		threads = 0
@@ -255,6 +259,7 @@ func (miner *Miner) commitTask(task *Task) {
 	var step uint64
 	seed := uint64(rand.Int63())
 	step = (math.MaxUint64 - seed) / uint64(threads)
+	atomic.StoreInt32(miner.isNonceFound, 0)
 	for i := 0; i < threads; i++ {
 		tSeed := seed + uint64(i)*step
 		var max uint64
@@ -264,6 +269,6 @@ func (miner *Miner) commitTask(task *Task) {
 			max = math.MaxUint64
 		}
 
-		go StartMining(task, tSeed, max, miner.recv, miner.stopChan, miner.log)
+		go StartMining(task, tSeed, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
 	}
 }

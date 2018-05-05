@@ -7,6 +7,7 @@ package miner
 
 import (
 	"math/big"
+	"sync/atomic"
 
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
@@ -16,7 +17,7 @@ import (
 // seed is the random start value for the nonce
 // result represents the founded nonce will be set in the result block
 // abort is a channel by closing which you can stop mining
-func StartMining(task *Task, seed uint64, max uint64, result chan<- *Result, abort <-chan struct{}, log *log.SeeleLog) {
+func StartMining(task *Task, seed uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, log *log.SeeleLog) {
 	block := task.generateBlock()
 
 	var nonce = seed
@@ -31,6 +32,10 @@ miner:
 			break miner
 
 		default:
+			if *isNonceFound != 0 {
+				log.Info("nonce is found")
+				break miner
+			}
 			block.Header.Nonce = nonce
 			hash := block.Header.Hash()
 			hashInt.SetBytes(hash.Bytes())
@@ -47,6 +52,7 @@ miner:
 				case <-abort:
 					logAbort(log)
 				case result <- found:
+					atomic.StoreInt32(isNonceFound, 1)
 					log.Info("nonce finding succeeded")
 				}
 

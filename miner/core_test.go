@@ -6,6 +6,7 @@
 package miner
 
 import (
+	"math"
 	"math/big"
 	"sync"
 	"testing"
@@ -31,7 +32,9 @@ func Test_Worker(t *testing.T) {
 
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
-	go StartMining(task, 0, result, abort, logger)
+	isNonceFound := new(int32)
+
+	go StartMining(task, 0, math.MaxUint64, result, abort, isNonceFound, logger)
 
 	select {
 	case found := <-result:
@@ -51,11 +54,12 @@ func Test_WorkerStop(t *testing.T) {
 
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
+	isNonceFound := new(int32)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		StartMining(task, 0, result, abort, logger)
+		StartMining(task, 0, math.MaxUint64, result, abort, isNonceFound, logger)
 		wg.Done()
 	}()
 
