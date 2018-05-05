@@ -149,6 +149,12 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Public:    true,
 		},
 		{
+			Namespace: "download",
+			Version:   "1.0",
+			Service:   downloader.NewPublicdownloaderAPI(s.seeleProtocol.downloader),
+			Public:    true,
+		},
+		{
 			Namespace: "network",
 			Version:   "1.0",
 			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),

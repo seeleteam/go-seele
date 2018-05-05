@@ -13,10 +13,10 @@ import (
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
-// StartMining start calculate nonce for the block.
-// seed random start value for nonce
-// result found nonce will be set in the result block
-// abort you could stop it by close(abort)
+// StartMining starts calculating the nonce for the block.
+// seed is the random start value for the nonce
+// result represents the founded nonce will be set in the result block
+// abort is a channel by closing which you can stop mining
 func StartMining(task *Task, seed uint64, result chan<- *Result, abort <-chan struct{}, log *log.SeeleLog) {
 	block := task.generateBlock()
 
@@ -48,7 +48,7 @@ miner:
 				case <-abort:
 					logAbort(log)
 				case result <- found:
-					log.Info("nonce found succeed")
+					log.Info("nonce finding succeeded")
 				}
 
 				break miner
@@ -60,7 +60,7 @@ miner:
 				case <-abort:
 					logAbort(log)
 				case result <- nil:
-					log.Info("nonce found outage")
+					log.Info("nonce finding outage")
 				}
 
 				break miner
@@ -71,6 +71,7 @@ miner:
 	}
 }
 
+// logAbort logs the info that nonce finding is aborted
 func logAbort(log *log.SeeleLog) {
-	log.Info("nonce found abort")
+	log.Info("nonce finding aborted")
 }

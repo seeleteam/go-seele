@@ -21,19 +21,22 @@ func Test_KeyStore(t *testing.T) {
 	}
 
 	fileName := filepath.Join(dir, "keyfile")
-	keypair, err := crypto.GenerateKey()
+	addr, keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
 	}
 
 	key := &Key{
-		PrivateKey: keypair,
+		*addr,
+		keypair,
 	}
 
-	err = StoreKey(fileName, key)
+	password := "testfile"
+	err = StoreKey(fileName, password, key)
 	assert.Equal(t, err, nil)
 
-	result, err := GetKey(fileName)
+	result, err := GetKey(fileName, password)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, crypto.FromECDSA(key.PrivateKey), crypto.FromECDSA(result.PrivateKey))
+	assert.Equal(t, key.Address, result.Address)
 }
