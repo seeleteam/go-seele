@@ -52,6 +52,11 @@ func NewTrie(root common.Hash, dbprefix []byte, db database.Database) (*Trie, er
 	return trie, nil
 }
 
+// GetDB returns database interface of trie 
+func (t *Trie) GetDB() database.Database{
+	return t.db
+}
+
 // Put add or update [key,value] in the trie
 func (t *Trie) Put(key, value []byte) error {
 	key = keybytesToHex(key)
