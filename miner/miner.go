@@ -23,13 +23,13 @@ import (
 
 var (
 	// ErrMinerIsRunning is returned when start miner is running
-	ErrMinerIsRunning = errors.New("Miner is running")
+	ErrMinerIsRunning = errors.New("miner is running")
 
 	// ErrMinerIsStop is returned when stop miner is stopped
-	ErrMinerIsStop = errors.New("Miner is stopped")
+	ErrMinerIsStop = errors.New("miner is stopped")
 
 	// ErrNodeIsSyncing is returned when start miner is syncing.
-	ErrNodeIsSyncing = errors.New("Can not start miner when syncing")
+	ErrNodeIsSyncing = errors.New("can not start miner when syncing")
 )
 
 // SeeleBackend wraps all methods required for minier.
