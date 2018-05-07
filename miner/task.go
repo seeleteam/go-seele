@@ -26,7 +26,7 @@ type Task struct {
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := big.NewInt(pow.MinerRewardAmount)
 	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
