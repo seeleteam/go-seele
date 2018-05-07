@@ -32,8 +32,8 @@ var (
 	ErrNodeIsSyncing = errors.New("Can not start miner when syncing")
 )
 
-// SeeleService wraps all methods required for minier.
-type SeeleService interface {
+// SeeleBackend wraps all methods required for minier.
+type SeeleBackend interface {
 	TxPool() *core.TransactionPool
 	BlockChain() *core.Blockchain
 	GetCoinbase() common.Address
@@ -49,7 +49,7 @@ type Miner struct {
 	current  *Task
 	recv     chan *Result
 
-	seele SeeleService
+	seele SeeleBackend
 	log   *log.SeeleLog
 
 	isFirstDownloader int32
@@ -60,7 +60,7 @@ type Miner struct {
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleService, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
