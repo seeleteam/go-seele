@@ -3,7 +3,7 @@
   "Version": "1.0",
   "DataDir": "node1",
   "ListenAddr": "0.0.0.0:39007",
-  "ServerPrivateKye": "0x0de1ffef23f127f53b7d784bc78887465f7802de1ab8b02a8243b7c60cc32f58",
+  "ServerPrivateKey": "0x0de1ffef23f127f53b7d784bc78887465f7802de1ab8b02a8243b7c60cc32f58",
   "Coinbase": "0x23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad",
   "StaticNodes": [],
   "RPCAddr": "127.0.0.1:55027",
