@@ -436,7 +436,7 @@ func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
 
 	for _, h := range headInfos {
 		d.log.Debug("d.processBlock %d", h.block.Header.Height)
-		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExist {
+		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
 			d.log.Error("downloader processBlocks err. %s", err)
 			d.Cancel()
 			break

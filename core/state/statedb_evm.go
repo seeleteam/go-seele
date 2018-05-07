@@ -17,7 +17,7 @@ func (s *Statedb) CreateAccount(address common.Address) {
 	s.GetOrNewStateObject(address)
 }
 
-// GetCodeHash returns contract code hash associated with the specified address if any.
+// GetCodeHash returns the hash of the contract code associated with the specified address if any.
 // Otherwise, return an empty hash.
 func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 	// @todo
@@ -36,14 +36,14 @@ func (s *Statedb) SetCode(address common.Address, code []byte) {
 	// @todo
 }
 
-// GetCodeSize returns the contract code size associated with the specified address if any.
+// GetCodeSize returns the size of the contract code associated with the specified address if any.
 // Otherwise, return 0.
 func (s *Statedb) GetCodeSize(address common.Address) int {
 	// @todo
 	return 0
 }
 
-// AddRefund refunds gas
+// AddRefund refunds the specified gas value
 func (s *Statedb) AddRefund(gas uint64) {
 	// @todo
 }
@@ -54,20 +54,20 @@ func (s *Statedb) GetRefund() uint64 {
 	return 0
 }
 
-// GetState returns the value of specified key in account storage if exists.
+// GetState returns the value of the specified key in account storage if exists.
 // Otherwise, return empty hash.
 func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash {
 	// @todo
 	return common.EmptyHash
 }
 
-// SetState adds or updates key-value pair in account storage.
+// SetState adds or updates the specified key-value pair in account storage.
 func (s *Statedb) SetState(address common.Address, key common.Hash, value common.Hash) {
 	// @todo
 }
 
 // Suicide marks the given account as suicided and clears the account balance.
-// Note, The account's state object is still available until the state is committed.
+// Note the account's state object is still available until the state is committed.
 // Return true if the specified account exists, otherwise false.
 func (s *Statedb) Suicide(address common.Address) bool {
 	stateObj := s.getStateObject(address)
@@ -93,13 +93,13 @@ func (s *Statedb) HasSuicided(address common.Address) bool {
 	return false
 }
 
-// Exist reports whether the given account exists in state.
-// Notably this should also return true for suicided accounts.
+// Exist indicates whether the given account exists in statedb.
+// Note that it should also return true for suicided accounts.
 func (s *Statedb) Exist(address common.Address) bool {
 	return s.getStateObject(address) != nil
 }
 
-// Empty returns whether the given account satisfy (balance = nonce = code = 0).
+// Empty indicates whether the given account satisfies (balance = nonce = code = 0).
 func (s *Statedb) Empty(address common.Address) bool {
 	// @todo
 	return false
@@ -110,13 +110,13 @@ func (s *Statedb) RevertToSnapshot(revid int) {
 	// @todo
 }
 
-// Snapshot returns an identifier for the current revision of the state.
+// Snapshot returns an identifier for the current revision of the statedb.
 func (s *Statedb) Snapshot() int {
 	// @todo
 	return 0
 }
 
-// AddLog add a log.
+// AddLog adds a log.
 func (s *Statedb) AddLog(log *types.Log) {
 	// @todo
 }

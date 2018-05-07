@@ -225,7 +225,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
-	assert.Equal(t, err, ErrBlockAlreadyExist)
+	assert.Equal(t, err, ErrBlockAlreadyExists)
 }
 
 func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
