@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	// ErrGenesisHashMismatch is returned when genesis block hash mismatch between store and memory.
+	// ErrGenesisHashMismatch is returned when the genesis block hash between the store and memory mismatch.
 	ErrGenesisHashMismatch = errors.New("genesis block hash mismatch")
 
-	// ErrGenesisNotFound is returned when genesis block not found in store.
+	// ErrGenesisNotFound is returned when genesis block not found in the store.
 	ErrGenesisNotFound = errors.New("genesis block not found")
 )
 
@@ -36,7 +36,7 @@ type Genesis struct {
 // DefaultGenesis returns the default genesis block in the blockchain.
 // TODO default genesis value is TBD according to the consensus algorithm.
 func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
-	// TODO define default accounts in genesis block
+	// TODO define default accounts in the genesis block
 	defaultAccounts := map[common.Address]state.Account{
 		common.HexMustToAddres("0x55489251c9d3b394e430d50cb20e271c8560d39b02dfb7efe9610ff51fa4affcf663ad4337117263f64b24149fed5c4fe95d5fb3a00d45a32e6433a200fa0301"): state.Account{0, big.NewInt(10000)},
 		common.HexMustToAddres("0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23"): state.Account{0, big.NewInt(20000)},
@@ -76,12 +76,12 @@ func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 	}
 }
 
-// Initialize writes the genesis block in blockchain store if unavailable.
-// Otherwise, check if the existing genesis block is valid in blockchain store.
+// Initialize writes the genesis block in the blockchain store if unavailable.
+// Otherwise, check if the existing genesis block is valid in the blockchain store.
 func (genesis *Genesis) Initialize(accountStateDB database.Database) error {
 	storedGenesisHash, err := genesis.bcStore.GetBlockHash(genesisBlockHeight)
 
-	// FIXME use seele defined common error instead of concrete levelDB error.
+	// FIXME use seele-defined common error instead of concrete levelDB error.
 	if err == errors.ErrNotFound {
 		return genesis.store(accountStateDB)
 	}
@@ -98,7 +98,7 @@ func (genesis *Genesis) Initialize(accountStateDB database.Database) error {
 	return nil
 }
 
-// store atomically stores the genesis block in blockchain store.
+// store atomically stores the genesis block in the blockchain store.
 func (genesis *Genesis) store(accountStateDB database.Database) error {
 	statedb, err := state.NewStatedb(common.EmptyHash, accountStateDB)
 	if err != nil {
