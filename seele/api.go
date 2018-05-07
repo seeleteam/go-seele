@@ -187,6 +187,20 @@ func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error)
 	return fields, nil
 }
 
+// GetTxPoolContent returns the transactions contained within the transaction pool
+func (api *PublicSeeleAPI) GetTxPoolContent(input interface{}, result *map[common.Address][]*types.Transaction) error {
+	txPool := api.s.TxPool()
+	*result = txPool.GetProcessableTransactions()
+	return nil
+}
+
+// GetTxPoolStatus returns the number of transaction in the pool
+func (api *PublicSeeleAPI) GetTxPoolStatus(input interface{}, result *uint64) error {
+	txPool := api.s.TxPool()
+	*result = uint64(txPool.GetProcessableStatus())
+	return nil
+}
+
 // PublicNetworkAPI provides an API to access network information.
 type PublicNetworkAPI struct {
 	p2pServer      *p2p.Server
