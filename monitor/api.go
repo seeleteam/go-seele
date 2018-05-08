@@ -56,11 +56,11 @@ func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
 		return ErrNodeInfoFailed
 	}
 
-	if api.s.seeleNode.Miner() == nil {
+	if api.s.seele.Miner() == nil {
 		return ErrMinerInfoFailed
 	}
 
-	mining := api.s.seeleNode.Miner().IsMining()
+	mining := api.s.seele.Miner().IsMining()
 
 	*result = NodeStats{
 		Active:  true,

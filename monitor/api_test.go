@@ -78,7 +78,7 @@ func createTestAPI() *PublicMonitorAPI {
 		return nil
 	}
 
-	seeleNode.StartMiner(seeleService)
+	seeleService.Miner().Start()
 
 	return api
 }
@@ -147,7 +147,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 	if errBranch != 1 {
 		seeleNode.Start()
 	} else {
-		seeleNode.StartMiner(seeleService)
+		seeleService.Miner().Start()
 	}
 
 	return api

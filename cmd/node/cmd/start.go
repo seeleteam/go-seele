@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -19,6 +20,7 @@ import (
 )
 
 var seeleNodeConfigFile *string
+var miner *string
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -73,10 +75,12 @@ var startCmd = &cobra.Command{
 		}
 
 		seeleNode.Start()
-		err = seeleNode.StartMiner(seeleService)
-		if err != nil {
-			fmt.Println("Starting the miner failed: ", err.Error())
-			return
+		if strings.ToLower(*miner) == "start" {
+			err = seeleService.Miner().Start()
+			if err != nil {
+				fmt.Println("Starting the miner failed: ", err.Error())
+				return
+			}
 		}
 
 		wg.Add(1)
@@ -89,4 +93,6 @@ func init() {
 
 	seeleNodeConfigFile = startCmd.Flags().StringP("config", "c", "", "seele node config file (required)")
 	startCmd.MarkFlagRequired("config")
+
+	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
 }

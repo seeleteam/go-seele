@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
 )
 
@@ -207,5 +208,39 @@ func (n *PublicNetworkAPI) GetPeerCount(input interface{}, result *int) error {
 // GetNetworkVersion returns the network version
 func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
 	*result = n.networkVersion
+	return nil
+}
+
+// PublicMinerAPI provides an API to access full node-related information.
+type PublicMinerAPI struct {
+	s *SeeleService
+}
+
+// NewPublicMinerAPI creates a new PublicSeeleAPI object for rpc service.
+func NewPublicMinerAPI(s *SeeleService) *PublicMinerAPI {
+	return &PublicMinerAPI{s}
+}
+
+// Start API is used to start the miner with the given number of threads.
+func (api *PublicMinerAPI) Start(threads *int, result *string) error {
+	if threads == nil {
+		threads = new(int)
+	}
+	api.s.miner.SetThreads(*threads)
+
+	if api.s.miner.IsMining() {
+		return miner.ErrMinerIsRunning
+	}
+
+	return api.s.miner.Start()
+}
+
+// Stop API is used to stop the miner.
+func (api *PublicMinerAPI) Stop(input *string, result *string) error {
+	if !api.s.miner.IsMining() {
+		return miner.ErrMinerIsStop
+	}
+	api.s.miner.Stop()
+
 	return nil
 }

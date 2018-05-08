@@ -16,10 +16,8 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/seele"
 )
 
 // error infos
@@ -55,8 +53,6 @@ type Node struct {
 
 	log  *log.SeeleLog
 	lock sync.RWMutex
-
-	miner *miner.Miner
 }
 
 // New creates a new P2P node.
@@ -70,31 +66,6 @@ func New(conf *Config) (*Node, error) {
 		services: []Service{},
 		log:      nlog,
 	}, nil
-}
-
-// Miner get miner info
-func (n *Node) Miner() *miner.Miner { return n.miner }
-
-// StartMiner create miner and begin to minning
-func (n *Node) StartMiner(service *seele.SeeleService) error {
-	if n.config == nil {
-		return ErrConfigIsNull
-	}
-
-	if n.log == nil {
-		return ErrLogIsNull
-	}
-
-	if n.miner == nil {
-		n.miner = miner.NewMiner(n.config.SeeleConfig.Coinbase, service, n.log)
-		go n.miner.Start()
-	} else {
-		if n.miner.IsMining() == false {
-			go n.miner.Start()
-		}
-	}
-
-	return nil
 }
 
 // Register append a new service into the node's stack.
@@ -135,10 +106,10 @@ func (n *Node) Start() error {
 			for j := 0; j < i; j++ {
 				n.services[j].Stop()
 			}
-			
+
 			// stop the p2p server
 			running.Stop()
-			
+
 			return err
 		}
 	}
@@ -148,10 +119,10 @@ func (n *Node) Start() error {
 		for _, service := range n.services {
 			service.Stop()
 		}
-		
+
 		// stop the p2p server
 		running.Stop()
-		
+
 		return err
 	}
 
@@ -250,29 +221,29 @@ func (n *Node) Stop() error {
 	if n.server == nil {
 		return ErrNodeStopped
 	}
-	
+
 	// stopErr is intended for possible stop errors
 	stopErr := &StopError{
 		Services: make(map[reflect.Type]error),
 	}
-	
+
 	for _, service := range n.services {
 		if err := service.Stop(); err != nil {
 			stopErr.Services[reflect.TypeOf(service)] = err
 		}
 	}
-    
+
 	// stop the p2p server
 	n.server.Stop()
-	
+
 	n.services = nil
 	n.server = nil
-    
+
 	// return the stop errors if any
 	if len(stopErr.Services) > 0 {
-	    return stopErr
+		return stopErr
 	}
-	
+
 	return nil
 }
 
