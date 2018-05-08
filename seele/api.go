@@ -8,6 +8,7 @@ package seele
 import (
 	"math/big"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
@@ -93,20 +94,9 @@ type GetBlockByHeightRequest struct {
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
-	store := api.s.chain.GetStore()
-	var block *types.Block
-	if request.Height < 0 {
-		block, _ = api.s.chain.CurrentBlock()
-	} else {
-		hash, err := store.GetBlockHash(uint64(request.Height))
-		if err != nil {
-			return err
-		}
-		var er error
-		block, er = store.GetBlock(hash)
-		if er != nil {
-			return er
-		}
+	block, err := api.GetBlock(request.Height)
+	if err != nil {
+		return err
 	}
 	response, err := rpcOutputBlock(block, request.FullTx)
 	if err != nil {
@@ -114,6 +104,51 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 	}
 	*result = response
 	return nil
+}
+
+// GetBlockRlp retrieves the RLP encoded for of a single block
+func (api *PublicSeeleAPI) GetBlockRlp(height *int64, result *string) error {
+	block, err := api.GetBlock(*height)
+	if err != nil {
+		return err
+	}
+	blockRlp, err := common.Serialize(block)
+	if err != nil {
+		return err
+	}
+	*result = hexutil.BytesToHex(blockRlp)
+	return nil
+}
+
+// PrintBlock retrieves a block and returns its pretty printed form
+func (api *PublicSeeleAPI) PrintBlock(height *int64, result *string) error {
+	block, err := api.GetBlock(*height)
+	if err != nil {
+		return err
+	}
+
+	*result = spew.Sdump(block)
+	return nil
+}
+
+// GetBlock returns block by height,when height is -1 the chain head is returned
+func (api *PublicSeeleAPI) GetBlock(height int64) (*types.Block, error) {
+	store := api.s.chain.GetStore()
+	var block *types.Block
+	if height < 0 {
+		block, _ = api.s.chain.CurrentBlock()
+	} else {
+		hash, err := store.GetBlockHash(uint64(height))
+		if err != nil {
+			return nil, err
+		}
+		var er error
+		block, er = store.GetBlock(hash)
+		if er != nil {
+			return nil, er
+		}
+	}
+	return block, nil
 }
 
 // GetBlockByHashRequest request param for GetBlockByHash api
