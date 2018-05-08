@@ -154,6 +154,12 @@
 			"revisionTime": "2017-10-17T18:19:29Z"
 		},
 		{
+			"checksumSHA1": "Tlfyw4mNjmUWPzYdoOSjdEysQpE=",
+			"path": "github.com/howeyc/gopass",
+			"revision": "bf9dde6d0d2c004a008c27aaee91170c786f6db8",
+			"revisionTime": "2017-01-09T16:22:49Z"
+		},
+		{
 			"checksumSHA1": "UYDU8nJJ/RXSTrR+dgQodj78uQI=",
 			"path": "github.com/inconshreveable/mousetrap",
 			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",

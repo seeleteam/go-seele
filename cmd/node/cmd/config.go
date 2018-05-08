@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/keystore"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -22,9 +22,8 @@ import (
 type Config struct {
 	node.Config
 
-	// private key file of the node for p2p module
-	// @TODO need to remove it as keeping private key in memory is very risky
-	KeyFile string
+	// ServerPrivateKey private key for p2p module, do not use it as any accounts
+	ServerPrivateKey string
 
 	// network id, not used now. @TODO maybe be removed or just use Version
 	NetworkID uint64
@@ -35,7 +34,7 @@ type Config struct {
 	// coinbase used by the miner
 	Coinbase string
 
-  // static nodes which will be connected to find more nodes when the node starts
+	// static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string
 
 	// core msg interaction uses TCP address and Kademila protocol uses UDP address
@@ -104,12 +103,12 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 		}
 	}
 
-	key, err := keystore.GetKey(config.KeyFile, "")
+	key, err := crypto.LoadECDSAFromString(config.ServerPrivateKey)
 	if err != nil {
 		return p2pConfig, err
 	}
 
-	p2pConfig.PrivateKey = key.PrivateKey
+	p2pConfig.PrivateKey = key
 	p2pConfig.ListenAddr = config.ListenAddr
 	return p2pConfig, nil
 }

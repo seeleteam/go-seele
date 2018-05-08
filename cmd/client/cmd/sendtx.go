@@ -18,7 +18,7 @@ import (
 )
 
 type txInfo struct {
-	amount *uint64 // amount specifies the coin amount to be transferred 
+	amount *uint64 // amount specifies the coin amount to be transferred
 	to     *string // to is the public address of the receiver
 	from   *string // from is the key file path of the sender
 }
@@ -47,7 +47,13 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		key, err := keystore.GetKey(*parameter.from, "")
+		pass, err := common.GetPassword()
+		if err != nil {
+			fmt.Printf("get password failed %s\n", err.Error())
+			return
+		}
+
+		key, err := keystore.GetKey(*parameter.from, pass)
 		if err != nil {
 			fmt.Printf("invalid sender key file. it should be a private key: %s\n", err.Error())
 			return
