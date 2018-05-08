@@ -34,7 +34,7 @@ func Test_Worker(t *testing.T) {
 	abort := make(chan struct{}, 1)
 	isNonceFound := new(int32)
 
-	go StartMining(task, 0, math.MaxUint64, result, abort, isNonceFound, logger)
+	go StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, logger)
 
 	select {
 	case found := <-result:
@@ -59,7 +59,7 @@ func Test_WorkerStop(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		StartMining(task, 0, math.MaxUint64, result, abort, isNonceFound, logger)
+		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, logger)
 		wg.Done()
 	}()
 
