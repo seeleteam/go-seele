@@ -17,7 +17,7 @@ import (
 // seed is the random start value for the nonce
 // result represents the founded nonce will be set in the result block
 // abort is a channel by closing which you can stop mining
-func StartMining(task *Task, seed uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, log *log.SeeleLog) {
+func StartMining(task *Task, seed uint64, min uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, log *log.SeeleLog) {
 	block := task.generateBlock()
 
 	var nonce = seed
@@ -61,6 +61,9 @@ miner:
 
 			// outage
 			if nonce == max {
+				nonce = min
+			}
+			if nonce == seed-1 {
 				select {
 				case <-abort:
 					logAbort(log)

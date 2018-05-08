@@ -257,18 +257,30 @@ func (miner *Miner) commitTask(task *Task) {
 	miner.log.Debug("miner threads num:%d", threads)
 
 	var step uint64
-	seed := uint64(rand.Int63())
-	step = (math.MaxUint64 - seed) / uint64(threads)
+	var seed uint64
+	if threads != 0 {
+		step = math.MaxUint64 / uint64(threads)
+	}
+
 	atomic.StoreInt32(miner.isNonceFound, 0)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < threads; i++ {
+		if threads == 1 {
+			seed = r.Uint64()
+		} else {
+			seed = uint64(r.Int63n(int64(step)))
+		}
 		tSeed := seed + uint64(i)*step
+		var min uint64
 		var max uint64
+		min = uint64(i) * step
+
 		if i != threads-1 {
-			max = tSeed + step
+			max = min + step - 1
 		} else {
 			max = math.MaxUint64
 		}
 
-		go StartMining(task, tSeed, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
+		go StartMining(task, tSeed, min, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
 	}
 }
