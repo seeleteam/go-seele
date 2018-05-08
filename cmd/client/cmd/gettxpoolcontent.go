@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"net/rpc/jsonrpc"
 
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +27,7 @@ var gettxpoolcontentCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var result map[common.Address][]*types.Transaction
+		var result map[string][]map[string]interface{}
 		err = client.Call("seele.GetTxPoolContent", nil, &result)
 		if err != nil {
 			fmt.Println(err)

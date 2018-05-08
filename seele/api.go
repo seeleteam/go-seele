@@ -94,7 +94,7 @@ type GetBlockByHeightRequest struct {
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
-	block, err := api.GetBlock(request.Height)
+	block, err := api.getBlock(request.Height)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 
 // GetBlockRlp retrieves the RLP encoded for of a single block
 func (api *PublicSeeleAPI) GetBlockRlp(height *int64, result *string) error {
-	block, err := api.GetBlock(*height)
+	block, err := api.getBlock(*height)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (api *PublicSeeleAPI) GetBlockRlp(height *int64, result *string) error {
 
 // PrintBlock retrieves a block and returns its pretty printed form
 func (api *PublicSeeleAPI) PrintBlock(height *int64, result *string) error {
-	block, err := api.GetBlock(*height)
+	block, err := api.getBlock(*height)
 	if err != nil {
 		return err
 	}
@@ -131,8 +131,8 @@ func (api *PublicSeeleAPI) PrintBlock(height *int64, result *string) error {
 	return nil
 }
 
-// GetBlock returns block by height,when height is -1 the chain head is returned
-func (api *PublicSeeleAPI) GetBlock(height int64) (*types.Block, error) {
+// getBlock returns block by height,when height is -1 the chain head is returned
+func (api *PublicSeeleAPI) getBlock(height int64) (*types.Block, error) {
 	store := api.s.chain.GetStore()
 	var block *types.Block
 	if height < 0 {
@@ -193,39 +193,49 @@ func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error)
 		"difficulty": head.Difficulty,
 	}
 
-	formatTx := func(tx *types.Transaction) interface{} {
-		return tx.Hash.ToHex()
-	}
-
-	if fullTx {
-		formatTx = func(tx *types.Transaction) interface{} {
-			transaction := map[string]interface{}{
-				"hash":         tx.Hash.ToHex(),
-				"from":         tx.Data.From.ToHex(),
-				"to":           tx.Data.To.ToHex(),
-				"amount":       tx.Data.Amount,
-				"accountNonce": tx.Data.AccountNonce,
-				"payload":      tx.Data.Payload,
-				"timestamp":    tx.Data.Timestamp,
-			}
-			return transaction
-		}
-	}
-
 	txs := b.Transactions
 	transactions := make([]interface{}, len(txs))
 	for i, tx := range txs {
-		transactions[i] = formatTx(tx)
+		if fullTx {
+			transactions[i] = rpcOutputTx(tx)
+		} else {
+			transactions[i] = tx.Hash.ToHex()
+		}
 	}
 	fields["transactions"] = transactions
 
 	return fields, nil
 }
 
+// rpcOutputTx converts the given tx to the RPC output
+func rpcOutputTx(tx *types.Transaction) map[string]interface{} {
+	transaction := map[string]interface{}{
+		"hash":         tx.Hash.ToHex(),
+		"from":         tx.Data.From.ToHex(),
+		"to":           tx.Data.To.ToHex(),
+		"amount":       tx.Data.Amount,
+		"accountNonce": tx.Data.AccountNonce,
+		"payload":      tx.Data.Payload,
+		"timestamp":    tx.Data.Timestamp,
+	}
+	return transaction
+}
+
 // GetTxPoolContent returns the transactions contained within the transaction pool
-func (api *PublicSeeleAPI) GetTxPoolContent(input interface{}, result *map[common.Address][]*types.Transaction) error {
+func (api *PublicSeeleAPI) GetTxPoolContent(input interface{}, result *map[string][]map[string]interface{}) error {
 	txPool := api.s.TxPool()
-	*result = txPool.GetProcessableTransactions()
+	data := txPool.GetProcessableTransactions()
+
+	content := make(map[string][]map[string]interface{})
+	for adress, txs := range data {
+		trans := make([]map[string]interface{}, len(txs))
+		for i, tran := range txs {
+			trans[i] = rpcOutputTx(tran)
+		}
+		content[adress.ToHex()] = trans
+	}
+	*result = content
+
 	return nil
 }
 
