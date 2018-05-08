@@ -12,14 +12,9 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-// MinerRewardAmount specifies the amount rewarded when the miner generates a new block
-const MinerRewardAmount = 10
-
 var (
 	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
-
-	constMinerRewardAmount = big.NewInt(MinerRewardAmount)
 
 	errRewardAmountInvalid = errors.New("invalid reward amount")
 	errBlockNonceInvalid   = errors.New("invalid block nonce")
@@ -44,8 +39,10 @@ func (engine Engine) ValidateHeader(blockHeader *types.BlockHeader) error {
 }
 
 // ValidateRewardAmount validates the specified amount and returns error if validation failed.
-func (engine Engine) ValidateRewardAmount(amount *big.Int) error {
-	if amount == nil || amount.Cmp(constMinerRewardAmount) != 0 {
+func (engine Engine) ValidateRewardAmount(blockHeight uint64, amount *big.Int) error {
+	reward := big.NewInt(GetReward(blockHeight))
+
+	if amount == nil || amount.Cmp(reward) != 0 {
 		return errRewardAmountInvalid
 	}
 

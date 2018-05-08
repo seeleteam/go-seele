@@ -183,7 +183,7 @@ func (miner *Miner) prepareNewBlock() {
 		txSlice = append(txSlice, value...)
 	}
 
-	err := miner.current.applyTransactions(miner.seele, stateDB.GetCopy(), txSlice, miner.log)
+	err := miner.current.applyTransactions(miner.seele, stateDB.GetCopy(), height, txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)

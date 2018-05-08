@@ -60,7 +60,7 @@ type consensusEngine interface {
 
 	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
 	// The amount of miner reward will change over time.
-	ValidateRewardAmount(amount *big.Int) error
+	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
 }
 
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
@@ -303,7 +303,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 		return nil, types.ErrAmountNegative
 	}
 
-	if err := bc.engine.ValidateRewardAmount(minerRewardTx.Data.Amount); err != nil {
+	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
 		return nil, err
 	}
 
