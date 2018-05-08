@@ -56,7 +56,7 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 		task.txs = append(task.txs, tx)
 	}
 
-	log.Info("miner transaction number: %d", len(task.txs))
+	log.Info("mining block height:%d, reward %s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
 
 	root := statedb.Commit(nil)
 	task.header.StateHash = root

@@ -7,6 +7,7 @@ package pow
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/core/types"
@@ -16,8 +17,7 @@ var (
 	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
 
-	errRewardAmountInvalid = errors.New("invalid reward amount")
-	errBlockNonceInvalid   = errors.New("invalid block nonce")
+	errBlockNonceInvalid = errors.New("invalid block nonce")
 )
 
 // Engine provides the consensus operations based on POW.
@@ -43,7 +43,7 @@ func (engine Engine) ValidateRewardAmount(blockHeight uint64, amount *big.Int) e
 	reward := big.NewInt(GetReward(blockHeight))
 
 	if amount == nil || amount.Cmp(reward) != 0 {
-		return errRewardAmountInvalid
+		return fmt.Errorf("invalid reward amount, block height %d, want %s, got %s", blockHeight, reward, amount)
 	}
 
 	return nil
