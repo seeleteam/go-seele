@@ -247,12 +247,9 @@ func (miner *Miner) commitTask(task *Task) {
 
 	threads := miner.threads
 
-	if threads == 0 {
+	if threads <= 0 {
 		threads = runtime.NumCPU()
 		miner.threads = threads
-	}
-	if threads < 0 {
-		threads = 0
 	}
 	miner.log.Debug("miner threads num:%d", threads)
 

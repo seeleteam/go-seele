@@ -40,14 +40,14 @@ var minerCmd = &cobra.Command{
 				fmt.Printf("miner start failed: %s\n", err.Error())
 				return
 			}
-			fmt.Println("miner start")
+			fmt.Println("miner start succeed")
 		case "stop":
 			err = client.Call("miner.Stop", &input, &result)
 			if err != nil {
 				fmt.Printf("miner stop failed: %s\n", err.Error())
 				return
 			}
-			fmt.Println("miner stop")
+			fmt.Println("miner stop succeed")
 		default:
 			fmt.Println("operation is not defined.")
 		}

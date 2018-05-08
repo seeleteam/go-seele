@@ -15,8 +15,11 @@ import (
 
 // StartMining starts calculating the nonce for the block.
 // seed is the random start value for the nonce
+// min is the min number for the nonce per thread
+// max is the max number for the nonce per thread
 // result represents the founded nonce will be set in the result block
 // abort is a channel by closing which you can stop mining
+// isNonceFound is a flag to mark nonce is found by other threads
 func StartMining(task *Task, seed uint64, min uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, log *log.SeeleLog) {
 	block := task.generateBlock()
 
@@ -32,7 +35,7 @@ miner:
 			break miner
 
 		default:
-			if *isNonceFound != 0 {
+			if atomic.LoadInt32(isNonceFound) != 0 {
 				log.Info("nonce is found")
 				break miner
 			}
@@ -59,10 +62,11 @@ miner:
 				break miner
 			}
 
-			// outage
+			// when nonce reached max, nonce traverses in [min, seed-1]
 			if nonce == max {
 				nonce = min
 			}
+			// outage
 			if nonce == seed-1 {
 				select {
 				case <-abort:
