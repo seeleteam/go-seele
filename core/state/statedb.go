@@ -46,8 +46,8 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}, nil
 }
 
-// This is a memory copy of state db.
-func (s *Statedb) GetCopy() *Statedb {
+// GetCopy is a memory copy of state db.
+func (s *Statedb) GetCopy() (*Statedb, error) {
 	copies, err := lru.New(StateCacheCapacity)
 	if err != nil {
 		panic(err) // only get err when StateCacheCapacity is negative, if so panic
