@@ -160,5 +160,11 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),
 			Public:    true,
 		},
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPublicDebugAPI(s),
+			Public:    true,
+		},
 	}...)
 }

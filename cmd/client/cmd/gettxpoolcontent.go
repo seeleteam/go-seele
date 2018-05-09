@@ -28,7 +28,7 @@ var gettxpoolcontentCmd = &cobra.Command{
 		defer client.Close()
 
 		var result map[string][]map[string]interface{}
-		err = client.Call("seele.GetTxPoolContent", nil, &result)
+		err = client.Call("debug.GetTxPoolContent", nil, &result)
 		if err != nil {
 			fmt.Println(err)
 			return

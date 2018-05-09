@@ -29,7 +29,7 @@ var getblockrlpCmd = &cobra.Command{
 		defer client.Close()
 
 		var result string
-		err = client.Call("seele.GetBlockRlp", &heightRlp, &result)
+		err = client.Call("debug.GetBlockRlp", &heightRlp, &result)
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -124,8 +124,8 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 	return allAccountTxs
 }
 
-// GetProcessableStatus return the total number of all processable transactions contained within the transaction pool
-func (pool *TransactionPool) GetProcessableStatus() int {
+// GetProcessableTransactionsCount return the total number of all processable transactions contained within the transaction pool
+func (pool *TransactionPool) GetProcessableTransactionsCount() int {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 

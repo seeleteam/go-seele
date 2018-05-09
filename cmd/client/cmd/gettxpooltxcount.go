@@ -12,12 +12,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// gettxpoolstatusCmd represents the get tx pool status command
-var gettxpoolstatusCmd = &cobra.Command{
-	Use:   "gettxpoolstatus",
+// gettxpooltxcountCmd represents the get tx pool status command
+var gettxpooltxcountCmd = &cobra.Command{
+	Use:   "gettxpooltxcount",
 	Short: "get the number of all processable transactions contained within the transaction pool",
 	Long: `For example:
-	client.exe gettxpoolstatus`,
+	client.exe gettxpooltxcount`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -27,7 +27,7 @@ var gettxpoolstatusCmd = &cobra.Command{
 		defer client.Close()
 
 		var status uint64
-		err = client.Call("seele.GetTxPoolStatus", nil, &status)
+		err = client.Call("debug.GetTxPoolTxCount", nil, &status)
 
 		if err != nil {
 			fmt.Printf("get tx pool status failed %s\n", err.Error())
@@ -37,5 +37,5 @@ var gettxpoolstatusCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(gettxpoolstatusCmd)
+	rootCmd.AddCommand(gettxpooltxcountCmd)
 }

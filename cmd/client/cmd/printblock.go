@@ -29,7 +29,7 @@ var printblockCmd = &cobra.Command{
 		defer client.Close()
 
 		var result string
-		err = client.Call("seele.PrintBlock", &heightPrint, &result)
+		err = client.Call("debug.PrintBlock", &heightPrint, &result)
 		if err != nil {
 			fmt.Println(err)
 			return
