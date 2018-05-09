@@ -5,12 +5,17 @@
 
 package state
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/seeleteam/go-seele/common"
+)
 
 // Account is a balance model for blockchain
 type Account struct {
-	Nonce  uint64
-	Amount *big.Int
+	Nonce    uint64
+	Amount   *big.Int
+	CodeHash common.Hash
 }
 
 // StateObject is the state object for statedb
@@ -72,4 +77,9 @@ func (s *StateObject) AddAmount(amount *big.Int) {
 // SubAmount substracts the specified amount from the balance of the account in the state object
 func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
+}
+
+// GetCodeHash gets the code hash of the account in the state object.
+func (s *StateObject) GetCodeHash() common.Hash {
+	return s.account.CodeHash
 }
