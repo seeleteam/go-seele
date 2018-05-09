@@ -38,8 +38,9 @@ func newStateObject() *StateObject {
 func (s *StateObject) GetCopy() *StateObject {
 	return &StateObject{
 		account: Account{
-			Nonce:  s.account.Nonce,
-			Amount: big.NewInt(0).Set(s.account.Amount),
+			Nonce:    s.account.Nonce,
+			Amount:   big.NewInt(0).Set(s.account.Amount),
+			CodeHash: s.account.CodeHash,
 		},
 		dirty: s.dirty,
 	}

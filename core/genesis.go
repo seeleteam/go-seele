@@ -38,9 +38,9 @@ type Genesis struct {
 func DefaultGenesis(bcStore store.BlockchainStore) *Genesis {
 	// TODO define default accounts in the genesis block
 	defaultAccounts := map[common.Address]state.Account{
-		common.HexMustToAddres("0x55489251c9d3b394e430d50cb20e271c8560d39b02dfb7efe9610ff51fa4affcf663ad4337117263f64b24149fed5c4fe95d5fb3a00d45a32e6433a200fa0301"): state.Account{0, big.NewInt(10000)},
-		common.HexMustToAddres("0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23"): state.Account{0, big.NewInt(20000)},
-		common.HexMustToAddres("0x3acdcc24c04c893280823715c4046df9d28d1f5ee362ad70e066932ee2c3b836b264d3897d1a9b788884362a75e7da0a89669f6f86ce52f2b73858a8e3f065d8"): state.Account{0, big.NewInt(30000)},
+		common.HexMustToAddres("0x55489251c9d3b394e430d50cb20e271c8560d39b02dfb7efe9610ff51fa4affcf663ad4337117263f64b24149fed5c4fe95d5fb3a00d45a32e6433a200fa0301"): state.Account{0, big.NewInt(10000), common.EmptyHash},
+		common.HexMustToAddres("0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23"): state.Account{0, big.NewInt(20000), common.EmptyHash},
+		common.HexMustToAddres("0x3acdcc24c04c893280823715c4046df9d28d1f5ee362ad70e066932ee2c3b836b264d3897d1a9b788884362a75e7da0a89669f6f86ce52f2b73858a8e3f065d8"): state.Account{0, big.NewInt(30000), common.EmptyHash},
 	}
 
 	// Will enable this feature later
