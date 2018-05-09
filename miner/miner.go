@@ -229,7 +229,7 @@ func (miner *Miner) prepareNewBlock() {
 		atomic.StoreInt32(&miner.mining, 0)
 		return
 	}
-	err = miner.current.applyTransactions(miner.seele, cpyStateDB, txSlice, miner.log)
+	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
