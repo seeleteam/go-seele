@@ -312,7 +312,7 @@ miner:
 				break miner
 			}
 			caltimes++
-			if (caltimes & (1 << 15)) == 0 {
+			if (caltimes % (1 << 15)) == 0 {
 				miner.hashrate.Mark(caltimes)
 				caltimes = 0
 			}
