@@ -20,8 +20,12 @@ func (s *Statedb) CreateAccount(address common.Address) {
 // GetCodeHash returns the hash of the contract code associated with the specified address if any.
 // Otherwise, return an empty hash.
 func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
-	// @todo
-	return common.EmptyHash
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return common.EmptyHash
+	}
+
+	return stateObj.GetCodeHash()
 }
 
 // GetCode returns the contract code associated with the specified address if any.
