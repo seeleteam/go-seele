@@ -11,38 +11,43 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/keystore"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
-// Config aggregate all configs here that exposed to users
-// Note add enough comments for every parameter
+// Config aggregates all configs exposed to users
+// Note to add enough comments for every field
 type Config struct {
 	node.Config
 
-	// private key file of the node for p2p module
-	// @TODO need to remove it as keep private key in memory is very risk
-	KeyFile string
+	// ServerPrivateKey private key for p2p module, do not use it as any accounts
+	ServerPrivateKey string
 
-	// coinbase that miner use
+	// network id, not used now. @TODO maybe be removed or just use Version
+	NetworkID uint64
+
+	// capacity of the transaction pool
+	Capacity uint
+
+	// coinbase used by the miner
 	Coinbase string
 
-	// static nodes when node start, it will connect with them to find more nodes
+	// static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string
 
-	// core msg interaction TCP address and Kademila protocol used UDP address
+	// core msg interaction uses TCP address and Kademila protocol uses UDP address
 	ListenAddr string
 
-	// If IsDebug is true, the log level will be DebugLevel. otherwise, log level is InfoLevel
+	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
 	IsDebug bool
 
-	// If PrintLog is true, it will print all the log file in the console. otherwise, will store the log in file.
+	// If PrintLog is true, all logs will be printed in the console, otherwise they will be stored in the file.
 	PrintLog bool
 }
 
-// GetConfigFromFile unmarshal config from a file
+// GetConfigFromFile unmarshals the config from the given file
 func GetConfigFromFile(filepath string) (Config, error) {
 	var config Config
 	buff, err := ioutil.ReadFile(filepath)
@@ -54,7 +59,7 @@ func GetConfigFromFile(filepath string) (Config, error) {
 	return config, err
 }
 
-// LoadConfigFromFile get node config from a file
+// LoadConfigFromFile gets node config from the given file
 func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	config, err := GetConfigFromFile(configFile)
 	if err != nil {
@@ -83,7 +88,7 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	return nodeConfig, nil
 }
 
-// GetP2pConfig get p2p module config from config
+// GetP2pConfig gets p2p module config from the given config
 func GetP2pConfig(config Config) (p2p.Config, error) {
 	p2pConfig := p2p.Config{}
 
@@ -98,12 +103,12 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 		}
 	}
 
-	key, err := keystore.GetKey(config.KeyFile)
+	key, err := crypto.LoadECDSAFromString(config.ServerPrivateKey)
 	if err != nil {
 		return p2pConfig, err
 	}
 
-	p2pConfig.PrivateKey = key.PrivateKey
+	p2pConfig.PrivateKey = key
 	p2pConfig.ListenAddr = config.ListenAddr
 	return p2pConfig, nil
 }

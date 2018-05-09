@@ -15,20 +15,20 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
-// StateCacheCapacity state cache capacity
+// StateCacheCapacity is the capacity of state cache
 const StateCacheCapacity = 1000
 
 var (
 	stateBalance0 = big.NewInt(0)
 )
 
-// Statedb use to store account with the MPT tee
+// Statedb is used to store accounts into the MPT tree
 type Statedb struct {
 	trie         *trie.Trie
-	stateObjects *lru.Cache // account address (common.Address) -> state object (*StateObject)
+	stateObjects *lru.Cache // stateObjects maps account addresses of common.Address type to the state objects of *StateObject type
 }
 
-// NewStatedb new a statedb
+// NewStatedb constructs and returns a statedb instance
 func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	trie, err := trie.NewTrie(root, []byte("S"), db)
 	if err != nil {
@@ -50,7 +50,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 func (s *Statedb) GetCopy() (*Statedb, error) {
 	copies, err := lru.New(StateCacheCapacity)
 	if err != nil {
-		panic(err) // only get err when StateCacheCapacity is negative, if so panic
+		panic(err) // call panic, in case of the error which happens only when StateCacheCapacity is negative.
 	}
 
 	for _, k := range s.stateObjects.Keys() {
@@ -71,7 +71,7 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	}, nil
 }
 
-// GetBalance returns the balance of specified account if exists.
+// GetBalance returns the balance of the specified account if exists.
 // Otherwise, returns zero.
 func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	object := s.getStateObject(addr)
@@ -81,7 +81,7 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	return stateBalance0
 }
 
-// SetBalance set the balance of specified account.
+// SetBalance sets the balance of the specified account
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
@@ -89,7 +89,7 @@ func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	}
 }
 
-// AddBalance add balance for account
+// AddBalance adds the specified amount to the balance for the specified account
 func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
@@ -97,7 +97,7 @@ func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-// SubBalance sub amount for account
+// SubBalance substracts the specified amount from the balance for the specified account
 func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
@@ -105,7 +105,7 @@ func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-// GetNonce get nonce of account
+// GetNonce gets the nonce of the specified account
 func (s *Statedb) GetNonce(addr common.Address) uint64 {
 	object := s.getStateObject(addr)
 	if object != nil {
@@ -114,7 +114,7 @@ func (s *Statedb) GetNonce(addr common.Address) uint64 {
 	return 0
 }
 
-// SetNonce set nonce of account
+// SetNonce sets the nonce of the specified account
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	object := s.getStateObject(addr)
 	if object != nil {
@@ -122,7 +122,7 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-// Commit commit memory state object to db
+// Commit commits memory state objects to db
 func (s *Statedb) Commit(batch database.Batch) common.Hash {
 	for _, key := range s.stateObjects.Keys() {
 		value, ok := s.stateObjects.Peek(key)
@@ -141,7 +141,7 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject) {
 	data, err := rlp.EncodeToBytes(obj.account)
 	if err != nil {
-		panic(err) // must encode because object account is a deterministic struct
+		panic(err) // must encode because the account object is a deterministic struct
 	}
 	s.trie.Put(addr[:], data)
 }
@@ -150,7 +150,7 @@ func (s *Statedb) cache(addr common.Address, obj *StateObject) {
 	if s.stateObjects.Len() == StateCacheCapacity {
 		s.Commit(nil)
 
-		// clear a quarter of the cached state info to avoid frequency commit
+		// clear a quarter of the cached state infos to avoid frequent commits
 		for i := 0; i < StateCacheCapacity/4; i++ {
 			s.stateObjects.RemoveOldest()
 		}
@@ -159,7 +159,7 @@ func (s *Statedb) cache(addr common.Address, obj *StateObject) {
 	s.stateObjects.Add(addr, obj)
 }
 
-// GetOrNewStateObject get or new a state object
+// GetOrNewStateObject gets or creates a state object
 func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	object := s.getStateObject(addr)
 	if object == nil {

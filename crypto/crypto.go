@@ -138,6 +138,16 @@ func GetAddress(key *ecdsa.PrivateKey) (*common.Address, error) {
 	return &id, nil
 }
 
+// MustGetAddress in fact the err will not occur, so use MustGetAddress will always work
+func MustGetAddress(key *ecdsa.PrivateKey) *common.Address {
+	addr, err := GetAddress(key)
+	if err != nil {
+		panic(err)
+	}
+
+	return addr
+}
+
 // GenerateRandomAddress generates and returns a random address.
 func GenerateRandomAddress() (*common.Address, error) {
 	publicKey, _, error := GenerateKeyPair()

@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"errors"
 	"math/big"
 	"time"
 
@@ -16,12 +15,9 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
-	"github.com/seeleteam/go-seele/seele"
 )
 
-var ErrNotEnoughTransactions = errors.New("not enough transactions")
-
-// Task is a mining work for engine, it contains block header, transactions, and transaction receipts.
+// Task is a mining work for engine, containing block header, transactions, and transaction receipts.
 type Task struct {
 	header *types.BlockHeader
 	txs    []*types.Transaction
@@ -29,13 +25,13 @@ type Task struct {
 	createdAt time.Time
 }
 
-// applyTransactions TODO need check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
+// applyTransactions TODO need to check more about the transactions, such as gas limit
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := big.NewInt(pow.MinerRewardAmount)
-	reward := types.NewTransaction(common.Address{}, seele.Coinbase, rewardValue, 0)
+	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
-	stateObj := statedb.GetOrNewStateObject(seele.Coinbase)
+	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
@@ -44,7 +40,7 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 
 		err := tx.Validate(statedb)
 		if err != nil {
-			log.Error("exec tx failed, cause for %s", err)
+			log.Error("validating tx failed, for %s", err.Error())
 			continue
 		}
 
@@ -58,7 +54,7 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 		task.txs = append(task.txs, tx)
 	}
 
-	log.Info("miner transaction number %d", len(task.txs))
+	log.Info("miner transaction number: %d", len(task.txs))
 
 	root := statedb.Commit(nil)
 	task.header.StateHash = root
@@ -66,11 +62,12 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 	return nil
 }
 
+// generateBlock builds a block from task
 func (task *Task) generateBlock() *types.Block {
 	return types.NewBlock(task.header, task.txs)
 }
 
-// Result if struct of mined result by engine, it contains the raw task and mined block.
+// Result is the result mined by engine. It contains the raw task and mined block.
 type Result struct {
 	task  *Task
 	block *types.Block // mined block, with good nonce

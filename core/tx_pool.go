@@ -24,7 +24,7 @@ type blockchain interface {
 	CurrentState() *state.Statedb
 }
 
-// TransactionPool is a thread-safe container for transactions that received
+// TransactionPool is a thread-safe container for transactions received
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain.
 type TransactionPool struct {
@@ -47,8 +47,8 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	return pool
 }
 
-// AddTransaction adds a single transation into the pool if it is valid and return true.
-// Otherwise, return false and concrete error.
+// AddTransaction adds a single transaction into the pool if it is valid and returns nil.
+// Otherwise, return the concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	statedb := pool.chain.CurrentState()
 	if err := tx.Validate(statedb); err != nil {
@@ -88,7 +88,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return pool.hashToTxMap[txHash]
 }
 
-// RemoveTransaction remove a transaction by its hash
+// RemoveTransaction removes a transaction with the specified hash
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
@@ -110,7 +110,7 @@ func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 }
 
 // GetProcessableTransactions retrieves all processable transactions. The returned transactions
-// are grouped by origin account address and sorted by nonce ASC.
+// are grouped by original account addresses and sorted by nonce ASC.
 func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*types.Transaction {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()

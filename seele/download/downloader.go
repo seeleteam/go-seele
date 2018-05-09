@@ -7,6 +7,7 @@ package downloader
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -75,6 +76,37 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 	}
 	d.log = log.GetLogger("download", common.PrintLog)
 	return d
+}
+
+func (d *Downloader) getReadableStatus() string {
+	var status string
+	switch d.syncStatus {
+	case statusNone:
+		status = "NotSyncing"
+	case statusPreparing:
+		status = "Preparing"
+	case statusFetching:
+		status = "Downloading"
+	case statusCleaning:
+		status = "Cleaning"
+	}
+	return status
+}
+
+// getSyncInfo gets sync information of the current session.
+func (d *Downloader) getSyncInfo(info *SyncInfo) {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	info.Status = d.getReadableStatus()
+	if d.syncStatus != statusFetching {
+		return
+	}
+
+	info.Duration = fmt.Sprintf("%.2f", time.Now().Sub(d.tm.startTime).Seconds())
+	info.StartNum = d.tm.fromNo
+	info.Amount = d.tm.toNo - d.tm.fromNo + 1
+	info.Downloaded = d.tm.downloadedNum
 }
 
 // Synchronise try to sync with remote peer.
@@ -404,7 +436,7 @@ func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
 
 	for _, h := range headInfos {
 		d.log.Debug("d.processBlock %d", h.block.Header.Height)
-		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExist {
+		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
 			d.log.Error("downloader processBlocks err. %s", err)
 			d.Cancel()
 			break

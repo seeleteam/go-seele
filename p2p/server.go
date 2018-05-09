@@ -57,7 +57,7 @@ type Config struct {
 	// Name node's name
 	Name string //`toml:"-"`
 
-	// PrivateKey Node's ecdsa.PrivateKey
+	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
 	PrivateKey *ecdsa.PrivateKey
 
 	// MyNodeID public key extracted from PrivateKey, so need not load from config
@@ -308,7 +308,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		if !ok {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
-			return errors.New("not found nodeID in discovery database!")
+			return errors.New("Not found nodeID in discovery database")
 		}
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
@@ -476,4 +476,22 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	}
 	srv.log.Info("unPackWrapHSMsg: verify OK!")
 	return
+}
+
+// Stop terminates the execution of the p2p server
+func (srv *Server) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return
+	}
+	srv.running = false
+
+	if srv.listener != nil {
+		srv.listener.Close()
+	}
+
+	close(srv.quit)
+	srv.Wait()
 }

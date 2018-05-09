@@ -24,10 +24,12 @@ var (
 	keyPrefixBody   = []byte("b")
 )
 
+// blockBody represents the payload of a block
 type blockBody struct {
-	Txs []*types.Transaction
+	Txs []*types.Transaction // Txs is a transaction collection
 }
 
+// blockchainDatabase wraps a database used for the blockchain
 type blockchainDatabase struct {
 	db database.Database
 }
@@ -48,6 +50,7 @@ func hashToHeaderKey(hash []byte) []byte   { return append(keyPrefixHeader, hash
 func hashToTDKey(hash []byte) []byte       { return append(keyPrefixTD, hash...) }
 func hashToBodyKey(hash []byte) []byte     { return append(keyPrefixBody, hash...) }
 
+// GetBlockHash gets the hash of the block with the specified height in the blockchain database
 func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error) {
 	hashBytes, err := store.db.Get(heightToHashKey(height))
 	if err != nil {
@@ -57,10 +60,13 @@ func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error
 	return common.BytesToHash(hashBytes), nil
 }
 
+// PutBlockHash puts the given block height which is encoded as the key 
+// and hash as the value to the blockchain database. 
 func (store *blockchainDatabase) PutBlockHash(height uint64, hash common.Hash) error {
 	return store.db.Put(heightToHashKey(height), hash.Bytes())
 }
 
+// DeleteBlockHash deletes the block hash mapped to by the specified height from the blockchain database
 func (store *blockchainDatabase) DeleteBlockHash(height uint64) (bool, error) {
 	key := heightToHashKey(height)
 
@@ -85,6 +91,7 @@ func encodeBlockHeight(height uint64) []byte {
 	return encoded
 }
 
+// GetHeadBlockHash gets the HEAD block hash in the blockchain database
 func (store *blockchainDatabase) GetHeadBlockHash() (common.Hash, error) {
 	hashBytes, err := store.db.Get(keyHeadBlockHash)
 	if err != nil {
@@ -94,6 +101,7 @@ func (store *blockchainDatabase) GetHeadBlockHash() (common.Hash, error) {
 	return common.BytesToHash(hashBytes), nil
 }
 
+// GetBlockHeader gets the header of the block with the specified hash in the blockchain database
 func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockHeader, error) {
 	headerBytes, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
 	if err != nil {
@@ -108,7 +116,8 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 	return header, nil
 }
 
-func (store *blockchainDatabase) HashBlock(hash common.Hash) (bool, error) {
+// HasBlock indicates if the block with the specified hash exists in the blockchain database
+func (store *blockchainDatabase) HasBlock(hash common.Hash) (bool, error) {
 	_, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
 	if err == errors.ErrNotFound {
 		return false, nil
@@ -121,6 +130,9 @@ func (store *blockchainDatabase) HashBlock(hash common.Hash) (bool, error) {
 	return true, nil
 }
 
+// PutBlockHeader serializes the given block header of the block with the specified hash
+// and total difficulty into the blockchain database.
+// isHead indicates if the given header is the HEAD block header
 func (store *blockchainDatabase) PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error {
 	return store.putBlockInternal(hash, header, nil, td, isHead)
 }
@@ -153,6 +165,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	return batch.Commit()
 }
 
+// GetBlockTotalDifficulty gets the total difficulty of the block with the specified hash in the blockchain database
 func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	tdBytes, err := store.db.Get(hashToTDKey(hash.Bytes()))
 	if err != nil {
@@ -167,6 +180,8 @@ func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big
 	return td, nil
 }
 
+// PutBlock serializes the given block with the specified total difficulty into the blockchain database.
+// isHead indicates if the block is the header block
 func (store *blockchainDatabase) PutBlock(block *types.Block, td *big.Int, isHead bool) error {
 	if block == nil {
 		panic("block is nil")
@@ -175,6 +190,7 @@ func (store *blockchainDatabase) PutBlock(block *types.Block, td *big.Int, isHea
 	return store.putBlockInternal(block.HeaderHash, block.Header, &blockBody{block.Transactions}, td, isHead)
 }
 
+// GetBlock gets the block with the specified hash in the blockchain database
 func (store *blockchainDatabase) GetBlock(hash common.Hash) (*types.Block, error) {
 	header, err := store.GetBlockHeader(hash)
 	if err != nil {
