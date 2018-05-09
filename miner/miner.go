@@ -223,7 +223,13 @@ func (miner *Miner) prepareNewBlock() {
 		txSlice = append(txSlice, value...)
 	}
 
-	err := miner.current.applyTransactions(miner.seele, stateDB.GetCopy(), header.Height, txSlice, miner.log)
+	cpyStateDB, err := stateDB.GetCopy()
+	if err != nil {
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
+		return
+	}
+	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
