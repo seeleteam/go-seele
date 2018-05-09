@@ -173,7 +173,7 @@ out:
 				continue
 			}
 
-			miner.log.Info("save block succeed and notify p2p")
+			miner.log.Info("saving block succeed and notify p2p")
 			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 			atomic.StoreInt32(&miner.mining, 0)
 

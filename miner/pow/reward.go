@@ -12,13 +12,13 @@ var (
 	// tailReward it is used when out of the reward table. we use a constant reward value.
 	tailReward int64 = 30
 
-	// blockNumberGeneratePerYear block number generated per year.
-	blockNumberGeneratePerYear uint64 = 525000
+	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
+	blockNumberPerEra uint64 = 525000
 )
 
 // GetReward get reward amount according to block height
 func GetReward(blockHeight uint64) int64 {
-	era := int(blockHeight / blockNumberGeneratePerYear)
+	era := int(blockHeight / blockNumberPerEra)
 
 	if era < len(rewardTable) {
 		return rewardTable[era]
