@@ -46,11 +46,11 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}, nil
 }
 
-// GetCopy gets a memory copy of statedb
-func (s *Statedb) GetCopy() *Statedb {
+// GetCopy is a memory copy of state db.
+func (s *Statedb) GetCopy() (*Statedb, error) {
 	copies, err := lru.New(StateCacheCapacity)
 	if err != nil {
-		panic(err) // call panic, in case of the error which happens only when StateCacheCapacity is negative. 
+		panic(err) // call panic, in case of the error which happens only when StateCacheCapacity is negative.
 	}
 
 	for _, k := range s.stateObjects.Keys() {
@@ -60,10 +60,15 @@ func (s *Statedb) GetCopy() *Statedb {
 		}
 	}
 
-	return &Statedb{
-		trie:         s.trie,
-		stateObjects: copies,
+	cpyTrie, err := s.trie.ShallowCopyTrie()
+	if err != nil {
+		return nil, err
 	}
+
+	return &Statedb{
+		trie:         cpyTrie,
+		stateObjects: copies,
+	}, nil
 }
 
 // GetBalance returns the balance of the specified account if exists.
