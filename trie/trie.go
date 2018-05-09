@@ -31,6 +31,12 @@ type Trie struct {
 	sha      hash.Hash // hash calc for trie
 }
 
+// ShallowCopyTrie returns a new trie with the same root.
+func (t *Trie) ShallowCopyTrie() (*Trie, error) {
+	rootHash := t.Hash()
+	return NewTrie(rootHash, t.dbprefix, t.db)
+}
+
 // NewTrie new a trie tree
 // param dbprefix will be used as prefix of hash key to save db.
 // because we save all of trie trees in the same db,dbprefix protects key/values for different trees

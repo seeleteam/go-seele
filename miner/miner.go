@@ -170,13 +170,14 @@ out:
 				continue
 			}
 
+			miner.log.Info("found a new mined block, block height:%d", result.block.Header.Height)
 			ret := miner.saveBlock(result)
 			if ret != nil {
 				miner.log.Error("saving the block failed, for %s", ret.Error())
 				continue
 			}
 
-			miner.log.Info("found a new mined block and notify p2p")
+			miner.log.Info("saving block succeed and notify p2p")
 			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 			atomic.StoreInt32(&miner.mining, 0)
 
@@ -226,7 +227,13 @@ func (miner *Miner) prepareNewBlock() {
 		txSlice = append(txSlice, value...)
 	}
 
-	err := miner.current.applyTransactions(miner.seele, stateDB.GetCopy(), txSlice, miner.log)
+	cpyStateDB, err := stateDB.GetCopy()
+	if err != nil {
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
+		return
+	}
+	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
