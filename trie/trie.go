@@ -33,12 +33,13 @@ type Trie struct {
 
 // ShallowCopyTrie returns a new trie with the same root.
 func (t *Trie) ShallowCopyTrie() (*Trie, error) {
-	var rootHash common.Hash
-	if t.root == nil {
-		rootHash = common.EmptyHash
-	} else {
-		rootHash = common.BytesToHash(t.root.Hash())
-	}
+	rootHash := t.Hash()
+	// var rootHash common.Hash
+	// if t.root == nil {
+	// 	rootHash = common.EmptyHash
+	// } else {
+	// 	rootHash = common.BytesToHash(t.root.Hash())
+	// }
 
 	return NewTrie(rootHash, t.dbprefix, t.db)
 }
