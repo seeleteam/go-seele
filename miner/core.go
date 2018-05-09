@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
@@ -20,11 +21,13 @@ import (
 // result represents the founded nonce will be set in the result block
 // abort is a channel by closing which you can stop mining
 // isNonceFound is a flag to mark nonce is found by other threads
-func StartMining(task *Task, seed uint64, min uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, log *log.SeeleLog) {
+// hashrate is meter tracking the average hashrate of the miner
+func StartMining(task *Task, seed uint64, min uint64, max uint64, result chan<- *Result, abort <-chan struct{}, isNonceFound *int32, hashrate metrics.Meter, log *log.SeeleLog) {
 	block := task.generateBlock()
 
 	var nonce = seed
 	var hashInt big.Int
+	var caltimes = int64(0)
 	target := pow.GetMiningTarget(block.Header.Difficulty)
 
 miner:
@@ -32,12 +35,18 @@ miner:
 		select {
 		case <-abort:
 			logAbort(log)
+			hashrate.Mark(caltimes)
 			break miner
 
 		default:
 			if atomic.LoadInt32(isNonceFound) != 0 {
 				log.Info("nonce is found")
 				break miner
+			}
+			caltimes++
+			if (caltimes & (1 << 15)) == 0 {
+				hashrate.Mark(caltimes)
+				caltimes = 0
 			}
 			block.Header.Nonce = nonce
 			hash := block.Header.Hash()

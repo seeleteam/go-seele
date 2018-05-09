@@ -244,3 +244,10 @@ func (api *PublicMinerAPI) Stop(input *string, result *string) error {
 
 	return nil
 }
+
+// Hashrate returns the POW hashrate
+func (api *PublicMinerAPI) Hashrate(input *string, hashrate *uint64) error {
+	*hashrate = uint64(api.s.miner.Hashrate())
+
+	return nil
+}
