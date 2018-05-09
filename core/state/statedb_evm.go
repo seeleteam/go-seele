@@ -25,26 +25,39 @@ func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 		return common.EmptyHash
 	}
 
-	return stateObj.GetCodeHash()
+	return stateObj.account.CodeHash
 }
 
 // GetCode returns the contract code associated with the specified address if any.
 // Otherwise, return nil.
 func (s *Statedb) GetCode(address common.Address) []byte {
-	// @todo
-	return nil
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return nil
+	}
+
+	return stateObj.loadCode(s.db)
 }
 
 // SetCode sets the contract code of the specified address if exists.
 func (s *Statedb) SetCode(address common.Address, code []byte) {
-	// @todo
+	stateObj := s.getStateObject(address)
+	if stateObj != nil {
+		stateObj.setCode(code)
+	}
 }
 
 // GetCodeSize returns the size of the contract code associated with the specified address if any.
 // Otherwise, return 0.
 func (s *Statedb) GetCodeSize(address common.Address) int {
-	// @todo
-	return 0
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return 0
+	}
+
+	code := stateObj.loadCode(s.db)
+
+	return len(code)
 }
 
 // AddRefund refunds the specified gas value

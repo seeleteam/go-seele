@@ -9,47 +9,60 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 )
+
+var keyPrefixCode = []byte("code")
 
 // Account is a balance model for blockchain
 type Account struct {
 	Nonce    uint64
 	Amount   *big.Int
-	CodeHash common.Hash
+	CodeHash common.Hash // contract code hash
 }
 
 // StateObject is the state object for statedb
 type StateObject struct {
-	account Account
-	dirty   bool
+	address common.Address
+	dbErr   error // dbErr is used for record the database error.
+
+	account      Account
+	dirtyAccount bool
+
+	code      []byte // contract code
+	dirtyCode bool
 }
 
-func newStateObject() *StateObject {
+func newStateObject(address common.Address) *StateObject {
 	return &StateObject{
+		address: address,
 		account: Account{
-			Nonce:  0,
 			Amount: new(big.Int),
 		},
-		dirty: false,
 	}
 }
 
 // GetCopy gets a copy of the state object
 func (s *StateObject) GetCopy() *StateObject {
 	return &StateObject{
+		address: s.address,
+		dbErr:   s.dbErr,
 		account: Account{
 			Nonce:    s.account.Nonce,
 			Amount:   big.NewInt(0).Set(s.account.Amount),
 			CodeHash: s.account.CodeHash,
 		},
-		dirty: s.dirty,
+		dirtyAccount: s.dirtyAccount,
+		code:         s.code,
+		dirtyCode:    s.dirtyCode,
 	}
 }
 
 // SetNonce sets the nonce of the account in the state object
 func (s *StateObject) SetNonce(nonce uint64) {
 	s.account.Nonce = nonce
-	s.dirty = true
+	s.dirtyAccount = true
 }
 
 // GetNonce gets the nonce of the account in the state object
@@ -66,7 +79,7 @@ func (s *StateObject) GetAmount() *big.Int {
 func (s *StateObject) SetAmount(amount *big.Int) {
 	if amount.Sign() >= 0 {
 		s.account.Amount.Set(amount)
-		s.dirty = true
+		s.dirtyAccount = true
 	}
 }
 
@@ -80,7 +93,41 @@ func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
 }
 
-// GetCodeHash gets the code hash of the account in the state object.
-func (s *StateObject) GetCodeHash() common.Hash {
-	return s.account.CodeHash
+func (s *StateObject) loadCode(db database.Database) []byte {
+	if s.code != nil {
+		return s.code
+	}
+
+	if s.account.CodeHash.IsEmpty() {
+		return nil
+	}
+
+	code, err := db.Get(s.getCodeKey(s.address))
+	if err != nil {
+		s.dbErr = err
+	} else {
+		s.code = code
+	}
+
+	return s.code
+}
+
+func (s *StateObject) getCodeKey(address common.Address) []byte {
+	return append(keyPrefixCode, address.Bytes()...)
+}
+
+func (s *StateObject) setCode(code []byte) {
+	s.code = code
+	s.dirtyCode = true
+
+	s.account.CodeHash = crypto.HashBytes(code)
+	s.dirtyAccount = true
+}
+
+func (s *StateObject) serializeCode(db database.Database) {
+	if s.code == nil {
+		db.Delete(s.getCodeKey(s.address))
+	} else {
+		db.Put(s.getCodeKey(s.address), s.code)
+	}
 }
