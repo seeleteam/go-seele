@@ -167,6 +167,12 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Public:    true,
 		},
 		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPublicDebugAPI(s),
+			Public:    true,
+		},
+		{
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
