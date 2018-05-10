@@ -94,7 +94,7 @@ func (s *Statedb) Suicide(address common.Address) bool {
 	}
 
 	stateObj.SetAmount(new(big.Int))
-	// @todo mark the state object as suicided
+	stateObj.suicided = true
 
 	return true
 }
@@ -106,9 +106,7 @@ func (s *Statedb) HasSuicided(address common.Address) bool {
 		return false
 	}
 
-	// @todo return stateObj.suicided
-
-	return false
+	return stateObj.suicided
 }
 
 // Exist indicates whether the given account exists in statedb.
@@ -119,8 +117,8 @@ func (s *Statedb) Exist(address common.Address) bool {
 
 // Empty indicates whether the given account satisfies (balance = nonce = code = 0).
 func (s *Statedb) Empty(address common.Address) bool {
-	// @todo
-	return false
+	stateObj := s.getStateObject(address)
+	return stateObj == nil || stateObj.empty()
 }
 
 // RevertToSnapshot reverts all state changes made since the given revision.

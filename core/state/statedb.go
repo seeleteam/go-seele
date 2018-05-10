@@ -147,6 +147,7 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
 	// @todo return error once dbErr occurs.
+	// @todo handle suicided state object: 1) remove account data 2) remove from statedb
 
 	if obj.dirtyAccount {
 		data, err := rlp.EncodeToBytes(obj.account)
