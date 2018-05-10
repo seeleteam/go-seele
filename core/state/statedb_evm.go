@@ -64,13 +64,12 @@ func (s *Statedb) GetCodeSize(address common.Address) int {
 
 // AddRefund refunds the specified gas value
 func (s *Statedb) AddRefund(gas uint64) {
-	// @todo
+	s.refund += gas
 }
 
 // GetRefund returns the current value of the refund counter.
 func (s *Statedb) GetRefund() uint64 {
-	// @todo
-	return 0
+	return s.refund
 }
 
 // GetState returns the value of the specified key in account storage if exists.
