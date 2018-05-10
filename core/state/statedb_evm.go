@@ -20,27 +20,46 @@ func (s *Statedb) CreateAccount(address common.Address) {
 // GetCodeHash returns the hash of the contract code associated with the specified address if any.
 // Otherwise, return an empty hash.
 func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
-	// @todo
-	return common.EmptyHash
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return common.EmptyHash
+	}
+
+	return stateObj.account.CodeHash
 }
 
 // GetCode returns the contract code associated with the specified address if any.
 // Otherwise, return nil.
 func (s *Statedb) GetCode(address common.Address) []byte {
-	// @todo
-	return nil
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return nil
+	}
+
+	code, err := stateObj.loadCode(s.db)
+	if err != nil {
+		stateObj.dbErr = err
+		return nil
+	}
+
+	return code
 }
 
 // SetCode sets the contract code of the specified address if exists.
 func (s *Statedb) SetCode(address common.Address, code []byte) {
-	// @todo
+	// EVM call SetCode after CreateAccount during contract creation.
+	// So, here the retrieved stateObj should not be nil.
+	stateObj := s.getStateObject(address)
+	if stateObj != nil {
+		stateObj.setCode(code)
+	}
 }
 
 // GetCodeSize returns the size of the contract code associated with the specified address if any.
 // Otherwise, return 0.
 func (s *Statedb) GetCodeSize(address common.Address) int {
-	// @todo
-	return 0
+	code := s.GetCode(address)
+	return len(code)
 }
 
 // AddRefund refunds the specified gas value
