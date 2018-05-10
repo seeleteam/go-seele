@@ -99,12 +99,10 @@ func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
 		return nil, err
 	}
 
-	if accounts != nil {
-		for addr, amount := range accounts {
-			stateObj := statedb.GetOrNewStateObject(addr)
-			stateObj.SetNonce(0)
-			stateObj.SetAmount(amount)
-		}
+	for addr, amount := range accounts {
+		stateObj := statedb.GetOrNewStateObject(addr)
+		stateObj.SetNonce(0)
+		stateObj.SetAmount(amount)
 	}
 
 	return statedb, nil

@@ -21,7 +21,7 @@ import (
 // Config aggregates all configs exposed to users
 // Note to add enough comments for every field
 type Config struct {
-	// The name of the node	+	node.Config
+	// The name of the node
 	Name string
 
 	// The version of the node
@@ -61,12 +61,14 @@ type Config struct {
 	HttpServer HttpServer
 }
 
+// GenesisInfo genesis info for generate genesis block, it could be used for initialize account balance
 type GenesisInfo struct {
 	// accounts info for genesis block used for test
 	// map key is account address -> value is account balance
 	Accounts map[string]int64
 }
 
+// HttpServer config for http server
 type HttpServer struct {
 	// The HTTPAddr is the address of HTTP rpc service
 	HTTPAddr string
@@ -92,6 +94,7 @@ func GetConfigFromFile(filepath string) (Config, error) {
 	return config, err
 }
 
+// GetGenesisInfoFromFile get genesis info from a specific file
 func GetGenesisInfoFromFile(filepath string) (GenesisInfo, error) {
 	var info GenesisInfo
 	buff, err := ioutil.ReadFile(filepath)
@@ -103,6 +106,7 @@ func GetGenesisInfoFromFile(filepath string) (GenesisInfo, error) {
 	return info, err
 }
 
+// GetGenesisAccountsFromFile get genesis accounts from a specific file
 func GetGenesisAccountsFromFile(filepath string) (map[common.Address]*big.Int, error) {
 	info, err := GetGenesisInfoFromFile(filepath)
 	if err != nil {
@@ -149,8 +153,6 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 			return nil, err
 		}
 		nodeConfig.SeeleConfig.GenesisAccounts = accounts
-	} else {
-		nodeConfig.SeeleConfig.GenesisAccounts = make(map[common.Address]*big.Int)
 	}
 
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
