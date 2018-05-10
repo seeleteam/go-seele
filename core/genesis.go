@@ -32,7 +32,7 @@ type Genesis struct {
 	accounts map[common.Address]*big.Int
 }
 
-// DefaultGenesis returns the default genesis block in the blockchain.
+// GetGenesis get genesis block according to accounts' balance
 func GetGenesis(accounts map[common.Address]*big.Int) *Genesis {
 	statedb, err := getStateDB(accounts)
 	if err != nil {
