@@ -33,8 +33,7 @@ type Genesis struct {
 }
 
 // DefaultGenesis returns the default genesis block in the blockchain.
-// TODO default genesis value is TBD according to the consensus algorithm.
-func GenerateGenesis(accounts map[common.Address]*big.Int) *Genesis {
+func GetGenesis(accounts map[common.Address]*big.Int) *Genesis {
 	statedb, err := getStateDB(accounts)
 	if err != nil {
 		panic(err)
@@ -100,10 +99,12 @@ func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
 		return nil, err
 	}
 
-	for addr, amount := range accounts {
-		stateObj := statedb.GetOrNewStateObject(addr)
-		stateObj.SetNonce(0)
-		stateObj.SetAmount(amount)
+	if accounts != nil {
+		for addr, amount := range accounts {
+			stateObj := statedb.GetOrNewStateObject(addr)
+			stateObj.SetNonce(0)
+			stateObj.SetAmount(amount)
+		}
 	}
 
 	return statedb, nil
