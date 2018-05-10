@@ -87,8 +87,8 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 	}
 
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
-	genesis := core.DefaultGenesis(bcStore)
-	err = genesis.Initialize(s.accountStateDB)
+	genesis := core.GetGenesis(conf.GenesisAccounts)
+	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()

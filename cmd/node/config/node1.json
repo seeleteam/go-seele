@@ -7,19 +7,17 @@
   "Coinbase": "0x23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad",
   "StaticNodes": [],
   "RPCAddr": "127.0.0.1:55027",
-  "HTTPAddr": "127.0.0.1:65027",
-  "HTTPCors": [
-    "*"
-  ],
-  "HTTPWhiteHost": [
-    "*"
-  ],
   "IsDebug": true,
   "PrintLog": true,
-  "SeeleConfig": {
-    "NetworkID": 1,
-    "TxConf": {
-      "Capacity": 1024
-    }
+  "NetworkID": 1,
+  "Capacity": 1024,
+  "HttpServer": {
+    "HTTPAddr": "127.0.0.1:65027",
+    "HTTPCors": [
+      "*"
+    ],
+    "HTTPWhiteHost": [
+      "*"
+    ]
   }
 }

@@ -2,6 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
+
 package downloader
 
 import (
@@ -106,8 +107,8 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 func newTestBlockchain(db database.Database) *core.Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := core.DefaultGenesis(bcStore)
-	if err := genesis.Initialize(db); err != nil {
+	genesis := core.GetGenesis(nil)
+	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
 
