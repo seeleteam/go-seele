@@ -62,8 +62,8 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 }
 
 // processContract process the specified contract tx and return the receipt.
-func processContract(context *vm.Context, tx *types.Transaction, statedb *state.Statedb, chainConfig *params.ChainConfig, vmConfig *vm.Config) (*types.Receipt, error) {
-	evm := vm.NewEVM(*context, statedb, chainConfig, *vmConfig)
+func processContract(context *vm.Context, tx *types.Transaction, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
+	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
 
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
@@ -73,7 +73,7 @@ func processContract(context *vm.Context, tx *types.Transaction, statedb *state.
 	if tx.Data.To == nil {
 		receipt.Result, receipt.ContractAddress, _, err = evm.Create(caller, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
 	} else {
-		// @todo ETH: st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
+		statedb.SetNonce(tx.Data.From, statedb.GetNonce(tx.Data.From)+1)
 		receipt.Result, _, err = evm.Call(caller, *tx.Data.To, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
 	}
 
@@ -86,4 +86,19 @@ func processContract(context *vm.Context, tx *types.Transaction, statedb *state.
 	// @todo add logs to receipt, which depend on the state DB implementation.
 
 	return receipt, nil
+}
+
+func getDefaultChainConfig() *params.ChainConfig {
+	return &params.ChainConfig{
+		ChainId:             big.NewInt(1),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: nil,
+		Ethash:              new(params.EthashConfig),
+	}
 }

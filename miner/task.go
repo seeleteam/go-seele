@@ -45,12 +45,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 			continue
 		}
 
-		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
-		fromStateObj.SubAmount(tx.Data.Amount)
-		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
-
-		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
-		toStateObj.AddAmount(tx.Data.Amount)
+		seele.BlockChain().ApplyTransaction(tx, seele.GetCoinbase(), statedb, task.header)
 
 		task.txs = append(task.txs, tx)
 	}
