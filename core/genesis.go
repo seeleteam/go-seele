@@ -37,7 +37,6 @@ func GetGenesis(accounts map[common.Address]*big.Int) *Genesis {
 	statedb, err := getStateDB(accounts)
 	if err != nil {
 		panic(err)
->>>>>>> upstream/master
 	}
 
 	stateRootHash := statedb.Commit(nil)
