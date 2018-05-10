@@ -31,7 +31,7 @@ type Content interface {
 type MerkleTree struct {
 	Root       *node
 	merkleRoot common.Hash
-	Leaves      []*node
+	Leaves     []*node
 }
 
 // node represents a node, root or leaf in the tree. It stores pointers to its immediate
@@ -140,7 +140,7 @@ func (m *MerkleTree) MerkleRoot() common.Hash {
 // in the leaves.
 func (m *MerkleTree) RebuildTree() error {
 	var cs []Content
-	for _, c := range m.leaves {
+	for _, c := range m.Leaves {
 		cs = append(cs, c.Content)
 	}
 	root, leaves, err := buildWithContent(cs)
@@ -148,7 +148,7 @@ func (m *MerkleTree) RebuildTree() error {
 		return err
 	}
 	m.Root = root
-	m.leaves = leaves
+	m.Leaves = leaves
 	m.merkleRoot = root.Hash
 	return nil
 }
@@ -162,7 +162,7 @@ func (m *MerkleTree) RebuildTreeWith(cs []Content) error {
 		return err
 	}
 	m.Root = root
-	m.leaves = leaves
+	m.Leaves = leaves
 	m.merkleRoot = root.Hash
 	return nil
 }
@@ -183,7 +183,7 @@ func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) b
 		return false
 	}
 
-	for _, l := range m.leaves {
+	for _, l := range m.Leaves {
 		if l.Content.Equals(content) {
 			currentParent := l.Parent
 			for currentParent != nil {
@@ -203,7 +203,7 @@ func (m *MerkleTree) VerifyContent(expectedMerkleRoot []byte, content Content) b
 // in the output.
 func (m *MerkleTree) String() string {
 	s := ""
-	for _, l := range m.leaves {
+	for _, l := range m.Leaves {
 		s += fmt.Sprintln(l)
 	}
 	return s
