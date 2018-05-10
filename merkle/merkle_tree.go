@@ -68,14 +68,14 @@ func (n *node) calculateHash() common.Hash {
 
 // NewTree creates a new Merkle tree using the specified contents.
 func NewTree(contents []Content) (*MerkleTree, error) {
-	root, leafs, err := buildWithContent(contents)
+	root, leaves, err := buildWithContent(contents)
 	if err != nil {
 		return nil, err
 	}
 	t := &MerkleTree{
 		Root:       root,
 		merkleRoot: root.Hash,
-		Leafs:      leafs,
+		Leaves:     leaves,
 	}
 	return t, nil
 }
@@ -86,23 +86,23 @@ func buildWithContent(contents []Content) (*node, []*node, error) {
 	if len(contents) == 0 {
 		return nil, nil, errNoContent
 	}
-	var leafs []*node
+	var leaves []*node
 	for _, c := range contents {
-		leafs = append(leafs, &node{
+		leaves = append(leaves, &node{
 			Hash:    c.CalculateHash(),
 			Content: c,
 		})
-	}
-	if len(leafs)%2 == 1 {
+	
+	if len(leaves)%2 == 1 {
 		duplicate := &node{
-			Hash:    leafs[len(leafs)-1].Hash,
-			Content: leafs[len(leafs)-1].Content,
+			Hash:    leaves[len(leaves)-1].Hash,
+			Content: leaves[len(leaves)-1].Content,
 			dup:     true,
 		}
-		leafs = append(leafs, duplicate)
+		leaves = append(leaves, duplicate)
 	}
-	root := buildIntermediate(leafs)
-	return root, leafs, nil
+	root := buildIntermediate(leaves)
+	return root, leaves, nil
 }
 
 // buildIntermediate is a helper function that constructs the intermediate and 
@@ -148,7 +148,7 @@ func (m *MerkleTree) RebuildTree() error {
 		return err
 	}
 	m.Root = root
-	m.Leaves = leafs
+	m.Leaves = leaves
 	m.merkleRoot = root.Hash
 	return nil
 }
@@ -162,7 +162,7 @@ func (m *MerkleTree) RebuildTreeWith(cs []Content) error {
 		return err
 	}
 	m.Root = root
-	m.Leaves = leafs
+	m.Leaves = leaves
 	m.merkleRoot = root.Hash
 	return nil
 }
