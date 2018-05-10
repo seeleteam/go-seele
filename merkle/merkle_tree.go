@@ -75,7 +75,7 @@ func NewTree(contents []Content) (*MerkleTree, error) {
 	t := &MerkleTree{
 		Root:       root,
 		merkleRoot: root.Hash,
-		leaves:     leaves,
+		Leaves:     leaves,
 	}
 	return t, nil
 }
