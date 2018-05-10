@@ -124,10 +124,10 @@ func (s *StateObject) setCode(code []byte) {
 	s.dirtyAccount = true
 }
 
-func (s *StateObject) serializeCode(db database.Database) {
+func (s *StateObject) serializeCode(batch database.Batch) {
 	if s.code == nil {
-		db.Delete(s.getCodeKey(s.address))
+		batch.Delete(s.getCodeKey(s.address))
 	} else {
-		db.Put(s.getCodeKey(s.address), s.code)
+		batch.Put(s.getCodeKey(s.address), s.code)
 	}
 }
