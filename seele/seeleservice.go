@@ -12,10 +12,10 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele/download"
@@ -33,6 +33,7 @@ type SeeleService struct {
 	chain          *core.Blockchain
 	chainDB        database.Database // database used to store blocks.
 	accountStateDB database.Database // database used to store account state info.
+	miner          *miner.Miner
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -43,15 +44,10 @@ type ServiceContext struct {
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
+func (s *SeeleService) Miner() *miner.Miner           { return s.miner }
+func (s *SeeleService) GetCoinbase() common.Address   { return s.Coinbase }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
-}
-
-// ApplyTransaction applys a transaction
-// Check if this transaction is valid in the state db
-func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Transaction) error {
-	// TODO
-	return nil
 }
 
 // NewSeeleService create SeeleService
@@ -83,8 +79,8 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 	}
 
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
-	genesis := core.DefaultGenesis(bcStore)
-	err = genesis.Initialize(s.accountStateDB)
+	genesis := core.GetGenesis(conf.GenesisAccounts)
+	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
@@ -108,6 +104,8 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		log.Error("NewSeeleService create seeleProtocol err. %s", err)
 		return nil, err
 	}
+
+	s.miner = miner.NewMiner(s.Coinbase, s, s.log)
 
 	return s, nil
 }
@@ -158,6 +156,18 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "network",
 			Version:   "1.0",
 			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),
+			Public:    true,
+		},
+		{
+			Namespace: "debug",
+			Version:   "1.0",
+			Service:   NewPublicDebugAPI(s),
+			Public:    true,
+		},
+		{
+			Namespace: "miner",
+			Version:   "1.0",
+			Service:   NewPublicMinerAPI(s),
 			Public:    true,
 		},
 	}...)

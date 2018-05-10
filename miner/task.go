@@ -15,7 +15,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
-	"github.com/seeleteam/go-seele/seele"
 )
 
 // Task is a mining work for engine, containing block header, transactions, and transaction receipts.
@@ -27,12 +26,13 @@ type Task struct {
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) error {
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, blockHeight uint64,
+	txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	rewardValue := big.NewInt(pow.MinerRewardAmount)
-	reward := types.NewTransaction(common.Address{}, seele.Coinbase, rewardValue, 0)
+	rewardValue := big.NewInt(pow.GetReward(blockHeight))
+	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
-	stateObj := statedb.GetOrNewStateObject(seele.Coinbase)
+	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
@@ -45,17 +45,12 @@ func (task *Task) applyTransactions(seele *seele.SeeleService, statedb *state.St
 			continue
 		}
 
-		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
-		fromStateObj.SubAmount(tx.Data.Amount)
-		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
-
-		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
-		toStateObj.AddAmount(tx.Data.Amount)
+		seele.BlockChain().ApplyTransaction(tx, seele.GetCoinbase(), statedb, task.header)
 
 		task.txs = append(task.txs, tx)
 	}
 
-	log.Info("miner transaction number: %d", len(task.txs))
+	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
 
 	root := statedb.Commit(nil)
 	task.header.StateHash = root

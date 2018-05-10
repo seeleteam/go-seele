@@ -45,4 +45,7 @@ type BlockchainStore interface {
 
 	// HasBlock checks if the block with the specified hash exists.
 	HasBlock(hash common.Hash) (bool, error)
+
+	// GetBlockByHeight retrieves the block for the specified block height.
+	GetBlockByHeight(height uint64) (*types.Block, error)
 }

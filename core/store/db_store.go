@@ -60,8 +60,8 @@ func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error
 	return common.BytesToHash(hashBytes), nil
 }
 
-// PutBlockHash puts the given block height which is encoded as the key 
-// and hash as the value to the blockchain database. 
+// PutBlockHash puts the given block height which is encoded as the key
+// and hash as the value to the blockchain database.
 func (store *blockchainDatabase) PutBlockHash(height uint64, hash common.Hash) error {
 	return store.db.Put(heightToHashKey(height), hash.Bytes())
 }
@@ -225,4 +225,17 @@ func (store *blockchainDatabase) GetBlock(hash common.Hash) (*types.Block, error
 		Header:       header,
 		Transactions: body.Txs,
 	}, nil
+}
+
+// GetBlockByHeight gets the block with the specified height in the blockchain database
+func (store *blockchainDatabase) GetBlockByHeight(height uint64) (*types.Block, error) {
+	hash, err := store.GetBlockHash(height)
+	if err != nil {
+		return nil, err
+	}
+	block, err := store.GetBlock(hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }

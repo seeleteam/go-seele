@@ -124,6 +124,20 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 	return allAccountTxs
 }
 
+// GetProcessableTransactionsCount return the total number of all processable transactions contained within the transaction pool
+func (pool *TransactionPool) GetProcessableTransactionsCount() int {
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
+
+	status := 0
+	for _, collection := range pool.accountToTxsMap {
+		if collection != nil {
+			status += collection.count()
+		}
+	}
+	return status
+}
+
 // Stop terminates the transaction pool.
 func (pool *TransactionPool) Stop() {
 	// TODO remove event listeners

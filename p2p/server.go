@@ -7,9 +7,8 @@ package p2p
 
 import (
 	"bytes"
-	"crypto/md5"
-
 	"crypto/ecdsa"
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
@@ -55,13 +54,13 @@ const (
 // Config holds Server options.
 type Config struct {
 	// Name node's name
-	Name string //`toml:"-"`
+	Name string
 
-	// PrivateKey Node's ecdsa.PrivateKey
+	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
 	PrivateKey *ecdsa.PrivateKey
 
 	// MyNodeID public key extracted from PrivateKey, so need not load from config
-	MyNodeID string `toml:"-"`
+	MyNodeID string
 
 	// MaxPeers max number of peers that can be connected
 	MaxPeers int
@@ -69,13 +68,13 @@ type Config struct {
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
-	MaxPendingPeers int `toml:",omitempty"`
+	MaxPendingPeers int
 
 	// pre-configured nodes.
 	StaticNodes []*discovery.Node
 
 	// Protocols should contain the protocols supported by the server.
-	Protocols []Protocol `toml:"-"`
+	Protocols []Protocol
 
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string
@@ -308,7 +307,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		if !ok {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
-			return errors.New("not found nodeID in discovery database!")
+			return errors.New("Not found nodeID in discovery database")
 		}
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
@@ -482,16 +481,16 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 func (srv *Server) Stop() {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
-	
+
 	if !srv.running {
 		return
 	}
 	srv.running = false
-	
+
 	if srv.listener != nil {
 		srv.listener.Close()
 	}
-	
+
 	close(srv.quit)
 	srv.Wait()
 }
