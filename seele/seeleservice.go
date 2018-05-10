@@ -12,7 +12,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
@@ -49,13 +48,6 @@ func (s *SeeleService) Miner() *miner.Miner           { return s.miner }
 func (s *SeeleService) GetCoinbase() common.Address   { return s.Coinbase }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
-}
-
-// ApplyTransaction applys a transaction
-// Check if this transaction is valid in the state db
-func (s *SeeleService) ApplyTransaction(coinbase common.Address, tx *types.Transaction) error {
-	// TODO
-	return nil
 }
 
 // NewSeeleService create SeeleService

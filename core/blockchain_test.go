@@ -93,6 +93,17 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 		txs = append(txs, newTestBlockTx(0, 1, startNonce+i))
 	}
 
+	header := &types.BlockHeader{
+		PreviousBlockHash: parentHash,
+		Creator:           minerAccount.addr,
+		StateHash:         common.EmptyHash,
+		TxHash:            types.MerkleRootHash(txs),
+		Height:            blockHeight,
+		Difficulty:        big.NewInt(1),
+		CreateTimestamp:   big.NewInt(1),
+		Nonce:             10,
+	}
+
 	stateRootHash := common.EmptyHash
 	parentBlock, err := bc.bcStore.GetBlock(parentHash)
 	if err == nil {
@@ -101,23 +112,14 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 			panic(err)
 		}
 
-		if err = updateStatedb(statedb, rewardTx, txs[1:]); err != nil {
+		if err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
 			panic(err)
 		}
 
 		stateRootHash = statedb.Commit(nil)
 	}
 
-	header := &types.BlockHeader{
-		PreviousBlockHash: parentHash,
-		Creator:           minerAccount.addr,
-		StateHash:         stateRootHash,
-		TxHash:            types.MerkleRootHash(txs),
-		Height:            blockHeight,
-		Difficulty:        big.NewInt(1),
-		CreateTimestamp:   big.NewInt(1),
-		Nonce:             10,
-	}
+	header.StateHash = stateRootHash
 
 	return &types.Block{
 		HeaderHash:   header.Hash(),

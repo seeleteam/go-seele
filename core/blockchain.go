@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
@@ -274,7 +275,7 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, er
 		return nil, err
 	}
 
-	if err := updateStatedb(statedb, minerRewardTx, block.Transactions[1:]); err != nil {
+	if err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header); err != nil {
 		return nil, err
 	}
 
@@ -310,30 +311,38 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	return minerRewardTx, nil
 }
 
-func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction) error {
+func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) error {
 	// process miner reward
 	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
+	receipts := make([]*types.Receipt, len(txs))
 	// process other txs
-	for _, tx := range txs {
+	for i, tx := range txs {
 		if err := tx.Validate(statedb); err != nil {
 			return err
 		}
 
-		if tx.Data.To == nil {
-			return errContractCreationNotSupported
+		receipt, err := bc.ApplyTransaction(tx, *minerRewardTx.Data.To, statedb, blockHeader)
+		if err != nil {
+			return err
 		}
 
-		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
-		fromStateObj.SubAmount(tx.Data.Amount)
-		fromStateObj.SetNonce(tx.Data.AccountNonce + 1)
-
-		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
-		toStateObj.AddAmount(tx.Data.Amount)
+		receipts[i] = receipt
 	}
 
 	return nil
+}
+
+// ApplyTransaction apply a transaction and change statedb corresponding and generate its receipt
+func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
+	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
+	receipt, err := processContract(context, tx, statedb, &vm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt, nil
 }
 
 // updateHashByHeight updates the height-to-hash mapping for the specified new HEAD block in the canonical chain.
