@@ -74,6 +74,9 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 		db:           s.db,
 		trie:         cpyTrie,
 		stateObjects: copies,
+
+		dbErr:  s.dbErr,
+		refund: s.refund,
 	}, nil
 }
 
