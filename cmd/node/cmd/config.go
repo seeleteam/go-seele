@@ -8,6 +8,7 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
+	"math/big"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -20,7 +21,17 @@ import (
 // Config aggregates all configs exposed to users
 // Note to add enough comments for every field
 type Config struct {
-	node.Config
+	// The name of the node	+	node.Config
+	Name string
+
+	// The version of the node
+	Version string
+
+	// The folder used to store block data
+	DataDir string
+
+	// JSON API address
+	RPCAddr string
 
 	// ServerPrivateKey private key for p2p module, do not use it as any accounts
 	ServerPrivateKey string
@@ -45,6 +56,28 @@ type Config struct {
 
 	// If PrintLog is true, all logs will be printed in the console, otherwise they will be stored in the file.
 	PrintLog bool
+
+	// http server config info
+	HttpServer HttpServer
+}
+
+type GenesisInfo struct {
+	// accounts info for genesis block used for test
+	// map key is account address -> value is account balance
+	Accounts map[string]int64
+}
+
+type HttpServer struct {
+	// The HTTPAddr is the address of HTTP rpc service
+	HTTPAddr string
+
+	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
+	// clients. Please be aware that CORS is a browser enforced security, it's fully
+	// useless for custom HTTP clients.
+	HTTPCors []string
+
+	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
+	HTTPWhiteHost []string
 }
 
 // GetConfigFromFile unmarshals the config from the given file
@@ -59,8 +92,39 @@ func GetConfigFromFile(filepath string) (Config, error) {
 	return config, err
 }
 
+func GetGenesisInfoFromFile(filepath string) (GenesisInfo, error) {
+	var info GenesisInfo
+	buff, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return info, err
+	}
+
+	err = json.Unmarshal(buff, &info)
+	return info, err
+}
+
+func GetGenesisAccountsFromFile(filepath string) (map[common.Address]*big.Int, error) {
+	info, err := GetGenesisInfoFromFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make(map[common.Address]*big.Int)
+	for k, v := range info.Accounts {
+		addr, err := common.HexToAddress(k)
+		if err != nil {
+			return nil, err
+		}
+
+		balance := big.NewInt(v)
+		accounts[addr] = balance
+	}
+
+	return accounts, nil
+}
+
 // LoadConfigFromFile gets node config from the given file
-func LoadConfigFromFile(configFile string) (*node.Config, error) {
+func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Config, error) {
 	config, err := GetConfigFromFile(configFile)
 	if err != nil {
 		return nil, err
@@ -70,17 +134,28 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	nodeConfig.Name = config.Name
 	nodeConfig.Version = config.Version
 	nodeConfig.RPCAddr = config.RPCAddr
-	nodeConfig.HTTPAddr = config.HTTPAddr
-	nodeConfig.HTTPCors = config.HTTPCors
-	nodeConfig.HTTPWhiteHost = config.HTTPWhiteHost
-	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.SeeleConfig.NetworkID
-	nodeConfig.SeeleConfig.TxConf.Capacity = config.SeeleConfig.TxConf.Capacity
+	nodeConfig.HTTPAddr = config.HttpServer.HTTPAddr
+	nodeConfig.HTTPCors = config.HttpServer.HTTPCors
+	nodeConfig.HTTPWhiteHost = config.HttpServer.HTTPWhiteHost
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
 		return nil, err
 	}
+
+	if genesisConfigFile != "" {
+		accounts, err := GetGenesisAccountsFromFile(genesisConfigFile)
+		if err != nil {
+			return nil, err
+		}
+		nodeConfig.SeeleConfig.GenesisAccounts = accounts
+	} else {
+		nodeConfig.SeeleConfig.GenesisAccounts = make(map[common.Address]*big.Int)
+	}
+
+	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
+	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
+	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
 
 	common.PrintLog = config.PrintLog
 	common.IsDebug = config.IsDebug

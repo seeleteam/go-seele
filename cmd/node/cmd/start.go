@@ -21,6 +21,7 @@ import (
 
 var seeleNodeConfigFile *string
 var miner *string
+var genesisConfigFile *string
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -32,7 +33,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, *genesisConfigFile)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
@@ -95,4 +96,6 @@ func init() {
 	startCmd.MarkFlagRequired("config")
 
 	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
+
+	genesisConfigFile = startCmd.Flags().StringP("genesis", "g", "", "seele genesis config file")
 }

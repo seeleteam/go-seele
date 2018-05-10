@@ -36,7 +36,7 @@ miner:
 
 		default:
 			if atomic.LoadInt32(isNonceFound) != 0 {
-				log.Info("nonce is found")
+				log.Info("exist mining as nonce is found in other process")
 				break miner
 			}
 			block.Header.Nonce = nonce

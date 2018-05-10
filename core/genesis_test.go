@@ -6,6 +6,8 @@
 package core
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -81,4 +83,17 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 	genesis := DefaultGenesis(bcStore)
 	err := genesis.Initialize(db)
 	assert.Equal(t, err, ErrGenesisHashMismatch)
+}
+
+func Test_GenesisInfo(t *testing.T) {
+	info := GenesisInfo{
+		Difficulty: 100000,
+		Accounts: map[string]uint64{
+			"a": 1,
+			"b": 2,
+		},
+	}
+
+	result, _ := json.Marshal(info)
+	fmt.Println(string(result))
 }
