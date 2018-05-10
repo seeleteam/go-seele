@@ -132,14 +132,14 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
-			s.commitOneIfDirty(addr, object, batch)
+			s.commitOne(addr, object, batch)
 		}
 	}
 
 	return s.trie.Commit(batch)
 }
 
-func (s *Statedb) commitOneIfDirty(addr common.Address, obj *StateObject, batch database.Batch) {
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
 	// @todo return error once dbErr occur.
 
 	if obj.dirtyAccount {
