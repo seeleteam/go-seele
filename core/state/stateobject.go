@@ -45,6 +45,9 @@ func newStateObject(address common.Address) *StateObject {
 
 // GetCopy gets a copy of the state object
 func (s *StateObject) GetCopy() *StateObject {
+	codeCloned := make([]byte, len(s.code))
+	copy(codeCloned, s.code)
+
 	return &StateObject{
 		address: s.address,
 		dbErr:   s.dbErr,
@@ -54,7 +57,7 @@ func (s *StateObject) GetCopy() *StateObject {
 			CodeHash: s.account.CodeHash,
 		},
 		dirtyAccount: s.dirtyAccount,
-		code:         s.code,
+		code:         codeCloned,
 		dirtyCode:    s.dirtyCode,
 	}
 }
@@ -93,23 +96,23 @@ func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
 }
 
-func (s *StateObject) loadCode(db database.Database) []byte {
+func (s *StateObject) loadCode(db database.Database) ([]byte, error) {
 	if s.code != nil {
-		return s.code
+		return s.code, nil
 	}
 
 	if s.account.CodeHash.IsEmpty() {
-		return nil
+		return nil, nil
 	}
 
 	code, err := db.Get(s.getCodeKey(s.address))
 	if err != nil {
-		s.dbErr = err
-	} else {
-		s.code = code
+		return nil, err
 	}
 
-	return s.code
+	s.code = code
+
+	return code, nil
 }
 
 func (s *StateObject) getCodeKey(address common.Address) []byte {
@@ -125,9 +128,7 @@ func (s *StateObject) setCode(code []byte) {
 }
 
 func (s *StateObject) serializeCode(batch database.Batch) {
-	if s.code == nil {
-		batch.Delete(s.getCodeKey(s.address))
-	} else {
+	if s.code != nil {
 		batch.Put(s.getCodeKey(s.address), s.code)
 	}
 }

@@ -65,11 +65,13 @@ func Test_Code(t *testing.T) {
 	assert.Equal(t, statedb.GetCodeHash(addr), codeHash)
 	assert.Equal(t, statedb.GetCode(addr), code)
 	assert.Equal(t, statedb.GetCodeSize(addr), len(code))
+	assert.Equal(t, stateObj.dirtyCode, true)
 
 	// Commit the account code change
 	batch := statedb.db.NewBatch()
 	rootHash := statedb.Commit(batch)
 	assert.Equal(t, batch.Commit(), error(nil))
+	assert.Equal(t, stateObj.dirtyCode, false)
 
 	// Create another state DB with the same root hash.
 	statedb2, err := NewStatedb(rootHash, statedb.db)
@@ -81,4 +83,5 @@ func Test_Code(t *testing.T) {
 	assert.Equal(t, statedb2.GetCodeHash(addr), codeHash)
 	assert.Equal(t, statedb2.GetCode(addr), code)
 	assert.Equal(t, statedb2.GetCodeSize(addr), len(code))
+	assert.Equal(t, stateObj.dirtyCode, false)
 }

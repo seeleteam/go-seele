@@ -36,7 +36,13 @@ func (s *Statedb) GetCode(address common.Address) []byte {
 		return nil
 	}
 
-	return stateObj.loadCode(s.db)
+	code, err := stateObj.loadCode(s.db)
+	if err != nil {
+		stateObj.dbErr = err
+		return nil
+	}
+
+	return code
 }
 
 // SetCode sets the contract code of the specified address if exists.
@@ -50,13 +56,7 @@ func (s *Statedb) SetCode(address common.Address, code []byte) {
 // GetCodeSize returns the size of the contract code associated with the specified address if any.
 // Otherwise, return 0.
 func (s *Statedb) GetCodeSize(address common.Address) int {
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return 0
-	}
-
-	code := stateObj.loadCode(s.db)
-
+	code := s.GetCode(address)
 	return len(code)
 }
 
