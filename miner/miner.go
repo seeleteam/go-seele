@@ -20,7 +20,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
@@ -289,81 +288,7 @@ func (miner *Miner) commitTask(task *Task) {
 			max = math.MaxUint64
 		}
 
-		go miner.startMining(task, tSeed, min, max)
-	}
-}
-
-// startMining starts calculating the nonce for the block
-// seed is the random start value for the nonce
-// min is the min number for the nonce per thread
-// max is the max number for the nonce per thread
-func (miner *Miner) startMining(task *Task, seed uint64, min uint64, max uint64) {
-	block := task.generateBlock()
-
-	var nonce = seed
-	var hashInt big.Int
-	var caltimes = int64(0)
-	target := pow.GetMiningTarget(block.Header.Difficulty)
-
-miner:
-	for {
-		select {
-		case <-miner.stopChan:
-			logAbort(miner.log)
-			miner.hashrate.Mark(caltimes)
-			break miner
-
-		default:
-			if atomic.LoadInt32(miner.isNonceFound) != 0 {
-				miner.log.Info("nonce is found")
-				break miner
-			}
-			caltimes++
-			if (caltimes % (1 << 15)) == 0 {
-				miner.hashrate.Mark(caltimes)
-				caltimes = 0
-			}
-			block.Header.Nonce = nonce
-			hash := block.Header.Hash()
-			hashInt.SetBytes(hash.Bytes())
-
-			// found
-			if hashInt.Cmp(target) <= 0 {
-				block.HeaderHash = hash
-				found := &Result{
-					task:  task,
-					block: block,
-				}
-
-				select {
-				case <-miner.stopChan:
-					logAbort(miner.log)
-				case miner.recv <- found:
-					atomic.StoreInt32(miner.isNonceFound, 1)
-					miner.log.Info("nonce finding succeeded")
-				}
-
-				break miner
-			}
-
-			// when nonce reached max, nonce traverses in [min, seed-1]
-			if nonce == max {
-				nonce = min
-			}
-			// outage
-			if nonce == seed-1 {
-				select {
-				case <-miner.stopChan:
-					logAbort(miner.log)
-				case miner.recv <- nil:
-					miner.log.Info("nonce finding outage")
-				}
-
-				break miner
-			}
-
-			nonce++
-		}
+		go StartMining(task, tSeed, min, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.hashrate, miner.log)
 	}
 }
 

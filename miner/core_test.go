@@ -28,28 +28,18 @@ func getTask(difficult int64) *Task {
 	}
 }
 
-func NewTestMiner(t *testing.T) *Miner {
-	return &Miner{
-		stopChan:             make(chan struct{}, 1),
-		recv:                 make(chan *Result, 1),
-		log:                  logger,
-		isFirstDownloader:    1,
-		isFirstBlockPrepared: 0,
-		isNonceFound:         new(int32),
-		hashrate:             metrics.NewMeter(),
-	}
-
-}
-
 func Test_Worker(t *testing.T) {
 	task := getTask(10)
 
-	miner := NewTestMiner(t)
+	result := make(chan *Result, 1)
+	abort := make(chan struct{}, 1)
+	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
 
-	go miner.startMining(task, 0, 0, math.MaxUint64)
+	go StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 
 	select {
-	case found := <-miner.recv:
+	case found := <-result:
 		target := pow.GetMiningTarget(task.header.Difficulty)
 
 		assert.Equal(t, found.task, task)
@@ -62,18 +52,21 @@ func Test_Worker(t *testing.T) {
 }
 
 func Test_WorkerStop(t *testing.T) {
-	task := getTask(10)
+	task := getTask(20)
 
-	miner := NewTestMiner(t)
+	result := make(chan *Result, 1)
+	abort := make(chan struct{}, 1)
+	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		miner.startMining(task, 0, 0, math.MaxUint64)
+		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 		wg.Done()
 	}()
 
-	close(miner.stopChan)
+	close(abort)
 
 	wg.Wait()
 }
