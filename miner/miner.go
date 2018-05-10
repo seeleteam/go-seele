@@ -264,7 +264,7 @@ func (miner *Miner) saveBlock(result *Result) error {
 
 // commitTask commits the given task to the miner
 func (miner *Miner) commitTask(task *Task) {
-	if atomic.LoadInt32(&miner.mining) != 1 {
+    if atomic.LoadInt32(&miner.mining) != 1 {
 		return
 	}
 
@@ -302,8 +302,8 @@ func (miner *Miner) commitTask(task *Task) {
 		}
 
 		miner.wg.Add(1)
-		go func(tseed, tmin, tmax) {
-		    defer miner.wg.Done()
+		go func(tseed uint64, tmin uint64, tmax uint64) {
+			defer miner.wg.Done()
 			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
 		}(tSeed, min, max)
 	}
