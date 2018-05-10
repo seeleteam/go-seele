@@ -47,6 +47,8 @@ func (s *Statedb) GetCode(address common.Address) []byte {
 
 // SetCode sets the contract code of the specified address if exists.
 func (s *Statedb) SetCode(address common.Address, code []byte) {
+	// EVM call SetCode after CreateAccount during contract creation.
+	// So, here the retrieved stateObj should not be nil.
 	stateObj := s.getStateObject(address)
 	if stateObj != nil {
 		stateObj.setCode(code)
