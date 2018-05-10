@@ -13,7 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// MonitorService implement some rpc interfaces used by a monitor server
+// MonitorService implements some rpc interfaces provided by a monitor server
 type MonitorService struct {
 	p2pServer *p2p.Server         // Peer-to-Peer server infos
 	seele     *seele.SeeleService // seele full node service
@@ -21,12 +21,12 @@ type MonitorService struct {
 	log       *log.SeeleLog
 
 	rpcAddr string // listening port
-	name    string // name display on the moitor
+	name    string // name displayed on the moitor
 	node    string // node name
 	version string // version
 }
 
-// NewMonitorService returns a rpc service
+// NewMonitorService returns a MonitorService instance
 func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, conf *node.Config, slog *log.SeeleLog, name string) (*MonitorService, error) {
 	return &MonitorService{
 		seele:     seeleService,
@@ -39,7 +39,7 @@ func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, c
 	}, nil
 }
 
-// Protocols implements node.Service, nil as it dosn't use p2pservice
+// Protocols implements node.Service, return nil as it dosn't use the p2p service
 func (s *MonitorService) Protocols() []p2p.Protocol { return nil }
 
 // Start implements node.Service, starting goroutines needed by SeeleService.

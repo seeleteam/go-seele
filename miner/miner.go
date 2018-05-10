@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -22,13 +23,13 @@ import (
 )
 
 var (
-	// ErrMinerIsRunning is returned when start miner is running
+	// ErrMinerIsRunning is returned when miner is running
 	ErrMinerIsRunning = errors.New("miner is running")
 
-	// ErrMinerIsStop is returned when stop miner is stopped
-	ErrMinerIsStop = errors.New("miner is stopped")
+	// ErrMinerIsStopped is returned when miner is stopped
+	ErrMinerIsStopped = errors.New("miner is stopped")
 
-	// ErrNodeIsSyncing is returned when start miner is syncing.
+	// ErrNodeIsSyncing is returned when the node is syncing
 	ErrNodeIsSyncing = errors.New("can not start miner when syncing")
 )
 
@@ -44,7 +45,9 @@ type Miner struct {
 	coinbase common.Address
 	mining   int32
 	canStart int32
+	stopped  int32
 
+	wg       sync.WaitGroup
 	stopChan chan struct{}
 	current  *Task
 	recv     chan *Result
@@ -64,7 +67,9 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
+		stopped:              0,
 		seele:                seele,
+		wg:                   sync.WaitGroup{},
 		stopChan:             make(chan struct{}, 1),
 		recv:                 make(chan *Result, 1),
 		log:                  log,
@@ -79,7 +84,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 	return miner
 }
 
-// SetThreads set the number of mining threads.
+// SetThreads sets the number of mining threads.
 func (miner *Miner) SetThreads(threads int) {
 	miner.threads = threads
 }
@@ -97,10 +102,13 @@ func (miner *Miner) Start() error {
 	}
 
 	atomic.StoreInt32(&miner.mining, 1)
+	atomic.StoreInt32(&miner.stopped, 0)
+	
 	go miner.waitBlock()
 	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
-		miner.prepareNewBlock() // try to prepare the first block
-		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
+		if err := miner.prepareNewBlock(); err == nil { // try to prepare the first block
+		    atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
+		}
 	}
 
 	miner.log.Info("Miner is started.")
@@ -111,9 +119,15 @@ func (miner *Miner) Start() error {
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
+	atomic.StoreInt32(&miner.stopped, 1)
+	
 	for i := 0; i < miner.threads; i++ {
 		miner.stopChan <- struct{}{}
 	}
+	
+	// wait for all threads to terminate
+	miner.wg.Wait()
+	
 	miner.log.Info("Miner is stopped.")
 }
 
@@ -151,7 +165,7 @@ func (miner *Miner) downloadEventCallback(e event.Event) {
 func (miner *Miner) newTxCallback(e event.Event) {
 	miner.log.Debug("got the new tx event")
 	// if not mining, start mining
-	if atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
+	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		miner.prepareNewBlock()
 	}
 }
@@ -173,7 +187,7 @@ out:
 				continue
 			}
 
-			miner.log.Info("saving block succeed and notify p2p")
+			miner.log.Info("saving block succeeded and notify p2p")
 			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 			atomic.StoreInt32(&miner.mining, 0)
 
@@ -186,7 +200,7 @@ out:
 }
 
 // prepareNewBlock prepares a new block to be mined
-func (miner *Miner) prepareNewBlock() {
+func (miner *Miner) prepareNewBlock() error {
 	miner.log.Debug("starting mining the new block")
 
 	timestamp := time.Now().Unix()
@@ -227,17 +241,19 @@ func (miner *Miner) prepareNewBlock() {
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
-		return
+		return err
 	}
 	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
 	if err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
-		return
+		return err
 	}
 
 	miner.log.Info("committing a new task to engine, height=%d", header.Height)
 	miner.commitTask(miner.current)
+	
+	return nil
 }
 
 // saveBlock saves the block in the given result to the blockchain
@@ -285,6 +301,10 @@ func (miner *Miner) commitTask(task *Task) {
 			max = math.MaxUint64
 		}
 
-		go StartMining(task, tSeed, min, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
+		miner.wg.Add(1)
+		go func(tseed, tmin, tmax) {
+		    defer miner.wg.Done()
+			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
+		}(tSeed, min, max)
 	}
 }

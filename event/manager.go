@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-// EventManager interface defines the event manager behavior
+// EventManager is an interface which defines the event manager behaviors
 // Note that it is thread safe
 type EventManager struct {
 	lock      sync.RWMutex
