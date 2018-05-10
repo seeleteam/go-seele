@@ -25,7 +25,6 @@ type Account struct {
 // StateObject is the state object for statedb
 type StateObject struct {
 	address common.Address
-	dbErr   error // dbErr is used for record the database error.
 
 	account      Account
 	dirtyAccount bool
@@ -50,7 +49,6 @@ func (s *StateObject) GetCopy() *StateObject {
 
 	return &StateObject{
 		address: s.address,
-		dbErr:   s.dbErr,
 		account: Account{
 			Nonce:    s.account.Nonce,
 			Amount:   big.NewInt(0).Set(s.account.Amount),

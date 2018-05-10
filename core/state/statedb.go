@@ -27,6 +27,8 @@ type Statedb struct {
 	db           database.Database
 	trie         *trie.Trie
 	stateObjects *lru.Cache // stateObjects maps account addresses of common.Address type to the state objects of *StateObject type
+
+	dbErr error // dbErr is used for record the database error.
 }
 
 // NewStatedb constructs and returns a statedb instance
