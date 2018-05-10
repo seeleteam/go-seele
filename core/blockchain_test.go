@@ -48,46 +48,20 @@ func newTestAccount(amount, nonce uint64) *testAccount {
 	}
 }
 
-func newTestGenesis(bcStore store.BlockchainStore) *Genesis {
-	statedb, err := state.NewStatedb(common.EmptyHash, nil)
-	if err != nil {
-		panic(err)
-	}
-
+func newTestGenesis() *Genesis {
+	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
-		stateObj := statedb.GetOrNewStateObject(account.addr)
-		stateObj.SetNonce(account.data.Nonce)
-		stateObj.SetAmount(account.data.Amount)
+		accounts[account.addr] = account.data.Amount
 	}
 
-	stateRootHash := statedb.Commit(nil)
-	genesis := Genesis{
-		bcStore: bcStore,
-		header: &types.BlockHeader{
-			PreviousBlockHash: common.EmptyHash,
-			Creator:           common.Address{},
-			StateHash:         stateRootHash,
-			TxHash:            types.MerkleRootHash(nil),
-			Difficulty:        big.NewInt(1),
-			Height:            genesisBlockHeight,
-			CreateTimestamp:   big.NewInt(0),
-			Nonce:             1,
-		},
-		accounts: make(map[common.Address]state.Account),
-	}
-
-	for _, account := range testGenesisAccounts {
-		genesis.accounts[account.addr] = account.data
-	}
-
-	return &genesis
+	return GetGenesis(accounts)
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := newTestGenesis(bcStore)
-	if err := genesis.Initialize(db); err != nil {
+	genesis := newTestGenesis()
+	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
 

@@ -24,6 +24,7 @@ var (
 
 // Statedb is used to store accounts into the MPT tree
 type Statedb struct {
+	db           database.Database
 	trie         *trie.Trie
 	stateObjects *lru.Cache // stateObjects maps account addresses of common.Address type to the state objects of *StateObject type
 }
@@ -41,6 +42,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	}
 
 	return &Statedb{
+		db:           db,
 		trie:         trie,
 		stateObjects: stateCache,
 	}, nil
@@ -66,6 +68,7 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	}
 
 	return &Statedb{
+		db:           s.db,
 		trie:         cpyTrie,
 		stateObjects: copies,
 	}, nil
@@ -129,21 +132,29 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
-			if object.dirty {
-				s.commitOne(addr, object)
-				object.dirty = false
-			}
+			s.commitOne(addr, object, batch)
 		}
 	}
+
 	return s.trie.Commit(batch)
 }
 
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject) {
-	data, err := rlp.EncodeToBytes(obj.account)
-	if err != nil {
-		panic(err) // must encode because the account object is a deterministic struct
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
+	// @todo return error once dbErr occurs.
+
+	if obj.dirtyAccount {
+		data, err := rlp.EncodeToBytes(obj.account)
+		if err != nil {
+			panic(err) // must encode because the account object is a deterministic struct
+		}
+		s.trie.Put(addr[:], data)
+		obj.dirtyAccount = false
 	}
-	s.trie.Put(addr[:], data)
+
+	if obj.dirtyCode {
+		obj.serializeCode(batch)
+		obj.dirtyCode = false
+	}
 }
 
 func (s *Statedb) cache(addr common.Address, obj *StateObject) {
@@ -163,7 +174,7 @@ func (s *Statedb) cache(addr common.Address, obj *StateObject) {
 func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	object := s.getStateObject(addr)
 	if object == nil {
-		object = newStateObject()
+		object = newStateObject(addr)
 		object.SetNonce(0)
 		s.cache(addr, object)
 	}
@@ -178,7 +189,7 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 		return object
 	}
 
-	object := newStateObject()
+	object := newStateObject(addr)
 	val, _ := s.trie.Get(addr[:])
 	if len(val) == 0 {
 		return nil
