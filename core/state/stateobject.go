@@ -130,6 +130,8 @@ func (s *StateObject) serializeCode(batch database.Batch) {
 	}
 }
 
+// empty returns whether the account is considered empty (nonce == amount == 0 and no code).
+// This is used during EVM execution.
 func (s *StateObject) empty() bool {
 	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && s.account.CodeHash.IsEmpty()
 }
