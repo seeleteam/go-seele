@@ -33,6 +33,7 @@ type StateObject struct {
 	code      []byte // contract code
 	dirtyCode bool
 
+	// When a state object is marked assuicided, it will be deleted from the trie when commit the state DB.
 	suicided bool
 }
 
