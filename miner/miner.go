@@ -100,16 +100,22 @@ func (miner *Miner) Start() error {
 		miner.log.Info("Can not start miner when syncing")
 		return ErrNodeIsSyncing
 	}
-
-	atomic.StoreInt32(&miner.mining, 1)
-	atomic.StoreInt32(&miner.stopped, 0)
 	
-	go miner.waitBlock()
+	atomic.StoreInt32(&miner.mining, 1)
+	
 	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
-		if err := miner.prepareNewBlock(); err == nil { // try to prepare the first block
-		    atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
+		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
+		    miner.log.Warn(err.Error())
+			atomic.StoreInt32(&miner.mining, 0)
+			
+			return err
 		}
+		
+		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
 	}
+	
+	atomic.StoreInt32(&miner.stopped, 0)
+	go miner.waitBlock()
 
 	miner.log.Info("Miner is started.")
 
@@ -166,7 +172,10 @@ func (miner *Miner) newTxCallback(e event.Event) {
 	miner.log.Debug("got the new tx event")
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
-		miner.prepareNewBlock()
+		if err := miner.prepareNewBlock(); err != nil {
+		    miner.log.Warn(err.Error())
+		    atomic.StoreInt32(&miner.mining, 0)
+		}
 	}
 }
 
@@ -239,14 +248,10 @@ func (miner *Miner) prepareNewBlock() error {
 
 	cpyStateDB, err := stateDB.GetCopy()
 	if err != nil {
-		miner.log.Warn(err.Error())
-		atomic.StoreInt32(&miner.mining, 0)
 		return err
 	}
 	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
 	if err != nil {
-		miner.log.Warn(err.Error())
-		atomic.StoreInt32(&miner.mining, 0)
 		return err
 	}
 
