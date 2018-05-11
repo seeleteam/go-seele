@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/trie"
 )
@@ -27,6 +28,14 @@ type Statedb struct {
 	db           database.Database
 	trie         *trie.Trie
 	stateObjects *lru.Cache // stateObjects maps account addresses of common.Address type to the state objects of *StateObject type
+
+	dbErr  error  // dbErr is used for record the database error.
+	refund uint64 // The refund counter, also used by state transitioning.
+
+	curTxHash    common.Hash
+	curBlockHash common.Hash
+	curTxIndex   uint
+	curLogs      []*types.Log
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -71,6 +80,9 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 		db:           s.db,
 		trie:         cpyTrie,
 		stateObjects: copies,
+
+		dbErr:  s.dbErr,
+		refund: s.refund,
 	}, nil
 }
 
@@ -141,6 +153,7 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
 	// @todo return error once dbErr occurs.
+	// @todo handle suicided state object: 1) remove account data 2) remove from statedb
 
 	if obj.dirtyAccount {
 		data, err := rlp.EncodeToBytes(obj.account)
@@ -200,4 +213,20 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	}
 	s.cache(addr, object)
 	return object
+}
+
+// Prepare sets the current transaction hash and index and block hash which is
+// used when the EVM emits new state logs.
+// @todo should be invoked before tx processing.
+func (s *Statedb) Prepare(blockHash, txHash common.Hash, txIndex uint) {
+	s.curBlockHash = blockHash
+	s.curTxHash = txHash
+	s.curTxIndex = txIndex
+	s.curLogs = nil
+}
+
+// GetCurrentLogs returns the current transaction logs.
+// @todo add logs to receipt after tx processing.
+func (s *Statedb) GetCurrentLogs() []*types.Log {
+	return s.curLogs
 }
