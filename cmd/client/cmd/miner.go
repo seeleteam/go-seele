@@ -22,9 +22,9 @@ var minerCmd = &cobra.Command{
 	Use:   "miner",
 	Short: "miner actions",
 	Long: `For example:
-	 miner.exe miner --start [-t <miner threads num>]
-	 miner.exe miner --stop
-	 miner.exe miner --gethashrate`,
+	 client.exe miner --start [-t <miner threads num>]
+	 client.exe miner --stop
+	 client.exe miner --gethashrate`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := jsonrpc.Dial("tcp", rpcAddr)
 		if err != nil {
