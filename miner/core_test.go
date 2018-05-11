@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
@@ -33,8 +34,9 @@ func Test_Worker(t *testing.T) {
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
 	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
 
-	go StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, logger)
+	go StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 
 	select {
 	case found := <-result:
@@ -55,11 +57,12 @@ func Test_WorkerStop(t *testing.T) {
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
 	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, logger)
+		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 		wg.Done()
 	}()
 

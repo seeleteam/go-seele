@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
@@ -57,6 +58,7 @@ type Miner struct {
 	threads              int
 	isFirstBlockPrepared int32
 	isNonceFound         *int32
+	hashrate             metrics.Meter // Meter tracking the average hashrate
 }
 
 // NewMiner constructs and returns a miner instance
@@ -71,6 +73,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		isNonceFound:         new(int32),
+		hashrate:             metrics.NewMeter(),
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -285,6 +288,11 @@ func (miner *Miner) commitTask(task *Task) {
 			max = math.MaxUint64
 		}
 
-		go StartMining(task, tSeed, min, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
+		go StartMining(task, tSeed, min, max, miner.recv, miner.stopChan, miner.isNonceFound, miner.hashrate, miner.log)
 	}
+}
+
+// Hashrate returns the rate of the POW search invocations per second in the last minute.
+func (miner *Miner) Hashrate() float64 {
+	return miner.hashrate.Rate1()
 }
