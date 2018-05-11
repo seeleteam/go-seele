@@ -24,19 +24,23 @@ type Account struct {
 
 // StateObject is the state object for statedb
 type StateObject struct {
-	address common.Address
-	dbErr   error // dbErr is used for record the database error.
+	address  common.Address
+	addrHash common.Hash
 
 	account      Account
 	dirtyAccount bool
 
 	code      []byte // contract code
 	dirtyCode bool
+
+	// When a state object is marked assuicided, it will be deleted from the trie when commit the state DB.
+	suicided bool
 }
 
 func newStateObject(address common.Address) *StateObject {
 	return &StateObject{
-		address: address,
+		address:  address,
+		addrHash: crypto.HashBytes(address.Bytes()),
 		account: Account{
 			Amount: new(big.Int),
 		},
@@ -48,18 +52,11 @@ func (s *StateObject) GetCopy() *StateObject {
 	codeCloned := make([]byte, len(s.code))
 	copy(codeCloned, s.code)
 
-	return &StateObject{
-		address: s.address,
-		dbErr:   s.dbErr,
-		account: Account{
-			Nonce:    s.account.Nonce,
-			Amount:   big.NewInt(0).Set(s.account.Amount),
-			CodeHash: s.account.CodeHash,
-		},
-		dirtyAccount: s.dirtyAccount,
-		code:         codeCloned,
-		dirtyCode:    s.dirtyCode,
-	}
+	objCloned := *s
+	objCloned.account.Amount = big.NewInt(0).Set(s.account.Amount)
+	objCloned.code = codeCloned
+
+	return &objCloned
 }
 
 // SetNonce sets the nonce of the account in the state object
@@ -105,7 +102,7 @@ func (s *StateObject) loadCode(db database.Database) ([]byte, error) {
 		return nil, nil
 	}
 
-	code, err := db.Get(s.getCodeKey(s.address))
+	code, err := db.Get(s.getCodeKey())
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +112,8 @@ func (s *StateObject) loadCode(db database.Database) ([]byte, error) {
 	return code, nil
 }
 
-func (s *StateObject) getCodeKey(address common.Address) []byte {
-	return append(keyPrefixCode, address.Bytes()...)
+func (s *StateObject) getCodeKey() []byte {
+	return append(keyPrefixCode, s.addrHash.Bytes()...)
 }
 
 func (s *StateObject) setCode(code []byte) {
@@ -129,6 +126,12 @@ func (s *StateObject) setCode(code []byte) {
 
 func (s *StateObject) serializeCode(batch database.Batch) {
 	if s.code != nil {
-		batch.Put(s.getCodeKey(s.address), s.code)
+		batch.Put(s.getCodeKey(), s.code)
 	}
+}
+
+// empty returns whether the account is considered empty (nonce == amount == 0 and no code).
+// This is used during EVM execution.
+func (s *StateObject) empty() bool {
+	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && s.account.CodeHash.IsEmpty()
 }

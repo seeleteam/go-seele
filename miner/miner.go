@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
@@ -60,6 +61,7 @@ type Miner struct {
 	threads              int
 	isFirstBlockPrepared int32
 	isNonceFound         *int32
+	hashrate             metrics.Meter // Meter tracking the average hashrate
 }
 
 // NewMiner constructs and returns a miner instance
@@ -76,6 +78,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		isNonceFound:         new(int32),
+		hashrate:             metrics.NewMeter(),
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
@@ -106,9 +109,9 @@ func (miner *Miner) Start() error {
 	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
 		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
 		    miner.log.Warn(err.Error())
-			atomic.StoreInt32(&miner.mining, 0)
+			  atomic.StoreInt32(&miner.mining, 0)
 			
-			return err
+			  return err
 		}
 		
 		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
@@ -305,11 +308,16 @@ func (miner *Miner) commitTask(task *Task) {
 		} else {
 			max = math.MaxUint64
 		}
-
+    
 		miner.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
 			defer miner.wg.Done()
-			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, miner.isNonceFound, miner.log)
+			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, miner.isNonceFound, miner.hashrate, miner.log)
 		}(tSeed, min, max)
 	}
+}
+
+// Hashrate returns the rate of the POW search invocations per second in the last minute.
+func (miner *Miner) Hashrate() float64 {
+	return miner.hashrate.Rate1()
 }
