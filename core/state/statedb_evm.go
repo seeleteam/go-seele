@@ -156,7 +156,7 @@ func (s *Statedb) AddLog(log *types.Log) {
 
 // AddPreimage records a SHA3 preimage seen by the VM.
 func (s *Statedb) AddPreimage(common.Hash, []byte) {
-	// @todo
+	// Currently, do not support SHA3 preimage produced by EVM.
 }
 
 // ForEachStorage visits all the key-value pairs for the specified account storage.
