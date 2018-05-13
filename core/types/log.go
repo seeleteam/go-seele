@@ -23,4 +23,6 @@ type Log struct {
 	// but not secured by consensus.
 	// block in which the transaction was included
 	BlockNumber uint64 `json:"blockNumber"`
+	// index of the transaction in the block
+	TxIndex uint `json:"transactionIndex" gencodec:"required"`
 }

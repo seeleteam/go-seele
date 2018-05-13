@@ -32,7 +32,8 @@ type Statedb struct {
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
 
-	curLogs []*types.Log
+	curTxIndex uint
+	curLogs    []*types.Log
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -213,8 +214,10 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	return object
 }
 
-// Prepare resets the logs for adding new EVM emitted state logs.
-func (s *Statedb) Prepare() {
+// Prepare sets the current transaction index which is
+// used when the EVM emits new state logs.
+func (s *Statedb) Prepare(txIndex int) {
+	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 }
 
