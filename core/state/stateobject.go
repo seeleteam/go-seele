@@ -11,15 +11,20 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/trie"
 )
 
-var keyPrefixCode = []byte("code")
+var (
+	keyPrefixCode   = []byte("code")
+	dbPrefixStorage = []byte("s")
+)
 
 // Account is a balance model for blockchain
 type Account struct {
-	Nonce    uint64
-	Amount   *big.Int
-	CodeHash common.Hash // contract code hash
+	Nonce           uint64
+	Amount          *big.Int
+	CodeHash        common.Hash // contract code hash
+	StorageRootHash common.Hash // merkle root of the storage trie
 }
 
 // StateObject is the state object for statedb
@@ -33,6 +38,10 @@ type StateObject struct {
 	code      []byte // contract code
 	dirtyCode bool
 
+	storageTrie   *trie.Trie
+	cachedStorage map[common.Hash]common.Hash // cache the retrieved account states.
+	dirtyStorage  map[common.Hash]common.Hash // changed account states that need to flush to DB.
+
 	// When a state object is marked assuicided, it will be deleted from the trie when commit the state DB.
 	suicided bool
 }
@@ -44,6 +53,8 @@ func newStateObject(address common.Address) *StateObject {
 		account: Account{
 			Amount: new(big.Int),
 		},
+		cachedStorage: make(map[common.Hash]common.Hash),
+		dirtyStorage:  make(map[common.Hash]common.Hash),
 	}
 }
 
@@ -134,4 +145,36 @@ func (s *StateObject) serializeCode(batch database.Batch) {
 // This is used during EVM execution.
 func (s *StateObject) empty() bool {
 	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && s.account.CodeHash.IsEmpty()
+}
+
+func (s *StateObject) setState(key, value common.Hash) {
+	s.cachedStorage[key] = value
+
+	if !s.dirtyStorage[key].Equal(value) {
+		s.dirtyStorage[key] = value
+	}
+}
+
+func (s *StateObject) getState(db database.Database, key common.Hash) (common.Hash, error) {
+	if value, ok := s.cachedStorage[key]; ok {
+		return value, nil
+	}
+
+	if s.storageTrie == nil {
+		var err error
+		if s.storageTrie, err = trie.NewTrie(s.account.StorageRootHash, dbPrefixStorage, db); err != nil {
+			return common.EmptyHash, err
+		}
+	}
+
+	if value, ok := s.storageTrie.Get(s.getStorageKey(key)); ok {
+		return common.BytesToHash(value), nil
+	}
+
+	return common.EmptyHash, nil
+}
+
+func (s *StateObject) getStorageKey(key common.Hash) []byte {
+	// trie key: address hash + storage key
+	return append(s.addrHash.Bytes(), key.Bytes()...)
 }
