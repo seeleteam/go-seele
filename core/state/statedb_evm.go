@@ -147,10 +147,6 @@ func (s *Statedb) Snapshot() int {
 
 // AddLog adds a log.
 func (s *Statedb) AddLog(log *types.Log) {
-	log.BlockHash = s.curBlockHash
-	log.TxHash = s.curTxHash
-	log.TxIndex = s.curTxIndex
-
 	s.curLogs = append(s.curLogs, log)
 }
 

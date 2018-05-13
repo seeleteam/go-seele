@@ -32,10 +32,7 @@ type Statedb struct {
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
 
-	curTxHash    common.Hash
-	curBlockHash common.Hash
-	curTxIndex   uint
-	curLogs      []*types.Log
+	curLogs []*types.Log
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -216,18 +213,12 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	return object
 }
 
-// Prepare sets the current transaction hash and index and block hash which is
-// used when the EVM emits new state logs.
-// @todo should be invoked before tx processing.
-func (s *Statedb) Prepare(blockHash, txHash common.Hash, txIndex uint) {
-	s.curBlockHash = blockHash
-	s.curTxHash = txHash
-	s.curTxIndex = txIndex
+// Prepare resets the logs for adding new EVM emitted state logs.
+func (s *Statedb) Prepare() {
 	s.curLogs = nil
 }
 
 // GetCurrentLogs returns the current transaction logs.
-// @todo add logs to receipt after tx processing.
 func (s *Statedb) GetCurrentLogs() []*types.Log {
 	return s.curLogs
 }
