@@ -8,7 +8,6 @@ package state
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
@@ -155,10 +154,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 	// @todo commit the storage change.
 
 	if obj.dirtyAccount {
-		data, err := rlp.EncodeToBytes(obj.account)
-		if err != nil {
-			panic(err) // must encode because the account object is a deterministic struct
-		}
+		data := common.SerializePanic(obj.account)
 		s.trie.Put(addr[:], data)
 		obj.dirtyAccount = false
 	}
@@ -207,7 +203,7 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 
-	if err := rlp.DecodeBytes(val, &object.account); err != nil {
+	if err := common.Deserialize(val, &object.account); err != nil {
 		return nil
 	}
 	s.cache(addr, object)
