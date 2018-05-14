@@ -73,7 +73,7 @@ func Test_Block_FindTransaction(t *testing.T) {
 		newTestTx(t, 30, 3, true),
 	}
 
-	block := NewBlock(header, txs)
+	block := NewBlock(header, txs, nil)
 
 	assert.Equal(t, block.FindTransaction(txs[0].Hash), txs[0])
 	assert.Equal(t, block.FindTransaction(txs[1].Hash), txs[1])
