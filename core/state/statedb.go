@@ -32,10 +32,8 @@ type Statedb struct {
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
 
-	curTxHash    common.Hash
-	curBlockHash common.Hash
-	curTxIndex   uint
-	curLogs      []*types.Log
+	curTxIndex uint
+	curLogs    []*types.Log
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -154,6 +152,7 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
 	// @todo return error once dbErr occurs.
 	// @todo handle suicided state object: 1) remove account data 2) remove from statedb
+	// @todo commit the storage change.
 
 	if obj.dirtyAccount {
 		data, err := rlp.EncodeToBytes(obj.account)
@@ -215,18 +214,14 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	return object
 }
 
-// Prepare sets the current transaction hash and index and block hash which is
+// Prepare sets the current transaction index which is
 // used when the EVM emits new state logs.
-// @todo should be invoked before tx processing.
-func (s *Statedb) Prepare(blockHash, txHash common.Hash, txIndex uint) {
-	s.curBlockHash = blockHash
-	s.curTxHash = txHash
-	s.curTxIndex = txIndex
+func (s *Statedb) Prepare(txIndex int) {
+	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 }
 
 // GetCurrentLogs returns the current transaction logs.
-// @todo add logs to receipt after tx processing.
 func (s *Statedb) GetCurrentLogs() []*types.Log {
 	return s.curLogs
 }

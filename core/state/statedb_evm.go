@@ -75,13 +75,26 @@ func (s *Statedb) GetRefund() uint64 {
 // GetState returns the value of the specified key in account storage if exists.
 // Otherwise, return empty hash.
 func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash {
-	// @todo
-	return common.EmptyHash
+	stateObj := s.getStateObject(address)
+	if stateObj == nil {
+		return common.EmptyHash
+	}
+
+	value, err := stateObj.getState(s.db, key)
+	if err != nil {
+		s.dbErr = err
+		return common.EmptyHash
+	}
+
+	return value
 }
 
 // SetState adds or updates the specified key-value pair in account storage.
 func (s *Statedb) SetState(address common.Address, key common.Hash, value common.Hash) {
-	// @todo
+	stateObj := s.getStateObject(address)
+	if stateObj != nil {
+		stateObj.setState(key, value)
+	}
 }
 
 // Suicide marks the given account as suicided and clears the account balance.
@@ -134,8 +147,6 @@ func (s *Statedb) Snapshot() int {
 
 // AddLog adds a log.
 func (s *Statedb) AddLog(log *types.Log) {
-	log.BlockHash = s.curBlockHash
-	log.TxHash = s.curTxHash
 	log.TxIndex = s.curTxIndex
 
 	s.curLogs = append(s.curLogs, log)
@@ -143,10 +154,10 @@ func (s *Statedb) AddLog(log *types.Log) {
 
 // AddPreimage records a SHA3 preimage seen by the VM.
 func (s *Statedb) AddPreimage(common.Hash, []byte) {
-	// @todo
+	// Currently, do not support SHA3 preimage produced by EVM.
 }
 
 // ForEachStorage visits all the key-value pairs for the specified account storage.
 func (s *Statedb) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) {
-	// @todo
+	// do nothing, since ETH only call this method in test.
 }
