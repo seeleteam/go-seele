@@ -160,11 +160,8 @@ func (s *StateObject) getState(db database.Database, key common.Hash) (common.Ha
 		return value, nil
 	}
 
-	if s.storageTrie == nil {
-		var err error
-		if s.storageTrie, err = trie.NewTrie(s.account.StorageRootHash, dbPrefixStorage, db); err != nil {
-			return common.EmptyHash, err
-		}
+	if err := s.ensureStorageTrie(db); err != nil {
+		return common.EmptyHash, err
 	}
 
 	if value, ok := s.storageTrie.Get(s.getStorageKey(key)); ok {
@@ -174,7 +171,48 @@ func (s *StateObject) getState(db database.Database, key common.Hash) (common.Ha
 	return common.EmptyHash, nil
 }
 
+func (s *StateObject) ensureStorageTrie(db database.Database) error {
+	if s.storageTrie != nil {
+		return nil
+	}
+
+	trie, err := trie.NewTrie(s.account.StorageRootHash, dbPrefixStorage, db)
+	if err != nil {
+		return err
+	}
+
+	s.storageTrie = trie
+
+	return nil
+}
+
 func (s *StateObject) getStorageKey(key common.Hash) []byte {
 	// trie key: address hash + storage key
 	return append(s.addrHash.Bytes(), key.Bytes()...)
+}
+
+// commitStorageTrie flush dirty storage to trie if any, and update the storage merkle root hash.
+func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch database.Batch) error {
+	if len(s.dirtyStorage) == 0 {
+		return nil
+	}
+
+	if err := s.ensureStorageTrie(trieDB); err != nil {
+		return err
+	}
+
+	for k, v := range s.dirtyStorage {
+		if err := s.storageTrie.Put(s.getStorageKey(k), v.Bytes()); err != nil {
+			return err
+		}
+	}
+
+	// Update the storage merkle root hash and mark account as dirty.
+	s.account.StorageRootHash = s.storageTrie.Commit(commitBatch)
+	s.dirtyAccount = true
+
+	// Reset dirty storage flag
+	s.dirtyStorage = make(map[common.Hash]common.Hash)
+
+	return nil
 }
