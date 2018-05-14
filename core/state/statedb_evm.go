@@ -38,7 +38,7 @@ func (s *Statedb) GetCode(address common.Address) []byte {
 
 	code, err := stateObj.loadCode(s.db)
 	if err != nil {
-		stateObj.dbErr = err
+		s.dbErr = err
 		return nil
 	}
 
@@ -64,13 +64,12 @@ func (s *Statedb) GetCodeSize(address common.Address) int {
 
 // AddRefund refunds the specified gas value
 func (s *Statedb) AddRefund(gas uint64) {
-	// @todo
+	s.refund += gas
 }
 
 // GetRefund returns the current value of the refund counter.
 func (s *Statedb) GetRefund() uint64 {
-	// @todo
-	return 0
+	return s.refund
 }
 
 // GetState returns the value of the specified key in account storage if exists.
@@ -95,7 +94,7 @@ func (s *Statedb) Suicide(address common.Address) bool {
 	}
 
 	stateObj.SetAmount(new(big.Int))
-	// @todo mark the state object as suicided
+	stateObj.suicided = true
 
 	return true
 }
@@ -107,9 +106,7 @@ func (s *Statedb) HasSuicided(address common.Address) bool {
 		return false
 	}
 
-	// @todo return stateObj.suicided
-
-	return false
+	return stateObj.suicided
 }
 
 // Exist indicates whether the given account exists in statedb.
@@ -120,8 +117,8 @@ func (s *Statedb) Exist(address common.Address) bool {
 
 // Empty indicates whether the given account satisfies (balance = nonce = code = 0).
 func (s *Statedb) Empty(address common.Address) bool {
-	// @todo
-	return false
+	stateObj := s.getStateObject(address)
+	return stateObj == nil || stateObj.empty()
 }
 
 // RevertToSnapshot reverts all state changes made since the given revision.
@@ -137,7 +134,11 @@ func (s *Statedb) Snapshot() int {
 
 // AddLog adds a log.
 func (s *Statedb) AddLog(log *types.Log) {
-	// @todo
+	log.BlockHash = s.curBlockHash
+	log.TxHash = s.curTxHash
+	log.TxIndex = s.curTxIndex
+
+	s.curLogs = append(s.curLogs, log)
 }
 
 // AddPreimage records a SHA3 preimage seen by the VM.

@@ -10,7 +10,6 @@ import (
 )
 
 // Log represents the contract execution log.
-// @todo just copied from ETH to fix build error.
 type Log struct {
 	// Consensus fields:
 	// address of the contract that generated the event
@@ -24,6 +23,10 @@ type Log struct {
 	// but not secured by consensus.
 	// block in which the transaction was included
 	BlockNumber uint64 `json:"blockNumber"`
+	// hash of the block in which the transaction was included
+	BlockHash common.Hash `json:"blockHash"`
+	// hash of the transaction
+	TxHash common.Hash `json:"transactionHash" gencodec:"required"`
 	// index of the transaction in the block
 	TxIndex uint `json:"transactionIndex" gencodec:"required"`
 }
