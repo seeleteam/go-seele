@@ -202,7 +202,7 @@ func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch da
 	}
 
 	for k, v := range s.dirtyStorage {
-		if err := s.storageTrie.Put(k.Bytes(), v.Bytes()); err != nil {
+		if err := s.storageTrie.Put(s.getStorageKey(k), v.Bytes()); err != nil {
 			return err
 		}
 	}
