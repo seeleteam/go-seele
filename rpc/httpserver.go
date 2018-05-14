@@ -60,7 +60,7 @@ func (server *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case http.MethodPost:
 		w.Header().Set("Content-Type", "application/json")
 		conn := &httpReadWriteCloser{req.Body, w}
-		server.ServeRequest(NewJsonCodec(conn))
+		server.ServeRequest(NewJSONCodec(conn))
 	default:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)

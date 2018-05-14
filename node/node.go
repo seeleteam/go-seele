@@ -180,7 +180,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 				n.log.Error("RPC accept failed", "err", err)
 				continue
 			}
-			go handler.ServeCodec(rpc.NewJsonCodec(conn))
+			go handler.ServeCodec(rpc.NewJSONCodec(conn))
 		}
 	}()
 

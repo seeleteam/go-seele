@@ -12,10 +12,8 @@ import (
 	"sync"
 )
 
-var errMissingParams = errors.New("jsonrpc: request body missing params")
-
 const (
-	jsonrpcVersion = "1.0"
+	jsonrpcVersion = "2.0"
 )
 
 type jsonCodec struct {
@@ -32,13 +30,14 @@ type jsonCodec struct {
 	// but save the original request ID in the pending map.
 	// When rpc responds, we use the sequence number in
 	// the response to find the original request ID.
-	mutex   sync.Mutex // protects seq, pending
-	seq     uint64
-	pending map[uint64]*json.RawMessage
+	mutex    sync.Mutex // protects seq, pending
+	encmutex sync.Mutex // protects enc
+	seq      uint64
+	pending  map[uint64]*json.RawMessage
 }
 
-// NewJsonCodec returns a new rpc.ServerCodec using JSON-RPC on conn.
-func NewJsonCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
+// NewJSONCodec returns a new rpc.ServerCodec using JSON-RPC on conn.
+func NewJSONCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
 	return &jsonCodec{
 		dec:     json.NewDecoder(conn),
 		enc:     json.NewEncoder(conn),
@@ -51,27 +50,88 @@ type jsonRequest struct {
 	Version string           `json:"jsonrpc"`
 	Method  string           `json:"method"`
 	Params  *json.RawMessage `json:"params"`
-	Id      *json.RawMessage `json:"id"`
+	ID      *json.RawMessage `json:"id"`
+}
+
+func (r *jsonRequest) UnmarshalJSON(raw []byte) error {
+	r.reset()
+	type req *jsonRequest
+	if err := json.Unmarshal(raw, req(r)); err != nil {
+		return errors.New("bad request")
+	}
+
+	var o = make(map[string]*json.RawMessage)
+	if err := json.Unmarshal(raw, &o); err != nil {
+		return errors.New("bad request")
+	}
+	if o["jsonrpc"] == nil || o["method"] == nil {
+		return errors.New("bad request")
+	}
+	_, okID := o["id"]
+	_, okParams := o["params"]
+	if len(o) == 3 && !(okID || okParams) || len(o) == 4 && !(okID && okParams) || len(o) > 4 {
+		return errors.New("bad request")
+	}
+	if r.Version != "2.0" {
+		return errors.New("bad request")
+	}
+	if okParams {
+		if r.Params == nil || len(*r.Params) == 0 {
+			return errors.New("bad request")
+		}
+	}
+	if okID && r.ID == nil {
+		r.ID = nil
+	}
+	if okID {
+		if len(*r.ID) == 0 {
+			return errors.New("bad request")
+		}
+		switch []byte(*r.ID)[0] {
+		case 't', 'f', '{', '[':
+			return errors.New("bad request")
+		}
+	}
+
+	return nil
 }
 
 func (r *jsonRequest) reset() {
 	r.Method = ""
 	r.Params = nil
-	r.Id = nil
+	r.ID = nil
 }
 
 type jsonResponse struct {
 	Version string           `json:"jsonrpc"`
-	Id      *json.RawMessage `json:"id"`
-	Result  interface{}      `json:"result"`
-	Error   interface{}      `json:"error"`
+	ID      *json.RawMessage `json:"id"`
+	Result  interface{}      `json:"result,omitempty"`
+	Error   interface{}      `json:"error,omitempty"`
 }
 
 func (c *jsonCodec) ReadRequestHeader(r *rpc.Request) error {
-	c.req.reset()
-	if err := c.dec.Decode(&c.req); err != nil {
+	var raw json.RawMessage
+	if err := c.dec.Decode(&raw); err != nil {
+		c.encmutex.Lock()
+		c.enc.Encode(jsonResponse{Version: jsonrpcVersion, ID: &null, Error: errParse})
+		c.encmutex.Unlock()
 		return err
 	}
+
+	if len(raw) > 0 && raw[0] == '[' {
+		c.req.Version = jsonrpcVersion
+		c.req.Method = "JSONRPC2.Batch"
+		c.req.Params = &raw
+		c.req.ID = nil
+	} else if err := json.Unmarshal(raw, &c.req); err != nil {
+		if err.Error() == "bad request" {
+			c.encmutex.Lock()
+			c.enc.Encode(jsonResponse{Version: jsonrpcVersion, ID: &null, Error: errRequest})
+			c.encmutex.Unlock()
+		}
+		return err
+	}
+
 	r.ServiceMethod = c.req.Method
 
 	// JSON request id can be any JSON value;
@@ -79,8 +139,8 @@ func (c *jsonCodec) ReadRequestHeader(r *rpc.Request) error {
 	// internal uint64 and save JSON on the side.
 	c.mutex.Lock()
 	c.seq++
-	c.pending[c.seq] = c.req.Id
-	c.req.Id = nil
+	c.pending[c.seq] = c.req.ID
+	c.req.ID = nil
 	r.Seq = c.seq
 	c.mutex.Unlock()
 
@@ -92,15 +152,27 @@ func (c *jsonCodec) ReadRequestBody(x interface{}) error {
 		return nil
 	}
 	if c.req.Params == nil {
-		return errMissingParams
+		return errParams
 	}
 	// JSON params is array value.
 	// RPC params is struct.
 	// Unmarshal into array containing struct for now.
 	// Should think about making RPC more general.
-	var params [1]interface{}
-	params[0] = x
-	return json.Unmarshal(*c.req.Params, &params)
+
+	if c.req.Method == "JSONRPC2.Batch" {
+		arg := x.(*BatchArg)
+		// arg.srv = c.srv
+		if err := json.Unmarshal(*c.req.Params, &arg.reqs); err != nil {
+			return NewError(errParams.Code, err.Error())
+		}
+		if len(arg.reqs) == 0 {
+			return errRequest
+		}
+	} else if err := json.Unmarshal(*c.req.Params, x); err != nil {
+		return NewError(errParams.Code, err.Error())
+	}
+
+	return nil
 }
 
 var null = json.RawMessage([]byte("null"))
@@ -115,16 +187,35 @@ func (c *jsonCodec) WriteResponse(r *rpc.Response, x interface{}) error {
 	delete(c.pending, r.Seq)
 	c.mutex.Unlock()
 
+	if replies, ok := x.(*[]*json.RawMessage); r.ServiceMethod == "JSONRPC2.Batch" && ok {
+		if len(*replies) == 0 {
+			return nil
+		}
+		c.encmutex.Lock()
+		defer c.encmutex.Unlock()
+		return c.enc.Encode(replies)
+	}
+
 	if b == nil {
 		// Invalid request so no id. Use JSON null.
-		b = &null
+		return nil
 	}
-	resp := jsonResponse{Version: jsonrpcVersion, Id: b}
+	resp := jsonResponse{Version: jsonrpcVersion, ID: b}
 	if r.Error == "" {
-		resp.Result = x
+		if x == nil {
+			resp.Result = &null
+		} else {
+			resp.Result = x
+		}
+	} else if r.Error[0] == '{' && r.Error[len(r.Error)-1] == '}' {
+		raw := json.RawMessage(r.Error)
+		resp.Error = &raw
 	} else {
-		resp.Error = r.Error
+		raw := json.RawMessage(newError(r.Error).Error())
+		resp.Error = &raw
 	}
+	c.encmutex.Lock()
+	defer c.encmutex.Unlock()
 	return c.enc.Encode(resp)
 }
 
@@ -136,5 +227,5 @@ func (c *jsonCodec) Close() error {
 // ServeConn blocks, serving the connection until the client hangs up.
 // The caller typically invokes ServeConn with go-routine.
 func ServeConn(conn io.ReadWriteCloser) {
-	rpc.ServeCodec(NewJsonCodec(conn))
+	rpc.ServeCodec(NewJSONCodec(conn))
 }
