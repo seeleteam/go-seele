@@ -323,7 +323,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 			return err
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, *minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, i, *minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
 			return err
 		}
@@ -335,9 +335,9 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 }
 
 // ApplyTransaction apply a transaction and change statedb corresponding and generate its receipt
-func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
+func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
-	receipt, err := processContract(context, tx, statedb, &vm.Config{})
+	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})
 	if err != nil {
 		return nil, err
 	}

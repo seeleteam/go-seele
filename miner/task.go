@@ -36,7 +36,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
-	for _, tx := range txs {
+	for i, tx := range txs {
 		seele.TxPool().RemoveTransaction(tx.Hash)
 
 		err := tx.Validate(statedb)
@@ -45,7 +45,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 			continue
 		}
 
-		seele.BlockChain().ApplyTransaction(tx, seele.GetCoinbase(), statedb, task.header)
+		seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
 
 		task.txs = append(task.txs, tx)
 	}
