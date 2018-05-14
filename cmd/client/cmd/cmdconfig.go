@@ -19,31 +19,30 @@ const (
 
 // Request cmd request for cobra command
 type Request struct {
-	Use         string  // Use is the one-line usage message
-	Short       string  // Short is the short description shown in the 'help' output
-	Long        string  // Long is the long message shown in the 'help <this-command>' output
-	RequestType string  // RequestType is the type of param used to visit rpc api
-	Method      string  // Method is the service method name
-	Params      []Param // Params is the param args for cmd input line
+	Use              string  // Use is the one-line usage message
+	Short            string  // Short is the short description shown in the 'help' output
+	Long             string  // Long is the long message shown in the 'help <this-command>' output
+	ParamReflectType string  // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
+	Method           string  // Method is the service method name
+	Params           []Param // Params is the param args for cmd input line
 }
 
 // Param cmd request Params for cobra command
 type Param struct {
 	ReflectName  string      // ReflectName is the name of property in the param  which is used to visit rpc api
 	ParamName    string      // ParamName is the name of the argument which to store the value of the flag
-	ShortHand    string      // ShortHand is the short name of the argument which to store the value of the flag
+	ShortHand    string      // ShortHand is the short name of the argument which to store the value of the flag,when it is "", it means not use short.
 	ParamType    string      // ParamType is the type of the flag
 	DefaultValue interface{} // DefaultValue is the default value of the flag when the flag is not input
 	Usage        string      // Usage is the description of the flag
 	Required     bool        // Required is mark the flag is required or not
-	UseShort     bool        // UseShort is need to use ShortHand or not
 }
 
 // Config common cmd config
 type Config struct {
-	structMap map[string]interface{}
-	basicMap  map[string]interface{}
-	request   []Request
+	structMap map[string]interface{} // structMap is struct mapping for ParamReflectType in Request
+	basicMap  map[string]interface{} // basicMap is basic mapping for ParamReflectType in Request
+	request   []Request              // Request is collection of cmd request for cobra command
 }
 
 // NewConfig create new Config pointer

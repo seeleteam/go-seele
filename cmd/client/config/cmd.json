@@ -3,7 +3,7 @@
         "Use": "teststruct",
         "Short": "test",
         "Long": "test",
-        "RequestType": "GetBlockByHeightRequest",
+        "ParamReflectType": "GetBlockByHeightRequest",
         "Method": "seele.GetBlockByHeight",
         "Params": [
             {
@@ -13,8 +13,7 @@
                 "ParamType": "*int64",
                 "DefaultValue": -1,
                 "Usage": "height for test",
-                "Required": true,
-                "UseShort": false
+                "Required": true
             },
             {
                 "ReflectName": "FullTx",
@@ -23,8 +22,7 @@
                 "ParamType": "*bool",
                 "DefaultValue": false,
                 "Usage": "fulltx for test",
-                "Required": false,
-                "UseShort": true
+                "Required": false
             }
         ]
     },
@@ -32,7 +30,7 @@
         "Use": "testbasic",
         "Short": "test",
         "Long": "test",
-        "RequestType": "int64",
+        "ParamReflectType": "int64",
         "Method": "debug.GetBlockRlp",
         "Params": [
             {
@@ -42,8 +40,7 @@
                 "ParamType": "*int64",
                 "DefaultValue": -1,
                 "Usage": "block height",
-                "Required": true,
-                "UseShort": false
+                "Required": true
             }
         ]
     },
@@ -51,7 +48,7 @@
         "Use": "testnil",
         "Short": "test",
         "Long": "test",
-        "RequestType": "nil",
+        "ParamReflectType": "nil",
         "Method": "seele.GetBlockHeight",
         "Params": []
     }
