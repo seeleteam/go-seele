@@ -141,17 +141,27 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
-			s.commitOne(addr, object, batch)
+			if err := s.commitOne(addr, object, batch); err != nil {
+				// @todo should return error once commit failed.
+				return common.EmptyHash
+			}
 		}
 	}
 
 	return s.trie.Commit(batch)
 }
 
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
-	// @todo return error once dbErr occurs.
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
 	// @todo handle suicided state object: 1) remove account data 2) remove from statedb
-	// @todo commit the storage change.
+
+	if err := obj.commitStorageTrie(s.db, batch); err != nil {
+		return err
+	}
+
+	if obj.dirtyCode {
+		obj.serializeCode(batch)
+		obj.dirtyCode = false
+	}
 
 	if obj.dirtyAccount {
 		data := common.SerializePanic(obj.account)
@@ -159,10 +169,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 		obj.dirtyAccount = false
 	}
 
-	if obj.dirtyCode {
-		obj.serializeCode(batch)
-		obj.dirtyCode = false
-	}
+	return nil
 }
 
 func (s *Statedb) cache(addr common.Address, obj *StateObject) {
