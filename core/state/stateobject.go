@@ -150,7 +150,7 @@ func (s *StateObject) empty() bool {
 func (s *StateObject) setState(key, value common.Hash) {
 	s.cachedStorage[key] = value
 
-	if !s.dirtyStorage[key].Equal(value) {
+	if old, ok := s.dirtyStorage[key]; !ok || !old.Equal(value) {
 		s.dirtyStorage[key] = value
 	}
 }
