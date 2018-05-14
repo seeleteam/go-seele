@@ -92,7 +92,7 @@ func (c *Config) GetRequestsFromFile(filePath string) ([]*Request, error) {
 	return requests, nil
 }
 
-// ParsePointInterface return parse interface,if it is a pointer, take the value
+// ParsePointInterface return parse interface, if it is a pointer, take the value
 func ParsePointInterface(i interface{}) interface{} {
 	switch i.(type) {
 	case *string:

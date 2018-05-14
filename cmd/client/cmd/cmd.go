@@ -122,7 +122,7 @@ func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Co
 			paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, int(param.DefaultValue.(float64)), param.Usage)
 		}
 	default:
-		return errors.New("param type match miss,check or add new match in ParseCmdFlag function")
+		return errors.New("param type match miss, check or add new match in ParseCmdFlag function")
 	}
 
 	if param.Required {
