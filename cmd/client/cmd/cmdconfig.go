@@ -19,12 +19,12 @@ const (
 
 // Request cmd request for cobra command
 type Request struct {
-	Use              string  // Use is the one-line usage message
-	Short            string  // Short is the short description shown in the 'help' output
-	Long             string  // Long is the long message shown in the 'help <this-command>' output
-	ParamReflectType string  // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
-	Method           string  // Method is the service method name
-	Params           []Param // Params is the param args for cmd input line
+	Use              string   // Use is the one-line usage message
+	Short            string   // Short is the short description shown in the 'help' output
+	Long             string   // Long is the long message shown in the 'help <this-command>' output
+	ParamReflectType string   // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
+	Method           string   // Method is the service method name
+	Params           []*Param // Params is the param args for cmd input line
 }
 
 // Param cmd request Params for cobra command
@@ -42,7 +42,7 @@ type Param struct {
 type Config struct {
 	structMap map[string]interface{} // structMap is struct mapping for ParamReflectType in Request
 	basicMap  map[string]interface{} // basicMap is basic mapping for ParamReflectType in Request
-	request   []Request              // Request is collection of cmd request for cobra command
+	request   []*Request             // Request is collection of cmd request for cobra command
 }
 
 // NewConfig create new Config pointer
@@ -78,13 +78,13 @@ func (c *Config) InitBasicData() {
 }
 
 // GetRequestsFromFile get cmd request from json file
-func (c *Config) GetRequestsFromFile(filePath string) ([]Request, error) {
+func (c *Config) GetRequestsFromFile(filePath string) ([]*Request, error) {
 	buff, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var requests []Request
+	var requests []*Request
 	err = json.Unmarshal(buff, &requests)
 	if err != nil {
 		return nil, err

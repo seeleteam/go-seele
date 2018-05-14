@@ -32,7 +32,7 @@ func init() {
 }
 
 // InitCommand init cobra command by Request
-func (c *Config) InitCommand(request Request) (*cobra.Command, error) {
+func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 	ParamFlags := make(map[string]interface{})
 	_, isBasic := c.basicMap[request.ParamReflectType]
 	_, isStruct := c.structMap[request.ParamReflectType]
@@ -89,7 +89,7 @@ func (c *Config) InitCommand(request Request) (*cobra.Command, error) {
 }
 
 // ParseCmdFlag parse cmd flag
-func ParseCmdFlag(param Param, paramFlags map[string]interface{}, cmd *cobra.Command) error {
+func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Command) error {
 	switch param.ParamType {
 	case "*string":
 		if param.ShortHand == "" {
