@@ -108,7 +108,7 @@ func Test_State(t *testing.T) {
 	k1 := common.StringToHash("key1")
 	v1 := common.StringToHash("value1")
 
-	// By default, account have no states
+	// By default, no state in account.
 	assert.Equal(t, statedb.GetState(addr, k1), common.EmptyHash)
 
 	// Set k1-v1

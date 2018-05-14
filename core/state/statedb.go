@@ -152,12 +152,6 @@ func (s *Statedb) Commit(batch database.Batch) common.Hash {
 }
 
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
-	// Remove the account from state DB if suicided.
-	if obj.suicided {
-		s.trie.Delete(addr.Bytes())
-		return nil
-	}
-
 	// Commit storage change.
 	if err := obj.commitStorageTrie(s.db, batch); err != nil {
 		return err
@@ -174,6 +168,11 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 		data := common.SerializePanic(obj.account)
 		s.trie.Put(addr[:], data)
 		obj.dirtyAccount = false
+	}
+
+	// Remove the account from state DB if suicided.
+	if obj.suicided {
+		s.trie.Delete(addr.Bytes())
 	}
 
 	return nil
