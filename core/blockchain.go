@@ -10,6 +10,7 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -18,6 +19,11 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/miner/pow"
+)
+
+var (
+	// limit block should not be ahead of 10 seconds of current time
+	futureBlockLimit int64 = 10
 )
 
 var (
@@ -41,6 +47,10 @@ var (
 	// does not match the state root hash in block header.
 	ErrBlockStateHashMismatch = errors.New("block state hash mismatch")
 
+	// ErrBlockReceiptHashMismatch is returned when the calculated receipts hash of block
+	// does not match the receipts root hash in block header.
+	ErrBlockReceiptHashMismatch = errors.New("block receipts hash mismatch")
+
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
 
@@ -50,6 +60,18 @@ var (
 	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
 	// the creator address in the block header.
 	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
+
+	// ErrBlockCreateTimeNull is returned when block create time is nil
+	ErrBlockCreateTimeNull = errors.New("block must have create time")
+
+	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
+	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
+
+	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
+	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
+
+	// ErrBlockDifficultInvalid is returned when block difficult is invalid
+	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
 
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
@@ -178,10 +200,17 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 
 	// Process the txs in the block and check the state root hash.
 	var blockStatedb *state.Statedb
-	if blockStatedb, err = bc.applyTxs(block, preBlock); err != nil {
+	var receipts []*types.Receipt
+	if blockStatedb, receipts, err = bc.applyTxs(block, preBlock); err != nil {
 		return err
 	}
 
+	// Validate receipts root hash.
+	if receiptsRootHash := types.ReceiptMerkleRootHash(receipts); !receiptsRootHash.Equal(block.Header.ReceiptHash) {
+		return ErrBlockReceiptHashMismatch
+	}
+
+	// Validate state root hash.
 	batch := bc.accountStateDB.NewBatch()
 	committed := false
 	defer func() {
@@ -191,7 +220,9 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}()
 
 	var stateRootHash common.Hash
-	stateRootHash = blockStatedb.Commit(batch)
+	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
+		return err
+	}
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
@@ -229,6 +260,10 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
+	if err = bc.bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
+		return err
+	}
+
 	// FIXME: write the block and update the account state in a batch.
 	// Otherwise, restore the account state during service startup.
 	if err = batch.Commit(); err != nil {
@@ -254,6 +289,24 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockInvalidHeight
 	}
 
+	if block.Header.CreateTimestamp == nil {
+		return ErrBlockCreateTimeNull
+	}
+
+	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
+	}
+
+	future := new(big.Int).SetInt64(time.Now().Unix() + futureBlockLimit)
+	if block.Header.CreateTimestamp.Cmp(future) > 0 {
+		return ErrBlockCreateTimeInFuture
+	}
+
+	difficult := pow.GetDifficult(block.Header.CreateTimestamp.Uint64(), preBlock.Header)
+	if difficult == nil || difficult.Cmp(block.Header.Difficulty) != 0 {
+		return ErrBlockDifficultInvalid
+	}
+
 	return bc.engine.ValidateHeader(block.Header)
 }
 
@@ -264,22 +317,23 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 
 // applyTxs processes the txs in the specified block and returns the new state DB of the block.
 // This method supposes the specified block is validated.
-func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
+func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, []*types.Receipt, error) {
 	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	statedb, err := state.NewStatedb(preBlock.Header.StateHash, bc.accountStateDB)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header); err != nil {
-		return nil, err
+	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return statedb, nil
+	return statedb, receipts, nil
 }
 
 func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
@@ -311,7 +365,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	return minerRewardTx, nil
 }
 
-func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) error {
+func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
 	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
@@ -320,24 +374,24 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	// process other txs
 	for i, tx := range txs {
 		if err := tx.Validate(statedb); err != nil {
-			return err
+			return nil, err
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, *minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, i, *minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		receipts[i] = receipt
 	}
 
-	return nil
+	return receipts, nil
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
-func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
+func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
-	receipt, err := processContract(context, tx, statedb, &vm.Config{})
+	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})
 	if err != nil {
 		return nil, err
 	}

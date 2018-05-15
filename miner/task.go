@@ -19,8 +19,9 @@ import (
 
 // Task is a mining work for engine, containing block header, transactions, and transaction receipts.
 type Task struct {
-	header *types.BlockHeader
-	txs    []*types.Transaction
+	header   *types.BlockHeader
+	txs      []*types.Transaction
+	receipts []*types.Receipt
 
 	createdAt time.Time
 }
@@ -36,7 +37,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
-	for _, tx := range txs {
+	for i, tx := range txs {
 		seele.TxPool().RemoveTransaction(tx.Hash)
 
 		err := tx.Validate(statedb)
@@ -45,14 +46,23 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 			continue
 		}
 
-		seele.BlockChain().ApplyTransaction(tx, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		if err != nil {
+			log.Error("apply tx failed, %s", err.Error())
+			continue
+		}
 
 		task.txs = append(task.txs, tx)
+		task.receipts = append(task.receipts, receipt)
 	}
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
 
-	root := statedb.Commit(nil)
+	root, err := statedb.Commit(nil)
+	if err != nil {
+		return err
+	}
+	
 	task.header.StateHash = root
 
 	return nil
@@ -60,7 +70,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 
 // generateBlock builds a block from task
 func (task *Task) generateBlock() *types.Block {
-	return types.NewBlock(task.header, task.txs)
+	return types.NewBlock(task.header, task.txs, task.receipts)
 }
 
 // Result is the result mined by engine. It contains the raw task and mined block.

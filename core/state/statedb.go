@@ -8,7 +8,6 @@ package state
 import (
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
@@ -32,10 +31,8 @@ type Statedb struct {
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
 
-	curTxHash    common.Hash
-	curBlockHash common.Hash
-	curTxIndex   uint
-	curLogs      []*types.Log
+	curTxIndex uint
+	curLogs    []*types.Log
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -71,7 +68,7 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 		}
 	}
 
-	cpyTrie, err := s.trie.ShallowCopyTrie()
+	cpyTrie, err := s.trie.ShallowCopy()
 	if err != nil {
 		return nil, err
 	}
@@ -138,36 +135,50 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 }
 
 // Commit commits memory state objects to db
-func (s *Statedb) Commit(batch database.Batch) common.Hash {
+func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
+	if s.dbErr != nil {
+		return common.EmptyHash, s.dbErr
+	}
+
 	for _, key := range s.stateObjects.Keys() {
 		value, ok := s.stateObjects.Peek(key)
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
-			s.commitOne(addr, object, batch)
+			if err := s.commitOne(addr, object, batch); err != nil {
+				return common.EmptyHash, err
+			}
 		}
 	}
 
-	return s.trie.Commit(batch)
+	return s.trie.Commit(batch), nil
 }
 
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) {
-	// @todo return error once dbErr occurs.
-	// @todo handle suicided state object: 1) remove account data 2) remove from statedb
-
-	if obj.dirtyAccount {
-		data, err := rlp.EncodeToBytes(obj.account)
-		if err != nil {
-			panic(err) // must encode because the account object is a deterministic struct
-		}
-		s.trie.Put(addr[:], data)
-		obj.dirtyAccount = false
+func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
+	// Commit storage change.
+	if err := obj.commitStorageTrie(s.db, batch); err != nil {
+		return err
 	}
 
+	// Commit code change.
 	if obj.dirtyCode {
 		obj.serializeCode(batch)
 		obj.dirtyCode = false
 	}
+
+	// Commit account info change.
+	if obj.dirtyAccount {
+		data := common.SerializePanic(obj.account)
+		s.trie.Put(addr[:], data)
+		obj.dirtyAccount = false
+	}
+
+	// Remove the account from state DB if suicided.
+	if obj.suicided {
+		s.trie.Delete(addr.Bytes())
+	}
+
+	return nil
 }
 
 func (s *Statedb) cache(addr common.Address, obj *StateObject) {
@@ -208,25 +219,21 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 
-	if err := rlp.DecodeBytes(val, &object.account); err != nil {
+	if err := common.Deserialize(val, &object.account); err != nil {
 		return nil
 	}
 	s.cache(addr, object)
 	return object
 }
 
-// Prepare sets the current transaction hash and index and block hash which is
+// Prepare sets the current transaction index which is
 // used when the EVM emits new state logs.
-// @todo should be invoked before tx processing.
-func (s *Statedb) Prepare(blockHash, txHash common.Hash, txIndex uint) {
-	s.curBlockHash = blockHash
-	s.curTxHash = txHash
-	s.curTxIndex = txIndex
+func (s *Statedb) Prepare(txIndex int) {
+	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 }
 
 // GetCurrentLogs returns the current transaction logs.
-// @todo add logs to receipt after tx processing.
 func (s *Statedb) GetCurrentLogs() []*types.Log {
 	return s.curLogs
 }

@@ -62,7 +62,8 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 }
 
 // processContract process the specified contract tx and return the receipt.
-func processContract(context *vm.Context, tx *types.Transaction, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
+func processContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
+	statedb.Prepare(txIndex)
 	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
 
 	var err error
@@ -81,9 +82,14 @@ func processContract(context *vm.Context, tx *types.Transaction, statedb *state.
 		return nil, err
 	}
 
-	receipt.PostState = statedb.Commit(nil)
+	if receipt.PostState, err = statedb.Commit(nil); err != nil {
+		return nil, err
+	}
 
-	// @todo add logs to receipt, which depend on the state DB implementation.
+	receipt.Logs = statedb.GetCurrentLogs()
+	if receipt.Logs == nil {
+		receipt.Logs = make([]*types.Log, 0)
+	}
 
 	return receipt, nil
 }

@@ -84,3 +84,18 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 
 // Big converts address to a big int.
 func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
+
+func (id Address) MarshalText() ([]byte, error) {
+	str := id.ToHex()
+	return []byte(str), nil
+}
+
+func (id *Address) UnmarshalText(json []byte) error {
+	a, err := HexToAddress(string(json))
+	if err != nil {
+		return err
+	}
+
+	copy(id[:], a[:])
+	return nil
+}
