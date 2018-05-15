@@ -209,6 +209,12 @@
 			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
+			"checksumSHA1": "an5RM8wjgPPloolUUYkvEncbHu4=",
+			"path": "github.com/rcrowley/go-metrics",
+			"revision": "e2704e165165ec55d062f5919b4b29494e9fa790",
+			"revisionTime": "2018-05-03T17:46:38Z"
+		},
+		{
 			"checksumSHA1": "92dUWJPlL97eTKBNibbY8vPVxWY=",
 			"path": "github.com/rs/cors",
 			"revision": "12972ae4e7775151d0d53aaad277be85133ce445",

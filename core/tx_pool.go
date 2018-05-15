@@ -140,5 +140,4 @@ func (pool *TransactionPool) GetProcessableTransactionsCount() int {
 
 // Stop terminates the transaction pool.
 func (pool *TransactionPool) Stop() {
-	// TODO remove event listeners
 }

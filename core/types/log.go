@@ -10,7 +10,6 @@ import (
 )
 
 // Log represents the contract execution log.
-// @todo just copied from ETH to fix build error.
 type Log struct {
 	// Consensus fields:
 	// address of the contract that generated the event
