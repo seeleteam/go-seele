@@ -158,6 +158,8 @@ func (c *jsonCodec) ReadRequestBody(x interface{}) error {
 	// RPC params is struct.
 	// Unmarshal into array containing struct for now.
 	// Should think about making RPC more general.
+	var params [1]interface{}
+	params[0] = x
 
 	if c.req.Method == "JSONRPC2.Batch" {
 		arg := x.(*BatchArg)
@@ -168,7 +170,7 @@ func (c *jsonCodec) ReadRequestBody(x interface{}) error {
 		if len(arg.reqs) == 0 {
 			return errRequest
 		}
-	} else if err := json.Unmarshal(*c.req.Params, x); err != nil {
+	} else if err := json.Unmarshal(*c.req.Params, &params); err != nil {
 		return NewError(errParams.Code, err.Error())
 	}
 
@@ -198,7 +200,7 @@ func (c *jsonCodec) WriteResponse(r *rpc.Response, x interface{}) error {
 
 	if b == nil {
 		// Invalid request so no id. Use JSON null.
-		return nil
+		b = &null
 	}
 	resp := jsonResponse{Version: jsonrpcVersion, ID: b}
 	if r.Error == "" {

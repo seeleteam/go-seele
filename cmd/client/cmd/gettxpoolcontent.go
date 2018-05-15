@@ -8,8 +8,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/rpc/jsonrpc"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ var gettxpoolcontentCmd = &cobra.Command{
 	Long: `For example:
 	client.exe gettxpoolcontent`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -44,10 +44,10 @@ func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
 }
 
 type clientRequest struct {
-	Version string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params,omitempty"`
-	ID      *uint64     `json:"id,omitempty"`
+	Version string         `json:"jsonrpc"`
+	Method  string         `json:"method"`
+	Params  [1]interface{} `json:"params,omitempty"`
+	ID      *uint64        `json:"id,omitempty"`
 }
 
 func (c *clientCodec) WriteRequest(r *rpc.Request, param interface{}) error {
@@ -97,7 +97,7 @@ func (c *clientCodec) WriteRequest(r *rpc.Request, param interface{}) error {
 	}
 	req.Version = jsonrpcVersion
 	req.Method = r.ServiceMethod
-	req.Params = param
+	req.Params[0] = param
 	if err := c.enc.Encode(&req); err != nil {
 		return NewError(errInternal.Code, err.Error())
 	}
