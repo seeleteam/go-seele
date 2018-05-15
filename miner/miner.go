@@ -76,7 +76,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		hashrate:             metrics.NewMeter(),
 	}
 
-	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
+	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
 
 	return miner
@@ -131,8 +131,8 @@ func (miner *Miner) IsMining() bool {
 	return atomic.LoadInt32(&miner.mining) == 1
 }
 
-// downloadEventCallback handles events which indicate the downloader state
-func (miner *Miner) downloadEventCallback(e event.Event) {
+// downloaderEventCallback handles events which indicate the downloader state
+func (miner *Miner) downloaderEventCallback(e event.Event) {
 	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
 		return
 	}

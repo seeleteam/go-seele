@@ -68,7 +68,7 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 		}
 	}
 
-	cpyTrie, err := s.trie.ShallowCopyTrie()
+	cpyTrie, err := s.trie.ShallowCopy()
 	if err != nil {
 		return nil, err
 	}
