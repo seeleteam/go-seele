@@ -28,13 +28,23 @@ const genesisBlockHeight = uint64(0)
 
 // Genesis represents the genesis block in the blockchain.
 type Genesis struct {
-	header   *types.BlockHeader
-	accounts map[common.Address]*big.Int
+	header *types.BlockHeader
+	info   GenesisInfo
+}
+
+// GenesisInfo genesis info for generate genesis block, it could be used for initialize account balance
+type GenesisInfo struct {
+	// Accounts accounts info for genesis block used for test
+	// map key is account address -> value is account balance
+	Accounts map[common.Address]int64 `json:"accounts"`
+
+	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is choose by total difficult
+	Difficult int64 `json:"difficult"`
 }
 
 // GetGenesis get genesis block according to accounts' balance
-func GetGenesis(accounts map[common.Address]*big.Int) *Genesis {
-	statedb, err := getStateDB(accounts)
+func GetGenesis(info GenesisInfo) *Genesis {
+	statedb, err := getStateDB(info.Accounts)
 	if err != nil {
 		panic(err)
 	}
@@ -46,12 +56,12 @@ func GetGenesis(accounts map[common.Address]*big.Int) *Genesis {
 			Creator:           common.Address{},
 			StateHash:         stateRootHash,
 			TxHash:            types.MerkleRootHash(nil),
-			Difficulty:        big.NewInt(1),
+			Difficulty:        big.NewInt(info.Difficult),
 			Height:            genesisBlockHeight,
 			CreateTimestamp:   big.NewInt(0),
 			Nonce:             1,
 		},
-		accounts: accounts,
+		info: info,
 	}
 }
 
@@ -79,7 +89,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 // store atomically stores the genesis block in the blockchain store.
 func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB database.Database) error {
-	statedb, err := getStateDB(genesis.accounts)
+	statedb, err := getStateDB(genesis.info.Accounts)
 	if err != nil {
 		return err
 	}
@@ -93,7 +103,7 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
 }
 
-func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
+func getStateDB(accounts map[common.Address]int64) (*state.Statedb, error) {
 	statedb, err := state.NewStatedb(common.EmptyHash, nil)
 	if err != nil {
 		return nil, err
@@ -102,7 +112,7 @@ func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
 	for addr, amount := range accounts {
 		stateObj := statedb.GetOrNewStateObject(addr)
 		stateObj.SetNonce(0)
-		stateObj.SetAmount(amount)
+		stateObj.SetAmount(big.NewInt(amount))
 	}
 
 	return statedb, nil

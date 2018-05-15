@@ -14,14 +14,14 @@ import (
 
 // BlockHeader represents the header of a block in the blockchain.
 type BlockHeader struct {
-	PreviousBlockHash common.Hash // PreviousBlockHash represents the hash of the parent block 
+	PreviousBlockHash common.Hash    // PreviousBlockHash represents the hash of the parent block
 	Creator           common.Address // Creator is the coinbase of the miner which mined the block
-	StateHash         common.Hash // StateHash is the root hash of the state trie
-	TxHash            common.Hash // TxHash is the root hash of the transaction trie
-	Difficulty        *big.Int // Difficulty is the difficulty of the block
-	Height            uint64 // Height is the number of the block
-	CreateTimestamp   *big.Int // CreateTimestamp is the timestamp when the block is created
-	Nonce             uint64 // Nonce is the pow of the block
+	StateHash         common.Hash    // StateHash is the root hash of the state trie
+	TxHash            common.Hash    // TxHash is the root hash of the transaction trie
+	Difficulty        *big.Int       // Difficulty is the difficulty of the block
+	Height            uint64         // Height is the number of the block
+	CreateTimestamp   *big.Int       // CreateTimestamp is the unix time when the block is created
+	Nonce             uint64         // Nonce is the pow of the block
 }
 
 // Clone returns a clone of the block header.
@@ -46,8 +46,8 @@ func (header *BlockHeader) Hash() common.Hash {
 
 // Block represents a block in the blockchain.
 type Block struct {
-	HeaderHash   common.Hash // HeaderHash is the hash of the RLP encoded header bytes
-	Header       *BlockHeader // Header is the block header
+	HeaderHash   common.Hash    // HeaderHash is the hash of the RLP encoded header bytes
+	Header       *BlockHeader   // Header is the block header
 	Transactions []*Transaction // Transactions is the block payload
 }
 

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -18,6 +19,10 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/miner/pow"
+)
+
+var (
+	futureBlockLimit int64 = 10
 )
 
 var (
@@ -50,6 +55,18 @@ var (
 	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
 	// the creator address in the block header.
 	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
+
+	// ErrBlockCreateTimeNull is returned when block create time is nil
+	ErrBlockCreateTimeNull = errors.New("block must have create time")
+
+	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
+	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
+
+	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
+	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
+
+	// ErrBlockDifficultInvalid is returned when block difficult is invalid
+	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
 
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
@@ -252,6 +269,24 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 
 	if block.Header.Height != preBlock.Header.Height+1 {
 		return ErrBlockInvalidHeight
+	}
+
+	if block.Header.CreateTimestamp == nil {
+		return ErrBlockCreateTimeNull
+	}
+
+	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
+	}
+
+	future := new(big.Int).SetInt64(time.Now().Unix() + futureBlockLimit)
+	if block.Header.CreateTimestamp.Cmp(future) > 0 {
+		return ErrBlockCreateTimeInFuture
+	}
+
+	difficult := pow.GetDifficult(block.Header.CreateTimestamp.Uint64(), preBlock.Header)
+	if difficult == nil || difficult.Cmp(block.Header.Difficulty) != 0 {
+		return ErrBlockDifficultInvalid
 	}
 
 	return bc.engine.ValidateHeader(block.Header)
