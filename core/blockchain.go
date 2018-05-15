@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 )
 

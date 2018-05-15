@@ -32,7 +32,7 @@ type Genesis struct {
 	info   GenesisInfo
 }
 
-// GenesisInfo genesis info for generate genesis block, it could be used for initialize account balance
+// GenesisInfo genesis info for generating genesis block, it could be used for initializing account balance
 type GenesisInfo struct {
 	// Accounts accounts info for genesis block used for test
 	// map key is account address -> value is account balance
@@ -44,6 +44,10 @@ type GenesisInfo struct {
 
 // GetGenesis get genesis block according to accounts' balance
 func GetGenesis(info GenesisInfo) *Genesis {
+	if info.Difficult == 0 {
+		info.Difficult = 1
+	}
+
 	statedb, err := getStateDB(info.Accounts)
 	if err != nil {
 		panic(err)
@@ -63,6 +67,16 @@ func GetGenesis(info GenesisInfo) *Genesis {
 		},
 		info: info,
 	}
+}
+
+// only used for test
+func GetDefaultGenesis(accounts map[common.Address]int64) *Genesis {
+	info := GenesisInfo{
+		Accounts:accounts,
+		Difficult:1,
+	}
+
+	return GetGenesis(info)
 }
 
 // InitializeAndValidate writes the genesis block in the blockchain store if unavailable.
