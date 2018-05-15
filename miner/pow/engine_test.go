@@ -6,10 +6,11 @@
 package pow
 
 import (
-	"testing"
 	"math/big"
-	"github.com/seeleteam/go-seele/core/types"
+	"testing"
+
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 func Test_GetDifficult(t *testing.T) {
@@ -32,9 +33,9 @@ func Test_GetDifficult(t *testing.T) {
 
 func getDiff(interval uint64, diff *big.Int) *big.Int {
 	header := &types.BlockHeader{
-		CreateTimestamp:big.NewInt(0),
-		Difficulty:diff,
-		Height: 10,
+		CreateTimestamp: big.NewInt(0),
+		Difficulty:      diff,
+		Height:          10,
 	}
 
 	return GetDifficult(interval, header)
