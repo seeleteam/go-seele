@@ -107,7 +107,7 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 func newTestBlockchain(db database.Database) *core.Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := core.GetGenesis(nil)
+	genesis := core.GetDefaultGenesis(nil)
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}

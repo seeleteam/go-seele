@@ -6,8 +6,6 @@
 package seele
 
 import (
-	"math/big"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 )
@@ -20,6 +18,5 @@ type Config struct {
 
 	Coinbase common.Address
 
-	// genesis accounts balance info for test
-	GenesisAccounts map[common.Address]*big.Int
+	GenesisConfig core.GenesisInfo
 }

@@ -8,10 +8,10 @@ package cmd
 import (
 	"encoding/json"
 	"io/ioutil"
-	"math/big"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
@@ -61,13 +61,6 @@ type Config struct {
 	HttpServer HttpServer
 }
 
-// GenesisInfo genesis info for generate genesis block, it could be used for initialize account balance
-type GenesisInfo struct {
-	// accounts info for genesis block used for test
-	// map key is account address -> value is account balance
-	Accounts map[string]int64
-}
-
 // HttpServer config for http server
 type HttpServer struct {
 	// The HTTPAddr is the address of HTTP rpc service
@@ -95,8 +88,8 @@ func GetConfigFromFile(filepath string) (Config, error) {
 }
 
 // GetGenesisInfoFromFile get genesis info from a specific file
-func GetGenesisInfoFromFile(filepath string) (GenesisInfo, error) {
-	var info GenesisInfo
+func GetGenesisInfoFromFile(filepath string) (core.GenesisInfo, error) {
+	var info core.GenesisInfo
 	buff, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return info, err
@@ -104,27 +97,6 @@ func GetGenesisInfoFromFile(filepath string) (GenesisInfo, error) {
 
 	err = json.Unmarshal(buff, &info)
 	return info, err
-}
-
-// GetGenesisAccountsFromFile get genesis accounts from a specific file
-func GetGenesisAccountsFromFile(filepath string) (map[common.Address]*big.Int, error) {
-	info, err := GetGenesisInfoFromFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	accounts := make(map[common.Address]*big.Int)
-	for k, v := range info.Accounts {
-		addr, err := common.HexToAddress(k)
-		if err != nil {
-			return nil, err
-		}
-
-		balance := big.NewInt(v)
-		accounts[addr] = balance
-	}
-
-	return accounts, nil
 }
 
 // LoadConfigFromFile gets node config from the given file
@@ -148,11 +120,11 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	}
 
 	if genesisConfigFile != "" {
-		accounts, err := GetGenesisAccountsFromFile(genesisConfigFile)
+		info, err := GetGenesisInfoFromFile(genesisConfigFile)
 		if err != nil {
 			return nil, err
 		}
-		nodeConfig.SeeleConfig.GenesisAccounts = accounts
+		nodeConfig.SeeleConfig.GenesisConfig = info
 	}
 
 	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)

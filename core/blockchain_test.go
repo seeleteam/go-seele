@@ -49,12 +49,12 @@ func newTestAccount(amount, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
-	accounts := make(map[common.Address]*big.Int)
+	accounts := make(map[common.Address]int64)
 	for _, account := range testGenesisAccounts {
-		accounts[account.addr] = account.data.Amount
+		accounts[account.addr] = account.data.Amount.Int64()
 	}
 
-	return GetGenesis(accounts)
+	return GetDefaultGenesis(accounts)
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
