@@ -92,35 +92,15 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Command) error {
 	switch param.ParamType {
 	case "*string":
-		if param.ShortHand == "" {
-			paramFlags[param.ReflectName] = cmd.Flags().String(param.ParamName, param.DefaultValue.(string), param.Usage)
-		} else {
-			paramFlags[param.ReflectName] = cmd.Flags().StringP(param.ParamName, param.ShortHand, param.DefaultValue.(string), param.Usage)
-		}
+		paramFlags[param.ReflectName] = cmd.Flags().StringP(param.ParamName, param.ShortHand, param.DefaultValue.(string), param.Usage)
 	case "*bool":
-		if param.ShortHand == "" {
-			paramFlags[param.ReflectName] = cmd.Flags().Bool(param.ParamName, param.DefaultValue.(bool), param.Usage)
-		} else {
-			paramFlags[param.ReflectName] = cmd.Flags().BoolP(param.ParamName, param.ShortHand, param.DefaultValue.(bool), param.Usage)
-		}
+		paramFlags[param.ReflectName] = cmd.Flags().BoolP(param.ParamName, param.ShortHand, param.DefaultValue.(bool), param.Usage)
 	case "*int64":
-		if param.ShortHand == "" {
-			paramFlags[param.ReflectName] = cmd.Flags().Int64(param.ParamName, int64(param.DefaultValue.(float64)), param.Usage)
-		} else {
-			paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.ParamName, param.ShortHand, int64(param.DefaultValue.(float64)), param.Usage)
-		}
+		paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.ParamName, param.ShortHand, int64(param.DefaultValue.(float64)), param.Usage)
 	case "*uint64":
-		if param.ShortHand == "" {
-			paramFlags[param.ReflectName] = cmd.Flags().Uint64(param.ParamName, uint64(param.DefaultValue.(float64)), param.Usage)
-		} else {
-			paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.ParamName, param.ShortHand, uint64(param.DefaultValue.(float64)), param.Usage)
-		}
+		paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.ParamName, param.ShortHand, uint64(param.DefaultValue.(float64)), param.Usage)
 	case "*int":
-		if param.ShortHand == "" {
-			paramFlags[param.ReflectName] = cmd.Flags().Int(param.ParamName, int(param.DefaultValue.(float64)), param.Usage)
-		} else {
-			paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, int(param.DefaultValue.(float64)), param.Usage)
-		}
+		paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, int(param.DefaultValue.(float64)), param.Usage)
 	default:
 		return errors.New("param type match miss, check or add new match in ParseCmdFlag function")
 	}
