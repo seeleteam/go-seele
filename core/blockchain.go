@@ -219,7 +219,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		}
 	}()
 
-	if stateRootHash := blockStatedb.Commit(batch); !stateRootHash.Equal(block.Header.StateHash) {
+	var stateRootHash common.Hash
+	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
+		return err
+	}
+
+	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
 	}
 
