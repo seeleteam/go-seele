@@ -82,7 +82,10 @@ func processContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 		return nil, err
 	}
 
-	receipt.PostState = statedb.Commit(nil)
+	if receipt.PostState, err = statedb.Commit(nil); err != nil {
+		return nil, err
+	}
+
 	receipt.Logs = statedb.GetCurrentLogs()
 	if receipt.Logs == nil {
 		receipt.Logs = make([]*types.Log, 0)

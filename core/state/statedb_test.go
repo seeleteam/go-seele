@@ -76,14 +76,8 @@ func teststatedbaddbalance(root common.Hash, db database.Database) common.Hash {
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), 1)
 	}
 
-	batch := db.NewBatch()
-	hash := statedb.Commit(batch)
-	batch.Commit()
+	hash, statedb := commitAndNewStateDB(statedb)
 
-	statedb, err = NewStatedb(hash, db)
-	if err != nil {
-		panic(err)
-	}
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
 		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
@@ -109,14 +103,8 @@ func teststatedbsubbalance(root common.Hash, db database.Database) common.Hash {
 		stateobject.SetNonce(nonce + 1)
 	}
 
-	batch := db.NewBatch()
-	hash := statedb.Commit(batch)
-	batch.Commit()
+	hash, statedb := commitAndNewStateDB(statedb)
 
-	statedb, err = NewStatedb(hash, db)
-	if err != nil {
-		panic(err)
-	}
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
 		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
@@ -142,14 +130,8 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
 
-	batch := db.NewBatch()
-	hash := statedb.Commit(batch)
-	batch.Commit()
-
-	statedb, err = NewStatedb(hash, db)
-	if err != nil {
-		panic(err)
-	}
+	hash, statedb := commitAndNewStateDB(statedb)
+	
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
 		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
