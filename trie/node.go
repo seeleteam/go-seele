@@ -6,8 +6,8 @@
 package trie
 
 const (
-	// numBranchNodes number children in branch node
-	numBranchNodes int = 17 // for 0-f branches + value node; reduce the height of tree for performance
+	// numBranchChildren number children in branch node
+	numBranchChildren int = 17 // for 0-f branches + value node; reduce the height of tree for performance
 )
 
 // Noder interface for node
@@ -22,11 +22,11 @@ type Node struct {
 	dirty bool   // is the node dirty,need to write to database
 }
 
-// ExtendNode is extend node struct
-type ExtendNode struct {
+// ExtensionNode is extension node struct
+type ExtensionNode struct {
 	Node
 	Key      []byte // for shared nibbles
-	Nextnode noder  // for next node
+	NextNode noder  // for next node
 }
 
 // LeafNode is leaf node struct
@@ -39,10 +39,10 @@ type LeafNode struct {
 // BranchNode is node for branch
 type BranchNode struct {
 	Node
-	Children [numBranchNodes]noder
+	Children [numBranchChildren]noder
 }
 
-// hashNode is just used by nextnode of ExtendNode
+// hashNode is just used by NextNode of ExtensionNode
 // when it does not load real node from database
 type hashNode []byte
 

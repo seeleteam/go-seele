@@ -13,7 +13,7 @@ var (
 	tailReward int64 = 30
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
-	blockNumberPerEra uint64 = 525000
+	blockNumberPerEra uint64 = 525000 * 4
 )
 
 // GetReward get reward amount according to block height

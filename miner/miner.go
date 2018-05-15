@@ -20,6 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
@@ -76,7 +77,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		hashrate:             metrics.NewMeter(),
 	}
 
-	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloadEventCallback)
+	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
 
 	return miner
@@ -131,8 +132,8 @@ func (miner *Miner) IsMining() bool {
 	return atomic.LoadInt32(&miner.mining) == 1
 }
 
-// downloadEventCallback handles events which indicate the downloader state
-func (miner *Miner) downloadEventCallback(e event.Event) {
+// downloaderEventCallback handles events which indicate the downloader state
+func (miner *Miner) downloaderEventCallback(e event.Event) {
 	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
 		return
 	}
@@ -207,12 +208,13 @@ func (miner *Miner) prepareNewBlock() {
 	}
 
 	height := parent.Header.Height
+	difficult := pow.GetDifficult(uint64(timestamp), parent.Header)
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.HeaderHash,
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        big.NewInt(10000000), //TODO find a way to decide difficulty
+		Difficulty:        difficult,
 	}
 
 	miner.current = &Task{
@@ -239,7 +241,7 @@ func (miner *Miner) prepareNewBlock() {
 		return
 	}
 
-	miner.log.Info("committing a new task to engine, height=%d", header.Height)
+	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
 	miner.commitTask(miner.current)
 }
 

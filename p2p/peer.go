@@ -44,7 +44,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 			offset:   offset,
 			Protocol: p,
 			in:       make(chan Message, 1),
-			close:closed,
+			close:    closed,
 		}
 
 		protoMap[p.cap().String()] = protoRW
@@ -87,8 +87,8 @@ errLoop:
 		}
 	}
 
-	p.close()
 	p.wg.Wait()
+	p.close()
 	p.log.Info("p2p.peer.run quit. err=%s", err)
 
 	return err
@@ -201,7 +201,7 @@ type protocolRW struct {
 	offset uint16
 	in     chan Message // read message channel, message will be transferred here when it is a protocol message
 	rw     MsgReadWriter
-	close chan struct{}
+	close  chan struct{}
 }
 
 func (rw *protocolRW) WriteMsg(msg Message) (err error) {

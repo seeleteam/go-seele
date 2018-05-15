@@ -48,4 +48,7 @@ type BlockchainStore interface {
 
 	// GetBlockByHeight retrieves the block for the specified block height.
 	GetBlockByHeight(height uint64) (*types.Block, error)
+
+	// PutReceipts serializes given receipts for the specified block hash.
+	PutReceipts(hash common.Hash, receipts []*types.Receipt) error
 }

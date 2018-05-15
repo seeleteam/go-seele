@@ -23,7 +23,7 @@ func newTestBlockHeader(t *testing.T) *BlockHeader {
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
 		Height:            1,
-		CreateTimestamp:   big.NewInt(time.Now().UnixNano()),
+		CreateTimestamp:   big.NewInt(time.Now().Unix()),
 		Nonce:             1,
 	}
 }
@@ -73,7 +73,7 @@ func Test_Block_FindTransaction(t *testing.T) {
 		newTestTx(t, 30, 3, true),
 	}
 
-	block := NewBlock(header, txs)
+	block := NewBlock(header, txs, nil)
 
 	assert.Equal(t, block.FindTransaction(txs[0].Hash), txs[0])
 	assert.Equal(t, block.FindTransaction(txs[1].Hash), txs[1])

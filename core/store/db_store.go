@@ -18,10 +18,11 @@ import (
 var (
 	keyHeadBlockHash = []byte("HeadBlockHash")
 
-	keyPrefixHash   = []byte("H")
-	keyPrefixHeader = []byte("h")
-	keyPrefixTD     = []byte("t")
-	keyPrefixBody   = []byte("b")
+	keyPrefixHash     = []byte("H")
+	keyPrefixHeader   = []byte("h")
+	keyPrefixTD       = []byte("t")
+	keyPrefixBody     = []byte("b")
+	keyPrefixReceipts = []byte("r")
 )
 
 // blockBody represents the payload of a block
@@ -41,6 +42,7 @@ type blockchainDatabase struct {
 //   3) keyPrefixHeader + hash => header
 //   4) keyPrefixTD + hash => total difficulty (td for short)
 //   5) keyPrefixBody + hash => block body (transactions)
+//   6) keyPrefixReceipts + hash => block receipts
 func NewBlockchainDatabase(db database.Database) BlockchainStore {
 	return &blockchainDatabase{db}
 }
@@ -49,6 +51,7 @@ func heightToHashKey(height uint64) []byte { return append(keyPrefixHash, encode
 func hashToHeaderKey(hash []byte) []byte   { return append(keyPrefixHeader, hash...) }
 func hashToTDKey(hash []byte) []byte       { return append(keyPrefixTD, hash...) }
 func hashToBodyKey(hash []byte) []byte     { return append(keyPrefixBody, hash...) }
+func hashToReceiptsKey(hash []byte) []byte { return append(keyPrefixReceipts, hash...) }
 
 // GetBlockHash gets the hash of the block with the specified height in the blockchain database
 func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error) {
@@ -238,4 +241,16 @@ func (store *blockchainDatabase) GetBlockByHeight(height uint64) (*types.Block, 
 		return nil, err
 	}
 	return block, nil
+}
+
+// PutReceipts serializes given receipts for the specified block hash.
+func (store *blockchainDatabase) PutReceipts(hash common.Hash, receipts []*types.Receipt) error {
+	encodedBytes, err := common.Serialize(receipts)
+	if err != nil {
+		return err
+	}
+
+	key := hashToReceiptsKey(hash.Bytes())
+
+	return store.db.Put(key, encodedBytes)
 }
