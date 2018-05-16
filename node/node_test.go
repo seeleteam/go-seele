@@ -19,9 +19,11 @@ var (
 
 func testNodeConfig() *Config {
 	return &Config{
-		Name:    "test node",
-		Version: "test version",
-		P2P:     p2p.Config{PrivateKey: testNodeKey},
+		Name:      "test node",
+		Version:   "test version",
+		WSAddr:    "127.0.0.1:8080",
+		WSPattern: "/ws",
+		P2P:       p2p.Config{PrivateKey: testNodeKey},
 	}
 }
 
