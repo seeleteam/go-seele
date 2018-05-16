@@ -43,8 +43,9 @@ func GetReward(blockHeight uint64) *big.Int {
 	var result *big.Int
 	if era < len(rewardTableCoin) {
 		result = rewardTableCoin[era]
+	} else {
+		result = tailRewardCoin
 	}
 
-	result = tailRewardCoin
 	return big.NewInt(0).Set(result)
 }
