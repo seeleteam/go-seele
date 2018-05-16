@@ -9,8 +9,13 @@ Official golang implementation of the Seele.
 
 Building Seele project requires both a Go (version 1.7 or later) and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
 
+- linux & mac
 ```makefile
 make all
+```
+- windows
+```makefile
+buildall.bat
 ```
 
 # Contribution
