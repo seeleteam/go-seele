@@ -10,7 +10,7 @@
   "IsDebug": true,
   "PrintLog": true,
   "NetworkID": 1,
-  "Capacity": 1024,
+  "Capacity": 10000,
   "HttpServer": {
     "HTTPAddr": "127.0.0.1:65027",
     "HTTPCors": [

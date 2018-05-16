@@ -18,6 +18,7 @@ import (
 var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
+	errTxFeeNil = errors.New("fee can't be nil")
 )
 
 type blockchain interface {
@@ -66,6 +67,24 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return errTxPoolFull
 	}
 
+	if tx.Data.Fee == nil {
+		return errTxFeeNil
+	}
+
+	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce)
+	if existTx != nil && tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
+		pool.removeTransaction(existTx.Hash)
+	}
+
+	pool.addTransaction(tx)
+
+	// fire event
+	event.TransactionInsertedEventManager.Fire(tx)
+
+	return nil
+}
+
+func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
 	pool.hashToTxMap[tx.Hash] = tx
 
 	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
@@ -73,11 +92,15 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	}
 
 	pool.accountToTxsMap[tx.Data.From].add(tx)
+}
 
-	// fire event
-	event.TransactionInsertedEventManager.Fire(tx)
+func (pool *TransactionPool) findTransaction(from common.Address, nonce uint64) *types.Transaction {
+	col, ok := pool.accountToTxsMap[from]
+	if !ok {
+		return nil
+	}
 
-	return nil
+	return col.findTx(nonce)
 }
 
 // GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
@@ -93,6 +116,10 @@ func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
+	pool.removeTransaction(txHash)
+}
+
+func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 	tx := pool.hashToTxMap[txHash]
 	if tx == nil {
 		return
