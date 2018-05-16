@@ -19,5 +19,9 @@
     "HTTPWhiteHost": [
       "*"
     ]
+  },
+  "WSServer": {
+    "WSAddr": "127.0.0.1:8080",
+    "WSPattern": "/ws"
   }
 }

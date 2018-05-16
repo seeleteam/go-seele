@@ -59,6 +59,9 @@ type Config struct {
 
 	// http server config info
 	HttpServer HttpServer
+
+	// websocket server config info
+	WSServer WSServer
 }
 
 // GenesisInfo genesis info for generate genesis block, it could be used for initialize account balance
@@ -80,6 +83,14 @@ type HttpServer struct {
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
 	HTTPWhiteHost []string
+}
+
+// WSServer config for websocket server
+type WSServer struct {
+	// The WSAddr is the address of Websocket rpc service
+	WSAddr string
+	// The WSAddr is the pattern of Websocket rpc service
+	WSPattern string
 }
 
 // GetConfigFromFile unmarshals the config from the given file
@@ -141,6 +152,8 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	nodeConfig.HTTPAddr = config.HttpServer.HTTPAddr
 	nodeConfig.HTTPCors = config.HttpServer.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HttpServer.HTTPWhiteHost
+	nodeConfig.WSAddr = config.WSServer.WSAddr
+	nodeConfig.WSPattern = config.WSServer.WSPattern
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {

@@ -30,6 +30,12 @@ type Config struct {
 	// The HTTPAddr is the address of HTTP rpc service
 	HTTPAddr string
 
+	// The WSAddr is the address of Websocket rpc service
+	WSAddr string
+
+	// The WSPattern is the pattern of Websocket rpc service
+	WSPattern string
+
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
