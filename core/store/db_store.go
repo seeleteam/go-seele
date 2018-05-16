@@ -7,6 +7,7 @@ package store
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -23,11 +24,19 @@ var (
 	keyPrefixTD       = []byte("t")
 	keyPrefixBody     = []byte("b")
 	keyPrefixReceipts = []byte("r")
+	keyPrefixTxIndex  = []byte("i")
 )
 
 // blockBody represents the payload of a block
 type blockBody struct {
 	Txs []*types.Transaction // Txs is a transaction collection
+}
+
+// txIndex represents an index that used to query block info by tx hash.
+type txIndex struct {
+	BlockHash   common.Hash
+	BlockHeight uint64
+	Index       uint // tx array index in block body
 }
 
 // blockchainDatabase wraps a database used for the blockchain
@@ -43,15 +52,17 @@ type blockchainDatabase struct {
 //   4) keyPrefixTD + hash => total difficulty (td for short)
 //   5) keyPrefixBody + hash => block body (transactions)
 //   6) keyPrefixReceipts + hash => block receipts
+//   7) keyPrefixTxIndex + txHash => txIndex
 func NewBlockchainDatabase(db database.Database) BlockchainStore {
 	return &blockchainDatabase{db}
 }
 
-func heightToHashKey(height uint64) []byte { return append(keyPrefixHash, encodeBlockHeight(height)...) }
-func hashToHeaderKey(hash []byte) []byte   { return append(keyPrefixHeader, hash...) }
-func hashToTDKey(hash []byte) []byte       { return append(keyPrefixTD, hash...) }
-func hashToBodyKey(hash []byte) []byte     { return append(keyPrefixBody, hash...) }
-func hashToReceiptsKey(hash []byte) []byte { return append(keyPrefixReceipts, hash...) }
+func heightToHashKey(height uint64) []byte  { return append(keyPrefixHash, encodeBlockHeight(height)...) }
+func hashToHeaderKey(hash []byte) []byte    { return append(keyPrefixHeader, hash...) }
+func hashToTDKey(hash []byte) []byte        { return append(keyPrefixTD, hash...) }
+func hashToBodyKey(hash []byte) []byte      { return append(keyPrefixBody, hash...) }
+func hashToReceiptsKey(hash []byte) []byte  { return append(keyPrefixReceipts, hash...) }
+func txHashToIndexKey(txHash []byte) []byte { return append(keyPrefixTxIndex, txHash...) }
 
 // GetBlockHash gets the hash of the block with the specified height in the blockchain database
 func (store *blockchainDatabase) GetBlockHash(height uint64) (common.Hash, error) {
@@ -158,6 +169,17 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 	if body != nil {
 		batch.Put(hashToBodyKey(hashBytes), common.SerializePanic(body))
+
+		// Write index for each tx.
+		for i, tx := range body.Txs {
+			idx := txIndex{hash, header.Height, uint(i)}
+			encodedTxIndex, err := common.Serialize(idx)
+			if err != nil {
+				return err
+			}
+
+			batch.Put(txHashToIndexKey(tx.Hash.Bytes()), encodedTxIndex)
+		}
 	}
 
 	if isHead {
@@ -253,4 +275,54 @@ func (store *blockchainDatabase) PutReceipts(hash common.Hash, receipts []*types
 	key := hashToReceiptsKey(hash.Bytes())
 
 	return store.db.Put(key, encodedBytes)
+}
+
+// GetReceipts retrieves the receipts for the specified block hash.
+func (store *blockchainDatabase) GetReceipts(hash common.Hash) ([]*types.Receipt, error) {
+	key := hashToReceiptsKey(hash.Bytes())
+	encodedBytes, err := store.db.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	receipts := make([]*types.Receipt, 0)
+	if err := common.Deserialize(encodedBytes, &receipts); err != nil {
+		return nil, err
+	}
+
+	return receipts, nil
+}
+
+// GetReceipt retrieves the receipt for the specified tx hash.
+func (store *blockchainDatabase) GetReceipt(txHash common.Hash) (*types.Receipt, error) {
+	txIndex, err := store.getTxIndex(txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	receipts, err := store.GetReceipts(txIndex.BlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if uint(len(receipts)) <= txIndex.Index {
+		return nil, fmt.Errorf("invalid tx index, txIndex = %v, receiptsLen = %v", *txIndex, len(receipts))
+	}
+
+	return receipts[txIndex.Index], nil
+}
+
+// getTxIndex retrieves the tx index for the specified tx hash.
+func (store *blockchainDatabase) getTxIndex(txHash common.Hash) (*txIndex, error) {
+	data, err := store.db.Get(txHashToIndexKey(txHash.Bytes()))
+	if err != nil {
+		return nil, err
+	}
+
+	index := &txIndex{}
+	if err := common.Deserialize(data, index); err != nil {
+		return nil, err
+	}
+
+	return index, nil
 }
