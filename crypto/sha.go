@@ -33,7 +33,7 @@ func HashBytes(data ...[]byte) common.Hash {
 }
 
 // MustHash returns the hash of the specified value.
-// Panics on error, e.g. unsupported data type for encoding.
+// Panic on any error, e.g. unsupported data type for encoding.
 func MustHash(v interface{}) common.Hash {
 	return HashBytes(common.SerializePanic(v))
 }

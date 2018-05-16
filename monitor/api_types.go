@@ -5,7 +5,7 @@
 
 package monitor
 
-// NodeInfo is the collection of metainformation about a node that is displayed
+// NodeInfo is the collection of meta information about a node that is displayed
 // on the monitoring page.
 type NodeInfo struct {
 	Name       string `json:"name"`
@@ -20,7 +20,7 @@ type NodeInfo struct {
 	History    bool   `json:"canUpdateHistory"`
 }
 
-// NodeStats is the information about the local node.
+// NodeStats is the state information about the local node.
 type NodeStats struct {
 	Active  bool `json:"active"`
 	Syncing bool `json:"syncing"`

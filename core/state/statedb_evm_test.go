@@ -40,6 +40,25 @@ func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
 	return statedb, stateObj, dispose
 }
 
+func commitAndNewStateDB(statedb *Statedb) (common.Hash, *Statedb) {
+	batch := statedb.db.NewBatch()
+	rootHash, err := statedb.Commit(batch)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = batch.Commit(); err != nil {
+		panic(err)
+	}
+
+	newStatedb, err := NewStatedb(rootHash, statedb.db)
+	if err != nil {
+		panic(err)
+	}
+
+	return rootHash, newStatedb
+}
+
 func Test_CreateAccount(t *testing.T) {
 	statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
@@ -68,17 +87,9 @@ func Test_Code(t *testing.T) {
 	assert.Equal(t, statedb.GetCodeSize(addr), len(code))
 	assert.Equal(t, stateObj.dirtyCode, true)
 
-	// Commit the account code change
-	batch := statedb.db.NewBatch()
-	rootHash := statedb.Commit(batch)
-	assert.Equal(t, batch.Commit(), error(nil))
+	// Commit the account code change and create another state DB with the same root hash.
+	_, statedb2 := commitAndNewStateDB(statedb)
 	assert.Equal(t, stateObj.dirtyCode, false)
-
-	// Create another state DB with the same root hash.
-	statedb2, err := NewStatedb(rootHash, statedb.db)
-	if err != nil {
-		panic(err)
-	}
 
 	// Ensure the account code is valid.
 	assert.Equal(t, statedb2.GetCodeHash(addr), codeHash)
@@ -122,15 +133,7 @@ func Test_State(t *testing.T) {
 	assert.Equal(t, statedb.GetState(addr, k2), v2)
 
 	// Commit the state change
-	batch := statedb.db.NewBatch()
-	rootHash := statedb.Commit(batch)
-	assert.Equal(t, batch.Commit(), error(nil))
-
-	// Create another state DB with the same root hash.
-	statedb2, err := NewStatedb(rootHash, statedb.db)
-	if err != nil {
-		panic(err)
-	}
+	_, statedb2 := commitAndNewStateDB(statedb)
 
 	// Ensure the state is valid.
 	assert.Equal(t, statedb2.GetState(addr, k1), v1)
@@ -151,15 +154,7 @@ func Test_Suicide(t *testing.T) {
 	assert.Equal(t, statedb.HasSuicided(addr), true)
 
 	// Commit the state change
-	batch := statedb.db.NewBatch()
-	rootHash := statedb.Commit(batch)
-	assert.Equal(t, batch.Commit(), error(nil))
-
-	// Create another state DB with the same root hash.
-	statedb2, err := NewStatedb(rootHash, statedb.db)
-	if err != nil {
-		panic(err)
-	}
+	_, statedb2 := commitAndNewStateDB(statedb)
 
 	// Ensure the account does not exist.
 	assert.Equal(t, statedb2.Exist(addr), false)

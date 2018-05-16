@@ -13,20 +13,20 @@ import (
 )
 
 var (
-	whiteList_all     = []string{"*"}
-	whiteList_domains = []string{"seele.com", "www.test.com"}
+	whiteListAll     = []string{"*"}
+	whiteListDomains = []string{"seele.com", "www.test.com"}
 )
 
 func Test_WhiteList(t *testing.T) {
-	testWhiteList(t, whiteList_all, "http://sometest.com", true)
-	testWhiteList(t, whiteList_all, "http://www.baidu.com", true)
-	testWhiteList(t, whiteList_all, "http://www.baidu.com:8080", true)
+	testWhiteList(t, whiteListAll, "http://sometest.com", true)
+	testWhiteList(t, whiteListAll, "http://www.baidu.com", true)
+	testWhiteList(t, whiteListAll, "http://www.baidu.com:8080", true)
 	testWhiteList(t, nil, "http://www.baidu.com", true)
-	testWhiteList(t, whiteList_domains, "http://www.baidu.com", false)
-	testWhiteList(t, whiteList_domains, "http://www.test.com", true)
-	testWhiteList(t, whiteList_domains, "http://www.test.com:1234", true)
-	testWhiteList(t, whiteList_domains, "http://127.0.0.1", true)
-	testWhiteList(t, whiteList_domains, "http://seele.com/test/666", true)
+	testWhiteList(t, whiteListDomains, "http://www.baidu.com", false)
+	testWhiteList(t, whiteListDomains, "http://www.test.com", true)
+	testWhiteList(t, whiteListDomains, "http://www.test.com:1234", true)
+	testWhiteList(t, whiteListDomains, "http://127.0.0.1", true)
+	testWhiteList(t, whiteListDomains, "http://seele.com/test/666", true)
 }
 
 func testWhiteList(t *testing.T, list []string, host string, expected bool) {
@@ -59,7 +59,7 @@ func Test_HTTPServe(t *testing.T) {
 	w = httptest.NewRecorder()
 
 	serve.ServeHTTP(w, req)
-	if w.Body.Len() != 0 {
+	if w.Body.Len() == 0 {
 		t.Fatalf("HTTPServe test failed")
 	}
 }

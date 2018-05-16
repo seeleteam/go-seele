@@ -42,7 +42,7 @@ type GenesisInfo struct {
 	Difficult int64 `json:"difficult"`
 }
 
-// GetGenesis get genesis block according to accounts' balance
+// GetGenesis gets the genesis block according to accounts' balance
 func GetGenesis(info GenesisInfo) *Genesis {
 	if info.Difficult == 0 {
 		info.Difficult = 1
@@ -53,7 +53,11 @@ func GetGenesis(info GenesisInfo) *Genesis {
 		panic(err)
 	}
 
-	stateRootHash := statedb.Commit(nil)
+	stateRootHash, err := statedb.Commit(nil)
+	if err != nil {
+		panic(err)
+	}
+
 	return &Genesis{
 		header: &types.BlockHeader{
 			PreviousBlockHash: common.EmptyHash,
@@ -69,11 +73,12 @@ func GetGenesis(info GenesisInfo) *Genesis {
 	}
 }
 
-// only used for test
+// GetDefaultGenesis get the default genesis block.
+// This is for test only.
 func GetDefaultGenesis(accounts map[common.Address]int64) *Genesis {
 	info := GenesisInfo{
-		Accounts:accounts,
-		Difficult:1,
+		Accounts:  accounts,
+		Difficult: 1,
 	}
 
 	return GetGenesis(info)

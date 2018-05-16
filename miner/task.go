@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -54,11 +55,19 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
+
+		if i == core.BlockTransactionNumberLimit {
+			break
+		}
 	}
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
 
-	root := statedb.Commit(nil)
+	root, err := statedb.Commit(nil)
+	if err != nil {
+		return err
+	}
+	
 	task.header.StateHash = root
 
 	return nil

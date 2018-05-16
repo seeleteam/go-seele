@@ -1,6 +1,7 @@
-// Copyright 2010 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package rpc
 
@@ -11,14 +12,13 @@ import (
 )
 
 var (
-	// Actual returned error may have different message.
-	errParse       = NewError(-32700, "parse error")
-	errRequest     = NewError(-32600, "invalid request")
-	errMethod      = NewError(-32601, "method not found")
-	errParams      = NewError(-32602, "invalid params")
-	errInternal    = NewError(-32603, "internal error")
-	errServer      = NewError(-32000, "server error")
-	errServerError = NewError(-32001, "jsonrpc2.Error: json.Marshal failed")
+	errParse       = NewError(-32700, "Parse error")
+	errRequest     = NewError(-32600, "Invalid request")
+	errMethod      = NewError(-32601, "Method not found")
+	errParams      = NewError(-32602, "Invalid params")
+	errInternal    = NewError(-32603, "Internal error")
+	errServer      = NewError(-32000, "Server error")
+	errServerError = NewError(-32001, "Jsonrpc2.Error: json.Marshal failed")
 )
 
 // Error represent JSON-RPC 2.0 "Error object".

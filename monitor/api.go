@@ -12,13 +12,13 @@ import (
 
 // error infos
 var (
-	ErrBlockchainInfoFailed = errors.New("get blockchain info failed")
-	ErrMinerInfoFailed      = errors.New("get miner info failed")
-	ErrNodeInfoFailed       = errors.New("get node info failed")
-	ErrP2PServerInfoFailed  = errors.New("get p2p server info failed")
+	ErrBlockchainInfoFailed = errors.New("getting blockchain info failed")
+	ErrMinerInfoFailed      = errors.New("getting miner info failed")
+	ErrNodeInfoFailed       = errors.New("getting node info failed")
+	ErrP2PServerInfoFailed  = errors.New("getting p2p server info failed")
 )
 
-// PublicMonitorAPI provides an API to monitor service
+// PublicMonitorAPI provides an API to the monitor service
 type PublicMonitorAPI struct {
 	s *MonitorService
 }
@@ -28,7 +28,7 @@ func NewPublicMonitorAPI(s *MonitorService) *PublicMonitorAPI {
 	return &PublicMonitorAPI{s}
 }
 
-// NodeInfo return NodeInfo struct of the local node
+// NodeInfo returns the NodeInfo struct of the local node
 func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 	*result = NodeInfo{
 		Name:       api.s.name,
@@ -46,7 +46,7 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 	return nil
 }
 
-// NodeStats return the information about the local node.
+// NodeStats returns the information about the local node.
 func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
 	if api.s.p2pServer == nil {
 		return ErrP2PServerInfoFailed

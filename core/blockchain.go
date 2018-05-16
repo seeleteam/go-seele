@@ -24,6 +24,9 @@ import (
 var (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
+
+	// block transaction number limit
+	BlockTransactionNumberLimit = 500
 )
 
 var (
@@ -72,6 +75,9 @@ var (
 
 	// ErrBlockDifficultInvalid is returned when block difficult is invalid
 	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
+
+	// ErrBlockTooManyTxs is returned when block have too many txs
+	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
@@ -219,7 +225,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		}
 	}()
 
-	if stateRootHash := blockStatedb.Commit(batch); !stateRootHash.Equal(block.Header.StateHash) {
+	var stateRootHash common.Hash
+	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
+		return err
+	}
+
+	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
 	}
 
@@ -271,6 +282,10 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 }
 
 func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
+	if len(block.Transactions) > BlockTransactionNumberLimit {
+		return ErrBlockTooManyTxs
+	}
+
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -383,7 +398,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	return receipts, nil
 }
 
-// ApplyTransaction apply a transaction and change statedb corresponding and generate its receipt
+// ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
 func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
 	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})

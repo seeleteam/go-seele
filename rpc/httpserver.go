@@ -18,7 +18,7 @@ import (
 
 var (
 	// ErrInvalidHost will be returned when the host is not in the whitelist
-	ErrInvalidHost = errors.New("Invalid host name.")
+	ErrInvalidHost = errors.New("invalid host name")
 )
 
 // HTTPServer represents a HTTP RPC server

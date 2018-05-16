@@ -118,7 +118,10 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 			panic(err)
 		}
 
-		stateRootHash = statedb.Commit(nil)
+		if stateRootHash, err = statedb.Commit(nil); err != nil {
+			panic(err)
+		}
+
 		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
 	}
 
