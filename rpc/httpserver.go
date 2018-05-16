@@ -23,13 +23,13 @@ var (
 
 // HTTPServer represents a HTTP RPC server
 type HTTPServer struct {
-	rpc.Server
+	rpc *rpc.Server
 }
 
 // NewHTTPServer returns a new HttpServer and a http handler used by cors
 func NewHTTPServer(whitehosts []string, corsList []string) (*HTTPServer, *hostFilter) {
 	server := &HTTPServer{
-		rpc.Server{},
+		rpc: &rpc.Server{},
 	}
 	// cors
 	c := cors.New(cors.Options{
@@ -56,16 +56,21 @@ func NewHTTPServer(whitehosts []string, corsList []string) (*HTTPServer, *hostFi
 func (server *HTTPServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case http.MethodConnect:
-		server.Server.ServeHTTP(w, req)
+		server.rpc.ServeHTTP(w, req)
 	case http.MethodPost:
 		w.Header().Set("Content-Type", "application/json")
 		conn := &httpReadWriteCloser{req.Body, w}
-		server.ServeRequest(NewJSONCodec(conn))
+		server.rpc.ServeRequest(NewJSONCodec(conn, server.rpc))
 	default:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		io.WriteString(w, "405 must POST or CONNECT\n")
 	}
+}
+
+// GetRPCServer return rpc server of the HTTPServer
+func (server *HTTPServer) GetRPCServer() *rpc.Server {
+	return server.rpc
 }
 
 // httpReadWriteCloser wraps a io.Reader and io.Writer

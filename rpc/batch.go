@@ -25,7 +25,7 @@ type BatchArg struct {
 func (JSONRPC2) Batch(arg BatchArg, replies *[]*json.RawMessage) (err error) {
 	cli, srv := net.Pipe()
 	defer cli.Close()
-	go arg.srv.ServeCodec(NewJSONCodec(srv))
+	go arg.srv.ServeCodec(NewJSONCodec(srv, arg.srv))
 
 	replyc := make(chan *json.RawMessage, len(arg.reqs))
 	donec := make(chan struct{}, 1)

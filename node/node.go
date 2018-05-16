@@ -180,7 +180,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 				n.log.Error("RPC accept failed", "err", err)
 				continue
 			}
-			go handler.ServeCodec(rpc.NewJSONCodec(conn))
+			go handler.ServeCodec(rpc.NewJSONCodec(conn, nil))
 		}
 	}()
 
@@ -190,8 +190,9 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 // startHTTPRPC starts http rpc server
 func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []string) error {
 	httpServer, httpHandler := rpc.NewHTTPServer(whitehosts, corsList)
+	rpcServer := httpServer.GetRPCServer()
 	for _, api := range apis {
-		if err := httpServer.RegisterName(api.Namespace, api.Service); err != nil {
+		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
 			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
@@ -202,7 +203,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 		listerner net.Listener
 		err       error
 	)
-	httpServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
+	rpcServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
 	if listerner, err = net.Listen("tcp", n.config.HTTPAddr); err != nil {
 		n.log.Error("HTTP listen failed", "err", err)
 		return err

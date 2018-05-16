@@ -20,6 +20,7 @@ type jsonCodec struct {
 	dec *json.Decoder // for reading JSON values
 	enc *json.Encoder // for writing JSON values
 	c   io.Closer
+	srv *rpc.Server
 
 	// temporary work space
 	req jsonRequest
@@ -37,11 +38,16 @@ type jsonCodec struct {
 }
 
 // NewJSONCodec returns a new rpc.ServerCodec using JSON-RPC on conn.
-func NewJSONCodec(conn io.ReadWriteCloser) rpc.ServerCodec {
+func NewJSONCodec(conn io.ReadWriteCloser, srv *rpc.Server) rpc.ServerCodec {
+	if srv == nil {
+		srv = rpc.DefaultServer
+	}
+	srv.Register(JSONRPC2{})
 	return &jsonCodec{
 		dec:     json.NewDecoder(conn),
 		enc:     json.NewEncoder(conn),
 		c:       conn,
+		srv:     srv,
 		pending: make(map[uint64]*json.RawMessage),
 	}
 }
@@ -122,7 +128,7 @@ func (c *jsonCodec) ReadRequestHeader(r *rpc.Request) error {
 		c.req.Version = jsonrpcVersion
 		c.req.Method = "JSONRPC2.Batch"
 		c.req.Params = &raw
-		c.req.ID = nil
+		c.req.ID = &null
 	} else if err := json.Unmarshal(raw, &c.req); err != nil {
 		if err.Error() == "bad request" {
 			c.encmutex.Lock()
@@ -151,6 +157,7 @@ func (c *jsonCodec) ReadRequestBody(x interface{}) error {
 	if x == nil {
 		return nil
 	}
+
 	if c.req.Params == nil {
 		return errParams
 	}
@@ -163,7 +170,7 @@ func (c *jsonCodec) ReadRequestBody(x interface{}) error {
 
 	if c.req.Method == "JSONRPC2.Batch" {
 		arg := x.(*BatchArg)
-		// arg.srv = c.srv
+		arg.srv = c.srv
 		if err := json.Unmarshal(*c.req.Params, &arg.reqs); err != nil {
 			return NewError(errParams.Code, err.Error())
 		}
@@ -229,5 +236,5 @@ func (c *jsonCodec) Close() error {
 // ServeConn blocks, serving the connection until the client hangs up.
 // The caller typically invokes ServeConn with go-routine.
 func ServeConn(conn io.ReadWriteCloser) {
-	rpc.ServeCodec(NewJSONCodec(conn))
+	rpc.ServeCodec(NewJSONCodec(conn, nil))
 }
