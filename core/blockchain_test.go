@@ -49,9 +49,9 @@ func newTestAccount(amount, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
-	accounts := make(map[common.Address]int64)
+	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
-		accounts[account.addr] = account.data.Amount.Int64()
+		accounts[account.addr] = account.data.Amount
 	}
 
 	return GetDefaultGenesis(accounts)
