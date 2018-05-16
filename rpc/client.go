@@ -1,7 +1,6 @@
-/**
-*  @file
-*  @copyright defined in go-seele/LICENSE
- */
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 
 package rpc
 
@@ -126,15 +125,15 @@ func (r *clientResponse) UnmarshalJSON(raw []byte) error {
 		return errors.New("bad response: " + string(raw))
 	}
 
-	var o = make(map[string]*json.RawMessage)
-	if err := json.Unmarshal(raw, &o); err != nil {
+	var respMap = make(map[string]*json.RawMessage)
+	if err := json.Unmarshal(raw, &respMap); err != nil {
 		return errors.New("bad response: " + string(raw))
 	}
-	_, okVer := o["jsonrpc"]
-	_, okID := o["id"]
-	_, okRes := o["result"]
-	_, okErr := o["error"]
-	if !okVer || !okID || !(okRes || okErr) || (okRes && okErr) || len(o) > 3 {
+	_, okVer := respMap["jsonrpc"]
+	_, okID := respMap["id"]
+	_, okRes := respMap["result"]
+	_, okErr := respMap["error"]
+	if !okVer || !okID || !(okRes || okErr) || (okRes && okErr) || len(respMap) > 3 {
 		return errors.New("bad response: " + string(raw))
 	}
 	if r.Version != jsonrpcVersion {
@@ -144,11 +143,11 @@ func (r *clientResponse) UnmarshalJSON(raw []byte) error {
 		r.Result = &null
 	}
 	if okErr {
-		if o["error"] == nil {
+		if respMap["error"] == nil {
 			return errors.New("bad response: " + string(raw))
 		}
 		oe := make(map[string]*json.RawMessage)
-		if err := json.Unmarshal(*o["error"], &oe); err != nil {
+		if err := json.Unmarshal(*respMap["error"], &oe); err != nil {
 			return errors.New("bad response: " + string(raw))
 		}
 		if oe["code"] == nil || oe["message"] == nil {
@@ -158,7 +157,7 @@ func (r *clientResponse) UnmarshalJSON(raw []byte) error {
 			return errors.New("bad response: " + string(raw))
 		}
 	}
-	if o["id"] == nil && !okErr {
+	if respMap["id"] == nil && !okErr {
 		return errors.New("bad response: " + string(raw))
 	}
 

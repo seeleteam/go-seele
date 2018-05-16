@@ -66,16 +66,16 @@ func (r *jsonRequest) UnmarshalJSON(raw []byte) error {
 		return errors.New("bad request")
 	}
 
-	var o = make(map[string]*json.RawMessage)
-	if err := json.Unmarshal(raw, &o); err != nil {
+	var reqMap = make(map[string]*json.RawMessage)
+	if err := json.Unmarshal(raw, &reqMap); err != nil {
 		return errors.New("bad request")
 	}
-	if o["jsonrpc"] == nil || o["method"] == nil {
+	if reqMap["jsonrpc"] == nil || reqMap["method"] == nil {
 		return errors.New("bad request")
 	}
-	_, okID := o["id"]
-	_, okParams := o["params"]
-	if len(o) == 3 && !(okID || okParams) || len(o) == 4 && !(okID && okParams) || len(o) > 4 {
+	_, okID := reqMap["id"]
+	_, okParams := reqMap["params"]
+	if len(reqMap) == 3 && !(okID || okParams) || len(reqMap) == 4 && !(okID && okParams) || len(reqMap) > 4 {
 		return errors.New("bad request")
 	}
 	if r.Version != "2.0" {
@@ -103,6 +103,7 @@ func (r *jsonRequest) UnmarshalJSON(raw []byte) error {
 }
 
 func (r *jsonRequest) reset() {
+	r.Version = ""
 	r.Method = ""
 	r.Params = nil
 	r.ID = nil
