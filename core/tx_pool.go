@@ -18,7 +18,8 @@ import (
 var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
-	errTxFeeNil = errors.New("fee can't be nil")
+	errTxFeeNil     = errors.New("fee can't be nil")
+	errTxNonceUsed  = errors.New("transaction from this address already used its nonce")
 )
 
 type blockchain interface {
@@ -72,8 +73,13 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	}
 
 	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce)
-	if existTx != nil && tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
-		pool.removeTransaction(existTx.Hash)
+	if existTx != nil {
+		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
+			pool.removeTransaction(existTx.Hash)
+			pool.addTransaction(tx)
+		} else {
+			return errTxNonceUsed
+		}
 	}
 
 	pool.addTransaction(tx)
