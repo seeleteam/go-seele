@@ -388,7 +388,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	return receipts, nil
 }
 
-// ApplyTransaction apply a transaction and change statedb corresponding and generate its receipt
+// ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
 func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
 	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})

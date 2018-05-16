@@ -15,11 +15,11 @@ const (
 	DownloaderFailedEvent = 2
 )
 
-// BlockMinedEventManager is event of new mined block
+// BlockMinedEventManager represents the event that a new block is mined
 var BlockMinedEventManager = NewEventManager()
 
-// TransactionInsertedEventManager is event of new transaction inserted into txpool
+// TransactionInsertedEventManager represents the event that a new transaction is inserted into txpool
 var TransactionInsertedEventManager = NewEventManager()
 
-// BlockInsertedEventManager is event of new block inserted into blockchain
+// BlockInsertedEventManager represents the event that a new block is inserted into the blockchain
 var BlockInsertedEventManager = NewEventManager()

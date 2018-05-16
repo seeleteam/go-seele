@@ -42,7 +42,7 @@ type GenesisInfo struct {
 	Difficult int64 `json:"difficult"`
 }
 
-// GetGenesis get genesis block according to accounts' balance
+// GetGenesis gets the genesis block according to accounts' balance
 func GetGenesis(info GenesisInfo) *Genesis {
 	if info.Difficult == 0 {
 		info.Difficult = 1
