@@ -24,6 +24,9 @@ import (
 var (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
+
+	// block transaction number limit
+	BlockTransactionNumberLimit = 500
 )
 
 var (
@@ -72,6 +75,9 @@ var (
 
 	// ErrBlockDifficultInvalid is returned when block difficult is invalid
 	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
+
+	// ErrBlockTooManyTxs is returned when block have too many txs
+	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
@@ -276,6 +282,10 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 }
 
 func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
+	if len(block.Transactions) > BlockTransactionNumberLimit {
+		return ErrBlockTooManyTxs
+	}
+
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
