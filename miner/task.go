@@ -6,10 +6,10 @@
 package miner
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -19,8 +19,9 @@ import (
 
 // Task is a mining work for engine, containing block header, transactions, and transaction receipts.
 type Task struct {
-	header *types.BlockHeader
-	txs    []*types.Transaction
+	header   *types.BlockHeader
+	txs      []*types.Transaction
+	receipts []*types.Receipt
 
 	createdAt time.Time
 }
@@ -29,7 +30,7 @@ type Task struct {
 func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, blockHeight uint64,
 	txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	rewardValue := big.NewInt(pow.GetReward(blockHeight))
+	rewardValue := pow.GetReward(blockHeight)
 	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
@@ -45,14 +46,27 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 			continue
 		}
 
-		seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		if err != nil {
+			log.Error("apply tx failed, %s", err.Error())
+			continue
+		}
 
 		task.txs = append(task.txs, tx)
+		task.receipts = append(task.receipts, receipt)
+
+		if i == core.BlockTransactionNumberLimit {
+			break
+		}
 	}
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
 
-	root := statedb.Commit(nil)
+	root, err := statedb.Commit(nil)
+	if err != nil {
+		return err
+	}
+
 	task.header.StateHash = root
 
 	return nil
@@ -60,7 +74,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 
 // generateBlock builds a block from task
 func (task *Task) generateBlock() *types.Block {
-	return types.NewBlock(task.header, task.txs)
+	return types.NewBlock(task.header, task.txs, task.receipts)
 }
 
 // Result is the result mined by engine. It contains the raw task and mined block.

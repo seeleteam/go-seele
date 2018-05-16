@@ -98,4 +98,5 @@ func init() {
 	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
 
 	genesisConfigFile = startCmd.Flags().StringP("genesis", "g", "", "seele genesis config file")
+	startCmd.MarkFlagRequired("genesis")
 }

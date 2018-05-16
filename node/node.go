@@ -26,8 +26,8 @@ var (
 	ErrLogIsNull          = errors.New("SeeleLog is null")
 	ErrNodeRunning        = errors.New("node is already running")
 	ErrNodeStopped        = errors.New("node is not started")
-	ErrServiceStartFailed = errors.New("node service start failed")
-	ErrServiceStopFailed  = errors.New("node service stop failed")
+	ErrServiceStartFailed = errors.New("node service starting failed")
+	ErrServiceStopFailed  = errors.New("node service stopping failed")
 )
 
 // StopError represents an error which is returned when a node fails to stop any registered service
@@ -68,7 +68,7 @@ func New(conf *Config) (*Node, error) {
 	}, nil
 }
 
-// Register append a new service into the node's stack.
+// Register appends a new service into the node's stack.
 func (n *Node) Register(service Service) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -81,7 +81,7 @@ func (n *Node) Register(service Service) error {
 	return nil
 }
 
-// Start create a p2p node.
+// Start starts the p2p node.
 func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -131,7 +131,7 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// startRPC starts all RPC
+// startRPC starts all RPCs
 func (n *Node) startRPC(services []Service, conf *Config) error {
 	apis := []rpc.API{}
 	for _, service := range services {
@@ -139,12 +139,12 @@ func (n *Node) startRPC(services []Service, conf *Config) error {
 	}
 
 	if err := n.startJSONRPC(apis); err != nil {
-		n.log.Error("startProc err", err)
+		n.log.Error("starting json rpc failed", err)
 		return err
 	}
 
 	if err := n.startHTTPRPC(apis, conf.HTTPWhiteHost, conf.HTTPCors); err != nil {
-		n.log.Error("start http rpc err", err)
+		n.log.Error("starting http rpc failed", err)
 		return err
 	}
 
@@ -156,15 +156,15 @@ func (n *Node) startRPC(services []Service, conf *Config) error {
 	return nil
 }
 
-// startJSONRPC starts JSONRPC server
+// startJSONRPC starts the json rpc server
 func (n *Node) startJSONRPC(apis []rpc.API) error {
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("Proc registered service namespace %s", api.Namespace)
+		n.log.Debug("registered service namespace: %s", api.Namespace)
 	}
 
 	var (
@@ -173,7 +173,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 	)
 
 	if listerner, err = net.Listen("tcp", n.config.RPCAddr); err != nil {
-		n.log.Error("Listen failed", "err", err)
+		n.log.Error("Listening failed", "err", err)
 		return err
 	}
 
@@ -182,7 +182,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		for {
 			conn, err := listerner.Accept()
 			if err != nil {
-				n.log.Error("RPC accept failed", "err", err)
+				n.log.Error("RPC accepting failed", "err", err)
 				continue
 			}
 			go handler.ServeCodec(rpc.NewJsonCodec(conn))
@@ -192,15 +192,15 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 	return nil
 }
 
-// startHTTPRPC starts http rpc server
+// startHTTPRPC starts the http rpc server
 func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []string) error {
 	httpServer, httpHandler := rpc.NewHTTPServer(whitehosts, corsList)
 	for _, api := range apis {
 		if err := httpServer.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("Proc registered service namespace %s", api.Namespace)
+		n.log.Debug("registered service namespace: %s", api.Namespace)
 	}
 
 	var (
@@ -209,7 +209,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 	)
 	httpServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
 	if listerner, err = net.Listen("tcp", n.config.HTTPAddr); err != nil {
-		n.log.Error("HTTP listen failed", "err", err)
+		n.log.Error("HTTP listening failed", "err", err)
 		return err
 	}
 
@@ -222,7 +222,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 func (n *Node) startWSRPC(apis []rpc.API) error {
 	for _, api := range apis {
 		if err := netrpc.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Websocket registered failed", "service", api.Service, "namespace", api.Namespace)
+			n.log.Error("Websocket registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
 	}
@@ -232,7 +232,7 @@ func (n *Node) startWSRPC(apis []rpc.API) error {
 	return nil
 }
 
-// Stop terminates the running the node and the services registered.
+// Stop terminates the running node and services registered.
 func (n *Node) Stop() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -266,7 +266,7 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-// Restart stop a running node and start a new one.
+// Restart stops the running node and starts it again.
 func (n *Node) Restart() error {
 	if err := n.Stop(); err != nil {
 		return err

@@ -189,7 +189,7 @@ func (api *PublicMinerAPI) Start(threads *int, result *string) error {
 // Stop API is used to stop the miner.
 func (api *PublicMinerAPI) Stop(input *string, result *string) error {
 	if !api.s.miner.IsMining() {
-		return miner.ErrMinerIsStop
+		return miner.ErrMinerIsStopped
 	}
 	api.s.miner.Stop()
 

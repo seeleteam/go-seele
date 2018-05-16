@@ -135,20 +135,23 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 }
 
 // Commit commits memory state objects to db
-func (s *Statedb) Commit(batch database.Batch) common.Hash {
+func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
+	if s.dbErr != nil {
+		return common.EmptyHash, s.dbErr
+	}
+
 	for _, key := range s.stateObjects.Keys() {
 		value, ok := s.stateObjects.Peek(key)
 		if ok {
 			addr := key.(common.Address)
 			object := value.(*StateObject)
 			if err := s.commitOne(addr, object, batch); err != nil {
-				// @todo should return error once commit failed.
-				return common.EmptyHash
+				return common.EmptyHash, err
 			}
 		}
 	}
 
-	return s.trie.Commit(batch)
+	return s.trie.Commit(batch), nil
 }
 
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {

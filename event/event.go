@@ -5,19 +5,19 @@
 
 package event
 
-// EmptyEvent empty event
+// EmptyEvent is an empty event
 var EmptyEvent interface{}
 
-// EventHandleMethod event handler method
+// EventHandleMethod represents an event handler
 type EventHandleMethod func(e Event)
 
-// Event interface
+// Event is the interface of events
 type Event interface {
 }
 
-// eventListener type for defining functions as listeners
+// eventListener is a struct which defines a function as a listener
 type eventListener struct {
-	// Callable call function
+	// Callable is a callable function
 	Callable        EventHandleMethod
 	IsOnceListener  bool
 	IsAsyncListener bool

@@ -390,7 +390,7 @@ func marshalSubjectPublicKeyInfo(pub *PublicKey) (subj asnSubjectPublicKeyInfo, 
 	return
 }
 
-// Encode a public key to DER format.
+// MarshalPublic encodes a public key to DER format.
 func MarshalPublic(pub *PublicKey) ([]byte, error) {
 	subj, err := marshalSubjectPublicKeyInfo(pub)
 	if err != nil {
@@ -399,7 +399,7 @@ func MarshalPublic(pub *PublicKey) ([]byte, error) {
 	return asn1.Marshal(subj)
 }
 
-// Decode a DER-encoded public key.
+// UnmarshalPublic decodes a DER-encoded public key.
 func UnmarshalPublic(in []byte) (pub *PublicKey, err error) {
 	var subj asnSubjectPublicKeyInfo
 
@@ -453,7 +453,7 @@ func marshalPrivateKey(prv *PrivateKey) (ecprv asnPrivateKey, err error) {
 	return
 }
 
-// Encode a private key to DER format.
+// MarshalPrivate encodes a private key to DER format.
 func MarshalPrivate(prv *PrivateKey) ([]byte, error) {
 	ecprv, err := marshalPrivateKey(prv)
 	if err != nil {
@@ -462,7 +462,7 @@ func MarshalPrivate(prv *PrivateKey) ([]byte, error) {
 	return asn1.Marshal(ecprv)
 }
 
-// Decode a private key from a DER-encoded format.
+// UnmarshalPrivate decodes a private key from a DER-encoded format.
 func UnmarshalPrivate(in []byte) (prv *PrivateKey, err error) {
 	var ecprv asnPrivateKey
 
@@ -491,7 +491,7 @@ func UnmarshalPrivate(in []byte) (prv *PrivateKey, err error) {
 	return
 }
 
-// Export a public key to PEM format.
+// ExportPublicPEM exports a public key to PEM format.
 func ExportPublicPEM(pub *PublicKey) (out []byte, err error) {
 	der, err := MarshalPublic(pub)
 	if err != nil {
@@ -512,7 +512,7 @@ func ExportPublicPEM(pub *PublicKey) (out []byte, err error) {
 	return
 }
 
-// Export a private key to PEM format.
+// ExportPrivatePEM exports a private key to PEM format.
 func ExportPrivatePEM(prv *PrivateKey) (out []byte, err error) {
 	der, err := MarshalPrivate(prv)
 	if err != nil {
@@ -533,7 +533,7 @@ func ExportPrivatePEM(prv *PrivateKey) (out []byte, err error) {
 	return
 }
 
-// Import a PEM-encoded public key.
+// ImportPublicPEM imports a PEM-encoded public key.
 func ImportPublicPEM(in []byte) (pub *PublicKey, err error) {
 	p, _ := pem.Decode(in)
 	if p == nil || p.Type != "ELLIPTIC CURVE PUBLIC KEY" {
@@ -544,7 +544,7 @@ func ImportPublicPEM(in []byte) (pub *PublicKey, err error) {
 	return
 }
 
-// Import a PEM-encoded private key.
+// ImportPrivatePEM imports a PEM-encoded private key.
 func ImportPrivatePEM(in []byte) (prv *PrivateKey, err error) {
 	p, _ := pem.Decode(in)
 	if p == nil || p.Type != "ELLIPTIC CURVE PRIVATE KEY" {

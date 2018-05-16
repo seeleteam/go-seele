@@ -12,12 +12,12 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
-// LevelDB level db struct
+// LevelDB wraps the leveldb
 type LevelDB struct {
 	db *leveldb.DB
 }
 
-// NewLevelDB news database interface of level db
+// NewLevelDB constructs and returns a LevelDB instance
 func NewLevelDB(path string) (database.Database, error) {
 	db, err := leveldb.OpenFile(path, nil)
 
@@ -36,7 +36,7 @@ func NewLevelDB(path string) (database.Database, error) {
 	return result, nil
 }
 
-// Close don't forget to close db when not use
+// Close is used to close the db when not used
 func (db *LevelDB) Close() {
 	db.db.Close()
 }
@@ -83,7 +83,7 @@ func (db *LevelDB) DeleteSring(key string) error {
 	return db.Delete([]byte(key))
 }
 
-// NewBatch news a batch operator
+// NewBatch constructs and returns a batch object
 func (db *LevelDB) NewBatch() database.Batch {
 	batch := &Batch{
 		leveldb: db.db,

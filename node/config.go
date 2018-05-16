@@ -10,7 +10,7 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// Config holds Node options.
+// Config holds the options for Node
 type Config struct {
 	// The name of the node
 	Name string
@@ -18,16 +18,16 @@ type Config struct {
 	// The version of the node
 	Version string
 
-	// The file system folder of the node use to store data
+	// The file system path of the node, used to store data
 	DataDir string
 
 	// The configuration of p2p network
 	P2P p2p.Config
 
-	// The RPCAddr is the address on which to start RPC server.
+	// RPCAddr is the address on which to start RPC server.
 	RPCAddr string
 
-	// The HTTPAddr is the address of HTTP rpc service
+	// HTTPAddr is the address of HTTP rpc server.
 	HTTPAddr string
 
 	// The WSAddr is the address of Websocket rpc service
@@ -37,13 +37,13 @@ type Config struct {
 	WSPattern string
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
+	// clients. Please note that CORS is a browser-enforced security, it's fully
 	// useless for custom HTTP clients.
 	HTTPCors []string
 
-	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
+	// HTTPHostFilter is the whitelist of hostnames from which incoming requests are allowed.
 	HTTPWhiteHost []string
 
-	// The SeeleConfig is the configuration to create seele service.
+	// The SeeleConfig is the configuration to create the seele service.
 	SeeleConfig seele.Config
 }

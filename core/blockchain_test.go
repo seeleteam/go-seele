@@ -27,12 +27,12 @@ type testAccount struct {
 }
 
 var testGenesisAccounts = []*testAccount{
-	newTestAccount(100, 0),
-	newTestAccount(100, 0),
-	newTestAccount(100, 0),
+	newTestAccount(big.NewInt(100), 0),
+	newTestAccount(big.NewInt(100), 0),
+	newTestAccount(big.NewInt(100), 0),
 }
 
-func newTestAccount(amount, nonce uint64) *testAccount {
+func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -42,7 +42,7 @@ func newTestAccount(amount, nonce uint64) *testAccount {
 		addr:    *addr,
 		privKey: privKey,
 		data: state.Account{
-			Amount: new(big.Int).SetUint64(amount),
+			Amount: amount,
 			Nonce:  nonce,
 		},
 	}
@@ -54,7 +54,7 @@ func newTestGenesis() *Genesis {
 		accounts[account.addr] = account.data.Amount
 	}
 
-	return GetGenesis(accounts)
+	return GetDefaultGenesis(accounts)
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
@@ -84,7 +84,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	minerAccount := newTestAccount(uint64(pow.GetReward(blockHeight)), 0)
+	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
 	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
 
@@ -105,6 +105,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 	}
 
 	stateRootHash := common.EmptyHash
+	receiptsRootHash := common.EmptyHash
 	parentBlock, err := bc.bcStore.GetBlock(parentHash)
 	if err == nil {
 		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
@@ -112,14 +113,20 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 			panic(err)
 		}
 
-		if err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
+		var receipts []*types.Receipt
+		if receipts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
 			panic(err)
 		}
 
-		stateRootHash = statedb.Commit(nil)
+		if stateRootHash, err = statedb.Commit(nil); err != nil {
+			panic(err)
+		}
+
+		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
 	}
 
 	header.StateHash = stateRootHash
+	header.ReceiptHash = receiptsRootHash
 
 	return &types.Block{
 		HeaderHash:   header.Hash(),

@@ -81,7 +81,11 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 	}
 
 	batch := db.NewBatch()
-	stateHash := statedb.Commit(batch)
+	stateHash, err := statedb.Commit(batch)
+	if err != nil {
+		t.Fatal()
+	}
+
 	if err = batch.Commit(); err != nil {
 		t.Fatal()
 	}
@@ -107,7 +111,7 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 func newTestBlockchain(db database.Database) *core.Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := core.GetGenesis(nil)
+	genesis := core.GetDefaultGenesis(nil)
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
