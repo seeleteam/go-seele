@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -31,7 +30,7 @@ type Task struct {
 func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, blockHeight uint64,
 	txs []*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	rewardValue := big.NewInt(pow.GetReward(blockHeight))
+	rewardValue := pow.GetReward(blockHeight)
 	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
 	reward.Signature = &crypto.Signature{}
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
@@ -67,7 +66,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	if err != nil {
 		return err
 	}
-	
+
 	task.header.StateHash = root
 
 	return nil

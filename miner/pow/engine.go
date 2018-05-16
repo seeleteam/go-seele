@@ -40,7 +40,7 @@ func (engine Engine) ValidateHeader(blockHeader *types.BlockHeader) error {
 
 // ValidateRewardAmount validates the specified amount and returns error if validation failed.
 func (engine Engine) ValidateRewardAmount(blockHeight uint64, amount *big.Int) error {
-	reward := big.NewInt(GetReward(blockHeight))
+	reward := GetReward(blockHeight)
 
 	if amount == nil || amount.Cmp(reward) != 0 {
 		return fmt.Errorf("invalid reward amount, block height %d, want %s, got %s", blockHeight, reward, amount)

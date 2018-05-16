@@ -36,7 +36,7 @@ type Genesis struct {
 type GenesisInfo struct {
 	// Accounts accounts info for genesis block used for test
 	// map key is account address -> value is account balance
-	Accounts map[common.Address]int64 `json:"accounts"`
+	Accounts map[common.Address]*big.Int `json:"accounts"`
 
 	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is choose by total difficult
 	Difficult int64 `json:"difficult"`
@@ -75,7 +75,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 
 // GetDefaultGenesis get the default genesis block.
 // This is for test only.
-func GetDefaultGenesis(accounts map[common.Address]int64) *Genesis {
+func GetDefaultGenesis(accounts map[common.Address]*big.Int) *Genesis {
 	info := GenesisInfo{
 		Accounts:  accounts,
 		Difficult: 1,
@@ -122,7 +122,7 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
 }
 
-func getStateDB(accounts map[common.Address]int64) (*state.Statedb, error) {
+func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
 	statedb, err := state.NewStatedb(common.EmptyHash, nil)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func getStateDB(accounts map[common.Address]int64) (*state.Statedb, error) {
 	for addr, amount := range accounts {
 		stateObj := statedb.GetOrNewStateObject(addr)
 		stateObj.SetNonce(0)
-		stateObj.SetAmount(big.NewInt(amount))
+		stateObj.SetAmount(amount)
 	}
 
 	return statedb, nil

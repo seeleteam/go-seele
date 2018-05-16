@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"math/big"
+
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -44,8 +46,8 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 	assert.Equal(t, genesis1.header, genesis2.header)
 
 	addr := crypto.MustGenerateRandomAddress()
-	accounts := make(map[common.Address]int64)
-	accounts[*addr] = 10
+	accounts := make(map[common.Address]*big.Int)
+	accounts[*addr] = big.NewInt(10)
 	genesis3 := GetDefaultGenesis(accounts)
 	if genesis3.header.StateHash == common.EmptyHash {
 		panic("genesis3 state hash should not equal to empty hash")
