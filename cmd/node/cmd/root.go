@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/seeleteam/go-seele/cmd/comm"
+	"github.com/spf13/cobra"
 )
 
 var rpcAddr string

@@ -7,6 +7,7 @@ package comm
 
 import (
 	"fmt"
+
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
@@ -18,9 +19,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 	var generateKeyPairCmd = &cobra.Command{
 		Use:   "generatekeypair",
 		Short: "generate a key pair",
-		Long: "generate a key pair and print them with hex values\n" +
-		"For example:\n" +
-			 name +" generateKeyPair",
+		Long:  "generate a key pair and print them with hex values\n For example:\n" + name + " generateKeyPair",
 		Run: func(cmd *cobra.Command, args []string) {
 			publicKey, privateKey, err := crypto.GenerateKeyPair()
 			if err != nil {

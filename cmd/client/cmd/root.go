@@ -8,9 +8,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+
+	comm "github.com/seeleteam/go-seele/cmd/comm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	comm "github.com/seeleteam/go-seele/cmd/comm"
 )
 
 var rpcAddr string
