@@ -286,8 +286,7 @@ func (miner *Miner) commitTask(task *Task) {
 		step = math.MaxUint64 / uint64(threads)
 	}
 
-	var isNonceFound *int32
-	*isNonceFound = 0
+	var isNonceFound int32 = 0
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < threads; i++ {
 		if threads == 1 {
@@ -309,7 +308,7 @@ func (miner *Miner) commitTask(task *Task) {
 		miner.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
 			defer miner.wg.Done()
-			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, isNonceFound, miner.hashrate, miner.log)
+			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, &isNonceFound, miner.hashrate, miner.log)
 		}(tSeed, min, max)
 	}
 }
