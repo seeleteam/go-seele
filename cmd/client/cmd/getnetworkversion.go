@@ -19,7 +19,7 @@ var getNetworkVersion = &cobra.Command{
 	Short: "get current network version",
 	Long: `get current network version
 	  For example:
-		  node.exe networkversion [-a 127.0.0.1:55027]`,
+		  client.exe networkversion [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
