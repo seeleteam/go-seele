@@ -65,7 +65,7 @@ func NewCmdData() []*Request {
 			Short: "get block transaction count by height",
 			Long: `For example:
   client.exe getblocktxcountbyheight --height -1`,
-			ParamReflectType: "GetBlockTxByHeightRequest",
+			ParamReflectType: "GetBlockTxCountByHeightRequest",
 			Method:           "txpool.GetBlockTransactionCountByHeight",
 			Params: []*Param{
 				&Param{
@@ -83,7 +83,7 @@ func NewCmdData() []*Request {
 			Short: "get block transaction count by hash",
 			Long: `For example:
   client.exe getblocktxcountbyhash --hash 0x00000006f1c704b54ba9c7d9a3d50982d0479680afcf62d3e69bc42b30e595fd`,
-			ParamReflectType: "GetBlockTxByHashRequest",
+			ParamReflectType: "GetBlockTxCountByHashRequest",
 			Method:           "txpool.GetBlockTransactionCountByHash",
 			Params: []*Param{
 				&Param{

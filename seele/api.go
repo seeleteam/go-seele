@@ -46,13 +46,13 @@ type GetBlockByHashRequest struct {
 	FullTx  bool
 }
 
-// GetBlockTransactionByHeightRequest request param for GetBlockTransactionCountByHeight api
-type GetBlockTransactionByHeightRequest struct {
+// GetBlockTxCountByHeightRequest request param for GetBlockTransactionCountByHeight api
+type GetBlockTxCountByHeightRequest struct {
 	Height int64
 }
 
 // GetBlockTransactionByHashRequest request param for GetBlockTransactionByHash api
-type GetBlockTransactionByHashRequest struct {
+type GetBlockTxCountByHashRequest struct {
 	HashHex string
 }
 
@@ -225,7 +225,7 @@ func NewPublicTransactionPoolAPI(s *SeeleService) *PublicTransactionPoolAPI {
 }
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *GetBlockTransactionByHeightRequest, result *int) error {
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *GetBlockTxCountByHeightRequest, result *int) error {
 	block, err := getBlock(api.s.chain, request.Height)
 	if err != nil {
 		return err
@@ -235,7 +235,7 @@ func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *G
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(request *GetBlockTransactionByHashRequest, result *int) error {
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(request *GetBlockTxCountByHashRequest, result *int) error {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(request.HashHex)
 	if err != nil {
