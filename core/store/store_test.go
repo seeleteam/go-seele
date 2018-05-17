@@ -18,23 +18,25 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func testBlockchainDatabase(ut func(BlockchainStore)) {
+func newTestBlockchainDatabase() (BlockchainStore, func()) {
 	dir, err := ioutil.TempDir("", "BlockchainStore")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
 
 	db, err := leveldb.NewLevelDB(dir)
 	if err != nil {
+		defer os.RemoveAll(dir)
 		panic(err)
 	}
-	defer db.Close()
 
-	ut(NewBlockchainDatabase(db))
+	return NewBlockchainDatabase(db), func() {
+		defer db.Close()
+		defer os.RemoveAll(dir)
+	}
 }
 
-func newTestBlockHeader(t *testing.T) *types.BlockHeader {
+func newTestBlockHeader() *types.BlockHeader {
 	return &types.BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
 		Creator:           *crypto.MustGenerateRandomAddress(),
@@ -48,41 +50,41 @@ func newTestBlockHeader(t *testing.T) *types.BlockHeader {
 }
 
 func Test_blockchainDatabase_Header(t *testing.T) {
-	header := newTestBlockHeader(t)
+	header := newTestBlockHeader()
 	headerHash := header.Hash()
 
-	testBlockchainDatabase(func(bcStore BlockchainStore) {
-		bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
 
-		hash, err := bcStore.GetBlockHash(1)
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, hash, headerHash)
+	bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
 
-		headHash, err := bcStore.GetHeadBlockHash()
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, headHash, headerHash)
+	hash, err := bcStore.GetBlockHash(1)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, hash, headerHash)
 
-		storedHeader, err := bcStore.GetBlockHeader(headerHash)
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, storedHeader.Hash(), headerHash)
+	headHash, err := bcStore.GetHeadBlockHash()
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, headHash, headerHash)
 
-		td, err := bcStore.GetBlockTotalDifficulty(headerHash)
-		assert.Equal(t, err, error(nil))
-		assert.Equal(t, td, header.Difficulty)
+	storedHeader, err := bcStore.GetBlockHeader(headerHash)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, storedHeader.Hash(), headerHash)
 
-		exist, err := bcStore.HasBlock(headerHash)
-		assert.Equal(t, exist, true)
-		assert.Equal(t, err, nil)
+	td, err := bcStore.GetBlockTotalDifficulty(headerHash)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, td, header.Difficulty)
 
-		exist, err = bcStore.HasBlock(common.EmptyHash)
-		assert.Equal(t, exist, false)
-		assert.Equal(t, err, nil)
-	})
+	exist, err := bcStore.HasBlock(headerHash)
+	assert.Equal(t, exist, true)
+	assert.Equal(t, err, nil)
+
+	exist, err = bcStore.HasBlock(common.EmptyHash)
+	assert.Equal(t, exist, false)
+	assert.Equal(t, err, nil)
 }
 
 func newTestTx() *types.Transaction {
-	return &types.Transaction{
-		Hash: common.EmptyHash,
+	tx := &types.Transaction{
 		Data: &types.TransactionData{
 			From:    *crypto.MustGenerateRandomAddress(),
 			To:      crypto.MustGenerateRandomAddress(),
@@ -92,22 +94,66 @@ func newTestTx() *types.Transaction {
 		},
 		Signature: &crypto.Signature{big.NewInt(1), big.NewInt(2)},
 	}
+
+	tx.Hash = crypto.MustHash(tx)
+
+	return tx
 }
 
 func Test_blockchainDatabase_Block(t *testing.T) {
-	header := newTestBlockHeader(t)
+	header := newTestBlockHeader()
 	block := &types.Block{
 		HeaderHash:   header.Hash(),
 		Header:       header,
 		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
 	}
 
-	testBlockchainDatabase(func(bcStore BlockchainStore) {
-		err := bcStore.PutBlock(block, header.Difficulty, true)
-		assert.Equal(t, err, error(nil))
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
 
-		storedBlock, err := bcStore.GetBlock(block.HeaderHash)
+	err := bcStore.PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, error(nil))
+
+	storedBlock, err := bcStore.GetBlock(block.HeaderHash)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, storedBlock, block)
+}
+
+func Test_blockchainDatabase_Receipt(t *testing.T) {
+	header := newTestBlockHeader()
+	block := &types.Block{
+		HeaderHash:   header.Hash(),
+		Header:       header,
+		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
+	}
+
+	receipts := []*types.Receipt{
+		&types.Receipt{TxHash: block.Transactions[0].Hash},
+		&types.Receipt{TxHash: block.Transactions[1].Hash},
+		&types.Receipt{TxHash: block.Transactions[2].Hash},
+	}
+
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	if err := bcStore.PutBlock(block, header.Difficulty, true); err != nil {
+		t.Fatal()
+	}
+
+	if err := bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
+		t.Fatal()
+	}
+
+	// Check receipts in the block
+	storedReceipts, err := bcStore.GetReceiptsByBlockHash(block.HeaderHash)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, len(storedReceipts), 3)
+
+	// Check single receipt
+	for i := 0; i < 3; i++ {
+		txHash := block.Transactions[i].Hash
+		receipt, err := bcStore.GetReceiptByTxHash(txHash)
 		assert.Equal(t, err, error(nil))
-		assert.Equal(t, storedBlock, block)
-	})
+		assert.Equal(t, receipt.TxHash, txHash)
+	}
 }

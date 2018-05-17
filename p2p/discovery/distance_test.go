@@ -24,9 +24,10 @@ func Test_Dic(t *testing.T) {
 	log3 := logDist(h1, h1)
 	log4 := logDist(h1, h4)
 
+	assert.Equal(t, log1, 254)
+	assert.Equal(t, log2, 255)
 	assert.Equal(t, log3, 0)
-
-	log.Debug("%d, %d, %d", log1, log2, log4)
+	assert.Equal(t, log4, 60)
 }
 
 func getHash(s string) common.Hash {

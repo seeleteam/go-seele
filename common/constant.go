@@ -19,7 +19,7 @@ var (
 	defaultDataFolder string
 
 	// PrintLog default is false. If it is true, all logs will be printed in the console, otherwise they will be stored in the file.
-	PrintLog = false
+	PrintLog = true
 
 	// IsDebug default is false. If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
 	IsDebug = false

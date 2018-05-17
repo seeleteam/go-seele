@@ -88,7 +88,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 
 		logFileName := logName + ".log"
 		logFullPath := filepath.Join(LogFolder, logFileName)
-		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND, 0666)
+		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
