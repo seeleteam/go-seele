@@ -7,6 +7,8 @@ package discovery
 
 import (
 	"container/list"
+	"fmt"
+	"github.com/seeleteam/go-seele/log"
 	"net"
 	"time"
 
@@ -32,6 +34,8 @@ type udp struct {
 	gotReply   chan *reply
 	addPending chan *pending
 	writer     chan *send
+
+	log *log.SeeleLog
 }
 
 type pending struct {
@@ -61,9 +65,15 @@ type reply struct {
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr) *udp {
+	log := log.GetLogger("discovery", common.PrintLog)
+	conn, err := getUDPConn(addr)
+	if err != nil {
+		panic(fmt.Sprintf("listen addr %s failed", addr.String()))
+	}
+
 	transport := &udp{
-		conn:      getUDPConn(addr),
-		table:     newTable(id, addr),
+		conn:      conn,
+		table:     newTable(id, addr, log),
 		self:      NewNodeWithAddr(id, addr),
 		localAddr: addr,
 
@@ -72,6 +82,8 @@ func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
 		writer:     make(chan *send, 1),
+
+		log: log,
 	}
 
 	return transport
@@ -80,7 +92,7 @@ func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 	encoding, err := common.Serialize(msg)
 	if err != nil {
-		log.Info(err.Error())
+		u.log.Info(err.Error())
 		return
 	}
 
@@ -93,16 +105,16 @@ func (u *udp) sendMsg(t msgType, msg interface{}, to *Node) {
 	u.writer <- s
 }
 
-func sendMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
+func (u *udp) sendConnMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
 	//log.Debug("buff length:", len(buff))
 	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
-		log.Info("send msg failed:%s", err.Error())
+		u.log.Info("send msg failed:%s", err.Error())
 		return false
 	}
 
 	if n != len(buff) {
-		log.Error("send msg failed, expected length: %d, actuall length: %d", len(buff), n)
+		u.log.Error("send msg failed, expected length: %d, actuall length: %d", len(buff), n)
 		return false
 	}
 
@@ -114,7 +126,7 @@ func (u *udp) sendLoop() {
 		select {
 		case s := <-u.writer:
 			//log.Debug("send msg to: %d", s.to.Port)
-			success := sendMsg(s.buff, u.conn, s.to.GetUDPAddr())
+			success := u.sendConnMsg(s.buff, u.conn, s.to.GetUDPAddr())
 			if !success {
 				r := &reply{
 					from: s.to,
@@ -138,7 +150,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			msg := &ping{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
-				log.Info(err.Error())
+				u.log.Info(err.Error())
 				return
 			}
 
@@ -148,7 +160,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			msg := &pong{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
-				log.Info(err.Error())
+				u.log.Info(err.Error())
 				return
 			}
 
@@ -165,7 +177,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
-				log.Info(err.Error())
+				u.log.Info(err.Error())
 				return
 			}
 
@@ -175,7 +187,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			msg := &neighbors{}
 			err := common.Deserialize(data[1:], &msg)
 			if err != nil {
-				log.Info(err.Error())
+				u.log.Info(err.Error())
 				return
 			}
 
@@ -188,10 +200,10 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			u.gotReply <- r
 		default:
-			log.Error("unknown code %d", code)
+			u.log.Error("unknown code %d", code)
 		}
 	} else {
-		log.Info("wrong length")
+		u.log.Info("wrong length")
 	}
 }
 
@@ -200,7 +212,7 @@ func (u *udp) readLoop() {
 		data := make([]byte, 1024)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
-			log.Info(err.Error())
+			u.log.Info(err.Error())
 		}
 
 		//log.Info("get msg from: %d", remoteAddr.Port)
@@ -267,7 +279,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					log.Debug("time out %d", p.code)
+					u.log.Debug("time out %d", p.code)
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}
@@ -282,7 +294,7 @@ func (u *udp) discovery() {
 	for {
 		id, err := crypto.GenerateRandomAddress()
 		if err != nil {
-			log.Error(err.Error())
+			u.log.Error(err.Error())
 			continue
 		}
 
@@ -339,5 +351,5 @@ func (u *udp) deleteNode(sha common.Hash) {
 
 	u.table.deleteNode(sha)
 	u.db.delete(sha)
-	log.Info("delete node, total nodes:%d", u.db.size())
+	u.log.Info("delete node, total nodes:%d", u.db.size())
 }

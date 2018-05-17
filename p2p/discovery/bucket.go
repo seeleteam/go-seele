@@ -6,6 +6,7 @@
 package discovery
 
 import (
+	log2 "github.com/seeleteam/go-seele/log"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -20,12 +21,15 @@ const (
 type bucket struct {
 	peers []*Node
 	lock  sync.RWMutex //used for peers change
+
+	log *log2.SeeleLog
 }
 
-func newBuckets() *bucket {
+func newBuckets(log *log2.SeeleLog) *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
 		lock:  sync.RWMutex{},
+		log: log,
 	}
 }
 
@@ -40,7 +44,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
-		log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
+		b.log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -77,11 +81,11 @@ func (b *bucket) deleteNode(target common.Hash) {
 	}
 
 	if index == -1 {
-		log.Error("Failed to find the node to delete\n")
+		b.log.Error("Failed to find the node to delete\n")
 		return
 	}
 
-	log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
+	b.log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
 
 	b.peers = append(b.peers[:index], b.peers[index+1:]...)
 }
@@ -95,9 +99,9 @@ func (b *bucket) size() int {
 
 // printNodeList only use for debug test
 func (b *bucket) printNodeList() {
-	log.Debug("bucket size %d", len(b.peers))
+	b.log.Debug("bucket size %d", len(b.peers))
 
 	for _, n := range b.peers {
-		log.Debug("%s", hexutil.BytesToHex(n.ID.Bytes()))
+		b.log.Debug("%s", hexutil.BytesToHex(n.ID.Bytes()))
 	}
 }
