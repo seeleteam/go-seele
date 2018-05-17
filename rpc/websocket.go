@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"net/rpc"
-	"net/rpc/jsonrpc"
 
 	"github.com/gorilla/websocket"
 )
@@ -23,7 +22,7 @@ var upgrader = websocket.Upgrader{
 
 // WSServer represents a Websocket RPC server
 type WSServer struct {
-	rpc.Server
+	rpc *rpc.Server
 }
 
 // WebsocketServerConn represents a websocket server connection
@@ -36,14 +35,19 @@ type WebsocketServerConn struct {
 // NewWSServer return a Websocket RPC server
 func NewWSServer() *WSServer {
 	server := &WSServer{
-		rpc.Server{},
+		rpc: &rpc.Server{},
 	}
 
 	return server
 }
 
+// GetWSServer return rpc server of the WSServer
+func (server *WSServer) GetWSServer() *rpc.Server {
+	return server.rpc
+}
+
 // ServeWS runs the JSON-RPC server on a single websocket connection.
-func ServeWS(w http.ResponseWriter, r *http.Request) {
+func (server *WSServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	defer ws.Close()
 
@@ -51,8 +55,8 @@ func ServeWS(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-
-	jsonrpc.ServeConn(ws.UnderlyingConn())
+	server.rpc.ServeConn(ws.UnderlyingConn())
+	//jsonrpc.ServeConn(ws.UnderlyingConn())
 }
 
 // Read represents read data from websocket connection.
