@@ -64,12 +64,12 @@ type Config struct {
 // HttpServerConfig config for http server
 type HttpServerConfig struct {
 	// The HTTPAddr is the address of HTTP rpc service
-	HTTPAddr string	`json:"address"`
+	HTTPAddr string
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	HTTPCors []string	`json:"cross"`
+	HTTPCors []string
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
 	HTTPWhiteHost []string
