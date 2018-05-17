@@ -6,6 +6,7 @@
 package discovery
 
 import (
+	"github.com/seeleteam/go-seele/log"
 	"net"
 	"sort"
 
@@ -25,7 +26,7 @@ type Table struct {
 	selfNode *Node //info of local node
 }
 
-func newTable(id common.Address, addr *net.UDPAddr) *Table {
+func newTable(id common.Address, addr *net.UDPAddr, log *log.SeeleLog) *Table {
 	selfNode := NewNodeWithAddr(id, addr)
 
 	table := &Table{
@@ -34,7 +35,7 @@ func newTable(id common.Address, addr *net.UDPAddr) *Table {
 	}
 
 	for i := 0; i < nBuckets; i++ {
-		table.buckets[i] = newBuckets()
+		table.buckets[i] = newBuckets(log)
 	}
 
 	return table

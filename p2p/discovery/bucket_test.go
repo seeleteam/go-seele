@@ -6,6 +6,7 @@
 package discovery
 
 import (
+	log2 "github.com/seeleteam/go-seele/log"
 	"net"
 	"strconv"
 	"testing"
@@ -14,8 +15,13 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 )
 
+func getBuckets() *bucket {
+	log := log2.GetLogger("test", true)
+	return newBuckets(log)
+}
+
 func Test_Bucket(t *testing.T) {
-	b := bucket{}
+	b := getBuckets()
 
 	n := getNode("9000")
 	b.addNode(n)
@@ -42,7 +48,7 @@ func Test_Bucket(t *testing.T) {
 }
 
 func Test_AddNode(t *testing.T) {
-	b := bucket{}
+	b := getBuckets()
 
 	var n1 *Node
 	for i := 0; i < 17; i++ {
