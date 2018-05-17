@@ -35,7 +35,7 @@ func newTestTx(t *testing.T, amount int64, nonce uint64, sign bool) *Transaction
 	fromPrivKey, fromAddress := randomAccount(t)
 	toAddress := randomAddress(t)
 
-	tx := NewTransaction(fromAddress, toAddress, big.NewInt(amount), nonce)
+	tx := NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 
 	if sign {
 		tx.Sign(fromPrivKey)
@@ -144,11 +144,11 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 	to := crypto.MustGenerateRandomAddress()
 
 	// Cannot create a tx with oversized payload.
-	tx, err := NewMessageTransaction(*from, *to, big.NewInt(100), 38, make([]byte, MaxPayloadSize+1))
+	tx, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(0), 38, make([]byte, MaxPayloadSize+1))
 	assert.Equal(t, err, ErrPayloadOversized)
 
 	// Create a tx with valid payload
-	tx, err = NewMessageTransaction(*from, *to, big.NewInt(100), 38, []byte("hello"))
+	tx, err = NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(0), 38, []byte("hello"))
 	assert.Equal(t, err, error(nil))
 	tx.Data.Payload = make([]byte, MaxPayloadSize+1) // modify the payload to invalid size.
 

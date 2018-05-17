@@ -12,7 +12,7 @@ import (
 )
 
 type txCollection struct {
-	nonceToTxMap map[uint64]*types.Transaction
+	nonceToTxMap map[uint64]*types.Transaction // nonce -> transaction
 }
 
 func newTxCollection() *txCollection {
@@ -33,6 +33,10 @@ func (collection *txCollection) getTxs() []*types.Transaction {
 	}
 
 	return txs
+}
+
+func (collection *txCollection) findTx(nonce uint64) *types.Transaction {
+	return collection.nonceToTxMap[nonce]
 }
 
 func (collection *txCollection) remove(nonce uint64) {
