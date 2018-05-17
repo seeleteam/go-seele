@@ -14,6 +14,7 @@ import (
 )
 
 var rpcAddr string
+var wsAddr string
 
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
@@ -37,6 +38,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
+	rootCmd.PersistentFlags().StringVarP(&wsAddr, "wsaddr", "w", "ws://127.0.0.1:8080/ws", "websocket rpc address")
 }
 
 // initConfig reads in the config file and ENV variables if set.

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/gorilla/websocket"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
@@ -55,14 +56,29 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				input = e.Interface()
 			}
 
-			client, err := rpc.Dial("tcp", rpcAddr)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			defer client.Close()
-
 			var output interface{}
+			var client *rpc.Client
+			var err error
+
+			if request.UseWebsocket {
+				ws, _, err := websocket.DefaultDialer.Dial(wsAddr, nil)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				defer ws.Close()
+
+				client = rpc.NewClient(ws.UnderlyingConn())
+				defer client.Close()
+			} else {
+				client, err = rpc.Dial("tcp", rpcAddr)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				defer client.Close()
+			}
+
 			err = client.Call(request.Method, &input, &output)
 			if err != nil {
 				fmt.Println(err)

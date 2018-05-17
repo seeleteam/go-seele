@@ -81,9 +81,9 @@ type HttpServer struct {
 // WSServer config for websocket server
 type WSServer struct {
 	// The WSAddr is the address of Websocket rpc service
-	WSAddr string
+	WSAddr string `json:"WSAddr"`
 	// The WSAddr is the pattern of Websocket rpc service
-	WSPattern string
+	WSPattern string `json:"WSPattern"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file

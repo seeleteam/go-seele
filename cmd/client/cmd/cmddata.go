@@ -14,6 +14,7 @@ func NewCmdData() []*Request {
 			Long:             "test",
 			ParamReflectType: "GetBlockByHeightRequest",
 			Method:           "seele.GetBlockByHeight",
+			UseWebsocket:     true,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
@@ -41,6 +42,7 @@ func NewCmdData() []*Request {
 			Long:             "test",
 			ParamReflectType: "int64",
 			Method:           "debug.GetBlockRlp",
+			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
@@ -58,6 +60,7 @@ func NewCmdData() []*Request {
 			Long:             "test",
 			ParamReflectType: "nil",
 			Method:           "seele.GetBlockHeight",
+			UseWebsocket:     false,
 			Params:           []*Param{},
 		},
 	}
