@@ -81,7 +81,7 @@ func (b *bucket) deleteNode(target common.Hash) {
 	}
 
 	if index == -1 {
-		b.log.Error("Failed to find the node to delete\n")
+		b.log.Error("Failed to find the node to delete")
 		return
 	}
 

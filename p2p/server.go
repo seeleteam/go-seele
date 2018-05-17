@@ -134,12 +134,14 @@ func (srv *Server) Start() (err error) {
 	srv.delpeer = make(chan *Peer)
 
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
+	address := common.HexMustToAddres(srv.MyNodeID)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	discoveryNode := discovery.NewNodeWithAddr(address, addr)
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s][%s]", srv.MyNodeID, addr)
-	srv.kadDB = discovery.StartService(common.HexMustToAddres(srv.MyNodeID), addr, srv.StaticNodes)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode.String())
+	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
