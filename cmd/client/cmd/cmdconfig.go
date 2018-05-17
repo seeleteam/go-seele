@@ -6,9 +6,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"io/ioutil"
-
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -46,19 +43,16 @@ type Config struct {
 }
 
 // NewConfig create new Config pointer
-func NewConfig(filepath string) (*Config, error) {
+func NewConfig() *Config {
 	config := &Config{
 		structMap: make(map[string]interface{}),
 		basicMap:  make(map[string]interface{}),
+		request:   NewCmdData(),
 	}
 	config.InitBasicData()
 	config.InitStructData()
-	requests, err := config.GetRequestsFromFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	config.request = requests
-	return config, nil
+
+	return config
 }
 
 // InitStructData init struct data for cmd config
@@ -75,21 +69,6 @@ func (c *Config) InitBasicData() {
 	c.basicMap["int64"] = nil
 	c.basicMap["uint64"] = nil
 	c.basicMap["nil"] = nil
-}
-
-// GetRequestsFromFile get cmd request from json file
-func (c *Config) GetRequestsFromFile(filePath string) ([]*Request, error) {
-	buff, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var requests []*Request
-	err = json.Unmarshal(buff, &requests)
-	if err != nil {
-		return nil, err
-	}
-	return requests, nil
 }
 
 // ParsePointInterface return parse interface, if it is a pointer, take the value
