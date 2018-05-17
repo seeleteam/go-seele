@@ -104,20 +104,20 @@ func (miner *Miner) Start() error {
 		miner.log.Info("Can not start miner when syncing")
 		return ErrNodeIsSyncing
 	}
-	
+
 	atomic.StoreInt32(&miner.mining, 1)
-	
+
 	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
 		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
-		    miner.log.Warn(err.Error())
-			  atomic.StoreInt32(&miner.mining, 0)
-			
-			  return err
+			miner.log.Warn(err.Error())
+			atomic.StoreInt32(&miner.mining, 0)
+
+			return err
 		}
-		
+
 		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
 	}
-	
+
 	atomic.StoreInt32(&miner.stopped, 0)
 	go miner.waitBlock()
 
@@ -130,14 +130,14 @@ func (miner *Miner) Start() error {
 func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.mining, 0)
 	atomic.StoreInt32(&miner.stopped, 1)
-	
+
 	for i := 0; i < miner.threads; i++ {
 		miner.stopChan <- struct{}{}
 	}
-	
+
 	// wait for all threads to terminate
 	miner.wg.Wait()
-	
+
 	miner.log.Info("Miner is stopped.")
 }
 
@@ -177,8 +177,8 @@ func (miner *Miner) newTxCallback(e event.Event) {
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil {
-		    miner.log.Warn(err.Error())
-		    atomic.StoreInt32(&miner.mining, 0)
+			miner.log.Warn(err.Error())
+			atomic.StoreInt32(&miner.mining, 0)
 		}
 	}
 }
@@ -246,23 +246,19 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	txs := miner.seele.TxPool().GetProcessableTransactions()
-	txSlice := make([]*types.Transaction, 0)
-	for _, value := range txs {
-		txSlice = append(txSlice, value...)
-	}
 
 	cpyStateDB, err := stateDB.GetCopy()
 	if err != nil {
 		return err
 	}
-	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txSlice, miner.log)
+	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txs, miner.log)
 	if err != nil {
 		return err
 	}
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
 	miner.commitTask(miner.current)
-	
+
 	return nil
 }
 
@@ -274,7 +270,7 @@ func (miner *Miner) saveBlock(result *Result) error {
 
 // commitTask commits the given task to the miner
 func (miner *Miner) commitTask(task *Task) {
-    if atomic.LoadInt32(&miner.mining) != 1 {
+	if atomic.LoadInt32(&miner.mining) != 1 {
 		return
 	}
 
@@ -310,7 +306,7 @@ func (miner *Miner) commitTask(task *Task) {
 		} else {
 			max = math.MaxUint64
 		}
-    
+
 		miner.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
 			defer miner.wg.Done()

@@ -7,8 +7,8 @@ package cmd
 
 import (
 	"fmt"
-	"net/rpc/jsonrpc"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +26,7 @@ var minerCmd = &cobra.Command{
 	 client.exe miner --stop
 	 client.exe miner --gethashrate`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Println(err)
 			return

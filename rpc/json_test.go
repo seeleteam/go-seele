@@ -28,7 +28,7 @@ type Reply struct {
 type Arith int
 
 type ArithAddResp struct {
-	Id     interface{} `json:"id"`
+	ID     interface{} `json:"id"`
 	Result Reply       `json:"result"`
 	Error  interface{} `json:"error"`
 }
@@ -83,7 +83,7 @@ func Test_ServerNoParams(t *testing.T) {
 	go ServeConn(srv)
 	dec := json.NewDecoder(cli)
 
-	fmt.Fprintf(cli, `{"method": "Arith.Add", "id": "123"}`)
+	fmt.Fprintf(cli, `{"jsonrpc":"2.0" , "method": "Arith.Add", "id": "123"}`)
 	var resp ArithAddResp
 	if err := dec.Decode(&resp); err != nil {
 		t.Fatalf("Decode after no params: %s", err)
@@ -117,7 +117,7 @@ func Test_Server(t *testing.T) {
 
 	// Send hand-coded requests to server, parse responses.
 	for i := 0; i < 10; i++ {
-		fmt.Fprintf(cli, `{"method": "Arith.Add", "id": "\u%04d", "params": [{"A": %d, "B": %d}]}`, i, i, i+1)
+		fmt.Fprintf(cli, `{"jsonrpc": "2.0" ,"method": "Arith.Add", "id": "\u%04d", "params": [{"A": %d, "B": %d}]}`, i, i, i+1)
 		var resp ArithAddResp
 		err := dec.Decode(&resp)
 		if err != nil {
@@ -126,8 +126,8 @@ func Test_Server(t *testing.T) {
 		if resp.Error != nil {
 			t.Fatalf("resp.Error: %s", resp.Error)
 		}
-		if resp.Id.(string) != string(i) {
-			t.Fatalf("resp: bad id %q want %q", resp.Id.(string), string(i))
+		if resp.ID.(string) != string(i) {
+			t.Fatalf("resp: bad id %q want %q", resp.ID.(string), string(i))
 		}
 		if resp.Result.C != 2*i+1 {
 			t.Fatalf("resp: bad result: %d+%d=%d", i, i+1, resp.Result.C)
@@ -137,21 +137,24 @@ func Test_Server(t *testing.T) {
 
 func Test_MalformedInput(t *testing.T) {
 	cli, srv := net.Pipe()
-	go cli.Write([]byte(`{id:1}`)) // invalid json
-	ServeConn(srv)                 // must return, not loop
+	go func() {
+		cli.Write([]byte(`{id:1}`)) // invalid
+		cli.Read(make([]byte, 1024))
+	}()
+	ServeConn(srv) // must return, not loop
 }
 
 func Test_Json_ErrorHasNullResult(t *testing.T) {
 	var out bytes.Buffer
-	sc := NewJsonCodec(struct {
+	sc := NewJSONCodec(struct {
 		io.Reader
 		io.Writer
 		io.Closer
 	}{
-		Reader: strings.NewReader(`{"method": "Arith.Add", "id": "123", "params": []}`),
+		Reader: strings.NewReader(`{"jsonrpc":"2.0", "method": "Arith.Add", "id": "123", "params": []}`),
 		Writer: &out,
 		Closer: ioutil.NopCloser(nil),
-	})
+	}, nil)
 	r := new(rpc.Request)
 	if err := sc.ReadRequestHeader(r); err != nil {
 		t.Fatal(err)
@@ -176,8 +179,12 @@ func Test_Json_ErrorHasNullResult(t *testing.T) {
 
 func Test_UnexpectedError(t *testing.T) {
 	cli, srv := myPipe()
-	go cli.PipeWriter.CloseWithError(errors.New("unexpected error!")) // reader will get this error
-	ServeConn(srv)                                                    // must return, not loop
+	go func() {
+		cli.PipeWriter.CloseWithError(errors.New("unexpected error")) // reader will get this error
+		cli.PipeReader.Close()                                        // writer will get ErrClosedPipe
+	}()
+	ServeConn(srv) // must return, not loop
+
 }
 
 // Copied from package net.

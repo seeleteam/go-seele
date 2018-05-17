@@ -87,6 +87,7 @@ func newTestTx() *types.Transaction {
 			From:    *crypto.MustGenerateRandomAddress(),
 			To:      crypto.MustGenerateRandomAddress(),
 			Amount:  big.NewInt(3),
+			Fee:     big.NewInt(0),
 			Payload: make([]byte, 0),
 		},
 		Signature: &crypto.Signature{big.NewInt(1), big.NewInt(2)},

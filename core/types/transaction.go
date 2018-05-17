@@ -53,18 +53,19 @@ var (
 
 // TransactionData wraps the data in a transaction.
 type TransactionData struct {
-	From         common.Address // From is the address of the sender
+	From         common.Address  // From is the address of the sender
 	To           *common.Address // To is the receiver address, which is nil for contract creation transaction
-	Amount       *big.Int // Amount is the amount to be transferred
-	AccountNonce uint64 // AccountNonce is the nonce of the sender account
-	Timestamp    uint64 // Timestamp is unix nano time when the transaction is created
-	Payload      []byte // Payload is the extra data of the transaction
+	Amount       *big.Int        // Amount is the amount to be transferred
+	AccountNonce uint64          // AccountNonce is the nonce of the sender account
+	Fee          *big.Int        // Transaction Fee
+	Timestamp    uint64          // Timestamp is unix nano time when the transaction is created
+	Payload      []byte          // Payload is the extra data of the transaction
 }
 
 // Transaction represents a transaction in the blockchain.
 type Transaction struct {
-	Hash      common.Hash // Hash is the hash of the transaction data
-	Data      *TransactionData // Data is the transaction data
+	Hash      common.Hash       // Hash is the hash of the transaction data
+	Data      *TransactionData  // Data is the transaction data
 	Signature *crypto.Signature // Signature is the signature of the transaction
 }
 
@@ -76,12 +77,12 @@ type stateDB interface {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 // panic if the amount is nil or negative.
-func NewTransaction(from, to common.Address, amount *big.Int, nonce uint64) *Transaction {
-	tx, _ := newTx(from, &to, amount, nonce, nil)
+func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) *Transaction {
+	tx, _ := newTx(from, &to, amount, fee, nonce, nil)
 	return tx
 }
 
-func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
+func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
 	if amount == nil {
 		panic("Failed to create tx, amount is nil.")
 	}
@@ -98,6 +99,7 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 		From:         from,
 		To:           to,
 		Amount:       new(big.Int).Set(amount),
+		Fee:          new(big.Int).Set(fee),
 		Timestamp:    uint64(time.Now().UnixNano()),
 		AccountNonce: nonce,
 	}
@@ -114,13 +116,13 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, nonce uint6
 }
 
 // NewContractTransaction returns a transaction to create a smart contract.
-func NewContractTransaction(from common.Address, amount *big.Int, nonce uint64, code []byte) (*Transaction, error) {
-	return newTx(from, nil, amount, nonce, code)
+func NewContractTransaction(from common.Address, amount *big.Int, fee *big.Int, nonce uint64, code []byte) (*Transaction, error) {
+	return newTx(from, nil, amount, fee, nonce, code)
 }
 
 // NewMessageTransaction returns a transation with the specified message.
-func NewMessageTransaction(from, to common.Address, amount *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
-	return newTx(from, &to, amount, nonce, msg)
+func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
+	return newTx(from, &to, amount, fee, nonce, msg)
 }
 
 // Sign signs the transaction with the specified private key.

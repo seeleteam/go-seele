@@ -7,8 +7,8 @@ package cmd
 
 import (
 	"fmt"
-	"net/rpc/jsonrpc"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +21,7 @@ var getinfo = &cobra.Command{
     For example:
 		client.exe getinfo -a 127.0.0.1:55027`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Println(err.Error())
 			return

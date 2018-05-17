@@ -8,19 +8,20 @@ package cmd
 import (
 	"fmt"
 	"math/big"
-	"net/rpc/jsonrpc"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
 type txInfo struct {
-	amount *uint64 // amount specifies the coin amount to be transferred
+	amount *string // amount specifies the coin amount to be transferred
 	to     *string // to is the public address of the receiver
 	from   *string // from is the key file path of the sender
+	fee    *string // transaction fee
 }
 
 var parameter = txInfo{}
@@ -34,7 +35,7 @@ var sendtxCmd = &cobra.Command{
     client.exe sendtx -m 0 -t 0x<public address> -f keyfile
     client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x<public address> -f keyfile `,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Printf("invalid address: %s\n", err.Error())
 			return
@@ -74,8 +75,19 @@ var sendtxCmd = &cobra.Command{
 
 		fmt.Printf("got the sender account nonce: %d\n", nonce)
 
-		amount := big.NewInt(0).SetUint64(*parameter.amount)
-		tx := types.NewTransaction(*from, toAddr, amount, nonce)
+		amount, ok := big.NewInt(0).SetString(*parameter.amount, 10)
+		if !ok {
+			fmt.Println("invalid amount value")
+			return
+		}
+
+		fee, ok := big.NewInt(0).SetString(*parameter.fee, 10)
+		if !ok {
+			fmt.Println("invalid fee value")
+			return
+		}
+
+		tx := types.NewTransaction(*from, toAddr, amount, fee, nonce)
 		tx.Sign(key.PrivateKey)
 
 		var result bool
@@ -95,9 +107,12 @@ func init() {
 	parameter.to = sendtxCmd.Flags().StringP("to", "t", "", "public address of the receiver")
 	sendtxCmd.MarkFlagRequired("to")
 
-	parameter.amount = sendtxCmd.Flags().Uint64P("amount", "m", 0, "the amount of the transferred coins")
+	parameter.amount = sendtxCmd.Flags().StringP("amount", "m", "", "the amount of the transferred coins")
 	sendtxCmd.MarkFlagRequired("amount")
 
 	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "key file path of the sender")
 	sendtxCmd.MarkFlagRequired("from")
+
+	parameter.fee = sendtxCmd.Flags().StringP("fee", "", "", "transaction fee")
+	sendtxCmd.MarkFlagRequired("fee")
 }
