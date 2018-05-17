@@ -23,10 +23,10 @@ func (t *WSTest) Echo(req *string, res *string) error {
 }
 func Test_Websocket(t *testing.T) {
 	rpc.RegisterName("Test", new(WSTest))
-	http.HandleFunc("/ws", ServeWS)
-	go http.ListenAndServe(":12315", nil)
+	http.HandleFunc("/test", ServeWS)
+	go http.ListenAndServe("127.0.0.1:12315", nil)
 
-	ws, _, _ := websocket.DefaultDialer.Dial("ws://127.0.0.1:12315/ws", nil)
+	ws, _, _ := websocket.DefaultDialer.Dial("ws://127.0.0.1:12315/test", nil)
 	defer ws.Close()
 
 	client := jsonrpc.NewClient(ws.UnderlyingConn())
