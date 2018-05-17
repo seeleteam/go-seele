@@ -8,8 +8,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/rpc/jsonrpc"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +26,7 @@ var getblockbyheightCmd = &cobra.Command{
 	Long: `For example:
 	client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -7,7 +7,8 @@ package cmd
 
 import (
 	"fmt"
-	"net/rpc/jsonrpc"
+
+	"github.com/seeleteam/go-seele/rpc"
 
 	"github.com/spf13/cobra"
 )
@@ -20,7 +21,7 @@ var getNetworkVersion = &cobra.Command{
 	  For example:
 		  node.exe networkversion [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Printf("Failed to connect to the node %s, error:%s\n", rpcAddr, err.Error())
 			return

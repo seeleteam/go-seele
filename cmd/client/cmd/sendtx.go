@@ -8,12 +8,12 @@ package cmd
 import (
 	"fmt"
 	"math/big"
-	"net/rpc/jsonrpc"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +34,7 @@ var sendtxCmd = &cobra.Command{
     client.exe sendtx -m 0 -t 0x<public address> -f keyfile
     client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x<public address> -f keyfile `,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Printf("invalid address: %s\n", err.Error())
 			return

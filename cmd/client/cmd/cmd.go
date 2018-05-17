@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/rpc/jsonrpc"
 	"reflect"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +59,7 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				input = e.Interface()
 			}
 
-			client, err := jsonrpc.Dial("tcp", rpcAddr)
+			client, err := rpc.Dial("tcp", rpcAddr)
 			if err != nil {
 				fmt.Println(err)
 				return
