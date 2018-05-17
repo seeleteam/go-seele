@@ -60,5 +60,41 @@ func NewCmdData() []*Request {
 			Method:           "seele.GetBlockHeight",
 			Params:           []*Param{},
 		},
+		&Request{
+			Use:   "getblocktxcountbyheight",
+			Short: "get block transaction count by height",
+			Long: `For example:
+  client.exe getblocktxcountbyheight --height -1`,
+			ParamReflectType: "GetBlockTxByHeightRequest",
+			Method:           "txpool.GetBlockTransactionCountByHeight",
+			Params: []*Param{
+				&Param{
+					ReflectName:  "Height",
+					ParamName:    "height",
+					ShortHand:    "",
+					ParamType:    "*int64",
+					DefaultValue: -1,
+					Usage:        "height for get block transaction count",
+					Required:     false,
+				},
+			}},
+		&Request{
+			Use:   "getblocktxcountbyhash",
+			Short: "get block transaction count by hash",
+			Long: `For example:
+  client.exe getblocktxcountbyhash --hash 0x00000006f1c704b54ba9c7d9a3d50982d0479680afcf62d3e69bc42b30e595fd`,
+			ParamReflectType: "GetBlockTxByHashRequest",
+			Method:           "txpool.GetBlockTransactionCountByHash",
+			Params: []*Param{
+				&Param{
+					ReflectName:  "HashHex",
+					ParamName:    "hash",
+					ShortHand:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash for get block transaction count",
+					Required:     true,
+				},
+			}},
 	}
 }

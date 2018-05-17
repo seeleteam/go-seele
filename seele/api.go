@@ -46,6 +46,16 @@ type GetBlockByHashRequest struct {
 	FullTx  bool
 }
 
+// GetBlockTransactionByHeightRequest request param for GetBlockTransactionCountByHeight api
+type GetBlockTransactionByHeightRequest struct {
+	Height int64
+}
+
+// GetBlockTransactionByHashRequest request param for GetBlockTransactionByHash api
+type GetBlockTransactionByHashRequest struct {
+	HashHex string
+}
+
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 	block, _ := api.s.chain.CurrentBlock()
@@ -163,12 +173,12 @@ func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) 
 	return nil
 }
 
-// PublicMinerAPI provides an API to access full node-related information.
+// PublicMinerAPI provides an API to access miner information.
 type PublicMinerAPI struct {
 	s *SeeleService
 }
 
-// NewPublicMinerAPI creates a new PublicSeeleAPI object for rpc service.
+// NewPublicMinerAPI creates a new PublicMinerAPI object for miner rpc service.
 func NewPublicMinerAPI(s *SeeleService) *PublicMinerAPI {
 	return &PublicMinerAPI{s}
 }
@@ -201,6 +211,43 @@ func (api *PublicMinerAPI) Stop(input *string, result *string) error {
 func (api *PublicMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 	*hashrate = uint64(api.s.miner.Hashrate())
 
+	return nil
+}
+
+// PublicTransactionPoolAPI provides an API to access transaction pool information.
+type PublicTransactionPoolAPI struct {
+	s *SeeleService
+}
+
+// NewPublicTransactionPoolAPI creates a new PublicTransactionPoolAPI object for transaction pool rpc service.
+func NewPublicTransactionPoolAPI(s *SeeleService) *PublicTransactionPoolAPI {
+	return &PublicTransactionPoolAPI{s}
+}
+
+// GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *GetBlockTransactionByHeightRequest, result *int) error {
+	block, err := getBlock(api.s.chain, request.Height)
+	if err != nil {
+		return err
+	}
+	*result = len(block.Transactions)
+	return nil
+}
+
+// GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(request *GetBlockTransactionByHashRequest, result *int) error {
+	store := api.s.chain.GetStore()
+	hashByte, err := hexutil.HexToBytes(request.HashHex)
+	if err != nil {
+		return err
+	}
+
+	hash := common.BytesToHash(hashByte)
+	block, err := store.GetBlock(hash)
+	if err != nil {
+		return err
+	}
+	*result = len(block.Transactions)
 	return nil
 }
 
