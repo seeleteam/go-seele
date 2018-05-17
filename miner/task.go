@@ -6,6 +6,7 @@
 package miner
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -28,16 +29,36 @@ type Task struct {
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
 func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, blockHeight uint64,
-	txs []*types.Transaction, log *log.SeeleLog) error {
+	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := pow.GetReward(blockHeight)
-	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, 0)
+	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, big.NewInt(0), 0)
 	reward.Signature = &crypto.Signature{}
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
-	for i, tx := range txs {
+	task.chooseTransactions(seele, statedb, txs, log)
+
+	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
+
+	root, err := statedb.Commit(nil)
+	if err != nil {
+		return err
+	}
+
+	task.header.StateHash = root
+
+	return nil
+}
+
+func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
+	for i := 0; i < core.BlockTransactionNumberLimit; i++ {
+		tx := popBestFeeTx(txs)
+		if tx == nil {
+			break
+		}
+
 		seele.TxPool().RemoveTransaction(tx.Hash)
 
 		err := tx.Validate(statedb)
@@ -54,22 +75,29 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
+	}
+}
 
-		if i == core.BlockTransactionNumberLimit {
-			break
+// get best fee transaction and remove it in the map
+// return best transaction if txs is empty, it will return nil
+func popBestFeeTx(txs map[common.Address][]*types.Transaction) *types.Transaction {
+	bestFee := big.NewInt(0)
+	var bestTx *types.Transaction
+	for _, txSlice := range txs {
+		if len(txSlice) > 0 {
+			if txSlice[0].Data.Fee.Cmp(bestFee) > 0 {
+				bestTx = txSlice[0]
+				bestFee.Set(txSlice[0].Data.Fee)
+			}
 		}
 	}
 
-	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
-
-	root, err := statedb.Commit(nil)
-	if err != nil {
-		return err
+	if bestTx != nil {
+		txSlice := txs[bestTx.Data.From]
+		txs[bestTx.Data.From] = append(txSlice[:0], txSlice[1:]...)
 	}
 
-	task.header.StateHash = root
-
-	return nil
+	return bestTx
 }
 
 // generateBlock builds a block from task
