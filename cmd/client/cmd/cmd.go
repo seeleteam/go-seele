@@ -16,11 +16,7 @@ import (
 )
 
 func init() {
-	config, err := NewConfig(DefaultPath)
-	if err != nil {
-		fmt.Println("init cmd fail :\n", err)
-	}
-
+	config := NewConfig()
 	for _, request := range config.request {
 		cmd, err := config.InitCommand(request)
 		if err != nil {
@@ -96,11 +92,11 @@ func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Co
 	case "*bool":
 		paramFlags[param.ReflectName] = cmd.Flags().BoolP(param.ParamName, param.ShortHand, param.DefaultValue.(bool), param.Usage)
 	case "*int64":
-		paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.ParamName, param.ShortHand, int64(param.DefaultValue.(float64)), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.ParamName, param.ShortHand, int64(param.DefaultValue.(int)), param.Usage)
 	case "*uint64":
-		paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.ParamName, param.ShortHand, uint64(param.DefaultValue.(float64)), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.ParamName, param.ShortHand, uint64(param.DefaultValue.(int)), param.Usage)
 	case "*int":
-		paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, int(param.DefaultValue.(float64)), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, param.DefaultValue.(int), param.Usage)
 	default:
 		return errors.New("param type match miss, check or add new match in ParseCmdFlag function")
 	}
