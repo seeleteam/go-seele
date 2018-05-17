@@ -61,6 +61,8 @@ func (c *Config) InitStructData() {
 	c.structMap["GetBlockByHashRequest"] = seele.GetBlockByHashRequest{}
 	c.structMap["GetBlockTxCountByHeightRequest"] = seele.GetBlockTxCountByHeightRequest{}
 	c.structMap["GetBlockTxCountByHashRequest"] = seele.GetBlockTxCountByHashRequest{}
+	c.structMap["GetTxByBlockHeightAndIndexRequest"] = seele.GetTxByBlockHeightAndIndexRequest{}
+	c.structMap["GetTxByBlockHashAndIndexRequest"] = seele.GetTxByBlockHashAndIndexRequest{}
 }
 
 // InitBasicData init basic data for cmd config

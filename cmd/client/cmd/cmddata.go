@@ -96,5 +96,59 @@ func NewCmdData() []*Request {
 					Required:     true,
 				},
 			}},
+		&Request{
+			Use:   "gettxbyheightandindex",
+			Short: "get transaction by block height and index",
+			Long: `For example:
+	  client.exe gettxbyheightandindex --height -1 --index 0`,
+			ParamReflectType: "GetTxByBlockHeightAndIndexRequest",
+			Method:           "txpool.GetTransactionByBlockHeightAndIndex",
+			Params: []*Param{
+				&Param{
+					ReflectName:  "Height",
+					ParamName:    "height",
+					ShortHand:    "",
+					ParamType:    "*int64",
+					DefaultValue: -1,
+					Usage:        "height for get block",
+					Required:     false,
+				},
+				&Param{
+					ReflectName:  "Index",
+					ParamName:    "index",
+					ShortHand:    "",
+					ParamType:    "*int",
+					DefaultValue: 0,
+					Usage:        "index of the transaction in block",
+					Required:     false,
+				},
+			}},
+		&Request{
+			Use:   "gettxbyhashandindex",
+			Short: "get transaction by hash and index",
+			Long: `For example:
+	  client.exe gettxbyhashandindex --hash 0x00000006f1c704b54ba9c7d9a3d50982d0479680afcf62d3e69bc42b30e595fd --index 0`,
+			ParamReflectType: "GetTxByBlockHashAndIndexRequest",
+			Method:           "txpool.GetTransactionByBlockHashAndIndex",
+			Params: []*Param{
+				&Param{
+					ReflectName:  "HashHex",
+					ParamName:    "hash",
+					ShortHand:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash for get block",
+					Required:     true,
+				},
+				&Param{
+					ReflectName:  "Index",
+					ParamName:    "index",
+					ShortHand:    "",
+					ParamType:    "*int",
+					DefaultValue: 0,
+					Usage:        "index of the transaction in block",
+					Required:     false,
+				},
+			}},
 	}
 }
