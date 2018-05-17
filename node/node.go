@@ -221,10 +221,10 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 
 // startWSRPC starts websocket rpc server
 func (n *Node) startWSRPC(apis []rpc.API) error {
-	handler := rpc.NewWSServer()
-	wsServer := handler.GetWSServer()
+	handler := rpc.NewWsRPCServer()
+	rpcServer := handler.GetWsRPCServer()
 	for _, api := range apis {
-		if err := wsServer.RegisterName(api.Namespace, api.Service); err != nil {
+		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
 			n.log.Error("Websocket registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}

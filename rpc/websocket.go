@@ -20,8 +20,8 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// WSServer represents a Websocket RPC server
-type WSServer struct {
+// WsRPCServer represents a Websocket RPC server
+type WsRPCServer struct {
 	rpc *rpc.Server
 }
 
@@ -32,22 +32,22 @@ type WebsocketServerConn struct {
 	w  io.WriteCloser
 }
 
-// NewWSServer return a Websocket RPC server
-func NewWSServer() *WSServer {
-	server := &WSServer{
+// NewWsRPCServer return a Websocket RPC server
+func NewWsRPCServer() *WsRPCServer {
+	server := &WsRPCServer{
 		rpc: &rpc.Server{},
 	}
 
 	return server
 }
 
-// GetWSServer return rpc server of the WSServer
-func (server *WSServer) GetWSServer() *rpc.Server {
+// GetWsRPCServer return rpc server of the WsRPCServer
+func (server *WsRPCServer) GetWsRPCServer() *rpc.Server {
 	return server.rpc
 }
 
 // ServeWS runs the JSON-RPC server on a single websocket connection.
-func (server *WSServer) ServeWS(w http.ResponseWriter, r *http.Request) {
+func (server *WsRPCServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	defer ws.Close()
 
@@ -55,8 +55,8 @@ func (server *WSServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	server.rpc.ServeConn(ws.UnderlyingConn())
-	//jsonrpc.ServeConn(ws.UnderlyingConn())
+
+	server.rpc.ServeCodec(NewJSONCodec(ws.UnderlyingConn(), nil))
 }
 
 // Read represents read data from websocket connection.
