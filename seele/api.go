@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
@@ -106,7 +107,7 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 		return err
 	}
 
-	response, err := rpcOutputBlock(block, request.FullTx)
+	response, err := rpcOutputBlock(block, request.FullTx, api.s.chain.GetStore())
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 		return err
 	}
 
-	response, err := rpcOutputBlock(block, request.FullTx)
+	response, err := rpcOutputBlock(block, request.FullTx, store)
 	if err != nil {
 		return err
 	}
@@ -204,7 +205,7 @@ func (api *PublicMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 }
 
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx
-func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error) {
+func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (map[string]interface{}, error) {
 	head := b.Header
 	fields := map[string]interface{}{
 		"height":     head.Height,
@@ -228,6 +229,12 @@ func rpcOutputBlock(b *types.Block, fullTx bool) (map[string]interface{}, error)
 		}
 	}
 	fields["transactions"] = transactions
+
+	totalDifficulty, err := store.GetBlockTotalDifficulty(b.HeaderHash)
+	if err != nil {
+		return nil, err
+	}
+	fields["totalDifficulty"] = totalDifficulty
 
 	return fields, nil
 }
