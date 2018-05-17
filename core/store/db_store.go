@@ -34,9 +34,8 @@ type blockBody struct {
 
 // txIndex represents an index that used to query block info by tx hash.
 type txIndex struct {
-	BlockHash   common.Hash
-	BlockHeight uint64
-	Index       uint // tx array index in block body
+	BlockHash common.Hash
+	Index     uint // tx array index in block body
 }
 
 // blockchainDatabase wraps a database used for the blockchain
@@ -172,7 +171,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 		// Write index for each tx.
 		for i, tx := range body.Txs {
-			idx := txIndex{hash, header.Height, uint(i)}
+			idx := txIndex{hash, uint(i)}
 			encodedTxIndex, err := common.Serialize(idx)
 			if err != nil {
 				return err
@@ -277,8 +276,8 @@ func (store *blockchainDatabase) PutReceipts(hash common.Hash, receipts []*types
 	return store.db.Put(key, encodedBytes)
 }
 
-// GetReceipts retrieves the receipts for the specified block hash.
-func (store *blockchainDatabase) GetReceipts(hash common.Hash) ([]*types.Receipt, error) {
+// GetReceiptsByBlockHash retrieves the receipts for the specified block hash.
+func (store *blockchainDatabase) GetReceiptsByBlockHash(hash common.Hash) ([]*types.Receipt, error) {
 	key := hashToReceiptsKey(hash.Bytes())
 	encodedBytes, err := store.db.Get(key)
 	if err != nil {
@@ -293,14 +292,14 @@ func (store *blockchainDatabase) GetReceipts(hash common.Hash) ([]*types.Receipt
 	return receipts, nil
 }
 
-// GetReceipt retrieves the receipt for the specified tx hash.
-func (store *blockchainDatabase) GetReceipt(txHash common.Hash) (*types.Receipt, error) {
+// GetReceiptByTxHash retrieves the receipt for the specified tx hash.
+func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error) {
 	txIndex, err := store.getTxIndex(txHash)
 	if err != nil {
 		return nil, err
 	}
 
-	receipts, err := store.GetReceipts(txIndex.BlockHash)
+	receipts, err := store.GetReceiptsByBlockHash(txIndex.BlockHash)
 	if err != nil {
 		return nil, err
 	}

@@ -144,14 +144,14 @@ func Test_blockchainDatabase_Receipt(t *testing.T) {
 	}
 
 	// Check receipts in the block
-	storedReceipts, err := bcStore.GetReceipts(block.HeaderHash)
+	storedReceipts, err := bcStore.GetReceiptsByBlockHash(block.HeaderHash)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, len(storedReceipts), 3)
 
 	// Check single receipt
 	for i := 0; i < 3; i++ {
 		txHash := block.Transactions[i].Hash
-		receipt, err := bcStore.GetReceipt(txHash)
+		receipt, err := bcStore.GetReceiptByTxHash(txHash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, receipt.TxHash, txHash)
 	}

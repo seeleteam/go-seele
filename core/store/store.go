@@ -52,9 +52,9 @@ type BlockchainStore interface {
 	// PutReceipts serializes given receipts for the specified block hash.
 	PutReceipts(hash common.Hash, receipts []*types.Receipt) error
 
-	// GetReceipts retrieves the receipts for the specified block hash.
-	GetReceipts(hash common.Hash) ([]*types.Receipt, error)
+	// GetReceiptsByBlockHash retrieves the receipts for the specified block hash.
+	GetReceiptsByBlockHash(hash common.Hash) ([]*types.Receipt, error)
 
-	// GetReceipt retrieves the receipt for the specified tx hash.
-	GetReceipt(txHash common.Hash) (*types.Receipt, error)
+	// GetReceiptByTxHash retrieves the receipt for the specified tx hash.
+	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
 }
