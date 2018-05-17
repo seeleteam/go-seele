@@ -8,8 +8,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"net/rpc/jsonrpc"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +26,7 @@ var getblockbyhashCmd = &cobra.Command{
 	Long: `For example:
 	client.exe getblockbyhash --hash 0x0000009721cf7bb5859f1a0ced952fcf71929ff8382db6ef20041ed441d5f92f [-f=true] [-a 127.0.0.1:55027]`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
 			fmt.Println(err)
 			return
