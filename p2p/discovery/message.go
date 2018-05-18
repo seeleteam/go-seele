@@ -157,7 +157,7 @@ func (m *findNode) send(t *udp) {
 				return true
 			}
 
-			t.log.Debug("find %d nodes", len(r.Nodes))
+			t.log.Debug("got find response with %d nodes", len(r.Nodes))
 
 			found := false
 			for _, n := range r.Nodes {
