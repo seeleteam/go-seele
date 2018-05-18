@@ -77,19 +77,16 @@ type Config struct {
 	Protocols []Protocol
 
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string `json:"listenAddr"`
-
-	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string `json:"serverPrivateKey"`
+	ListenAddr string `json:"addres"`
 
 	// network id, not used now. @TODO maybe be removed or just use Version
 	NetworkID uint64 `json:"networkID"`
 
-	// capacity of the transaction pool
-	Capacity uint `json:"capacity"`
-
 	// static nodes which will be connected to find more nodes when the node starts
 	StaticNodes []string `json:"staticNodes"`
+
+	// ServerPrivateKey private key for p2p module, do not use it as any accounts
+	ServerPrivateKey string `json:"privateKey "`
 }
 
 // Server manages all p2p peer connections.

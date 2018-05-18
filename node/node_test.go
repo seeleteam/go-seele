@@ -19,9 +19,10 @@ var (
 
 func testNodeConfig() *Config {
 	return &Config{
-		&Basic{
-			Name:    "test node",
-			Version: "test version"
+		Basic:Basic{
+			Name: "test node",
+			Version: "test version",
+			
 		},
 		P2P: p2p.Config{PrivateKey: testNodeKey},
 	}

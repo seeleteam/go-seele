@@ -3,26 +3,26 @@
     "name": "seele node1",
     "version": "1.0",
     "dataDir": "node1",
-    "rpcAddr": "127.0.0.1:55027",
+    "address": "0.0.0.0:55027",
+    "capacity": 10000,
     "coinbase": "0x23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad"
   },
   "p2p": {
-    "listenAddr": "0.0.0.0:39007",
-    "serverPrivateKey": "0x0de1ffef23f127f53b7d784bc78887465f7802de1ab8b02a8243b7c60cc32f58",
+    "privateKey": "0x0de1ffef23f127f53b7d784bc78887465f7802de1ab8b02a8243b7c60cc32f58",
     "staticNodes": [],
-    "networkID": 1,
-    "capacity": 10000
+    "address": "0.0.0.0:39007",
+    "networkID": 1
   },
   "log": {
     "isDebug": true,
     "printLog": true
   },
   "httpServer": {
-    "httpAddr": "127.0.0.1:65027",
-    "httpCors": [
+    "address": "127.0.0.1:65027",
+    "crosssorgins": [
       "*"
     ],
-    "httpWhiteHost": [
+    "whiteHost": [
       "*"
     ]
   }
