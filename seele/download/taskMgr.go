@@ -234,6 +234,12 @@ func (t *taskMgr) onPeerQuit(peerID string) {
 func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
+	if len(headers) == 0{
+		t.log.Warn("get block header msg with empty header info")
+		return nil
+	}
+
 	if peerID == t.masterPeer {
 		lastNo := t.fromNo + uint64(len(t.masterHeaderList))
 		t.log.Debug("masterPeer deliverHeaderMsg. lastNo=%d fromNo:%d header.height:%d", lastNo, t.fromNo, headers[0].Height)
