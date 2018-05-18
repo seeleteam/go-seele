@@ -140,7 +140,7 @@ func (srv *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode.String())
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode)
 	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
@@ -155,7 +155,7 @@ func (srv *Server) Start() (err error) {
 }
 
 func (srv *Server) addNode(node *discovery.Node) {
-	srv.log.Info("got discovery a new node event")
+	srv.log.Info("got discovery a new node event, node info:%s", node)
 	_, ok := srv.peers[node.ID]
 	if ok {
 		return
@@ -166,7 +166,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	srv.log.Info("connecting to a new node... %s", addr.String())
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
-		srv.log.Error("connect to a new node err: %s, node: %s", err, node.String())
+		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
 			conn.Close()
 		}
@@ -292,7 +292,7 @@ func (srv *Server) listenLoop() {
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
-	srv.log.Info("setup connection with peer %s", dialDest.String())
+	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd}, srv.Protocols, srv.log, dialDest)
 
 	var caps []Cap
@@ -302,7 +302,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
-		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest.String(), err)
+		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
