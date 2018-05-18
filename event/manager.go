@@ -102,10 +102,7 @@ func (h *EventManager) RemoveListener(callback EventHandleMethod) {
 }
 
 // removeOnceListener removes all listeners which run only once
-func (h *EventManager) removeOnceListener() {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-	
+func (h *EventManager) removeOnceListener() {	
 	listeners := make([]eventListener, 0, len(h.listeners))
 	for _, l := range h.listeners {
 		if !l.IsOnceListener {
