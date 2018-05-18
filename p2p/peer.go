@@ -79,7 +79,7 @@ errLoop:
 			break errLoop
 		case <-p.disconnection:
 			p.log.Info("p2p peer got disconnection request")
-			err = errors.New("disconnection error recved")
+			err = errors.New("disconnection error received")
 			break errLoop
 		case err = <-p.protocolErr:
 			p.log.Warn("p2p peer got protocol err %s", err.Error())
@@ -118,6 +118,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
+		p.log.Debug("got msg from peer: %s, code: %d",p.Node, msgRecv.Code)
 		if err != nil {
 			readErr <- err
 			return
