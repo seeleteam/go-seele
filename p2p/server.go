@@ -155,6 +155,7 @@ func (srv *Server) Start() (err error) {
 }
 
 func (srv *Server) addNode(node *discovery.Node) {
+	srv.log.Info("got discovery a new node event")
 	_, ok := srv.peers[node.ID]
 	if ok {
 		return
@@ -165,6 +166,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	srv.log.Info("connecting to a new node... %s", addr.String())
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
+		srv.log.Error("connect to a new node err: %s, node: %s", err, node.String())
 		if conn != nil {
 			conn.Close()
 		}
