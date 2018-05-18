@@ -9,8 +9,6 @@ import (
 	"net"
 	"sort"
 
-	"github.com/seeleteam/go-seele/log"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
