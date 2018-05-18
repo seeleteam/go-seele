@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/seele"
@@ -20,29 +21,8 @@ import (
 
 // Note to add enough comments for every field
 type Config struct {
-	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string `json:"serverPrivateKey"`
-
-	// network id, not used now. @TODO maybe be removed or just use Version
-	NetworkID uint64 `json:"networkID"`
-
-	// capacity of the transaction pool
-	Capacity uint `json:"capacity"`
-
-	// coinbase used by the miner
-	Coinbase string `json:"coinbase"`
-
-	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes []string `json:"staticNodes"`
-
-	// core msg interaction uses TCP address and Kademila protocol uses UDP address
-	ListenAddr string `json:"listenAddr"`
-
-	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
-	IsDebug bool `json:"isDebug"`
-
-	// If PrintLog is true, all logs will be printed in the console, otherwise they will be stored in the file.
-	PrintLog bool `json:"printLog"`
+	//Config is the Configuration of log
+	Log log.Config
 
 	// basic config for Node
 	Basic Basic `json:"basic"`
@@ -70,6 +50,9 @@ type Basic struct {
 
 	// RPCAddr is the address on which to start RPC server.
 	RPCAddr string `json:"rpcAddr"`
+
+	// coinbase used by the miner
+	Coinbase string `json:"coinbase"`
 }
 
 // HTTPServer config for http server
@@ -126,12 +109,12 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*Config, e
 		nodeConfig.SeeleConfig.GenesisConfig = info
 	}
 
-	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Coinbase)
-	nodeConfig.SeeleConfig.NetworkID = config.NetworkID
-	nodeConfig.SeeleConfig.TxConf.Capacity = config.Capacity
+	nodeConfig.SeeleConfig.Coinbase = common.HexMustToAddres(config.Basic.Coinbase)
+	nodeConfig.SeeleConfig.NetworkID = config.P2P.NetworkID
+	nodeConfig.SeeleConfig.TxConf.Capacity = config.P2P.Capacity
 
-	common.PrintLog = config.PrintLog
-	common.IsDebug = config.IsDebug
+	common.PrintLog = config.Log.PrintLog
+	common.IsDebug = config.Log.IsDebug
 	nodeConfig.Basic.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.Basic.DataDir)
 	return nodeConfig, nil
 }
@@ -140,24 +123,24 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*Config, e
 func GetP2pConfig(config Config) (p2p.Config, error) {
 	p2pConfig := p2p.Config{}
 
-	if len(config.StaticNodes) != 0 {
-		for _, id := range config.StaticNodes {
+	if len(config.P2P.StaticNodes) != 0 {
+		for _, id := range config.P2P.StaticNodes {
 			n, err := discovery.NewNodeFromString(id)
 			if err != nil {
 				return p2p.Config{}, err
 			}
 
-			p2pConfig.StaticNodes = append(p2pConfig.StaticNodes, n)
+			p2pConfig.ResolveStaticNodes = append(p2pConfig.ResolveStaticNodes, n)
 		}
 	}
 
-	key, err := crypto.LoadECDSAFromString(config.ServerPrivateKey)
+	key, err := crypto.LoadECDSAFromString(config.P2P.ServerPrivateKey)
 	if err != nil {
 		return p2pConfig, err
 	}
 
 	p2pConfig.PrivateKey = key
-	p2pConfig.ListenAddr = config.ListenAddr
+	p2pConfig.ListenAddr = config.P2P.ListenAddr
 	return p2pConfig, nil
 }
 
