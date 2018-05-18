@@ -61,7 +61,6 @@ type Miner struct {
 
 	threads              int
 	isFirstBlockPrepared int32
-	isNonceFound         *int32
 	hashrate             metrics.Meter // Meter tracking the average hashrate
 }
 
@@ -78,7 +77,6 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		log:                  log,
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
-		isNonceFound:         new(int32),
 		hashrate:             metrics.NewMeter(),
 	}
 
@@ -288,7 +286,7 @@ func (miner *Miner) commitTask(task *Task) {
 		step = math.MaxUint64 / uint64(threads)
 	}
 
-	atomic.StoreInt32(miner.isNonceFound, 0)
+	var isNonceFound int32 = 0
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < threads; i++ {
 		if threads == 1 {
@@ -310,7 +308,7 @@ func (miner *Miner) commitTask(task *Task) {
 		miner.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
 			defer miner.wg.Done()
-			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, miner.isNonceFound, miner.hashrate, miner.log)
+			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, &isNonceFound, miner.hashrate, miner.log)
 		}(tSeed, min, max)
 	}
 }
