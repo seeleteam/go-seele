@@ -58,11 +58,11 @@ type Config struct {
 	PrintLog bool
 
 	// http server config info
-	HttpServer HttpServerConfig
+	HttpServer HttpServer
 }
 
-// HttpServerConfig config for http server
-type HttpServerConfig struct {
+// HttpServer config for http server
+type HttpServer struct {
 	// The HTTPAddr is the address of HTTP rpc service
 	HTTPAddr string
 
