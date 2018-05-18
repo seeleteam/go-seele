@@ -9,9 +9,8 @@ import (
 	"net"
 	"sort"
 
-	"github.com/seeleteam/go-seele/log"
-
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -62,10 +61,7 @@ func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*N
 	minDis := []*Node{}
 	for _, e := range nodes {
 		if distCmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
-			//t.log.Debug("add node: %s", e.ID.ToHex())
 			minDis = append(minDis, e)
-		} else {
-			//t.log.Debug("skip node:%s", e.ID.ToHex())
 		}
 	}
 
