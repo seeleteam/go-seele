@@ -117,8 +117,7 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	nodeConfig.HTTPAddr = config.HttpServer.HTTPAddr
 	nodeConfig.HTTPCors = config.HttpServer.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HttpServer.HTTPWhiteHost
-	nodeConfig.WSServerConfig.WSAddr = config.WSServerConfig.WSAddr
-	nodeConfig.WSServerConfig.WSPattern = config.WSServerConfig.WSPattern
+	nodeConfig.WSServerConfig = config.WSServerConfig
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {

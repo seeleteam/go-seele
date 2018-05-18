@@ -23,7 +23,7 @@ var upgrader = websocket.Upgrader{
 // WSServerConfig config for websocket server
 type WSServerConfig struct {
 	// The WSAddr is the address of Websocket rpc service
-	WSAddr string `json:"wsaddr"`
+	WSAddr string `json:"address"`
 	// The WSAddr is the pattern of Websocket rpc service
 	WSPattern string `json:"pattern"`
 }
