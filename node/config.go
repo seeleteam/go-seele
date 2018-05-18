@@ -6,42 +6,43 @@
 package node
 
 import (
-	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/seele"
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/core"
-	"github.com/seeleteam/go-seele/p2p/discovery"
-	"io/ioutil"
 	"encoding/json"
+	"io/ioutil"
 	"path/filepath"
+
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // Note to add enough comments for every field
 type Config struct {
 	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string		`json:"serverPrivateKey"`
+	ServerPrivateKey string `json:"serverPrivateKey"`
 
 	// network id, not used now. @TODO maybe be removed or just use Version
-	NetworkID uint64		`json:"networkID"`
+	NetworkID uint64 `json:"networkID"`
 
 	// capacity of the transaction pool
-	Capacity uint		`json:"capacity"`
+	Capacity uint `json:"capacity"`
 
 	// coinbase used by the miner
-	Coinbase string		`json:"coinbase"`
+	Coinbase string `json:"coinbase"`
 
 	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes []string		`json:"staticNodes"`
+	StaticNodes []string `json:"staticNodes"`
 
 	// core msg interaction uses TCP address and Kademila protocol uses UDP address
-	ListenAddr string		`json:"listenAddr"`
+	ListenAddr string `json:"listenAddr"`
 
 	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
-	IsDebug bool		`json:"isDebug"`
+	IsDebug bool `json:"isDebug"`
 
 	// If PrintLog is true, all logs will be printed in the console, otherwise they will be stored in the file.
-	PrintLog bool		`json:"printLog"`
+	PrintLog bool `json:"printLog"`
 
 	// basic config for Node
 	Basic Basic `json:"basic"`
@@ -59,30 +60,30 @@ type Config struct {
 // Basic config for Node
 type Basic struct {
 	// The name of the node
-	Name string		`json:"name"`
+	Name string `json:"name"`
 
 	// The version of the node
-	Version string		`json:"version"`
+	Version string `json:"version"`
 
 	// The file system path of the node, used to store data
-	DataDir string		`json:"dataDir"`
+	DataDir string `json:"dataDir"`
 
 	// RPCAddr is the address on which to start RPC server.
-	RPCAddr string		`json:"rpcAddr"`
+	RPCAddr string `json:"rpcAddr"`
 }
 
 // HTTPServer config for http server
 type HTTPServer struct {
 	// The HTTPAddr is the address of HTTP rpc service
-	HTTPAddr string		`json:"httpAddr"`
+	HTTPAddr string `json:"httpAddr"`
 
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	HTTPCors []string		`json:"httpCors"`
+	HTTPCors []string `json:"httpCors"`
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
-	HTTPWhiteHost []string		`json:"httpWhiteHost"`
+	HTTPWhiteHost []string `json:"httpWhiteHost"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file
