@@ -22,8 +22,8 @@
       "*"
     ]
   },
-  "WSServer": {
-    "WSAddr": "127.0.0.1:8081",
-    "WSPattern": "/ws"
+  "wsserver": {
+    "wsaddr": "127.0.0.1:8081",
+    "pattern": "/ws"
   }
 }

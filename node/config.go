@@ -7,6 +7,7 @@ package node
 
 import (
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -30,12 +31,6 @@ type Config struct {
 	// HTTPAddr is the address of HTTP rpc server.
 	HTTPAddr string
 
-	// The WSAddr is the address of Websocket rpc service
-	WSAddr string
-
-	// The WSPattern is the pattern of Websocket rpc service
-	WSPattern string
-
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please note that CORS is a browser-enforced security, it's fully
 	// useless for custom HTTP clients.
@@ -46,4 +41,7 @@ type Config struct {
 
 	// The SeeleConfig is the configuration to create the seele service.
 	SeeleConfig seele.Config
+
+	// The configuration of websocket rpc service
+	WSServerConfig rpc.WSServerConfig
 }

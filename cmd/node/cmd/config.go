@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // Config aggregates all configs exposed to users
@@ -61,7 +62,7 @@ type Config struct {
 	HttpServer HttpServer
 
 	// websocket server config info
-	WSServer WSServer
+	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 }
 
 // HttpServer config for http server
@@ -76,14 +77,6 @@ type HttpServer struct {
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
 	HTTPWhiteHost []string
-}
-
-// WSServer config for websocket server
-type WSServer struct {
-	// The WSAddr is the address of Websocket rpc service
-	WSAddr string `json:"WSAddr"`
-	// The WSAddr is the pattern of Websocket rpc service
-	WSPattern string `json:"WSPattern"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file
@@ -124,8 +117,8 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	nodeConfig.HTTPAddr = config.HttpServer.HTTPAddr
 	nodeConfig.HTTPCors = config.HttpServer.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HttpServer.HTTPWhiteHost
-	nodeConfig.WSAddr = config.WSServer.WSAddr
-	nodeConfig.WSPattern = config.WSServer.WSPattern
+	nodeConfig.WSServerConfig.WSAddr = config.WSServerConfig.WSAddr
+	nodeConfig.WSServerConfig.WSPattern = config.WSServerConfig.WSPattern
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {

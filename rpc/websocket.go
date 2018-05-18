@@ -20,6 +20,14 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+// WSServerConfig config for websocket server
+type WSServerConfig struct {
+	// The WSAddr is the address of Websocket rpc service
+	WSAddr string `json:"wsaddr"`
+	// The WSAddr is the pattern of Websocket rpc service
+	WSPattern string `json:"pattern"`
+}
+
 // WsRPCServer represents a Websocket RPC server
 type WsRPCServer struct {
 	rpc *rpc.Server

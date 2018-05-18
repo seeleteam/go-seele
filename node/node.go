@@ -229,8 +229,8 @@ func (n *Node) startWSRPC(apis []rpc.API) error {
 			return err
 		}
 	}
-	http.HandleFunc(n.config.WSPattern, handler.ServeWS)
-	go http.ListenAndServe(n.config.WSAddr, nil)
+	http.HandleFunc(n.config.WSServerConfig.WSPattern, handler.ServeWS)
+	go http.ListenAndServe(n.config.WSServerConfig.WSAddr, nil)
 
 	return nil
 }
