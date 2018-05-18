@@ -78,6 +78,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		return nil, err
 	}
 
+	// initialize and validate genesis
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
 	genesis := core.GetGenesis(conf.GenesisConfig)
 	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)

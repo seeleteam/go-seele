@@ -136,7 +136,11 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 
 	err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
 	if err != nil {
-		sp.log.Error("synchronise err. %s", err)
+		if err == downloader.ErrIsSynchronising {
+			sp.log.Info("exit synchronise as it is already running.")
+		} else {
+			sp.log.Error("synchronise err. %s", err)
+		}
 		return
 	}
 
