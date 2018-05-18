@@ -154,7 +154,7 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
