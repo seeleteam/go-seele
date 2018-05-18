@@ -71,13 +71,22 @@ type Config struct {
 	MaxPendingPeers int
 
 	// pre-configured nodes.
-	StaticNodes []*discovery.Node
+	ResolveStaticNodes []*discovery.Node
 
 	// Protocols should contain the protocols supported by the server.
 	Protocols []Protocol
 
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string
+	ListenAddr string `json:"addres"`
+
+	// network id, not used now. @TODO maybe be removed or just use Version
+	NetworkID uint64 `json:"networkID"`
+
+	// static nodes which will be connected to find more nodes when the node starts
+	StaticNodes []string `json:"staticNodes"`
+
+	// ServerPrivateKey private key for p2p module, do not use it as any accounts
+	ServerPrivateKey string `json:"privateKey "`
 }
 
 // Server manages all p2p peer connections.
@@ -140,8 +149,9 @@ func (srv *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {

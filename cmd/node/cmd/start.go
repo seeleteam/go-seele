@@ -33,7 +33,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, *genesisConfigFile)
+		nCfg, err := node.LoadConfigFromFile(*seeleNodeConfigFile, *genesisConfigFile)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
@@ -41,7 +41,7 @@ var startCmd = &cobra.Command{
 
 		// print some config infos
 		fmt.Printf("log folder: %s\n", log.LogFolder)
-		fmt.Printf("data folder: %s\n", nCfg.DataDir)
+		fmt.Printf("data folder: %s\n", nCfg.Basic.DataDir)
 
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
@@ -52,7 +52,7 @@ var startCmd = &cobra.Command{
 		// Create seele service and register the service
 		slog := log.GetLogger("seele", common.PrintLog)
 		serviceContext := seele.ServiceContext{
-			DataDir: nCfg.DataDir,
+			DataDir: nCfg.Basic.DataDir,
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 		seeleService, err := seele.NewSeeleService(ctx, &nCfg.SeeleConfig, slog)

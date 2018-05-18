@@ -143,7 +143,7 @@ func (n *Node) startRPC(services []Service, conf *Config) error {
 		return err
 	}
 
-	if err := n.startHTTPRPC(apis, conf.HTTPWhiteHost, conf.HTTPCors); err != nil {
+	if err := n.startHTTPRPC(apis, conf.HTTPServer.HTTPWhiteHost, conf.HTTPServer.HTTPCors); err != nil {
 		n.log.Error("starting http rpc failed", err)
 		return err
 	}
@@ -167,7 +167,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		err       error
 	)
 
-	if listerner, err = net.Listen("tcp", n.config.RPCAddr); err != nil {
+	if listerner, err = net.Listen("tcp", n.config.Basic.RPCAddr); err != nil {
 		n.log.Error("Listening failed", "err", err)
 		return err
 	}
@@ -204,7 +204,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 		err       error
 	)
 	rpcServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
-	if listerner, err = net.Listen("tcp", n.config.HTTPAddr); err != nil {
+	if listerner, err = net.Listen("tcp", n.config.HTTPServer.HTTPAddr); err != nil {
 		n.log.Error("HTTP listening failed", "err", err)
 		return err
 	}

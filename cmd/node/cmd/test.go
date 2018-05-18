@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/spf13/cobra"
 )
@@ -93,13 +94,13 @@ func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
 }
 
 func startServer(configFile string) {
-	config, err := GetConfigFromFile(configFile)
+	config, err := node.GetConfigFromFile(configFile)
 	if err != nil {
 		fmt.Printf("read config file failed %s", err.Error())
 		return
 	}
 
-	p2pconfig, err := GetP2pConfig(config)
+	p2pconfig, err := node.GetP2pConfig(config)
 	if err != nil {
 		fmt.Printf("generate p2p config failed %s", err.Error())
 		return
