@@ -290,6 +290,7 @@ func (srv *Server) listenLoop() {
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
+	srv.log.Info("setup connection with peer %s", dialDest.String())
 	peer := NewPeer(&connection{fd: fd}, srv.Protocols, srv.log, dialDest)
 
 	var caps []Cap
@@ -299,6 +300,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
+		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest.String(), err)
 		peer.close()
 		return err
 	}
