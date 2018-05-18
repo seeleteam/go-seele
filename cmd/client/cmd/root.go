@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 
+	comm "github.com/seeleteam/go-seele/cmd/comm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -37,6 +38,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
+	rootCmd.AddCommand(comm.GetGenerateKeyPairCmd("client"))
 }
 
 // initConfig reads in the config file and ENV variables if set.

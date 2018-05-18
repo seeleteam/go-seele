@@ -6,9 +6,10 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/log"
 	"net"
 	"sort"
+
+	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/common"
 )
@@ -34,7 +35,7 @@ func newTable(id common.Address, addr *net.UDPAddr, log *log.SeeleLog) *Table {
 	table := &Table{
 		count:    0,
 		selfNode: selfNode,
-		log: log,
+		log:      log,
 	}
 
 	for i := 0; i < nBuckets; i++ {
