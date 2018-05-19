@@ -131,7 +131,7 @@ func GetP2pConfig(config Config) (p2p.Config, error) {
 
 	if(config.P2P.PrivateKey == nil){
 		privateKey,err := GetP2pConfigPrivateKey(config)
-		if(err != nil){
+		if(err == nil){
 			config.P2P.PrivateKey = privateKey
 		}
 	}

@@ -86,7 +86,7 @@ type Config struct {
 	StaticNodes []string `json:"staticNodes"`
 
 	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string `json:"privateKey "`
+	ServerPrivateKey string `json:"privateKey"`
 }
 
 // Server manages all p2p peer connections.
