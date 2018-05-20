@@ -53,7 +53,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit - 1; i++ {
+	for i := 0; i < core.BlockTransactionNumberLimit - 1; {
 		tx := popBestFeeTx(txs)
 		if tx == nil {
 			break
@@ -67,7 +67,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			continue
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, seele.GetCoinbase(), statedb, task.header)
 		if err != nil {
 			log.Error("apply tx failed, %s", err.Error())
 			continue
@@ -75,6 +75,8 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
+		
+		i++
 	}
 }
 
