@@ -21,19 +21,16 @@ type EventManager struct {
 func (h *EventManager) Fire(e Event) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-    
-	listeners := make([]eventListener, len(h.listeners))
-	copy(listeners, h.listeners)
 	
-	h.removeOnceListener()
-	
-	for _, l := range listeners {
+	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)
 		} else {
 			l.Callable(e)
 		}
 	}
+
+	h.removeOnceListener()
 }
 
 // AddListener registers a listener.
