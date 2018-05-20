@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 )
 
+const ShardNumber = 20
+
 var (
 	// tempFolder used to store temp file, such as log files
 	tempFolder string

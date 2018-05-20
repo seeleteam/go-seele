@@ -90,6 +90,27 @@ func (b *bucket) deleteNode(target common.Hash) {
 	b.peers = append(b.peers[:index], b.peers[index+1:]...)
 }
 
+func (b *bucket) getRandNodes(number int) []*Node {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	var result []*Node
+	if len(b.peers) > number {
+		result = make([]*Node, number)
+		// @TODO use random selection
+		for i := 0; i < number; i++ {
+			*result[i] = *b.peers[i]
+		}
+	} else {
+		result = make([]*Node, len(b.peers))
+		for i:= 0; i < len(result); i++ {
+			*result[i] = *b.peers[i]
+		}
+	}
+
+	return result
+}
+
 func (b *bucket) size() int {
 	b.lock.RLock()
 	defer b.lock.RUnlock()

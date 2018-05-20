@@ -29,23 +29,26 @@ type Node struct {
 	IP               net.IP
 	UDPPort, TCPPort int
 
+	Shard		int //node shard number
+
 	// node id for Kademila, which is generated from public key
 	// better to get it with getSha()
 	sha common.Hash
 }
 
 // NewNode new node with its value
-func NewNode(id common.Address, ip net.IP, port int) *Node {
+func NewNode(id common.Address, ip net.IP, port int, shard int) *Node {
 	return &Node{
 		ID:      id,
 		IP:      ip,
 		UDPPort: port,
+		Shard:shard,
 	}
 }
 
 // NewNodeWithAddr new node with id and network address
-func NewNodeWithAddr(id common.Address, addr *net.UDPAddr) *Node {
-	return NewNode(id, addr.IP, addr.Port)
+func NewNodeWithAddr(id common.Address, addr *net.UDPAddr, shard int) *Node {
+	return NewNode(id, addr.IP, addr.Port, shard)
 }
 
 func NewNodeFromString(id string) (*Node, error) {
@@ -76,7 +79,7 @@ func NewNodeFromString(id string) (*Node, error) {
 		return nil, err
 	}
 
-	node := NewNodeWithAddr(publicKey, addr)
+	node := NewNodeWithAddr(publicKey, addr, 0)
 	return node, nil
 }
 
@@ -85,6 +88,10 @@ func (n *Node) GetUDPAddr() *net.UDPAddr {
 		IP:   n.IP,
 		Port: int(n.UDPPort),
 	}
+}
+
+func (n *Node) setShard(shard int) {
+	n.Shard = shard
 }
 
 func (n *Node) getSha() common.Hash {

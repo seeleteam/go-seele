@@ -159,7 +159,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s", api.Namespace)
+		n.log.Debug("registered service namespace: %s in json rpc successful", api.Namespace)
 	}
 
 	var (
@@ -196,7 +196,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s", api.Namespace)
+		n.log.Debug("registered service namespace: %s in http rpc successful", api.Namespace)
 	}
 
 	var (

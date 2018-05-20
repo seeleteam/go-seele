@@ -21,15 +21,16 @@ const (
 )
 
 type Table struct {
-	buckets  [nBuckets]*bucket
-	count    int   //total number of nodes
-	selfNode *Node //info of local node
+	buckets      [nBuckets]*bucket
+	shardBuckets [common.ShardNumber]*bucket
+	count        int   //total number of nodes
+	selfNode     *Node //info of local node
 
 	log *log.SeeleLog
 }
 
-func newTable(id common.Address, addr *net.UDPAddr, log *log.SeeleLog) *Table {
-	selfNode := NewNodeWithAddr(id, addr)
+func newTable(id common.Address, addr *net.UDPAddr, shard int, log *log.SeeleLog) *Table {
+	selfNode := NewNodeWithAddr(id, addr, shard)
 
 	table := &Table{
 		count:    0,
@@ -41,13 +42,21 @@ func newTable(id common.Address, addr *net.UDPAddr, log *log.SeeleLog) *Table {
 		table.buckets[i] = newBuckets(log)
 	}
 
+	for i := 0; i < common.ShardNumber; i++ {
+		table.shardBuckets[i] = newBuckets(log)
+	}
+
 	return table
 }
 
 func (t *Table) addNode(node *Node) {
-	dis := logDist(t.selfNode.getSha(), node.getSha())
+	if node.Shard != t.selfNode.Shard {
+		t.shardBuckets[node.Shard].addNode(node)
+	} else {
+		dis := logDist(t.selfNode.getSha(), node.getSha())
 
-	t.buckets[dis].addNode(node)
+		t.buckets[dis].addNode(node)
+	}
 }
 
 func (t *Table) updateNode(node *Node) {
@@ -55,7 +64,7 @@ func (t *Table) updateNode(node *Node) {
 }
 
 // findNodeWithTarget find nodes that distance of target is less than measure with target
-func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*Node {
+func (t *Table) findNodeWithTarget(target common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
 
 	minDis := []*Node{}
@@ -68,10 +77,14 @@ func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*N
 	return minDis
 }
 
-func (t *Table) deleteNode(target common.Hash) {
-	dis := logDist(t.selfNode.getSha(), target)
-
-	t.buckets[dis].deleteNode(target)
+func (t *Table) deleteNode(n *Node) {
+	sha := n.getSha()
+	if n.Shard != t.selfNode.Shard {
+		t.shardBuckets[n.Shard].deleteNode(sha)
+	} else {
+		dis := logDist(t.selfNode.getSha(), sha)
+		t.buckets[dis].deleteNode(sha)
+	}
 }
 
 // findNodeForRequest calls when start find node, find the initialize nodes

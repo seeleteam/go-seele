@@ -64,7 +64,7 @@ type reply struct {
 	data interface{}
 }
 
-func newUDP(id common.Address, addr *net.UDPAddr) *udp {
+func newUDP(id common.Address, addr *net.UDPAddr, shard int) *udp {
 	log := log.GetLogger("discovery", common.PrintLog)
 	conn, err := getUDPConn(addr)
 	if err != nil {
@@ -73,8 +73,8 @@ func newUDP(id common.Address, addr *net.UDPAddr) *udp {
 
 	transport := &udp{
 		conn:      conn,
-		table:     newTable(id, addr, log),
-		self:      NewNodeWithAddr(id, addr),
+		table:     newTable(id, addr, shard, log),
+		self:      NewNodeWithAddr(id, addr, shard),
 		localAddr: addr,
 
 		db: NewDatabase(),
@@ -199,6 +199,15 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			u.gotReply <- r
+		case findShardNodeMsgType:
+			msg := &findShardNode{}
+			err := common.Deserialize(data[1:], &msg)
+			if err != nil {
+				u.log.Warn(err.Error())
+				return
+			}
+
+
 		default:
 			u.log.Error("unknown code %d", code)
 		}
@@ -343,13 +352,14 @@ func (u *udp) addNode(n *Node) {
 	//log.Info("add node, total nodes:%d", u.db.size())
 }
 
-func (u *udp) deleteNode(sha common.Hash) {
+func (u *udp) deleteNode(n *Node) {
 	selfSha := u.self.getSha()
+	sha := n.getSha()
 	if sha == selfSha {
 		return
 	}
 
-	u.table.deleteNode(sha)
+	u.table.deleteNode(n)
 	u.db.delete(sha)
 	u.log.Info("delete node, total nodes:%d", u.db.size())
 }
