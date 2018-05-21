@@ -59,6 +59,8 @@ func NewConfig() *Config {
 func (c *Config) InitStructData() {
 	c.structMap["GetBlockByHeightRequest"] = seele.GetBlockByHeightRequest{}
 	c.structMap["GetBlockByHashRequest"] = seele.GetBlockByHashRequest{}
+	c.structMap["GetTxByBlockHeightAndIndexRequest"] = seele.GetTxByBlockHeightAndIndexRequest{}
+	c.structMap["GetTxByBlockHashAndIndexRequest"] = seele.GetTxByBlockHashAndIndexRequest{}
 }
 
 // InitBasicData init basic data for cmd config
