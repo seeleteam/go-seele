@@ -7,12 +7,11 @@ package log
 
 import (
 	"fmt"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/seeleteam/go-seele/common"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -30,23 +29,26 @@ type SeeleLog struct {
 var logMap map[string]*SeeleLog
 var getLogMutex sync.Mutex
 
-//Loging exported log tag for all users
-var Loging *SeeleLog
+//Default exported log tag for all users
+var Default *SeeleLog
 
-func init() {
-	Loging = &SeeleLog{
+// NewSeeleLog create a pointer of SeeleLog
+func NewSeeleLog() *SeeleLog {
+	return &SeeleLog{
 		log:    logrus.New(),
 		level:  logrus.InfoLevel,
 		module: "log",
 	}
+}
+func init() {
+	Default = NewSeeleLog()
 	logFullPath := filepath.Join(LogFolder, "log.log")
 	file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 	}
-
-	Loging.log.Out = file
-	Loging.log.AddHook(&CallerHook{})
+	Default.log.Out = file
+	Default.log.AddHook(&CallerHook{})
 }
 
 //SetMod setting module tags for information
