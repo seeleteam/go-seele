@@ -110,7 +110,7 @@ func startServer(configFile string) {
 		Config: p2pconfig,
 	}
 
-	if len(myServer.StaticNodes) == 0 {
+	if len(myServer.OpenConfig.StaticNodes) == 0 {
 		fmt.Println("No remote peer configed, so is a static peer")
 	}
 

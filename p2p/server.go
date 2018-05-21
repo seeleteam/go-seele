@@ -76,6 +76,12 @@ type Config struct {
 	// Protocols should contain the protocols supported by the server.
 	Protocols []Protocol
 
+	//OpenConfig is the open Configuration of p2p
+	OpenConfig OpenConfig `json:"open"`
+}
+
+//OpenConfig is the open Configuration of p2p
+type OpenConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
@@ -125,7 +131,7 @@ func (srv *Server) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.log = log.GetLogger("p2p", common.PrintLog)
+	srv.log = log.GetLogger("p2p", common.LogConfig.PrintLog)
 	if srv.log == nil {
 		return errors.New("p2p Create logger error")
 	}
@@ -144,7 +150,7 @@ func (srv *Server) Start() (err error) {
 
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(srv.MyNodeID)
-	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.OpenConfig.ListenAddr)
 	discoveryNode := discovery.NewNodeWithAddr(address, addr)
 	if err != nil {
 		return err
@@ -236,12 +242,12 @@ running:
 
 func (srv *Server) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.ListenAddr)
+	listener, err := net.Listen("tcp", srv.OpenConfig.ListenAddr)
 	if err != nil {
 		return err
 	}
 	laddr := listener.Addr().(*net.TCPAddr)
-	srv.ListenAddr = laddr.String()
+	srv.OpenConfig.ListenAddr = laddr.String()
 	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()

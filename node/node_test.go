@@ -19,7 +19,7 @@ var (
 
 func testNodeConfig() *Config {
 	return &Config{
-		BasicConfig: Basic{
+		BasicConfig: BasicConfig{
 			Name:    "test node",
 			Version: "test version",
 		},

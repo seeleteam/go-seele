@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
@@ -50,7 +49,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", common.PrintLog)
+		slog := log.GetLogger("seele", nCfg.LogConfig.PrintLog)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}

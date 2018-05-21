@@ -34,7 +34,7 @@ func createTestAPI() *PublicMonitorAPI {
 	seeleConf := getTmpConfig()
 	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
-		BasicConfig: node.Basic{
+		BasicConfig: node.BasicConfig{
 			Name:    "Node for test",
 			Version: "Test 1.0",
 			DataDir: "node1",
@@ -42,7 +42,7 @@ func createTestAPI() *PublicMonitorAPI {
 		},
 		P2PConfig: p2p.Config{
 			PrivateKey: key,
-			ListenAddr: "0.0.0.0:39007",
+			OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39007"},
 		},
 		SeeleConfig: *seeleConf,
 	}
@@ -93,7 +93,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 
 		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
-			BasicConfig: node.Basic{
+			BasicConfig: node.BasicConfig{
 				Name:    "Node for test2",
 				Version: "Test 1.0",
 				DataDir: "node1",
@@ -101,14 +101,14 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 			},
 			P2PConfig: p2p.Config{
 				PrivateKey: key,
-				ListenAddr: "0.0.0.0:39008",
+				OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39008"},
 			},
 			SeeleConfig: *seeleConf,
 		}
 	} else {
 		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
-			BasicConfig: node.Basic{
+			BasicConfig: node.BasicConfig{
 				Name:    "Node for test3",
 				Version: "Test 1.0",
 				DataDir: "node1",
@@ -116,7 +116,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 			},
 			P2PConfig: p2p.Config{
 				PrivateKey: key,
-				ListenAddr: "0.0.0.0:39009",
+				OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39009"},
 			},
 			SeeleConfig: *seeleConf,
 		}

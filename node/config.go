@@ -14,7 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/seele"
@@ -23,10 +23,10 @@ import (
 // Config is the Configuration of node
 type Config struct {
 	//Config is the Configuration of log
-	LogConfig log.Config `json:"log"`
+	LogConfig comm.LogConfig `json:"log"`
 
 	// basic config for Node
-	BasicConfig Basic `json:"basic"`
+	BasicConfig BasicConfig `json:"basic"`
 
 	// The configuration of p2p network
 	P2PConfig p2p.Config `json:"p2p"`
@@ -38,8 +38,8 @@ type Config struct {
 	SeeleConfig seele.Config
 }
 
-// Basic config for Node
-type Basic struct {
+// BasicConfig config for Node
+type BasicConfig struct {
 	// The name of the node
 	Name string `json:"name"`
 
@@ -106,11 +106,10 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*Config, e
 	}
 
 	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
-	config.SeeleConfig.NetworkID = config.P2PConfig.NetworkID
+	config.SeeleConfig.NetworkID = config.P2PConfig.OpenConfig.NetworkID
 	config.SeeleConfig.TxConf.Capacity = config.BasicConfig.Capacity
-
-	common.PrintLog = config.LogConfig.PrintLog
-	common.IsDebug = config.LogConfig.IsDebug
+	common.LogConfig.PrintLog = config.LogConfig.PrintLog
+	common.LogConfig.IsDebug = config.LogConfig.IsDebug
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
 }
@@ -122,9 +121,9 @@ func GetP2pConfig(config *Config) (p2p.Config, error) {
 	}
 
 	if config.P2PConfig.ResolveStaticNodes == nil {
-		if resolveStaticNodes, err := GetP2pConfigResolveStaticNodes(config); err != nil {
+		if resolveStaticNodes, err := GetP2pConfigResolveStaticNodes(config); err == nil {
 			config.P2PConfig.ResolveStaticNodes = resolveStaticNodes
-		} else if err != nil {
+		} else {
 			return config.P2PConfig, err
 		}
 	}
@@ -132,7 +131,7 @@ func GetP2pConfig(config *Config) (p2p.Config, error) {
 	if config.P2PConfig.PrivateKey == nil {
 		if privateKey, err := GetP2pConfigPrivateKey(config); err == nil {
 			config.P2PConfig.PrivateKey = privateKey
-		} else if err != nil {
+		} else {
 			return config.P2PConfig, err
 		}
 	}
@@ -145,8 +144,8 @@ func GetP2pConfigResolveStaticNodes(config *Config) ([]*discovery.Node, error) {
 		return config.P2PConfig.ResolveStaticNodes, nil
 	}
 
-	if len(config.P2PConfig.StaticNodes) != 0 && len(config.P2PConfig.ResolveStaticNodes) == 0 {
-		for _, id := range config.P2PConfig.StaticNodes {
+	if len(config.P2PConfig.OpenConfig.StaticNodes) != 0 && len(config.P2PConfig.ResolveStaticNodes) == 0 {
+		for _, id := range config.P2PConfig.OpenConfig.StaticNodes {
 			n, err := discovery.NewNodeFromString(id)
 			if err != nil {
 				return nil, err
@@ -165,7 +164,7 @@ func GetP2pConfigPrivateKey(config *Config) (*ecdsa.PrivateKey, error) {
 		return config.P2PConfig.PrivateKey, nil
 	}
 
-	key, err := crypto.LoadECDSAFromString(config.P2PConfig.ServerPrivateKey)
+	key, err := crypto.LoadECDSAFromString(config.P2PConfig.OpenConfig.ServerPrivateKey)
 	if err != nil {
 		return nil, err
 	}

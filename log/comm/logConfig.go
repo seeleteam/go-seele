@@ -3,10 +3,10 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package log
+package comm
 
-// Config is the Configuration of log
-type Config struct {
+// LogConfig is the Configuration of log
+type LogConfig struct {
 	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
 	IsDebug bool `json:"isDebug"`
 

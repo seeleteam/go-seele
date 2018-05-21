@@ -8,9 +8,10 @@ package discovery
 import (
 	"container/list"
 	"fmt"
-	"github.com/seeleteam/go-seele/log"
 	"net"
 	"time"
+
+	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -65,7 +66,7 @@ type reply struct {
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr) *udp {
-	log := log.GetLogger("discovery", common.PrintLog)
+	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
 	conn, err := getUDPConn(addr)
 	if err != nil {
 		panic(fmt.Sprintf("listen addr %s failed", addr.String()))
