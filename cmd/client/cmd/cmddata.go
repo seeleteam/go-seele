@@ -31,7 +31,7 @@ func NewCmdData() []*Request {
 					ShortHand:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
-					Usage:        "is add full tx, default is false",
+					Usage:        "whether get full transaction info, default is false",
 					Required:     false,
 				},
 			},
