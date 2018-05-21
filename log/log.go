@@ -7,11 +7,12 @@ package log
 
 import (
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
-	"github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/seeleteam/go-seele/common"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -21,46 +22,11 @@ var (
 
 // SeeleLog wraps log class
 type SeeleLog struct {
-	log    *logrus.Logger
-	level  logrus.Level
-	module string
+	log *logrus.Logger
 }
 
 var logMap map[string]*SeeleLog
 var getLogMutex sync.Mutex
-
-//Default exported log tag for all users
-var Default *SeeleLog
-
-// NewSeeleLog create a pointer of SeeleLog
-func NewSeeleLog() *SeeleLog {
-	logtmp := SeeleLog{
-		log:    logrus.New(),
-		level:  logrus.InfoLevel,
-		module: "log",
-	}
-	logFullPath := filepath.Join(LogFolder, "log.log")
-	file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
-	}
-	logtmp.log.Out = file
-	logtmp.log.AddHook(&CallerHook{})
-	return &logtmp
-}
-func init() {
-	Default = NewSeeleLog()
-}
-
-//SetMod setting module tags for information
-func (p *SeeleLog) SetMod(module string) {
-	p.module = module
-}
-
-//GetMod setting module tags for information
-func (p *SeeleLog) GetMod() string {
-	return p.module
-}
 
 // Panic Level, highest level of severity. Panic logs and then calls panic with the
 // message passed to Debug, Info, ...
@@ -96,17 +62,6 @@ func (p *SeeleLog) Debug(format string, args ...interface{}) {
 	p.log.Debugf(format, args...)
 }
 
-// GetLevel obtain the current level station
-func (p *SeeleLog) GetLevel() logrus.Level {
-	return p.level
-}
-
-//SetLevel set the current level station
-func (p *SeeleLog) SetLevel(level logrus.Level) {
-	p.level = level
-	p.log.SetLevel(level)
-}
-
 // GetLogger gets logrus.Logger object according to logName
 // each module can have its own logger
 func GetLogger(logName string, bConsole bool) *SeeleLog {
@@ -131,8 +86,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
 
-		logFileName := logName + ".log"
-		logFullPath := filepath.Join(LogFolder, logFileName)
+		logFullPath := filepath.Join(LogFolder, "log.log")
 		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
@@ -147,7 +101,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.SetLevel(logrus.InfoLevel)
 	}
 
-	log.AddHook(&CallerHook{}) // add caller hook to print caller's file and line number
+	log.AddHook(&CallerHook{module: logName}) // add caller hook to print caller's file and line number
 	curLog = &SeeleLog{
 		log: log,
 	}
