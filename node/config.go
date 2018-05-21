@@ -7,6 +7,7 @@ package node
 
 import (
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -40,4 +41,7 @@ type Config struct {
 
 	// The SeeleConfig is the configuration to create the seele service.
 	SeeleConfig seele.Config
+
+	// The configuration of websocket rpc service
+	WSServerConfig rpc.WSServerConfig
 }
