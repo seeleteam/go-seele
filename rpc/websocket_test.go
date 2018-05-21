@@ -6,7 +6,6 @@
 package rpc
 
 import (
-	"net/http"
 	"testing"
 )
 
@@ -23,11 +22,4 @@ func Test_Websocket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Websocket register test failed")
 	}
-	http.HandleFunc("/test", handler.ServeWS)
-	go func() {
-		err := http.ListenAndServe("127.0.0.1:12315", nil)
-		if err != nil {
-			t.Fatalf("Websocket serve test failed")
-		}
-	}()
 }
