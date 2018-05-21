@@ -155,7 +155,7 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 		{
 			Namespace: "network",
 			Version:   "1.0",
-			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),
+			Service:   NewPublicNetworkAPI(s),
 			Public:    true,
 		},
 		{
