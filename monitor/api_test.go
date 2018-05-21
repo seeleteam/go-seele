@@ -45,7 +45,8 @@ func createTestAPI() *PublicMonitorAPI {
 		RPCAddr: "127.0.0.1:55027",
 		WSServerConfig: rpc.WSServerConfig{
 			WSAddr:    "127.0.0.1:8080",
-			WSPattern: "/ws"},
+			WSPattern: "/ws",
+		},
 		SeeleConfig: *seeleConf,
 	}
 
