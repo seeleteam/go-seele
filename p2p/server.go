@@ -77,7 +77,7 @@ type Config struct {
 	Protocols []Protocol
 
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string `json:"addres"`
+	ListenAddr string `json:"address"`
 
 	// network id, not used now. @TODO maybe be removed or just use Version
 	NetworkID uint64 `json:"networkID"`

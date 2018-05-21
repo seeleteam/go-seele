@@ -11,7 +11,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
-
 )
 
 var (
@@ -20,12 +19,11 @@ var (
 
 func testNodeConfig() *Config {
 	return &Config{
-		Basic:Basic{
-			Name: "test node",
+		BasicConfig: Basic{
+			Name:    "test node",
 			Version: "test version",
-			
 		},
-		P2P: p2p.Config{PrivateKey: testNodeKey},
+		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
 	}
 }
 

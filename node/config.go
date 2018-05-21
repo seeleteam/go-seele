@@ -6,10 +6,10 @@
 package node
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
-	"crypto/ecdsa"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -20,16 +20,16 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// Note to add enough comments for every field
+// Config is the Configuration of node
 type Config struct {
 	//Config is the Configuration of log
-	Log log.Config `json:"log"`
+	LogConfig log.Config `json:"log"`
 
 	// basic config for Node
-	Basic Basic `json:"basic"`
+	BasicConfig Basic `json:"basic"`
 
 	// The configuration of p2p network
-	P2P p2p.Config `json:"p2p"`
+	P2PConfig p2p.Config `json:"p2p"`
 
 	// HttpServer config for http server
 	HTTPServer HTTPServer `json:"httpServer"`
@@ -54,7 +54,7 @@ type Basic struct {
 
 	// coinbase used by the miner
 	Coinbase string `json:"coinbase"`
-		
+
 	// capacity of the transaction pool
 	Capacity uint `json:"capacity"`
 }
@@ -74,15 +74,15 @@ type HTTPServer struct {
 }
 
 // GetConfigFromFile unmarshals the config from the given file
-func GetConfigFromFile(filepath string) (Config, error) {
+func GetConfigFromFile(filepath string) (*Config, error) {
 	var config Config
 	buff, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 
 	err = json.Unmarshal(buff, &config)
-	return config, err
+	return &config, err
 }
 
 // LoadConfigFromFile gets node config from the given file
@@ -92,9 +92,9 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*Config, e
 		return nil, err
 	}
 
-	config.P2P, err = GetP2pConfig(config)
+	config.P2PConfig, err = GetP2pConfig(config)
 	if err != nil {
-		return &config, err
+		return config, err
 	}
 
 	if genesisConfigFile != "" {
@@ -105,72 +105,71 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*Config, e
 		config.SeeleConfig.GenesisConfig = info
 	}
 
-	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.Basic.Coinbase)
-	config.SeeleConfig.NetworkID = config.P2P.NetworkID
-	config.SeeleConfig.TxConf.Capacity = config.Basic.Capacity
+	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
+	config.SeeleConfig.NetworkID = config.P2PConfig.NetworkID
+	config.SeeleConfig.TxConf.Capacity = config.BasicConfig.Capacity
 
-	common.PrintLog = config.Log.PrintLog
-	common.IsDebug = config.Log.IsDebug
-	config.Basic.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.Basic.DataDir)
-	return &config, nil
+	common.PrintLog = config.LogConfig.PrintLog
+	common.IsDebug = config.LogConfig.IsDebug
+	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
+	return config, nil
 }
 
 // GetP2pConfig ResolveStaticNodes from the given config
-func GetP2pConfig(config Config) (p2p.Config, error) {
-
-	if(config.P2P.ResolveStaticNodes != nil && config.P2P.PrivateKey != nil){
-		return config.P2P,nil
+func GetP2pConfig(config *Config) (p2p.Config, error) {
+	if config.P2PConfig.ResolveStaticNodes != nil && config.P2PConfig.PrivateKey != nil {
+		return config.P2PConfig, nil
 	}
 
-	if(config.P2P.ResolveStaticNodes == nil){
-		resolveStaticNodes,err := GetP2pConfigResolveStaticNodes(config)
-		if(err != nil){
-			config.P2P.ResolveStaticNodes = resolveStaticNodes
+	if config.P2PConfig.ResolveStaticNodes == nil {
+		if resolveStaticNodes, err := GetP2pConfigResolveStaticNodes(config); err != nil {
+			config.P2PConfig.ResolveStaticNodes = resolveStaticNodes
+		} else if err != nil {
+			return config.P2PConfig, err
 		}
 	}
 
-	if(config.P2P.PrivateKey == nil){
-		privateKey,err := GetP2pConfigPrivateKey(config)
-		if(err == nil){
-			config.P2P.PrivateKey = privateKey
+	if config.P2PConfig.PrivateKey == nil {
+		if privateKey, err := GetP2pConfigPrivateKey(config); err == nil {
+			config.P2PConfig.PrivateKey = privateKey
+		} else if err != nil {
+			return config.P2PConfig, err
 		}
 	}
-	return config.P2P, nil
+	return config.P2PConfig, nil
 }
 
-// GetP2pConfig ResolveStaticNodes from the given config
-func GetP2pConfigResolveStaticNodes(config Config) ([]*discovery.Node, error) {
-
-	if(config.P2P.ResolveStaticNodes != nil){
-		return config.P2P.ResolveStaticNodes,nil
+// GetP2pConfigResolveStaticNodes from the given config
+func GetP2pConfigResolveStaticNodes(config *Config) ([]*discovery.Node, error) {
+	if config.P2PConfig.ResolveStaticNodes != nil {
+		return config.P2PConfig.ResolveStaticNodes, nil
 	}
 
-	if len(config.P2P.StaticNodes) != 0  && len(config.P2P.ResolveStaticNodes) == 0 {
-		for _, id := range config.P2P.StaticNodes {
+	if len(config.P2PConfig.StaticNodes) != 0 && len(config.P2PConfig.ResolveStaticNodes) == 0 {
+		for _, id := range config.P2PConfig.StaticNodes {
 			n, err := discovery.NewNodeFromString(id)
 			if err != nil {
 				return nil, err
 			}
 
-			config.P2P.ResolveStaticNodes = append(config.P2P.ResolveStaticNodes, n)
+			config.P2PConfig.ResolveStaticNodes = append(config.P2PConfig.ResolveStaticNodes, n)
 		}
 	}
 
-	return config.P2P.ResolveStaticNodes, nil
+	return config.P2PConfig.ResolveStaticNodes, nil
 }
 
-// GetP2pConfig privateKey from the given config
-func GetP2pConfigPrivateKey(config Config) (*ecdsa.PrivateKey, error) {
-
-	if(config.P2P.PrivateKey != nil){
-		return config.P2P.PrivateKey,nil
+// GetP2pConfigPrivateKey from the given config
+func GetP2pConfigPrivateKey(config *Config) (*ecdsa.PrivateKey, error) {
+	if config.P2PConfig.PrivateKey != nil {
+		return config.P2PConfig.PrivateKey, nil
 	}
-	key, err := crypto.LoadECDSAFromString(config.P2P.ServerPrivateKey)
-	
+
+	key, err := crypto.LoadECDSAFromString(config.P2PConfig.ServerPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	return key,err
+	return key, err
 }
 
 // GetGenesisInfoFromFile get genesis info from a specific file

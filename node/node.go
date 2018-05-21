@@ -90,7 +90,7 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
-	n.serverConfig = n.config.P2P
+	n.serverConfig = n.config.P2PConfig
 	running := &p2p.Server{Config: n.serverConfig}
 	for _, service := range n.services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
@@ -167,7 +167,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		err       error
 	)
 
-	if listerner, err = net.Listen("tcp", n.config.Basic.RPCAddr); err != nil {
+	if listerner, err = net.Listen("tcp", n.config.BasicConfig.RPCAddr); err != nil {
 		n.log.Error("Listening failed", "err", err)
 		return err
 	}

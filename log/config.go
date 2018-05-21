@@ -7,7 +7,6 @@ package log
 
 // Config is the Configuration of log
 type Config struct {
-
 	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
 	IsDebug bool `json:"isDebug"`
 
