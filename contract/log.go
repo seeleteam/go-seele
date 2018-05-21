@@ -13,5 +13,5 @@ import (
 var log *slog.SeeleLog
 
 func init() {
-	log = slog.GetLogger("contract", common.PrintLog)
+	log = slog.GetLogger("contract", common.LogConfig.PrintLog)
 }
