@@ -24,7 +24,7 @@ func Test_Log(t *testing.T) {
 }
 
 func Test_LogFile(t *testing.T) {
-	log := GetLogger("test2", true)
+	log := GetLogger("test2", false)
 
 	log.Debug("debug")
 
