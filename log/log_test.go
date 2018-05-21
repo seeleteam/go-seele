@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Log(t *testing.T) {
-	lg := GetLogger("test", false)
+	lg := GetLogger("test", true)
 	lg.Debug("debug msg")
 	lg.Info("info msg")
 	lg.Warn("warn msg")
@@ -24,7 +24,7 @@ func Test_Log(t *testing.T) {
 }
 
 func Test_LogFile(t *testing.T) {
-	log := GetLogger("test2", false)
+	log := GetLogger("test2", true)
 
 	log.Debug("debug")
 
