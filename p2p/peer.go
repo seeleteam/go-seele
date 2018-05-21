@@ -118,7 +118,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
-		p.log.Debug("got msg from peer: %s, code: %d",p.Node, msgRecv.Code)
+		//p.log.Debug("got msg from peer: %s, code: %d",p.Node, msgRecv.Code)
 		if err != nil {
 			readErr <- err
 			return
