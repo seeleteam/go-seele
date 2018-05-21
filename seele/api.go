@@ -8,6 +8,7 @@ package seele
 import (
 	"errors"
 	"math/big"
+	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -19,7 +20,7 @@ import (
 )
 
 var (
-	errIndexOutRange = errors.New("index out of block transaction list range")
+	errIndexOutRange = errors.New("index out of block transaction list range, the max index is ")
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -49,16 +50,6 @@ type GetBlockByHeightRequest struct {
 type GetBlockByHashRequest struct {
 	HashHex string
 	FullTx  bool
-}
-
-// GetBlockTxCountByHeightRequest request param for GetBlockTransactionCountByHeight api
-type GetBlockTxCountByHeightRequest struct {
-	Height int64
-}
-
-// GetBlockTxCountByHashRequest request param for GetBlockTransactionByHash api
-type GetBlockTxCountByHashRequest struct {
-	HashHex string
 }
 
 // GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
@@ -242,8 +233,8 @@ func NewPublicTransactionPoolAPI(s *SeeleService) *PublicTransactionPoolAPI {
 }
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *GetBlockTxCountByHeightRequest, result *int) error {
-	block, err := getBlock(api.s.chain, request.Height)
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(height *int64, result *int) error {
+	block, err := getBlock(api.s.chain, *height)
 	if err != nil {
 		return err
 	}
@@ -252,9 +243,9 @@ func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(request *G
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(request *GetBlockTxCountByHashRequest, result *int) error {
+func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash *string, result *int) error {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(request.HashHex)
+	hashByte, err := hexutil.HexToBytes(*blockHash)
 	if err != nil {
 		return err
 	}
@@ -277,7 +268,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request
 
 	txs := block.Transactions
 	if request.Index >= len(txs) {
-		return errIndexOutRange
+		return errors.New(errIndexOutRange.Error() + strconv.Itoa(len(txs)-1))
 	}
 
 	*result = rpcOutputTx(txs[request.Index])
@@ -300,7 +291,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *
 
 	txs := block.Transactions
 	if request.Index >= len(txs) {
-		return errIndexOutRange
+		return errors.New(errIndexOutRange.Error() + strconv.Itoa(len(txs)-1))
 	}
 	*result = rpcOutputTx(txs[request.Index])
 	return nil
