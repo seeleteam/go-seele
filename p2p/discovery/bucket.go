@@ -6,12 +6,12 @@
 package discovery
 
 import (
-	log2 "github.com/seeleteam/go-seele/log"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
+	log2 "github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -29,7 +29,7 @@ func newBuckets(log *log2.SeeleLog) *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
 		lock:  sync.RWMutex{},
-		log: log,
+		log:   log,
 	}
 }
 
@@ -44,7 +44,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
-		b.log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
+		b.log.Info("add node: %s", node)
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -91,8 +91,8 @@ func (b *bucket) deleteNode(target common.Hash) {
 }
 
 func (b *bucket) getRandNodes(number int) []*Node {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 
 	var result []*Node
 	if len(b.peers) > number {
@@ -103,12 +103,24 @@ func (b *bucket) getRandNodes(number int) []*Node {
 		}
 	} else {
 		result = make([]*Node, len(b.peers))
-		for i:= 0; i < len(result); i++ {
-			*result[i] = *b.peers[i]
+		for i := 0; i < len(result); i++ {
+			result[i] = &Node{}
+			*(result[i]) = *(b.peers[i])
 		}
 	}
 
 	return result
+}
+
+func (b *bucket) get(index int) *Node {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if index < len(b.peers) {
+		return b.peers[index]
+	}
+
+	return nil
 }
 
 func (b *bucket) size() int {

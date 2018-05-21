@@ -6,13 +6,13 @@
 package discovery
 
 import (
-	log2 "github.com/seeleteam/go-seele/log"
 	"net"
 	"strconv"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/crypto"
+	log2 "github.com/seeleteam/go-seele/log"
 )
 
 func getBuckets() *bucket {
@@ -32,7 +32,7 @@ func Test_Bucket(t *testing.T) {
 	assert.Equal(t, b.size(), 1)
 
 	// copy node of n
-	n3 := NewNode(n.ID, n.IP, int(n.UDPPort))
+	n3 := NewNode(n.ID, n.IP, int(n.UDPPort), 0)
 	b.addNode(n3)
 	assert.Equal(t, b.size(), 1)
 
@@ -72,7 +72,7 @@ func getNode(port string) *Node {
 	}
 
 	addr, _ := net.ResolveUDPAddr("udp", ":"+port)
-	n := NewNode(*id, addr.IP, addr.Port)
+	n := NewNode(*id, addr.IP, addr.Port, 0)
 
 	return n
 }

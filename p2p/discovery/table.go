@@ -14,26 +14,25 @@ import (
 )
 
 const (
-	alpha              = 3 // Kademlia concurrency factor
-	responseNodeNumber = 5 // TODO with this number for test
-	hashBits           = len(common.Hash{}) * 8
-	nBuckets           = hashBits + 1 // Number of buckets
+	alpha                = 3 // Kademlia concurrency factor
+	responseNodeNumber   = 5 // TODO with this number for test
+	hashBits             = len(common.Hash{}) * 8
+	nBuckets             = hashBits + 1 // Number of buckets
+	shardTargeNodeNumber = 2
 )
 
 type Table struct {
 	buckets      [nBuckets]*bucket
-	shardBuckets [common.ShardNumber]*bucket
-	count        int   //total number of nodes
-	selfNode     *Node //info of local node
+	shardBuckets [common.ShardNumber + 1]*bucket // 0 represents undefined shard number node.
+	selfNode     *Node                           //info of local node
 
 	log *log.SeeleLog
 }
 
-func newTable(id common.Address, addr *net.UDPAddr, shard int, log *log.SeeleLog) *Table {
+func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLog) *Table {
 	selfNode := NewNodeWithAddr(id, addr, shard)
 
 	table := &Table{
-		count:    0,
 		selfNode: selfNode,
 		log:      log,
 	}
@@ -42,7 +41,7 @@ func newTable(id common.Address, addr *net.UDPAddr, shard int, log *log.SeeleLog
 		table.buckets[i] = newBuckets(log)
 	}
 
-	for i := 0; i < common.ShardNumber; i++ {
+	for i := 0; i < common.ShardNumber+1; i++ {
 		table.shardBuckets[i] = newBuckets(log)
 	}
 
@@ -106,6 +105,29 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node {
 	}
 
 	return result.entries
+}
+
+func (t *Table) GetRandNodes(number int) []*Node {
+	// TODO get nodes randomly
+	nodes := make([]*Node, 0)
+	count := 0
+	for i := 0; i < nBuckets; i++ {
+		b := t.buckets[i]
+		if b.size() > 0 {
+			bnodes := b.getRandNodes(number)
+
+			for j := 0; j < len(bnodes); j++ {
+				nodes = append(nodes, bnodes[j])
+				count++
+
+				if count == number {
+					return nodes
+				}
+			}
+		}
+	}
+
+	return nodes
 }
 
 // nodesByDistance is a list of nodes, ordered by

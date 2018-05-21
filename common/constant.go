@@ -24,7 +24,7 @@ var (
 	PrintLog = true
 
 	// IsDebug default is false. If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
-	IsDebug = false
+	IsDebug = true
 )
 
 func init() {

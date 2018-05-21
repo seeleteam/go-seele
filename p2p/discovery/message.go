@@ -16,12 +16,12 @@ type msgType uint8
 
 const (
 	// add msg type flag at the first byte of the message
-	pingMsgType      msgType = 1
-	pongMsgType      msgType = 2
-	findNodeMsgType  msgType = 3
-	neighborsMsgType msgType = 4
+	pingMsgType          msgType = 1
+	pongMsgType          msgType = 2
+	findNodeMsgType      msgType = 3
+	neighborsMsgType     msgType = 4
 	findShardNodeMsgType msgType = 5
-	shardNodeMsgType msgType = 6
+	shardNodeMsgType     msgType = 6
 )
 
 const (
@@ -29,16 +29,16 @@ const (
 )
 
 type ping struct {
-	Version uint // TODO add version check
-	SelfID  common.Address
-	Shard   uint
+	Version   uint // TODO add version check
+	SelfID    common.Address
+	SelfShard uint
 
 	to *Node
 }
 
 type pong struct {
-	SelfID common.Address
-	Shard uint
+	SelfID    common.Address
+	SelfShard uint
 }
 
 type findNode struct {
@@ -54,26 +54,27 @@ type neighbors struct {
 }
 
 type findShardNode struct {
-	SelfID common.Address
-	Shard uint
+	SelfID       common.Address
+	RequestShard uint // request shard info
 
 	to *Node
 }
 
 type shardNode struct {
-	SelfID common.Address
-	Nodes []*rpcNode
+	SelfID       common.Address
+	RequestShard uint // request shard info
+	Nodes        []*rpcNode
 }
 
 type rpcNode struct {
 	SelfID  common.Address
 	IP      net.IP
 	UDPPort uint16
-	Shard 	uint
+	Shard   uint
 }
 
 func (r *rpcNode) ToNode() *Node {
-	return NewNode(r.SelfID, r.IP, int(r.UDPPort), int(r.Shard))
+	return NewNode(r.SelfID, r.IP, int(r.UDPPort), r.Shard)
 }
 
 func ConvertToRpcNode(n *Node) *rpcNode {
@@ -81,7 +82,7 @@ func ConvertToRpcNode(n *Node) *rpcNode {
 		SelfID:  n.ID,
 		IP:      n.IP,
 		UDPPort: uint16(n.UDPPort),
-		Shard:uint(n.Shard),
+		Shard:   n.Shard,
 	}
 }
 
@@ -101,7 +102,9 @@ func generateBuff(code msgType, encoding []byte) []byte {
 
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
-	t.log.Debug("received ping from: %s", m.SelfID.ToHex())
+	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
+	t.log.Debug("received ping from: %s", node)
+	t.addNode(node)
 
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
@@ -109,15 +112,16 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	}
 
 	resp := &pong{
-		SelfID: t.self.ID,
+		SelfID:    t.self.ID,
+		SelfShard: t.self.Shard,
 	}
 
-	t.sendMsg(pongMsgType, resp, NewNodeWithAddr(m.SelfID, from, int(m.Shard)))
+	t.sendMsg(pongMsgType, resp, node.ID, node.GetUDPAddr())
 }
 
 // send send ping message and handle callback
 func (m *ping) send(t *udp) {
-	t.log.Debug("send ping msg to: %s", m.to.ID.ToHex())
+	t.log.Debug("send ping msg to: %s", m.to)
 
 	p := &pending{
 		from: m.to,
@@ -125,7 +129,7 @@ func (m *ping) send(t *udp) {
 
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*pong)
-			n := NewNodeWithAddr(r.SelfID, addr, int(r.Shard))
+			n := NewNodeWithAddr(r.SelfID, addr, r.SelfShard)
 			t.table.updateNode(n)
 
 			t.log.Debug("received pong msg: %s", r.SelfID.ToHex())
@@ -138,24 +142,22 @@ func (m *ping) send(t *udp) {
 	}
 
 	t.addPending <- p
-	t.sendMsg(pingMsgType, m, m.to)
+	t.sendMsg(pingMsgType, m, m.to.ID, m.to.GetUDPAddr())
 }
 
 // handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	t.log.Debug("received find node request from: %s", m.SelfID.ToHex())
-	node := NewNodeWithAddr(m.SelfID, from)
-	t.addNode(node)
+	t.log.Debug("received find node request from: %s, id: %s", from, m.SelfID)
 
 	nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
 
+	if len(nodes) == 0 {
+		return
+	}
+
 	rpcs := make([]*rpcNode, len(nodes))
 	for index, n := range nodes {
-		rpcs[index] = &rpcNode{
-			SelfID:  n.ID,
-			IP:      n.IP,
-			UDPPort: uint16(n.UDPPort),
-		}
+		rpcs[index] = ConvertToRpcNode(n)
 	}
 
 	response := &neighbors{
@@ -163,12 +165,12 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 		SelfID: t.self.ID,
 	}
 
-	t.sendMsg(neighborsMsgType, response, NewNodeWithAddr(m.SelfID, from))
+	t.sendMsg(neighborsMsgType, response, m.SelfID, from)
 }
 
 // send send find node message and handle callback
 func (m *findNode) send(t *udp) {
-	t.log.Debug("send find msg to: %s", m.to.ID.ToHex())
+	t.log.Debug("send find msg to: %s", m.to)
 
 	p := &pending{
 		from: m.to,
@@ -210,7 +212,7 @@ func (m *findNode) send(t *udp) {
 	}
 
 	t.addPending <- p
-	t.sendMsg(findNodeMsgType, m, m.to)
+	t.sendMsg(findNodeMsgType, m, m.to.ID, m.to.GetUDPAddr())
 }
 
 func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
@@ -229,8 +231,19 @@ func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
 	}
 }
 
+func sendFindShardNodeRequest(u *udp, shard uint, to *Node) {
+	query := &findShardNode{
+		SelfID:       u.self.ID,
+		RequestShard: shard,
+
+		to: to,
+	}
+
+	query.send(u)
+}
+
 func (m *findShardNode) send(t *udp) {
-	t.log.Debug("send find shard node msg to: %s", m.to.ID.ToHex())
+	t.log.Debug("send find shard %d query to node: %s", m.RequestShard, m.to)
 
 	p := &pending{
 		from: m.to,
@@ -238,43 +251,47 @@ func (m *findShardNode) send(t *udp) {
 
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*shardNode)
-			n := NewNodeWithAddr(r.SelfID, addr)
-			t.table.updateNode(n)
-
+			t.log.Debug("got find shard node response with nodes number %d in shard %d from:%s",
+				len(r.Nodes), r.RequestShard, addr)
 			for _, node := range r.Nodes {
-				t.table.addNode(node.ToNode())
+				t.addNode(node.ToNode())
 			}
 
 			return true
 		},
-		errorCallBack: func() { // delete this node when ping timeout, TODO add time limit
-			t.deleteNode(m.to)
+		errorCallBack: func() {
 		},
 	}
 
 	t.addPending <- p
-	t.sendMsg(findShardNodeMsgType, m, m.to)
+	t.sendMsg(findShardNodeMsgType, m, m.to.ID, m.to.GetUDPAddr())
 }
 
-func (m *findShardNode) handle(t *udp) {
-	bucket := t.table.shardBuckets[m.Shard]
-	nodes := bucket.getRandNodes(responseNodeNumber)
+func (m *findShardNode) handle(t *udp, from *net.UDPAddr) {
+	t.log.Debug("got find shard node request from: %s, find shard %d", from, m.RequestShard)
 
-	rpcnodes := make([]*rpcNode, len(nodes))
+	var nodes []*Node
+	if m.RequestShard == t.self.Shard {
+		nodes = t.table.GetRandNodes(responseNodeNumber)
+	} else {
+		bucket := t.table.shardBuckets[m.RequestShard]
+		nodes = bucket.getRandNodes(responseNodeNumber)
+	}
+
+	if len(nodes) == 0 {
+		return
+	}
+
+	rpcNodes := make([]*rpcNode, len(nodes))
 	for i := 0; i < len(nodes); i++ {
-		rpcnodes[i] = &rpcNode{
-			SelfID:  nodes[i].ID,
-			IP:      nodes[i].IP,
-			UDPPort: uint16(nodes[i].UDPPort),
-
-		}
+		rpcNodes[i] = ConvertToRpcNode(nodes[i])
 	}
 
-	response := shardNode{
-		SelfID:t.self.ID,
-		Nodes: rpcnodes,
+	response := &shardNode{
+		SelfID:       t.self.ID,
+		RequestShard: m.RequestShard,
+		Nodes:        rpcNodes,
 	}
 
+	t.sendMsg(shardNodeMsgType, response, m.SelfID, from)
 }
-
-

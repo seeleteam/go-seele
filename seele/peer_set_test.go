@@ -17,7 +17,7 @@ import (
 
 func getTestPeer() *peer {
 	addr := crypto.MustGenerateRandomAddress()
-	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{})
+	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{}, 0)
 	p2pPeer := p2p.NewPeer(nil, nil, nil, node)
 	peer := newPeer(1, p2pPeer, nil)
 
