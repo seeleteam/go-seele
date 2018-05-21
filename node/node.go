@@ -147,6 +147,11 @@ func (n *Node) startRPC(services []Service, conf *Config) error {
 		return err
 	}
 
+	if err := n.startWSRPC(apis); err != nil {
+		n.log.Error("start websocket err", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -209,6 +214,22 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 	}
 
 	go http.Serve(listerner, httpHandler)
+
+	return nil
+}
+
+// startWSRPC starts websocket rpc server
+func (n *Node) startWSRPC(apis []rpc.API) error {
+	handler := rpc.NewWsRPCServer()
+	rpcServer := handler.GetWsRPCServer()
+	for _, api := range apis {
+		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+			n.log.Error("Websocket registration failed", "service", api.Service, "namespace", api.Namespace)
+			return err
+		}
+	}
+	http.HandleFunc(n.config.WSServerConfig.WSPattern, handler.ServeWS)
+	go http.ListenAndServe(n.config.WSServerConfig.WSAddr, nil)
 
 	return nil
 }

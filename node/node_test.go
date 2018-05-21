@@ -24,6 +24,10 @@ func testNodeConfig() *Config {
 			Version: "test version",
 		},
 		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
+		WSServerConfig: rpc.WSServerConfig{
+			WSAddr:    "127.0.0.1:8080",
+			WSPattern: "/ws",
+		},
 	}
 }
 

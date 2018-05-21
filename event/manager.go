@@ -17,12 +17,11 @@ type EventManager struct {
 	listeners []eventListener
 }
 
-// Fire fires the event and returns it after all listeners have done
-// their jobs.
+// Fire triggers all listeners with the specified event and removes listeners which run only once.
 func (h *EventManager) Fire(e Event) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-
+	
 	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)
@@ -100,15 +99,15 @@ func (h *EventManager) RemoveListener(callback EventHandleMethod) {
 }
 
 // removeOnceListener removes all listeners which run only once
-func (h *EventManager) removeOnceListener() {
-	listener := make([]eventListener, 0, len(h.listeners))
+func (h *EventManager) removeOnceListener() {	
+	listeners := make([]eventListener, 0, len(h.listeners))
 	for _, l := range h.listeners {
 		if !l.IsOnceListener {
-			listener = append(listener, l)
+			listeners = append(listeners, l)
 		}
 	}
 
-	h.listeners = listener
+	h.listeners = listeners
 }
 
 // find finds listener existing in the manager

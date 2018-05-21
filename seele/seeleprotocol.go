@@ -397,13 +397,13 @@ handler:
 				break
 			}
 			p.log.Debug("Recved downloader.GetBlockHeadersMsg")
-			var headL []*types.BlockHeader
+			var headList []*types.BlockHeader
 			var head *types.BlockHeader
 			orgNum := query.Number
 
 			if query.Hash != common.EmptyHash {
 				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
-					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
+					p.log.Error("HandleMsg GetBlockHeader err from query hash. %s", err)
 					break
 				}
 				orgNum = head.Height
@@ -417,19 +417,24 @@ handler:
 					curNum = orgNum + cnt
 				}
 
-				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
-				if head, err = p.chain.GetStore().GetBlockHeader(hash); err != nil {
-					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
-					break handler
+				hash, err := p.chain.GetStore().GetBlockHash(curNum)
+				if err != nil {
+					p.log.Error("get error when get block hash by height. err: %s, height:%s", err, curNum)
+					break
 				}
-				headL = append(headL, head)
+
+				if head, err = p.chain.GetStore().GetBlockHeader(hash); err != nil {
+					p.log.Error("get error when get block by block hash. err: %s, hash:%s", err, hash)
+					break
+				}
+				headList = append(headList, head)
 			}
 
-			if err = peer.sendBlockHeaders(headL); err != nil {
+			if err = peer.sendBlockHeaders(headList); err != nil {
 				p.log.Error("HandleMsg sendBlockHeaders err. %s", err)
 				break handler
 			}
-			p.log.Debug("send downloader.sendBlockHeaders. len=%d", len(headL))
+			p.log.Debug("send downloader.sendBlockHeaders. len=%d", len(headList))
 
 		case downloader.GetBlocksMsg:
 			p.log.Debug("Recved downloader.GetBlocksMsg")
