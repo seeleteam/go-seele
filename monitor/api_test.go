@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -41,9 +42,10 @@ func createTestAPI() *PublicMonitorAPI {
 			PrivateKey: key,
 			ListenAddr: "0.0.0.0:39007",
 		},
-		RPCAddr:     "127.0.0.1:55027",
-		WSAddr:      "127.0.0.1:8080",
-		WSPattern:   "/ws",
+		RPCAddr: "127.0.0.1:55027",
+		WSServerConfig: rpc.WSServerConfig{
+			WSAddr:    "127.0.0.1:8080",
+			WSPattern: "/ws"},
 		SeeleConfig: *seeleConf,
 	}
 
