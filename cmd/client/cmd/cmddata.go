@@ -15,6 +15,7 @@ func NewCmdData() []*Request {
   client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:55027]`,
 			ParamReflectType: "GetBlockByHeightRequest",
 			Method:           "seele.GetBlockByHeight",
+			UseWebsocket:     true,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
@@ -43,6 +44,7 @@ func NewCmdData() []*Request {
   client.exe getblockrlp --height -1 [-a 127.0.0.1:55027]`,
 			ParamReflectType: "int64",
 			Method:           "debug.GetBlockRlp",
+			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
@@ -61,6 +63,7 @@ func NewCmdData() []*Request {
   client.exe getblockheight`,
 			ParamReflectType: "nil",
 			Method:           "seele.GetBlockHeight",
+			UseWebsocket:     false,
 			Params:           []*Param{},
 		},
 		&Request{

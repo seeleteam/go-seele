@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // Config aggregates all configs exposed to users
@@ -59,6 +60,9 @@ type Config struct {
 
 	// http server config info
 	HttpServer HttpServer
+
+	// websocket server config info
+	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 }
 
 // HttpServer config for http server
@@ -113,6 +117,7 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	nodeConfig.HTTPAddr = config.HttpServer.HTTPAddr
 	nodeConfig.HTTPCors = config.HttpServer.HTTPCors
 	nodeConfig.HTTPWhiteHost = config.HttpServer.HTTPWhiteHost
+	nodeConfig.WSServerConfig = config.WSServerConfig
 
 	nodeConfig.P2P, err = GetP2pConfig(config)
 	if err != nil {
