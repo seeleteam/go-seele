@@ -13,6 +13,7 @@ import (
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -53,6 +54,10 @@ func newMockBlockchain() *mockBlockchain {
 
 func (chain mockBlockchain) CurrentState() *state.Statedb {
 	return chain.statedb
+}
+
+func (chain mockBlockchain) GetStore() store.BlockchainStore {
+	return chain.GetStore()
 }
 
 func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint64) {

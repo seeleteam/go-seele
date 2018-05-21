@@ -165,10 +165,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 		// Write index for each tx.
 		for i, tx := range body.Txs {
-			idx := types.TxIndex{
-				BlockHash: hash,
-				Index:     uint(i),
-			}
+			idx := types.TxIndex{hash, uint(i)}
 			encodedTxIndex, err := common.Serialize(idx)
 			if err != nil {
 				return err

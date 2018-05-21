@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	errIndexOutRange       = errors.New("index out of block transaction list range, the max index is ")
 	errTransactionNotFound = errors.New("transaction not found")
 )
 
@@ -64,7 +63,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request
 
 	txs := block.Transactions
 	if request.Index >= len(txs) {
-		return errors.New(errIndexOutRange.Error() + strconv.Itoa(len(txs)-1))
+		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 
 	*result = rpcOutputTx(txs[request.Index])
@@ -87,13 +86,13 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *
 
 	txs := block.Transactions
 	if request.Index >= len(txs) {
-		return errors.New(errIndexOutRange.Error() + strconv.Itoa(len(txs)-1))
+		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 	*result = rpcOutputTx(txs[request.Index])
 	return nil
 }
 
-// GetTransactionByHash returns the transaction by the griven transaction hash.
+// GetTransactionByHash returns the transaction by the given transaction hash.
 func (api *PublicTransactionPoolAPI) GetTransactionByHash(txHash *string, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(*txHash)
