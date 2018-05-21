@@ -22,11 +22,30 @@ var (
 
 // SeeleLog wraps log class
 type SeeleLog struct {
-	log *logrus.Logger
+	log   *logrus.Logger
+	level logrus.Level
 }
 
 var logMap map[string]*SeeleLog
 var getLogMutex sync.Mutex
+
+//Loging exported log tag for all users
+var Loging *SeeleLog
+
+func init() {
+	Loging = &SeeleLog{
+		log:   logrus.New(),
+		level: logrus.InfoLevel,
+	}
+	logFullPath := filepath.Join(LogFolder, "log.log")
+	file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+	}
+
+	Loging.log.Out = file
+	Loging.log.AddHook(&CallerHook{})
+}
 
 // Panic Level, highest level of severity. Panic logs and then calls panic with the
 // message passed to Debug, Info, ...
@@ -60,6 +79,17 @@ func (p *SeeleLog) Info(format string, args ...interface{}) {
 // Debug Level. Usually only enabled when debugging. Very verbose logging.
 func (p *SeeleLog) Debug(format string, args ...interface{}) {
 	p.log.Debugf(format, args...)
+}
+
+// GetLevel obtain the current level station
+func (p *SeeleLog) GetLevel() logrus.Level {
+	return p.level
+}
+
+//SetLevel set the current level station
+func (p *SeeleLog) SetLevel(level logrus.Level) {
+	p.level = level
+	p.log.SetLevel(level)
 }
 
 // GetLogger gets logrus.Logger object according to logName
