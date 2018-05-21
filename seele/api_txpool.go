@@ -13,6 +13,11 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
+var (
+	errIndexOutRange       = errors.New("index out of block transaction list range, the max index is ")
+	errTransactionNotFound = errors.New("transaction not found")
+)
+
 // PublicTransactionPoolAPI provides an API to access transaction pool information.
 type PublicTransactionPoolAPI struct {
 	s *SeeleService
@@ -85,5 +90,40 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *
 		return errors.New(errIndexOutRange.Error() + strconv.Itoa(len(txs)-1))
 	}
 	*result = rpcOutputTx(txs[request.Index])
+	return nil
+}
+
+// GetTransactionByHash returns the transaction by the griven transaction hash.
+func (api *PublicTransactionPoolAPI) GetTransactionByHash(txHash *string, result *map[string]interface{}) error {
+	store := api.s.chain.GetStore()
+	hashByte, err := hexutil.HexToBytes(*txHash)
+	if err != nil {
+		return err
+	}
+	hash := common.BytesToHash(hashByte)
+
+	// Try to get transaction in txpool
+	tx := api.s.TxPool().LookupTransaction(hash)
+	if tx != nil {
+		*result = rpcOutputTx(tx)
+		return nil
+	}
+
+	// Try to get finalized transaction
+	txIndex, err := store.GetTxIndex(hash)
+	if err != nil {
+		api.s.log.Info(err.Error())
+		return errTransactionNotFound
+	}
+
+	if txIndex != nil {
+		block, err := store.GetBlock(txIndex.BlockHash)
+		if err != nil {
+			return err
+		}
+		*result = rpcOutputTx(block.Transactions[txIndex.Index])
+		return nil
+	}
+
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 )
@@ -24,26 +25,29 @@ var (
 
 type blockchain interface {
 	CurrentState() *state.Statedb
+	GetStore() store.BlockchainStore
 }
 
 // TransactionPool is a thread-safe container for transactions received
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain.
 type TransactionPool struct {
-	mutex           sync.RWMutex
-	config          TransactionPoolConfig
-	chain           blockchain
-	hashToTxMap     map[common.Hash]*types.Transaction
-	accountToTxsMap map[common.Address]*txCollection // Account address to tx collection mapping.
+	mutex             sync.RWMutex
+	config            TransactionPoolConfig
+	chain             blockchain
+	hashToTxMap       map[common.Hash]*types.Transaction
+	lookupHashToTxMap map[common.Hash]*types.Transaction // Transactions map for lookup
+	accountToTxsMap   map[common.Address]*txCollection   // Account address to tx collection mapping.
 }
 
 // NewTransactionPool creates and returns a transaction pool.
 func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
 	pool := &TransactionPool{
-		config:          config,
-		chain:           chain,
-		hashToTxMap:     make(map[common.Hash]*types.Transaction),
-		accountToTxsMap: make(map[common.Address]*txCollection),
+		config:            config,
+		chain:             chain,
+		hashToTxMap:       make(map[common.Hash]*types.Transaction),
+		lookupHashToTxMap: make(map[common.Hash]*types.Transaction),
+		accountToTxsMap:   make(map[common.Address]*txCollection),
 	}
 
 	return pool
@@ -92,6 +96,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 
 func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
 	pool.hashToTxMap[tx.Hash] = tx
+	pool.lookupHashToTxMap[tx.Hash] = tx
 
 	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
 		pool.accountToTxsMap[tx.Data.From] = newTxCollection()
@@ -117,6 +122,11 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return pool.hashToTxMap[txHash]
 }
 
+// LookupTransaction returns a transaction in pool
+func (pool *TransactionPool) LookupTransaction(txHash common.Hash) *types.Transaction {
+	return pool.lookupHashToTxMap[txHash]
+}
+
 // RemoveTransaction removes a transaction with the specified hash
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.mutex.Lock()
@@ -140,6 +150,21 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 	}
 
 	delete(pool.hashToTxMap, txHash)
+}
+
+// RefreshLookupTransactions removes finalized and old transactions in lookupHashToTxMap
+func (pool *TransactionPool) RefreshLookupTransactions() {
+	for txHash, tx := range pool.lookupHashToTxMap {
+		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
+
+		state := pool.chain.CurrentState()
+		nonce := state.GetNonce(tx.Data.From)
+
+		// Transactions have been processed or are too old need to delete
+		if txIndex != nil || tx.Data.AccountNonce+1 < nonce {
+			delete(pool.lookupHashToTxMap, txHash)
+		}
+	}
 }
 
 // GetProcessableTransactions retrieves all processable transactions. The returned transactions
