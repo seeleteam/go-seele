@@ -42,7 +42,7 @@ type statusData struct {
 // blockHeadersQuery represents a block header query.
 type blockHeadersQuery struct {
 	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
-	Number  uint64      // Block hash from which to retrieve headers (excludes Hash)
+	Number  uint64      // Block number from which to retrieve headers (excludes Hash)
 	Amount  uint64      // Maximum number of headers to retrieve
 	Reverse bool        // Query direction (false = rising towards latest, true = falling towards genesis)
 }

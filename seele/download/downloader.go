@@ -24,7 +24,7 @@ const (
 	GetBlockHeadersMsg uint16 = 8
 	BlockHeadersMsg    uint16 = 9
 	GetBlocksMsg       uint16 = 10
-	BlocksPreMsg       uint16 = 11 // is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksPreMsg       uint16 = 11 // BlocksPreMsg is sent before BlockMsg, containing block numbers of BlockMsg.
 	BlocksMsg          uint16 = 12
 )
 
@@ -46,7 +46,7 @@ var (
 	errHashNotMatch        = errors.New("Hash not match")
 	errInvalidAncestor     = errors.New("Ancestor is invalid")
 	errInvalidPacketRecved = errors.New("Invalid packet received")
-	errIsSynchronising     = errors.New("Is synchronising")
+	ErrIsSynchronising     = errors.New("Is synchronising")
 	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
 	errPeerNotFound        = errors.New("Peer not found")
 	errSyncErr             = errors.New("Err occurs when syncing")
@@ -115,7 +115,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	d.lock.Lock()
 	if d.syncStatus != statusNone {
 		d.lock.Unlock()
-		return errIsSynchronising
+		return ErrIsSynchronising
 	}
 	d.syncStatus = statusPreparing
 	d.cancelCh = make(chan struct{})

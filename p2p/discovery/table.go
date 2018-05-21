@@ -6,11 +6,11 @@
 package discovery
 
 import (
-	"github.com/seeleteam/go-seele/log"
 	"net"
 	"sort"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -34,7 +34,7 @@ func newTable(id common.Address, addr *net.UDPAddr, log *log.SeeleLog) *Table {
 	table := &Table{
 		count:    0,
 		selfNode: selfNode,
-		log: log,
+		log:      log,
 	}
 
 	for i := 0; i < nBuckets; i++ {
@@ -61,10 +61,7 @@ func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*N
 	minDis := []*Node{}
 	for _, e := range nodes {
 		if distCmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
-			t.log.Debug("add node: %s", e.ID.ToHex())
 			minDis = append(minDis, e)
-		} else {
-			t.log.Debug("skip node:%s", e.ID.ToHex())
 		}
 	}
 

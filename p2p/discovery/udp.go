@@ -279,7 +279,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					u.log.Debug("time out %d", p.code)
+					u.log.Debug("time out to wait for msg with msg type %d", p.code)
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}

@@ -21,6 +21,7 @@ type Request struct {
 	Long             string   // Long is the long message shown in the 'help <this-command>' output
 	ParamReflectType string   // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
 	Method           string   // Method is the service method name
+	UseWebsocket     bool     // UseWebsocket is how to visit the rpc api, if true will use websocket,otherwise use rpc 2.0
 	Params           []*Param // Params is the param args for cmd input line
 }
 
@@ -59,6 +60,8 @@ func NewConfig() *Config {
 func (c *Config) InitStructData() {
 	c.structMap["GetBlockByHeightRequest"] = seele.GetBlockByHeightRequest{}
 	c.structMap["GetBlockByHashRequest"] = seele.GetBlockByHashRequest{}
+	c.structMap["GetTxByBlockHeightAndIndexRequest"] = seele.GetTxByBlockHeightAndIndexRequest{}
+	c.structMap["GetTxByBlockHashAndIndexRequest"] = seele.GetTxByBlockHashAndIndexRequest{}
 }
 
 // InitBasicData init basic data for cmd config
