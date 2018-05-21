@@ -20,6 +20,7 @@ type CallerHook struct {
 // Fire adds a caller field in logger instance
 func (hook *CallerHook) Fire(entry *logrus.Entry) error {
 	entry.Data["caller"] = hook.caller()
+	entry.Data["module"] = Loging.module
 	return nil
 }
 

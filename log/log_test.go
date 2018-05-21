@@ -19,7 +19,11 @@ func Test_Log_File(t *testing.T) {
 	lg.Info(filepath.Join(common.GetTempFolder(), "Log"))
 	lg.Warn("warn msg")
 	lg.Error("error msg")
-	Loging.Info("I am in testing you are best!!!")
+	Loging.Info("I am in testing, you are best!!!")
+	Loging.SetMod("testing")
+	Loging.Info("testing the mod function!")
+	Loging.SetMod("second")
+	Loging.Info("testing the mod function!")
 	//Fatal("fatal msg")
 	//panic("panic msg")
 }

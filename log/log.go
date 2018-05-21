@@ -22,8 +22,9 @@ var (
 
 // SeeleLog wraps log class
 type SeeleLog struct {
-	log   *logrus.Logger
-	level logrus.Level
+	log    *logrus.Logger
+	level  logrus.Level
+	module string
 }
 
 var logMap map[string]*SeeleLog
@@ -34,8 +35,9 @@ var Loging *SeeleLog
 
 func init() {
 	Loging = &SeeleLog{
-		log:   logrus.New(),
-		level: logrus.InfoLevel,
+		log:    logrus.New(),
+		level:  logrus.InfoLevel,
+		module: "log",
 	}
 	logFullPath := filepath.Join(LogFolder, "log.log")
 	file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -45,6 +47,16 @@ func init() {
 
 	Loging.log.Out = file
 	Loging.log.AddHook(&CallerHook{})
+}
+
+//SetMod setting module tags for information
+func (p *SeeleLog) SetMod(module string) {
+	p.module = module
+}
+
+//GetMod setting module tags for information
+func (p *SeeleLog) GetMod() string {
+	return p.module
 }
 
 // Panic Level, highest level of severity. Panic logs and then calls panic with the
