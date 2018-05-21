@@ -96,5 +96,7 @@ func (n *Node) getSha() common.Hash {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf(nodeHeader+"%s@%s", hex.EncodeToString(n.ID.Bytes()), n.GetUDPAddr().String())
+	addr := n.GetUDPAddr().String()
+	hex := hex.EncodeToString(n.ID.Bytes())
+	return fmt.Sprintf(nodeHeader+"%s@%s", hex, addr)
 }
