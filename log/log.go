@@ -34,21 +34,22 @@ var Default *SeeleLog
 
 // NewSeeleLog create a pointer of SeeleLog
 func NewSeeleLog() *SeeleLog {
-	return &SeeleLog{
+	logtmp := SeeleLog{
 		log:    logrus.New(),
 		level:  logrus.InfoLevel,
 		module: "log",
 	}
-}
-func init() {
-	Default = NewSeeleLog()
 	logFullPath := filepath.Join(LogFolder, "log.log")
 	file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 	}
-	Default.log.Out = file
-	Default.log.AddHook(&CallerHook{})
+	logtmp.log.Out = file
+	logtmp.log.AddHook(&CallerHook{})
+	return &logtmp
+}
+func init() {
+	Default = NewSeeleLog()
 }
 
 //SetMod setting module tags for information
