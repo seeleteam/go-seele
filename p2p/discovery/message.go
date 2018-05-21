@@ -75,7 +75,7 @@ func generateBuff(code msgType, encoding []byte) []byte {
 
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
-	//log.Debug("received ping from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
+	t.log.Debug("received ping from: %s", m.SelfID.ToHex())
 
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
@@ -91,7 +91,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 
 // send send ping message and handle callback
 func (m *ping) send(t *udp) {
-	//log.Debug("send ping msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
+	t.log.Debug("send ping msg to: %s", m.to.ID.ToHex())
 
 	p := &pending{
 		from: m.to,
@@ -102,7 +102,7 @@ func (m *ping) send(t *udp) {
 			n := NewNodeWithAddr(r.SelfID, addr)
 			t.table.updateNode(n)
 
-			//log.Debug("received pong msg: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
+			t.log.Debug("received pong msg: %s", r.SelfID.ToHex())
 
 			return true
 		},
@@ -118,7 +118,7 @@ func (m *ping) send(t *udp) {
 
 // handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	//log.Debug("received find node request from: %s", hexutil.BytesToHex(m.SelfID.Bytes()))
+	t.log.Debug("received find node request from: %s", m.SelfID.ToHex())
 	node := NewNodeWithAddr(m.SelfID, from)
 	t.addNode(node)
 
@@ -143,7 +143,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 
 // send send find node message and handle callback
 func (m *findNode) send(t *udp) {
-	//log.Debug("send find msg to: %s", hexutil.BytesToHex(m.to.ID.Bytes()))
+	t.log.Debug("send find msg to: %s", m.to.ID.ToHex())
 
 	p := &pending{
 		from: m.to,
@@ -152,16 +152,16 @@ func (m *findNode) send(t *udp) {
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*neighbors)
 
-			//log.Debug("received neighbors msg from: %s", hexutil.BytesToHex(r.SelfID.Bytes()))
+			t.log.Debug("received neighbors msg from: %s", r.SelfID.ToHex())
 			if r.Nodes == nil || len(r.Nodes) == 0 {
 				return true
 			}
 
-			//log.Debug("find %d nodes", len(r.Nodes))
+			t.log.Debug("got find response with %d nodes", len(r.Nodes))
 
 			found := false
 			for _, n := range r.Nodes {
-				//log.Debug("received node: %s", hexutil.BytesToHex(n.SelfID.Bytes()))
+				t.log.Debug("received node: %s", n.SelfID.ToHex())
 
 				if n.SelfID == m.QueryID {
 					found = true
