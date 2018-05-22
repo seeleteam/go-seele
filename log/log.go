@@ -20,6 +20,8 @@ var (
 	LogFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
+const logfile string = "log.log"
+
 // SeeleLog wraps log class
 type SeeleLog struct {
 	log *logrus.Logger
@@ -86,7 +88,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
 
-		logFullPath := filepath.Join(LogFolder, "log.log")
+		logFullPath := filepath.Join(LogFolder, logfile)
 		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
