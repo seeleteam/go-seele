@@ -69,6 +69,12 @@ type Transaction struct {
 	Signature *crypto.Signature // Signature is the signature of the transaction
 }
 
+// TxIndex represents an index that used to query block info by tx hash.
+type TxIndex struct {
+	BlockHash common.Hash
+	Index     uint // tx array index in block body
+}
+
 type stateDB interface {
 	GetBalance(common.Address) *big.Int
 	GetNonce(common.Address) uint64

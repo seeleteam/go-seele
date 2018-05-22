@@ -156,5 +156,24 @@ func NewCmdData() []*Request {
 					Required:     false,
 				},
 			}},
+		&Request{
+			Use:   "gettransactionbyhash",
+			Short: "get transaction count by hash",
+			Long: `For example:
+  client.exe gettransactionbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+			ParamReflectType: "string",
+			Method:           "txpool.GetTransactionByHash",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "TxHash",
+					ParamName:    "hash",
+					ShortHand:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash of the transaction",
+					Required:     true,
+				},
+			}},
 	}
 }

@@ -32,12 +32,6 @@ type blockBody struct {
 	Txs []*types.Transaction // Txs is a transaction collection
 }
 
-// txIndex represents an index that used to query block info by tx hash.
-type txIndex struct {
-	BlockHash common.Hash
-	Index     uint // tx array index in block body
-}
-
 // blockchainDatabase wraps a database used for the blockchain
 type blockchainDatabase struct {
 	db database.Database
@@ -171,7 +165,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 		// Write index for each tx.
 		for i, tx := range body.Txs {
-			idx := txIndex{hash, uint(i)}
+			idx := types.TxIndex{hash, uint(i)}
 			encodedTxIndex, err := common.Serialize(idx)
 			if err != nil {
 				return err
@@ -294,7 +288,7 @@ func (store *blockchainDatabase) GetReceiptsByBlockHash(hash common.Hash) ([]*ty
 
 // GetReceiptByTxHash retrieves the receipt for the specified tx hash.
 func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error) {
-	txIndex, err := store.getTxIndex(txHash)
+	txIndex, err := store.GetTxIndex(txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -311,14 +305,14 @@ func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.
 	return receipts[txIndex.Index], nil
 }
 
-// getTxIndex retrieves the tx index for the specified tx hash.
-func (store *blockchainDatabase) getTxIndex(txHash common.Hash) (*txIndex, error) {
+// GetTxIndex retrieves the tx index for the specified tx hash.
+func (store *blockchainDatabase) GetTxIndex(txHash common.Hash) (*types.TxIndex, error) {
 	data, err := store.db.Get(txHashToIndexKey(txHash.Bytes()))
 	if err != nil {
 		return nil, err
 	}
 
-	index := &txIndex{}
+	index := &types.TxIndex{}
 	if err := common.Deserialize(data, index); err != nil {
 		return nil, err
 	}
