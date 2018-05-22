@@ -6,7 +6,6 @@
 package seele
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -16,10 +15,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/p2p"
-)
-
-var (
-	errIndexOutRange = errors.New("index out of block transaction list range, the max index is ")
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.

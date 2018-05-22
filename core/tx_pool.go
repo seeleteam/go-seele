@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 )
@@ -24,6 +25,7 @@ var (
 
 type blockchain interface {
 	CurrentState() *state.Statedb
+	GetStore() store.BlockchainStore
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -76,7 +78,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	if existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
 			pool.removeTransaction(existTx.Hash)
-			pool.addTransaction(tx)
+			delete(pool.hashToTxMap, existTx.Hash)
 		} else {
 			return errTxNonceUsed
 		}
@@ -138,8 +140,21 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 			delete(pool.accountToTxsMap, tx.Data.From)
 		}
 	}
+}
 
-	delete(pool.hashToTxMap, txHash)
+// ReflushTransactions removes finalized and old transactions in hashToTxMap
+func (pool *TransactionPool) ReflushTransactions() {
+	for txHash, tx := range pool.hashToTxMap {
+		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
+
+		state := pool.chain.CurrentState()
+		nonce := state.GetNonce(tx.Data.From)
+
+		// Transactions have been processed or are too old need to delete
+		if txIndex != nil || tx.Data.AccountNonce+1 < nonce {
+			delete(pool.hashToTxMap, txHash)
+		}
+	}
 }
 
 // GetProcessableTransactions retrieves all processable transactions. The returned transactions

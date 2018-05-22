@@ -57,4 +57,7 @@ type BlockchainStore interface {
 
 	// GetReceiptByTxHash retrieves the receipt for the specified tx hash.
 	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
+
+	// GetTxIndex retrieves the tx index for the specified tx hash.
+	GetTxIndex(txHash common.Hash) (*types.TxIndex, error)
 }
