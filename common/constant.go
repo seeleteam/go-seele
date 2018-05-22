@@ -13,6 +13,8 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 )
 
+const ShardNumber = 20
+
 var (
 	// tempFolder used to store temp file, such as log files
 	tempFolder string
@@ -21,7 +23,7 @@ var (
 	defaultDataFolder string
 
 	// LogConfig is the Configuration of log
-	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: false}
+	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 )
 
 func init() {

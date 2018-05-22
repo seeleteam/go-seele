@@ -154,13 +154,14 @@ func (srv *Server) Start() (err error) {
 	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(srv.MyNodeID)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-	discoveryNode := discovery.NewNodeWithAddr(address, addr)
+	//TODO define shard number
+	discoveryNode := discovery.NewNodeWithAddr(address, addr, 0)
 	if err != nil {
 		return err
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
