@@ -33,9 +33,9 @@ func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, c
 		seeleNode: seeleNode,
 		log:       slog,
 		name:      name,
-		rpcAddr:   conf.RPCAddr,
-		node:      conf.Name,
-		version:   conf.Version,
+		rpcAddr:   conf.BasicConfig.RPCAddr,
+		node:      conf.BasicConfig.Name,
+		version:   conf.BasicConfig.Version,
 	}, nil
 }
 
