@@ -38,7 +38,7 @@ func (s *Statedb) GetCode(address common.Address) []byte {
 
 	code, err := stateObj.loadCode(s.db)
 	if err != nil {
-		s.dbErr = err
+		s.setError(err)
 		return nil
 	}
 
@@ -82,7 +82,7 @@ func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash 
 
 	value, err := stateObj.getState(s.db, key)
 	if err != nil {
-		s.dbErr = err
+		s.setError(err)
 		return common.EmptyHash
 	}
 

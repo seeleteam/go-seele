@@ -42,8 +42,11 @@ type StateObject struct {
 	cachedStorage map[common.Hash]common.Hash // cache the retrieved account states.
 	dirtyStorage  map[common.Hash]common.Hash // changed account states that need to flush to DB.
 
-	// When a state object is marked assuicided, it will be deleted from the trie when commit the state DB.
+	// When a state object is marked as suicided, it will be deleted from the trie when commit the state DB.
 	suicided bool
+
+	// When a state object is marked as deleted, need not to load from trie again.
+	deleted bool
 }
 
 func newStateObject(address common.Address) *StateObject {
@@ -131,12 +134,16 @@ func (s *StateObject) setCode(code []byte) {
 	s.code = code
 	s.dirtyCode = true
 
-	s.account.CodeHash = crypto.HashBytes(code)
+	if len(code) == 0 {
+		s.account.CodeHash = common.EmptyHash
+	} else {
+		s.account.CodeHash = crypto.HashBytes(code)
+	}
 	s.dirtyAccount = true
 }
 
 func (s *StateObject) serializeCode(batch database.Batch) {
-	if s.code != nil {
+	if len(s.code) > 0 {
 		batch.Put(s.getCodeKey(), s.code)
 	}
 }
