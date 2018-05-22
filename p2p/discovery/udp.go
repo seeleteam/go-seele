@@ -8,14 +8,9 @@ package discovery
 import (
 	"container/list"
 	"fmt"
-<<<<<<< HEAD
 	rand2 "math/rand"
-=======
->>>>>>> master
 	"net"
 	"time"
-
-	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
