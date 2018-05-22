@@ -28,6 +28,6 @@ func Test_LogFile(t *testing.T) {
 
 	log.Debug("debug")
 
-	exist := common.FileOrFolderExists(filepath.Join(LogFolder, "test2.log"))
-	assert.Equal(t, exist, false)
+	exist := common.FileOrFolderExists(filepath.Join(LogFolder, LogFile))
+	assert.Equal(t, exist, true)
 }
