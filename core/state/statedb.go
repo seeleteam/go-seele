@@ -83,6 +83,13 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	}, nil
 }
 
+// setError only records the first error.
+func (s *Statedb) setError(err error) {
+	if s.dbErr == nil {
+		s.dbErr = err
+	}
+}
+
 // GetBalance returns the balance of the specified account if exists.
 // Otherwise, returns zero.
 func (s *Statedb) GetBalance(addr common.Address) *big.Int {
