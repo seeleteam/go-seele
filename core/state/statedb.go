@@ -182,6 +182,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 
 	// Remove the account from state DB if suicided.
 	if obj.suicided {
+		obj.deleted = true
 		s.trie.Delete(addr.Bytes())
 	}
 
@@ -214,10 +215,13 @@ func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *StateObject {
-	value, ok := s.stateObjects.Get(addr)
-	if ok {
-		object := value.(*StateObject)
-		return object
+	if value, ok := s.stateObjects.Get(addr); ok {
+		if object := value.(*StateObject); !object.deleted {
+			return object
+		}
+
+		// object has already been deleted from trie.
+		return nil
 	}
 
 	object := newStateObject(addr)
@@ -229,6 +233,7 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	if err := common.Deserialize(val, &object.account); err != nil {
 		return nil
 	}
+
 	s.cache(addr, object)
 	return object
 }
