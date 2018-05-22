@@ -195,6 +195,5 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	assert.Equal(t, len(pool.accountToTxsMap), 1)
 
 	pool.RemoveTransaction(tx.Hash)
-	assert.Equal(t, len(pool.hashToTxMap), 0)
 	assert.Equal(t, len(pool.accountToTxsMap), 0)
 }
