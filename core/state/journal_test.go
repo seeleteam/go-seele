@@ -105,8 +105,19 @@ func Test_Journal_Suicide(t *testing.T) {
 	statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
+	stateObj.SetAmount(big.NewInt(100))
+
 	snapshot := statedb.Snapshot()
 	statedb.Suicide(stateObj.address)
 	statedb.RevertToSnapshot(snapshot)
 	assert.Equal(t, statedb.HasSuicided(stateObj.address), false)
+	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(100))
+
+	// Suicide a state object that already suicided.
+	stateObj.suicided = true
+	snapshot = statedb.Snapshot()
+	statedb.Suicide(stateObj.address)
+	statedb.RevertToSnapshot(snapshot)
+	assert.Equal(t, statedb.HasSuicided(stateObj.address), true)
+	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(100))
 }
