@@ -102,7 +102,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByHash(txHash *string, result
 	hash := common.BytesToHash(hashByte)
 
 	// Try to get transaction in txpool
-	tx := api.s.TxPool().LookupTransaction(hash)
+	tx := api.s.TxPool().GetTransaction(hash)
 	if tx != nil {
 		*result = rpcOutputTx(tx)
 		return nil

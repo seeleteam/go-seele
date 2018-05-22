@@ -53,7 +53,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit - 1; i++ {
+	for i := 0; i < core.BlockTransactionNumberLimit-1; i++ {
 		tx := popBestFeeTx(txs)
 		if tx == nil {
 			break
