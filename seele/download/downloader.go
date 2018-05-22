@@ -24,7 +24,7 @@ const (
 	GetBlockHeadersMsg uint16 = 8
 	BlockHeadersMsg    uint16 = 9
 	GetBlocksMsg       uint16 = 10
-	BlocksPreMsg       uint16 = 11 // is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksPreMsg       uint16 = 11 // BlocksPreMsg is sent before BlockMsg, containing block numbers of BlockMsg.
 	BlocksMsg          uint16 = 12
 )
 
@@ -74,7 +74,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		chain:      chain,
 		syncStatus: statusNone,
 	}
-	d.log = log.GetLogger("download", common.PrintLog)
+	d.log = log.GetLogger("download", common.LogConfig.PrintLog)
 	return d
 }
 

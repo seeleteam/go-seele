@@ -8,9 +8,14 @@ package discovery
 import (
 	"container/list"
 	"fmt"
+<<<<<<< HEAD
 	rand2 "math/rand"
+=======
+>>>>>>> master
 	"net"
 	"time"
+
+	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -70,7 +75,7 @@ type reply struct {
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
-	log := log.GetLogger("discovery", common.PrintLog)
+	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
 	conn, err := getUDPConn(addr)
 	if err != nil {
 		panic(fmt.Sprintf("listen addr %s failed", addr.String()))

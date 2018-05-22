@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
@@ -41,7 +40,7 @@ var startCmd = &cobra.Command{
 
 		// print some config infos
 		fmt.Printf("log folder: %s\n", log.LogFolder)
-		fmt.Printf("data folder: %s\n", nCfg.DataDir)
+		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
 
 		seeleNode, err := node.New(nCfg)
 		if err != nil {
@@ -50,9 +49,9 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", common.PrintLog)
+		slog := log.GetLogger("seele", nCfg.LogConfig.PrintLog)
 		serviceContext := seele.ServiceContext{
-			DataDir: nCfg.DataDir,
+			DataDir: nCfg.BasicConfig.DataDir,
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 		seeleService, err := seele.NewSeeleService(ctx, &nCfg.SeeleConfig, slog)

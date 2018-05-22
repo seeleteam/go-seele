@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
@@ -19,9 +20,16 @@ var (
 
 func testNodeConfig() *Config {
 	return &Config{
-		Name:    "test node",
-		Version: "test version",
-		P2P:     p2p.Config{PrivateKey: testNodeKey},
+		BasicConfig: BasicConfig{
+			Name:    "test node",
+			Version: "test version",
+		},
+		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
+		WSServerConfig: rpc.WSServerConfig{
+			WSAddr:    "127.0.0.1:8080",
+			WSPattern: "/ws",
+		},
+		LogConfig: comm.LogConfig{PrintLog: true, IsDebug: true},
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -34,14 +35,20 @@ func createTestAPI() *PublicMonitorAPI {
 	seeleConf := getTmpConfig()
 	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
-		Name:    "Node for test",
-		Version: "Test 1.0",
-		DataDir: "node1",
-		P2P: p2p.Config{
+		BasicConfig: node.BasicConfig{
+			Name:    "Node for test",
+			Version: "Test 1.0",
+			DataDir: "node1",
+			RPCAddr: "127.0.0.1:55027",
+		},
+		P2PConfig: p2p.Config{
 			PrivateKey: key,
 			ListenAddr: "0.0.0.0:39007",
 		},
-		RPCAddr:     "127.0.0.1:55027",
+		WSServerConfig: rpc.WSServerConfig{
+			WSAddr:    "127.0.0.1:8080",
+			WSPattern: "/ws",
+		},
 		SeeleConfig: *seeleConf,
 	}
 
@@ -91,27 +98,31 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 
 		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
-			Name:    "Node for test2",
-			Version: "Test 1.0",
-			DataDir: "node1",
-			P2P: p2p.Config{
+			BasicConfig: node.BasicConfig{
+				Name:    "Node for test2",
+				Version: "Test 1.0",
+				DataDir: "node1",
+				RPCAddr: "127.0.0.1:55028",
+			},
+			P2PConfig: p2p.Config{
 				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39008",
 			},
-			RPCAddr:     "127.0.0.1:55028",
 			SeeleConfig: *seeleConf,
 		}
 	} else {
 		key, _ := crypto.GenerateKey()
 		testConf = node.Config{
-			Name:    "Node for test3",
-			Version: "Test 1.0",
-			DataDir: "node1",
-			P2P: p2p.Config{
+			BasicConfig: node.BasicConfig{
+				Name:    "Node for test3",
+				Version: "Test 1.0",
+				DataDir: "node1",
+				RPCAddr: "127.0.0.1:55029",
+			},
+			P2PConfig: p2p.Config{
 				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39009",
 			},
-			RPCAddr:     "127.0.0.1:55029",
 			SeeleConfig: *seeleConf,
 		}
 	}

@@ -93,13 +93,14 @@ func (t *ProtocolTest) handleMsg(rw p2p.MsgReadWriter) {
 }
 
 func startServer(configFile string) {
-	config, err := GetConfigFromFile(configFile)
+	cmdConfig, err := GetConfigFromFile(configFile)
 	if err != nil {
 		fmt.Printf("read config file failed %s", err.Error())
 		return
 	}
+	config := CopyConfig(cmdConfig)
 
-	p2pconfig, err := GetP2pConfig(config)
+	p2pconfig, err := GetP2pConfig(config, cmdConfig)
 	if err != nil {
 		fmt.Printf("generate p2p config failed %s", err.Error())
 		return
@@ -109,7 +110,7 @@ func startServer(configFile string) {
 		Config: p2pconfig,
 	}
 
-	if len(myServer.StaticNodes) == 0 {
+	if len(myServer.ResolveStaticNodes) == 0 {
 		fmt.Println("No remote peer configed, so is a static peer")
 	}
 

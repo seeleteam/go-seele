@@ -46,6 +46,18 @@ type GetBlockByHashRequest struct {
 	FullTx  bool
 }
 
+// GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
+type GetTxByBlockHeightAndIndexRequest struct {
+	Height int64
+	Index  int
+}
+
+// GetTxByBlockHashAndIndexRequest request param for GetTransactionByBlockHashAndIndex api
+type GetTxByBlockHashAndIndexRequest struct {
+	HashHex string
+	Index   int
+}
+
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 	block, _ := api.s.chain.CurrentBlock()
@@ -163,12 +175,12 @@ func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) 
 	return nil
 }
 
-// PublicMinerAPI provides an API to access full node-related information.
+// PublicMinerAPI provides an API to access miner information.
 type PublicMinerAPI struct {
 	s *SeeleService
 }
 
-// NewPublicMinerAPI creates a new PublicSeeleAPI object for rpc service.
+// NewPublicMinerAPI creates a new PublicMinerAPI object for miner rpc service.
 func NewPublicMinerAPI(s *SeeleService) *PublicMinerAPI {
 	return &PublicMinerAPI{s}
 }
@@ -197,7 +209,7 @@ func (api *PublicMinerAPI) Stop(input *string, result *string) error {
 	return nil
 }
 
-// Hashrate returns the POW hashrate
+// Hashrate returns the POW hashrate.
 func (api *PublicMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 	*hashrate = uint64(api.s.miner.Hashrate())
 

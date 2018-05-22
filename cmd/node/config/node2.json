@@ -1,25 +1,35 @@
 {
-  "Name": "seele node2",
-  "Version": "1.0",
-  "DataDir": "node2",
-  "ListenAddr": "0.0.0.0:39008",
-  "ServerPrivateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
-  "Coinbase": "0x4dd6881d13ab5152127533c5954e4e062eb4bb2dcd93becf4f4e9b1d2d69f1363eea0395e8e76a2716b033d1e3cc8da2bf24811b1e31a86ac8bcacca4c4b29bd",
-  "StaticNodes": [
-    "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007"
-  ],
-  "RPCAddr": "127.0.0.1:55028",
-  "IsDebug": true,
-  "PrintLog": true,
-  "NetworkID": 1,
-  "Capacity": 10000,
-  "HttpServer": {
-    "HTTPAddr": "127.0.0.1:65028",
-    "HTTPCors": [
+  "basic":{
+    "name": "seele node2",
+    "version": "1.0",
+    "dataDir": "node2",
+    "address": "0.0.0.0:55028",
+    "capacity": 10000,
+    "coinbase": "0x4dd6881d13ab5152127533c5954e4e062eb4bb2dcd93becf4f4e9b1d2d69f1363eea0395e8e76a2716b033d1e3cc8da2bf24811b1e31a86ac8bcacca4c4b29bd"
+  },
+  "p2p": {
+    "address": "0.0.0.0:39008",
+    "privateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
+    "staticNodes": [
+      "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007"
+    ],
+    "networkID": 1
+  },
+  "log": {
+    "isDebug": true,
+    "printLog": true
+  },
+  "httpServer": {
+    "address": "127.0.0.1:65028",
+    "crosssorgins": [
       "*"
     ],
-    "HTTPWhiteHost": [
+    "whiteHost": [
       "*"
     ]
+  },
+  "wsserver": {
+    "address": "127.0.0.1:8081",
+    "pattern": "/ws"
   }
 }
