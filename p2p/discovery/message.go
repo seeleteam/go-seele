@@ -103,7 +103,7 @@ func generateBuff(code msgType, encoding []byte) []byte {
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
-	t.log.Debug("received ping from: %s", node)
+	t.log.Debug("received [pingMsg] from: %s", node)
 	t.addNode(node)
 
 	// response with pong
@@ -121,7 +121,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 
 // send send ping message and handle callback
 func (m *ping) send(t *udp) {
-	t.log.Debug("send ping msg to: %s", m.to)
+	t.log.Debug("send [pingMsg] to: %s", m.to)
 
 	p := &pending{
 		from: m.to,
@@ -132,7 +132,7 @@ func (m *ping) send(t *udp) {
 			n := NewNodeWithAddr(r.SelfID, addr, r.SelfShard)
 			t.table.updateNode(n)
 
-			t.log.Debug("received pong msg: %s", r.SelfID.ToHex())
+			t.log.Debug("received [pongMsg] from: %s", r.SelfID.ToHex())
 
 			return true
 		},
@@ -147,7 +147,7 @@ func (m *ping) send(t *udp) {
 
 // handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	t.log.Debug("received find node request from: %s, id: %s", from, m.SelfID)
+	t.log.Debug("received request [findNodeMsg] from: %s, id: %s", from, m.SelfID)
 
 	nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
 
@@ -170,7 +170,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 
 // send send find node message and handle callback
 func (m *findNode) send(t *udp) {
-	t.log.Debug("send find msg to: %s", m.to)
+	t.log.Debug("send request [findNodeMsg] to: %s", m.to)
 
 	p := &pending{
 		from: m.to,
@@ -179,12 +179,10 @@ func (m *findNode) send(t *udp) {
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*neighbors)
 
-			t.log.Debug("received neighbors msg from: %s", r.SelfID.ToHex())
+			t.log.Debug("received [neighborsMsg] from: %s with %d nodes", r.SelfID.ToHex(), len(r.Nodes))
 			if r.Nodes == nil || len(r.Nodes) == 0 {
 				return true
 			}
-
-			t.log.Debug("got find response with %d nodes", len(r.Nodes))
 
 			found := false
 			for _, n := range r.Nodes {
@@ -243,7 +241,7 @@ func sendFindShardNodeRequest(u *udp, shard uint, to *Node) {
 }
 
 func (m *findShardNode) send(t *udp) {
-	t.log.Debug("send find shard %d query to node: %s", m.RequestShard, m.to)
+	t.log.Debug("send request [findShardNodeMsg], shard: %d, to node: %s", m.RequestShard, m.to)
 
 	p := &pending{
 		from: m.to,
@@ -251,7 +249,7 @@ func (m *findShardNode) send(t *udp) {
 
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*shardNode)
-			t.log.Debug("got find shard node response with nodes number %d in shard %d from:%s",
+			t.log.Debug("got response [shardNodeMsg] with nodes number %d in shard %d from:%s",
 				len(r.Nodes), r.RequestShard, addr)
 			for _, node := range r.Nodes {
 				t.addNode(node.ToNode())
@@ -268,7 +266,7 @@ func (m *findShardNode) send(t *udp) {
 }
 
 func (m *findShardNode) handle(t *udp, from *net.UDPAddr) {
-	t.log.Debug("got find shard node request from: %s, find shard %d", from, m.RequestShard)
+	t.log.Debug("got request [findShardNodeMsg] from: %s, find shard %d", from, m.RequestShard)
 
 	var nodes []*Node
 	if m.RequestShard == t.self.Shard {

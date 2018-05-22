@@ -99,6 +99,7 @@ func (b *bucket) getRandNodes(number int) []*Node {
 		result = make([]*Node, number)
 		// @TODO use random selection
 		for i := 0; i < number; i++ {
+			result[i] = &Node{}
 			*result[i] = *b.peers[i]
 		}
 	} else {

@@ -18,7 +18,7 @@ const (
 	responseNodeNumber   = 5 // TODO with this number for test
 	hashBits             = len(common.Hash{}) * 8
 	nBuckets             = hashBits + 1 // Number of buckets
-	shardTargeNodeNumber = 2
+	shardTargeNodeNumber = 2            // other shard minimal node number for start
 )
 
 type Table struct {
