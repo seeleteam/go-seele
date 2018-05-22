@@ -36,7 +36,7 @@ type Statedb struct {
 	curLogs    []*types.Log
 
 	// State modifications for current processed tx.
-	curJournal *journal
+	curJournal journal
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -55,6 +55,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		db:           db,
 		trie:         trie,
 		stateObjects: stateCache,
+		curJournal:   journal{},
 	}, nil
 }
 
@@ -251,7 +252,7 @@ func (s *Statedb) Prepare(txIndex int) {
 	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 
-	s.curJournal = &journal{}
+	s.curJournal.entries = s.curJournal.entries[:0]
 }
 
 // GetCurrentLogs returns the current transaction logs.
