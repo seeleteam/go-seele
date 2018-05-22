@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
@@ -28,6 +29,7 @@ func testNodeConfig() *Config {
 			WSAddr:    "127.0.0.1:8080",
 			WSPattern: "/ws",
 		},
+		LogConfig: comm.LogConfig{PrintLog: true, IsDebug: true},
 	}
 }
 

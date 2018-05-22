@@ -32,7 +32,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := node.LoadConfigFromFile(*seeleNodeConfigFile, *genesisConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, *genesisConfigFile)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return

@@ -43,7 +43,7 @@ func createTestAPI() *PublicMonitorAPI {
 		},
 		P2PConfig: p2p.Config{
 			PrivateKey: key,
-			OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39007"},
+			ListenAddr: "0.0.0.0:39007",
 		},
 		WSServerConfig: rpc.WSServerConfig{
 			WSAddr:    "127.0.0.1:8080",
@@ -106,7 +106,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 			},
 			P2PConfig: p2p.Config{
 				PrivateKey: key,
-				OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39008"},
+				ListenAddr: "0.0.0.0:39008",
 			},
 			SeeleConfig: *seeleConf,
 		}
@@ -121,7 +121,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 			},
 			P2PConfig: p2p.Config{
 				PrivateKey: key,
-				OpenConfig: p2p.OpenConfig{ListenAddr: "0.0.0.0:39009"},
+				ListenAddr: "0.0.0.0:39009",
 			},
 			SeeleConfig: *seeleConf,
 		}
