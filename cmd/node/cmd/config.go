@@ -43,41 +43,6 @@ type Config struct {
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 }
 
-// BasicConfig config for Node
-type BasicConfig struct {
-	// The name of the node
-	Name string `json:"name"`
-
-	// The version of the node
-	Version string `json:"version"`
-
-	// The file system path of the node, used to store data
-	DataDir string `json:"dataDir"`
-
-	// RPCAddr is the address on which to start RPC server.
-	RPCAddr string `json:"address"`
-
-	// coinbase used by the miner
-	Coinbase string `json:"coinbase"`
-
-	// capacity of the transaction pool
-	Capacity uint `json:"capacity"`
-}
-
-// HTTPServer config for http server
-type HTTPServer struct {
-	// The HTTPAddr is the address of HTTP rpc service
-	HTTPAddr string `json:"address"`
-
-	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
-	// clients. Please be aware that CORS is a browser enforced security, it's fully
-	// useless for custom HTTP clients.
-	HTTPCors []string `json:"crosssorgins"`
-
-	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
-	HTTPWhiteHost []string `json:"whiteHost"`
-}
-
 // GetConfigFromFile unmarshals the config from the given file
 func GetConfigFromFile(filepath string) (*Config, error) {
 	var config Config
