@@ -49,7 +49,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 
 		protoMap[p.cap().String()] = protoRW
 		offset += p.Length
-		log.Debug("NewPeer called, add protocol: %s", p.cap().String())
+		log.Debug("NewPeer called, add protocol: %s", p.cap())
 	}
 
 	return &Peer{
@@ -139,7 +139,7 @@ func (p *Peer) notifyProtocols() {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
-				p.log.Debug("notifyProtocols.AddPeer called. protocol:%s", proto.cap().String())
+				p.log.Debug("notifyProtocols.AddPeer called. protocol:%s", proto.cap())
 				proto.AddPeer(p, &proto)
 			}
 		}()
