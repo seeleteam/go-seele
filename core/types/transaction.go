@@ -154,11 +154,14 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if tx.Data.To != nil {
-		contractCreator, ok := statedb.GetContractCreator(*tx.Data.To)
-		if ok {
-			if toShardNum := common.GetShardNumber(contractCreator); toShardNum != common.LocalShardNumber {
-				return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
-			}
+		toAddr := *tx.Data.To
+
+		if contractCreator, ok := statedb.GetContractCreator(*tx.Data.To); ok {
+			toAddr = contractCreator
+		}
+
+		if toShardNum := common.GetShardNumber(toAddr); toShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
 	}
 
