@@ -84,7 +84,8 @@ func NewCmdData() []*Request {
 					Usage:        "height for the block",
 					Required:     true,
 				},
-			}},
+			},
+		},
 		&Request{
 			Use:   "getblockheight",
 			Short: "get block height of the chain head",
@@ -112,7 +113,8 @@ func NewCmdData() []*Request {
 					Usage:        "height for get block transaction count",
 					Required:     false,
 				},
-			}},
+			},
+		},
 		&Request{
 			Use:   "getblocktxcountbyhash",
 			Short: "get block transaction count by hash",
@@ -130,7 +132,8 @@ func NewCmdData() []*Request {
 					Usage:        "hash for get block transaction count",
 					Required:     true,
 				},
-			}},
+			},
+		},
 		&Request{
 			Use:   "gettxbyheightandindex",
 			Short: "get transaction by block height and index",
@@ -157,7 +160,8 @@ func NewCmdData() []*Request {
 					Usage:        "index of the transaction in block",
 					Required:     false,
 				},
-			}},
+			},
+		},
 		&Request{
 			Use:   "gettxbyhashandindex",
 			Short: "get transaction by hash and index",
@@ -184,7 +188,8 @@ func NewCmdData() []*Request {
 					Usage:        "index of the transaction in block",
 					Required:     false,
 				},
-			}},
+			},
+		},
 		&Request{
 			Use:   "getpeercount",
 			Short: "get count of connected peers",
@@ -224,6 +229,26 @@ func NewCmdData() []*Request {
 			Method:           "network.GetPeersInfo",
 			UseWebsocket:     false,
 			Params:           []*Param{},
+		},
+		&Request{
+			Use:   "gettransactionbyhash",
+			Short: "get transaction count by hash",
+			Long: `For example:
+  			client.exe gettransactionbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+			ParamReflectType: "string",
+			Method:           "txpool.GetTransactionByHash",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "TxHash",
+					ParamName:    "hash",
+					ShortHand:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash of the transaction",
+					Required:     true,
+				},
+			},
 		},
 	}
 }

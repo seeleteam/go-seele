@@ -31,8 +31,12 @@ type Statedb struct {
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
 
+	// Receipt logs for current processed tx.
 	curTxIndex uint
 	curLogs    []*types.Log
+
+	// State modifications for current processed tx.
+	curJournal journal
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -51,6 +55,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		db:           db,
 		trie:         trie,
 		stateObjects: stateCache,
+		curJournal:   journal{},
 	}, nil
 }
 
@@ -83,6 +88,13 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	}, nil
 }
 
+// setError only records the first error.
+func (s *Statedb) setError(err error) {
+	if s.dbErr == nil {
+		s.dbErr = err
+	}
+}
+
 // GetBalance returns the balance of the specified account if exists.
 // Otherwise, returns zero.
 func (s *Statedb) GetBalance(addr common.Address) *big.Int {
@@ -97,6 +109,7 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
+		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
 		object.SetAmount(balance)
 	}
 }
@@ -105,6 +118,7 @@ func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
+		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
 		object.AddAmount(amount)
 	}
 }
@@ -113,6 +127,7 @@ func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
+		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
 		object.SubAmount(amount)
 	}
 }
@@ -130,6 +145,7 @@ func (s *Statedb) GetNonce(addr common.Address) uint64 {
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	object := s.getStateObject(addr)
 	if object != nil {
+		s.curJournal.append(nonceChange{&addr, object.GetNonce()})
 		object.SetNonce(nonce)
 	}
 }
@@ -175,6 +191,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 
 	// Remove the account from state DB if suicided.
 	if obj.suicided {
+		obj.deleted = true
 		s.trie.Delete(addr.Bytes())
 	}
 
@@ -207,10 +224,13 @@ func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *StateObject {
-	value, ok := s.stateObjects.Get(addr)
-	if ok {
-		object := value.(*StateObject)
-		return object
+	if value, ok := s.stateObjects.Get(addr); ok {
+		if object := value.(*StateObject); !object.deleted {
+			return object
+		}
+
+		// object has already been deleted from trie.
+		return nil
 	}
 
 	object := newStateObject(addr)
@@ -222,15 +242,17 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 	if err := common.Deserialize(val, &object.account); err != nil {
 		return nil
 	}
+
 	s.cache(addr, object)
 	return object
 }
 
-// Prepare sets the current transaction index which is
-// used when the EVM emits new state logs.
+// Prepare resets the logs and journal to process a new tx.
 func (s *Statedb) Prepare(txIndex int) {
 	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
+
+	s.curJournal.entries = s.curJournal.entries[:0]
 }
 
 // GetCurrentLogs returns the current transaction logs.

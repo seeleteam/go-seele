@@ -74,7 +74,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		chain:      chain,
 		syncStatus: statusNone,
 	}
-	d.log = log.GetLogger("download", common.PrintLog)
+	d.log = log.GetLogger("download", common.LogConfig.PrintLog)
 	return d
 }
 
@@ -345,7 +345,7 @@ outLoop:
 	for !tm.isDone() {
 		hasReqData := false
 		if startNo, amount := tm.getReqHeaderInfo(conn); amount > 0 {
-			d.log.Debug("tm.getReqHeaderInfo. %d %d", startNo, amount)
+			d.log.Debug("tm.getReqHeaderInfo. startNo:%d amount:%d", startNo, amount)
 			hasReqData = true
 			if err = conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, startNo, amount, false); err != nil {
 				d.log.Info("RequestHeadersByHashOrNumber err!")

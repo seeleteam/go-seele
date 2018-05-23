@@ -96,7 +96,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.Out = file
 	}
 
-	if common.IsDebug {
+	if common.LogConfig.IsDebug {
 		log.SetLevel(logrus.DebugLevel)
 	} else {
 		log.SetLevel(logrus.InfoLevel)

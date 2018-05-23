@@ -11,7 +11,7 @@
     "address": "0.0.0.0:39008",
     "privateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
     "staticNodes": [
-      "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007"
+      "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007[0]"
     ],
     "networkID": 1
   },
@@ -20,16 +20,12 @@
     "printLog": true
   },
   "httpServer": {
-    "address": "127.0.0.1:65028",
+    "address": "127.0.0.1:65027",
     "crosssorgins": [
       "*"
     ],
     "whiteHost": [
       "*"
     ]
-  },
-  "wsserver": {
-    "address": "127.0.0.1:8081",
-    "pattern": "/ws"
   }
 }

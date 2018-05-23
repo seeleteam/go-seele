@@ -24,7 +24,7 @@ func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
 	}
 
 	testAddr := *crypto.MustGenerateRandomAddress()
-	statedb.CreateAccount(testAddr)
+	statedb.GetOrNewStateObject(testAddr)
 
 	stateObj := statedb.getStateObject(testAddr)
 	if stateObj == nil {

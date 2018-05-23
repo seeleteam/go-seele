@@ -9,7 +9,11 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+
+	"github.com/seeleteam/go-seele/log/comm"
 )
+
+const ShardNumber = 20
 
 var (
 	// tempFolder used to store temp file, such as log files
@@ -18,11 +22,8 @@ var (
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
 
-	// PrintLog default is false. If it is true, all logs will be printed in the console, otherwise they will be stored in the file.
-	PrintLog = true
-
-	// IsDebug default is false. If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel
-	IsDebug = false
+	// LogConfig is the Configuration of log
+	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 )
 
 func init() {

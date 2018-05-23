@@ -253,15 +253,21 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
-	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
 
+	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
+		p2pPeer.Disconnect(DiscHandShakeErr)
+		p.log.Info("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
+		return
+	}
+
+	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
 	block, _ := p.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
 		return
 	}
-	//genenis TODO get genenis from blockchain
+
 	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
 		newPeer.Disconnect(DiscHandShakeErr)
 		p.log.Error("handleAddPeer err. %s", err)
