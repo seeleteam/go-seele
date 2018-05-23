@@ -21,18 +21,19 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-func getTmpConfig() *seele.Config {
+func getTmpConfig() *node.Config {
 	acctAddr := crypto.MustGenerateRandomAddress()
 
-	return &seele.Config{
-		TxConf:    *core.DefaultTxPoolConfig(),
-		NetworkID: 1,
-		Coinbase:  *acctAddr,
+	return &node.Config{
+		SeeleConfig: node.SeeleConfig{
+			TxConf:   *core.DefaultTxPoolConfig(),
+			Coinbase: *acctAddr,
+		},
 	}
 }
 
 func createTestAPI() *PublicMonitorAPI {
-	seeleConf := getTmpConfig()
+	conf := getTmpConfig()
 	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
 		BasicConfig: node.BasicConfig{
@@ -49,7 +50,7 @@ func createTestAPI() *PublicMonitorAPI {
 			WSAddr:    "127.0.0.1:8080",
 			WSPattern: "/ws",
 		},
-		SeeleConfig: *seeleConf,
+		SeeleConfig: conf.SeeleConfig,
 	}
 
 	serviceContext := seele.ServiceContext{
@@ -67,7 +68,7 @@ func createTestAPI() *PublicMonitorAPI {
 		return nil
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, seeleConf, log)
+	seeleService, err := seele.NewSeeleService(ctx, conf, log)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -91,7 +92,7 @@ func createTestAPI() *PublicMonitorAPI {
 }
 
 func createTestAPIErr(errBranch int) *PublicMonitorAPI {
-	seeleConf := getTmpConfig()
+	conf := getTmpConfig()
 
 	testConf := node.Config{}
 	if errBranch == 1 {
@@ -108,7 +109,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39008",
 			},
-			SeeleConfig: *seeleConf,
+			SeeleConfig: conf.SeeleConfig,
 		}
 	} else {
 		key, _ := crypto.GenerateKey()
@@ -123,7 +124,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				PrivateKey: key,
 				ListenAddr: "0.0.0.0:39009",
 			},
-			SeeleConfig: *seeleConf,
+			SeeleConfig: conf.SeeleConfig,
 		}
 	}
 
@@ -142,7 +143,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 		return nil
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, seeleConf, log)
+	seeleService, err := seele.NewSeeleService(ctx, conf, log)
 	if err != nil {
 		fmt.Println(err)
 		return nil
