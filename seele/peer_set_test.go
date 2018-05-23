@@ -97,6 +97,4 @@ func Test_PeerSet_Remove(t *testing.T) {
 	assert.Equal(t, len(set.peerMap), 0)
 	assert.Equal(t, len(set.shardPeers[0]), 0)
 	assert.Equal(t, len(set.shardPeers[1]), 0)
-
-
 }
