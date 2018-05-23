@@ -16,6 +16,8 @@ import (
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
+	common.IsShardDisabled = true
+
 	privKey, keyErr := crypto.GenerateKey()
 	if keyErr != nil {
 		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
@@ -63,6 +65,10 @@ func (db *mockStateDB) GetNonce(address common.Address) uint64 {
 	}
 
 	return 0
+}
+
+func (db *mockStateDB) GetContractCreator(contractAddr common.Address) (common.Address, bool) {
+	return common.Address{}, false
 }
 
 func newTestStateDB(address common.Address, nonce, balance uint64) stateDB {
