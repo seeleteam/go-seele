@@ -14,7 +14,11 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
+<<<<<<< HEAD
 	"github.com/seeleteam/go-seele/log/comm"
+=======
+	"github.com/seeleteam/go-seele/metrics"
+>>>>>>> add metrics package and entry point in cmd
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -37,6 +41,9 @@ type Config struct {
 
 	// The configuration of websocket rpc service
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
+
+	// metrics config info
+	MetricsConfig metrics.Config `json:"metrics"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file

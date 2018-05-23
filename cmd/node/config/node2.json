@@ -30,5 +30,12 @@
   "wsserver": {
     "address": "127.0.0.1:8081",
     "pattern": "/ws"
+  },
+  "metrics": {
+    "Addr": "127.0.0.1:8086",
+    "Duration": 10,
+    "Database": "influxdb",
+    "Username": "test",
+    "Password": "test123"
   }
 }

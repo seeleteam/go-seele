@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
@@ -21,6 +22,7 @@ import (
 var seeleNodeConfigFile *string
 var miner *string
 var genesisConfigFile *string
+var metricsEnableFlag *bool
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -83,6 +85,17 @@ var startCmd = &cobra.Command{
 			}
 		}
 
+		if *metricsEnableFlag {
+			metrics.StartMetricsWithConfig(
+				&nCfg.MetricsConfig,
+				slog,
+				nCfg.Name,
+				nCfg.Version,
+				nCfg.SeeleConfig.NetworkID,
+				nCfg.SeeleConfig.Coinbase,
+			)
+		}
+
 		wg.Add(1)
 		wg.Wait()
 	},
@@ -98,4 +111,6 @@ func init() {
 
 	genesisConfigFile = startCmd.Flags().StringP("genesis", "g", "", "seele genesis config file")
 	startCmd.MarkFlagRequired("genesis")
+
+	metricsEnableFlag = startCmd.Flags().BoolP("metrics", "t", false, "start metrics")
 }
