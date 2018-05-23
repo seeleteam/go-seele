@@ -167,6 +167,25 @@ func MustGenerateRandomAddress() *common.Address {
 	return address
 }
 
+// MustGenerateShardAddress generates and returns a random address that match the specified shard number.
+// Panic on any error.
+func MustGenerateShardAddress(shardNum uint) *common.Address {
+	if shardNum == 0 || shardNum > common.ShardNumber {
+		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
+	}
+
+	for {
+		address, err := GenerateRandomAddress()
+		if err != nil {
+			panic(err)
+		}
+
+		if common.GetShardNumber(*address) == shardNum {
+			return address
+		}
+	}
+}
+
 // CreateAddress returns a new address with the specified address and nonce.
 // Generally, it's used to create the contract address based on account
 // address and nonce.
