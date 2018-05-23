@@ -49,6 +49,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 
 		protoMap[p.cap().String()] = protoRW
 		offset += p.Length
+		log.Debug("NewPeer called, add protocol: %s", p.cap())
 	}
 
 	return &Peer{
@@ -132,11 +133,13 @@ func (p *Peer) readLoop(readErr chan<- error) {
 
 func (p *Peer) notifyProtocols() {
 	p.wg.Add(len(p.protocolMap))
+	p.log.Debug("notifyProtocols called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
 		go func() {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
+				p.log.Debug("notifyProtocols.AddPeer called. protocol:%s", proto.cap())
 				proto.AddPeer(p, &proto)
 			}
 		}()
