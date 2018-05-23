@@ -32,7 +32,7 @@ func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 		return common.EmptyHash
 	}
 
-	return stateObj.account.CodeHash
+	return common.BytesToHash(stateObj.account.CodeHash)
 }
 
 // GetCode returns the contract code associated with the specified address if any.
@@ -166,12 +166,12 @@ func (s *Statedb) Empty(address common.Address) bool {
 
 // RevertToSnapshot reverts all state changes made since the given revision.
 func (s *Statedb) RevertToSnapshot(revid int) {
-	s.curJournal.revert(s)
+	s.curJournal.revert(s, revid)
 }
 
 // Snapshot returns an identifier for the current revision of the statedb.
 func (s *Statedb) Snapshot() int {
-	return 0
+	return s.curJournal.snapshot()
 }
 
 // AddLog adds a log.

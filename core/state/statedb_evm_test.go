@@ -65,7 +65,7 @@ func Test_CreateAccount(t *testing.T) {
 
 	// Assert the no code for a new created account.
 	assert.Equal(t, statedb.dbErr, error(nil))
-	assert.Equal(t, stateObj.account.CodeHash, common.EmptyHash)
+	assert.Equal(t, stateObj.account.CodeHash, []byte(nil))
 	assert.Equal(t, stateObj.code, []byte(nil))
 	assert.Equal(t, stateObj.dirtyCode, false)
 }

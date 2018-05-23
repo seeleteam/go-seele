@@ -20,6 +20,9 @@ var (
 	LogFolder = filepath.Join(common.GetTempFolder(), "Log")
 )
 
+// LogFile is the file which records all logs by users
+const LogFile string = "log.log"
+
 // SeeleLog wraps log class
 type SeeleLog struct {
 	log *logrus.Logger
@@ -83,16 +86,13 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	} else {
 		err := os.MkdirAll(LogFolder, os.ModePerm)
 		if err != nil {
-			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+			panic(fmt.Sprintf("creating log dir failed: %s", err.Error()))
 		}
-
-		logFileName := logName + ".log"
-		logFullPath := filepath.Join(LogFolder, logFileName)
-		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		logFullPath := filepath.Join(LogFolder, LogFile)
+		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
 		if err != nil {
 			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
 		}
-
 		log.Out = file
 	}
 
@@ -102,7 +102,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.SetLevel(logrus.InfoLevel)
 	}
 
-	log.AddHook(&CallerHook{}) // add caller hook to print caller's file and line number
+	log.AddHook(&CallerHook{module: logName}) // add caller hook to print caller's file and line number
 	curLog = &SeeleLog{
 		log: log,
 	}

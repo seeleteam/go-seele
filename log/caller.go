@@ -15,11 +15,13 @@ const (
 
 // CallerHook a caller hook of logrus
 type CallerHook struct {
+	module string
 }
 
 // Fire adds a caller field in logger instance
 func (hook *CallerHook) Fire(entry *logrus.Entry) error {
 	entry.Data["caller"] = hook.caller()
+	entry.Data["module"] = hook.module
 	return nil
 }
 

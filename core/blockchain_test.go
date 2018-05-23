@@ -84,6 +84,8 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
+	common.IsShardDisabled = true
+
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
 	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, big.NewInt(0), minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
