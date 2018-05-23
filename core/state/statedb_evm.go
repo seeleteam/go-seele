@@ -14,7 +14,14 @@ import (
 
 // CreateAccount creates a new account in statedb.
 func (s *Statedb) CreateAccount(address common.Address) {
-	s.GetOrNewStateObject(address)
+	stateObj := s.getStateObject(address)
+	if stateObj != nil {
+		return
+	}
+
+	stateObj = newStateObject(address)
+	s.curJournal.append(createObjectChange{&address})
+	s.cache(address, stateObj)
 }
 
 // GetCodeHash returns the hash of the contract code associated with the specified address if any.
@@ -25,7 +32,7 @@ func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 		return common.EmptyHash
 	}
 
-	return stateObj.account.CodeHash
+	return common.BytesToHash(stateObj.account.CodeHash)
 }
 
 // GetCode returns the contract code associated with the specified address if any.
@@ -50,9 +57,19 @@ func (s *Statedb) SetCode(address common.Address, code []byte) {
 	// EVM call SetCode after CreateAccount during contract creation.
 	// So, here the retrieved stateObj should not be nil.
 	stateObj := s.getStateObject(address)
-	if stateObj != nil {
-		stateObj.setCode(code)
+	if stateObj == nil {
+		return
 	}
+
+	prevCode, err := stateObj.loadCode(s.db)
+	if err != nil {
+		s.setError(err)
+		return
+	}
+
+	s.curJournal.append(codeChange{&address, prevCode})
+
+	stateObj.setCode(code)
 }
 
 // GetCodeSize returns the size of the contract code associated with the specified address if any.
@@ -64,6 +81,7 @@ func (s *Statedb) GetCodeSize(address common.Address) int {
 
 // AddRefund refunds the specified gas value
 func (s *Statedb) AddRefund(gas uint64) {
+	s.curJournal.append(refundChange{s.refund})
 	s.refund += gas
 }
 
@@ -92,9 +110,19 @@ func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash 
 // SetState adds or updates the specified key-value pair in account storage.
 func (s *Statedb) SetState(address common.Address, key common.Hash, value common.Hash) {
 	stateObj := s.getStateObject(address)
-	if stateObj != nil {
-		stateObj.setState(key, value)
+	if stateObj == nil {
+		return
 	}
+
+	prevValue, err := stateObj.getState(s.db, key)
+	if err != nil {
+		s.setError(err)
+		return
+	}
+
+	s.curJournal.append(storageChange{&address, key, prevValue})
+
+	stateObj.setState(key, value)
 }
 
 // Suicide marks the given account as suicided and clears the account balance.
@@ -105,6 +133,8 @@ func (s *Statedb) Suicide(address common.Address) bool {
 	if stateObj == nil {
 		return false
 	}
+
+	s.curJournal.append(suicideChange{&address, stateObj.suicided, stateObj.GetAmount()})
 
 	stateObj.SetAmount(new(big.Int))
 	stateObj.suicided = true
@@ -136,13 +166,12 @@ func (s *Statedb) Empty(address common.Address) bool {
 
 // RevertToSnapshot reverts all state changes made since the given revision.
 func (s *Statedb) RevertToSnapshot(revid int) {
-	// @todo
+	s.curJournal.revert(s, revid)
 }
 
 // Snapshot returns an identifier for the current revision of the statedb.
 func (s *Statedb) Snapshot() int {
-	// @todo
-	return 0
+	return s.curJournal.snapshot()
 }
 
 // AddLog adds a log.

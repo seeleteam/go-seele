@@ -54,7 +54,7 @@ var startCmd = &cobra.Command{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
-		seeleService, err := seele.NewSeeleService(ctx, &nCfg.SeeleConfig, slog)
+		seeleService, err := seele.NewSeeleService(ctx, nCfg, slog)
 		if err != nil {
 			fmt.Println(err.Error())
 			return

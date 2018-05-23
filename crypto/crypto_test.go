@@ -33,3 +33,11 @@ func Test_CreateAddress(t *testing.T) {
 	addr2 = CreateAddress(common.BytesToAddress([]byte{6}), 9)
 	assert.Equal(t, true, addr1.Equal(addr2))
 }
+
+func Test_MustGenerateShardAddress(t *testing.T) {
+	addr := MustGenerateShardAddress(5)
+	assert.Equal(t, common.GetShardNumber(*addr), uint(5))
+
+	addr = MustGenerateShardAddress(10)
+	assert.Equal(t, common.GetShardNumber(*addr), uint(10))
+}

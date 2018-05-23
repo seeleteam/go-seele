@@ -19,7 +19,6 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/seele"
 )
 
 // Config is the Configuration of node
@@ -35,9 +34,6 @@ type Config struct {
 
 	// HttpServer config for http server
 	HTTPServer node.HTTPServer `json:"httpServer"`
-
-	// The SeeleConfig is the configuration to create the seele service.
-	SeeleConfig seele.Config
 
 	// The configuration of websocket rpc service
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
@@ -78,8 +74,7 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 	}
 
 	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
-	config.SeeleConfig.NetworkID = config.P2PConfig.NetworkID
-	config.SeeleConfig.TxConf.Capacity = config.BasicConfig.Capacity
+	config.SeeleConfig.TxConf = *core.DefaultTxPoolConfig()
 	common.LogConfig.PrintLog = config.LogConfig.PrintLog
 	common.LogConfig.IsDebug = config.LogConfig.IsDebug
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
@@ -94,7 +89,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 		HTTPServer:     cmdConfig.HTTPServer,
 		WSServerConfig: cmdConfig.WSServerConfig,
 		P2PConfig:      p2p.Config{ListenAddr: cmdConfig.P2PConfig.ListenAddr, NetworkID: cmdConfig.P2PConfig.NetworkID},
-		SeeleConfig:    seele.Config{},
+		SeeleConfig:    node.SeeleConfig{},
 	}
 	return config
 }
