@@ -38,7 +38,7 @@ func newTestTx(t *testing.T, amount int64, nonce uint64, sign bool) *Transaction
 	fromPrivKey, fromAddress := randomAccount(t)
 	toAddress := randomAddress(t)
 
-	tx := NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
+	tx, _ := NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 
 	if sign {
 		tx.Sign(fromPrivKey)
@@ -194,7 +194,7 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 
 	from := crypto.MustGenerateShardAddress(1) // invalid shard
 	to := crypto.MustGenerateShardAddress(9)
-	tx := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
@@ -208,7 +208,7 @@ func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
 
 	from := crypto.MustGenerateShardAddress(9)
 	to := crypto.MustGenerateShardAddress(1) // invalid shard
-	tx := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
@@ -234,4 +234,17 @@ func Test_Transaction_Validate_InvalidContractShard(t *testing.T) {
 
 	err = tx.Validate(statedb)
 	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
+}
+
+func Test_Transaction_InvalidFee(t *testing.T) {
+	dispose := prepareShardEnv(9)
+	defer dispose()
+
+	// From and contract addresses match the shard number.
+	from := crypto.MustGenerateShardAddress(9)
+	contractAddr := crypto.MustGenerateShardAddress(9)
+	tx, err := NewTransaction(*from, *contractAddr, big.NewInt(20), big.NewInt(-1), 5)
+	var nilTx *Transaction = nil
+	assert.Equal(t, tx, nilTx)
+	assert.Equal(t, err.Error(), "failed to create tx, fee is negative")
 }

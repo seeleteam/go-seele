@@ -85,9 +85,12 @@ type stateDB interface {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 // panic if the amount is nil or negative.
-func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) *Transaction {
-	tx, _ := newTx(from, &to, amount, fee, nonce, nil)
-	return tx
+func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
+	tx, err := newTx(from, &to, amount, fee, nonce, nil)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
@@ -97,6 +100,10 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 
 	if amount.Sign() < 0 {
 		panic("Failed to create tx, amount is negative.")
+	}
+
+	if fee.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("failed to create tx, fee is negative")
 	}
 
 	if len(payload) > MaxPayloadSize {
