@@ -22,7 +22,7 @@ type Config struct {
 	BasicConfig BasicConfig
 
 	// The configuration of p2p network
-	P2PConfig p2p.Config
+	P2PConfig p2p.P2PConfig
 
 	// HttpServer config for http server
 	HTTPServer HTTPServer

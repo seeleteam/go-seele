@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
+	"crypto/ecdsa"
 )
 
 var (
@@ -19,12 +20,13 @@ var (
 )
 
 func testNodeConfig() *Config {
+		privateKey := map[string]*ecdsa.PrivateKey{string(testNodeKey.D.Bytes()):testNodeKey}
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",
 			Version: "test version",
 		},
-		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
+		P2PConfig: p2p.P2PConfig{PrivateKey:privateKey},
 		WSServerConfig: rpc.WSServerConfig{
 			WSAddr:    "127.0.0.1:8080",
 			WSPattern: "/ws",

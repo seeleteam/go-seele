@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/crypto/ecies"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
@@ -57,7 +57,7 @@ type Config struct {
 	Name string
 
 	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
-	PrivateKey *ecdsa.PrivateKey
+	//PrivateKey *ecdsa.PrivateKey
 
 	// MyNodeID public key extracted from PrivateKey, so need not load from config
 	MyNodeID string
@@ -71,19 +71,19 @@ type Config struct {
 	MaxPendingPeers int
 
 	// pre-configured nodes.
-	ResolveStaticNodes []*discovery.Node
+	//ResolveStaticNodes []*discovery.Node
 
 	// Protocols should contain the protocols supported by the server.
 	Protocols []Protocol
 
-	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string
+	 //p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
+	//ListenAddr string
 
 	// network id, not used now. @TODO maybe be removed or just use Version
-	NetworkID uint64
+	//NetworkID uint64
 }
 
-//OpenConfig is the open Configuration of p2p
+//P2PConfig is the Configuration of p2p
 type P2PConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
@@ -92,16 +92,19 @@ type P2PConfig struct {
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes []string `json:"staticNodes"`
+	StaticNodes map[string]*discovery.Node `json:"staticNodes"`
 
 	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string `json:"privateKey"`
+	PrivateKey map[string]*ecdsa.PrivateKey `json:"privateKey"`
 }
 
 // Server manages all p2p peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
+
+	//P2PConfig is the Configuration of p2p
+	P2PConfig
 
 	lock    sync.Mutex // protects running
 	running bool
@@ -151,9 +154,10 @@ func (srv *Server) Start() (err error) {
 	srv.addpeer = make(chan *Peer)
 	srv.delpeer = make(chan *Peer)
 
-	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
+	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
+	srv.MyNodeID = crypto.PubkeyToString(&privateKey.PublicKey)
 	address := common.HexMustToAddres(srv.MyNodeID)
-	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.P2PConfig.ListenAddr)
 	//TODO define shard number
 	discoveryNode := discovery.NewNodeWithAddr(address, addr, 0)
 	if err != nil {
@@ -161,7 +165,7 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", discoveryNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
+	srv.kadDB = discovery.StartService(address, addr, srv.P2PConfig.StaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -246,12 +250,12 @@ running:
 
 func (srv *Server) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.ListenAddr)
+	listener, err := net.Listen("tcp", srv.P2PConfig.ListenAddr)
 	if err != nil {
 		return err
 	}
 	laddr := listener.Addr().(*net.TCPAddr)
-	srv.ListenAddr = laddr.String()
+	srv.P2PConfig.ListenAddr = laddr.String()
 	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()
@@ -426,8 +430,9 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	binary.BigEndian.PutUint64(extBuf[16:], nounceCnt)
 	binary.BigEndian.PutUint64(extBuf[24:], nounceSvr)
 
+	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
 	// 1. Sign with local privateKey first
-	priKeyLocal := math.PaddedBigBytes(srv.PrivateKey.D, 32)
+	priKeyLocal := math.PaddedBigBytes(privateKey.D, 32)
 	sig, err := secp256k1.Sign(extBuf, priKeyLocal)
 	if err != nil {
 		return Message{}, err
@@ -471,8 +476,9 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 		return
 	}
 
+	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
 	// Decrypt with local private key, make sure it is sended to local
-	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
+	eciesPriKey := ecies.ImportECDSA(privateKey)
 	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
 	if err != nil {
 		return

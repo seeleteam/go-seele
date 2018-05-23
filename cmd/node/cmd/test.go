@@ -98,19 +98,18 @@ func startServer(configFile string) {
 		fmt.Printf("read config file failed %s", err.Error())
 		return
 	}
-	config := CopyConfig(cmdConfig)
 
-	p2pconfig, err := GetP2pConfig(config, cmdConfig)
+	p2pconfig := cmdConfig.P2PConfig
 	if err != nil {
 		fmt.Printf("generate p2p config failed %s", err.Error())
 		return
 	}
 
 	myServer := &p2p.Server{
-		Config: p2pconfig,
+		P2PConfig: p2pconfig,
 	}
 
-	if len(myServer.ResolveStaticNodes) == 0 {
+	if len(myServer.StaticNodes) == 0 {
 		fmt.Println("No remote peer configed, so is a static peer")
 	}
 

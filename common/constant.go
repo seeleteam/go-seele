@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/log/comm"
+	"crypto/ecdsa"
 )
 
 const ShardNumber = 20
@@ -44,4 +45,14 @@ func GetTempFolder() string {
 // GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
+}
+
+// GetMapOnlyValue gets the map only value
+func GetMapOnlyValue(privateKey map[string]*ecdsa.PrivateKey) *ecdsa.PrivateKey {
+	if (len(privateKey) == 1) {
+		for _, v := range privateKey {
+			return v
+		}
+	}
+	return nil
 }
