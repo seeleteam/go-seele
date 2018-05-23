@@ -500,3 +500,24 @@ func (srv *Server) Stop() {
 	close(srv.quit)
 	srv.Wait()
 }
+
+// PeersInfo returns an array of metadata objects describing connected peers.
+func (srv *Server) PeersInfo() *[]PeerInfo {
+	infos := make([]PeerInfo, 0, srv.PeerCount())
+	for _, peer := range srv.peers {
+		if peer != nil {
+			peerInfo := peer.Info()
+			peerInfo.Name = srv.Name
+			infos = append(infos, *peerInfo)
+		}
+	}
+	// Sort the result array alphabetically by node identifier
+	for i := 0; i < len(infos); i++ {
+		for j := i + 1; j < len(infos); j++ {
+			if infos[i].ID > infos[j].ID {
+				infos[i], infos[j] = infos[j], infos[i]
+			}
+		}
+	}
+	return &infos
+}

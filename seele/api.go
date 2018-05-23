@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/miner"
+	"github.com/seeleteam/go-seele/p2p"
 )
 
 var (
@@ -164,6 +165,12 @@ type PublicNetworkAPI struct {
 // NewPublicNetworkAPI creates a new PublicNetworkAPI object for rpc service.
 func NewPublicNetworkAPI(s *SeeleService) *PublicNetworkAPI {
 	return &PublicNetworkAPI{s}
+}
+
+// GetPeersInfo returns all the information of peers at the protocol granularity.
+func (n *PublicNetworkAPI) GetPeersInfo(input interface{}, result *[]p2p.PeerInfo) error {
+	*result = *n.s.p2pServer.PeersInfo()
+	return nil
 }
 
 // GetPeerCount returns the count of peers

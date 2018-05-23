@@ -8,6 +8,7 @@ package p2p
 import (
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -224,4 +225,61 @@ func (rw *protocolRW) ReadMsg() (Message, error) {
 	case <-rw.close:
 		return Message{}, errors.New("peer connection closed")
 	}
+}
+
+// ProtocolMap returns cap => protocol read write wrapper
+func (p *Peer) ProtocolMap() map[string]protocolRW {
+	return p.protocolMap
+}
+
+// RemoteAddr returns the remote address of the network connection.
+func (p *Peer) RemoteAddr() net.Addr {
+	return p.rw.fd.RemoteAddr()
+}
+
+// LocalAddr returns the local address of the network connection.
+func (p *Peer) LocalAddr() net.Addr {
+	return p.rw.fd.LocalAddr()
+}
+
+// PeerInfo represents a short summary of a connected peer
+type PeerInfo struct {
+	ID      string   `json:"id"`   // Unique of the node
+	Name    string   `json:"name"` // Name of the node
+	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
+	Network struct {
+		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
+		RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
+	} `json:"network"`
+	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
+}
+
+// Info returns data of the peer but not contain id and name.
+func (p *Peer) Info() *PeerInfo {
+	var caps []string
+	protocols := make(map[string]interface{})
+
+	for cap, protocol := range p.ProtocolMap() {
+		caps = append(caps, cap)
+
+		protoInfo := interface{}("unknown")
+		if query := protocol.Protocol.GetPeer; query != nil {
+			if metadata := query(p.Node.ID); metadata != nil {
+				protoInfo = metadata
+			} else {
+				protoInfo = "handshake"
+			}
+		}
+		protocols[protocol.Protocol.Name] = protoInfo
+	}
+
+	info := &PeerInfo{
+		ID:        p.Node.ID.ToHex(),
+		Caps:      caps,
+		Protocols: protocols,
+	}
+	info.Network.LocalAddress = p.LocalAddr().String()
+	info.Network.RemoteAddress = p.RemoteAddr().String()
+
+	return info
 }

@@ -77,6 +77,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 
 	s.Protocol.AddPeer = s.handleAddPeer
 	s.Protocol.DeletePeer = s.handleDelPeer
+	s.Protocol.GetPeer = s.handleGetPeer
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
@@ -271,6 +272,13 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
+}
+
+func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
+	if p := s.peerSet.peers[address]; p != nil {
+		return p.Info()
+	}
+	return nil
 }
 
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
