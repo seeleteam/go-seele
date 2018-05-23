@@ -150,6 +150,14 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
+// SetCodeCreator sets the contract creator address for the specified contract address.
+func (s *Statedb) SetCodeCreator(creatorAddr, contractAddr common.Address) {
+	object := s.getStateObject(contractAddr)
+	if object != nil {
+		object.SetCodeCreator(creatorAddr)
+	}
+}
+
 // Commit commits memory state objects to db
 func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 	if s.dbErr != nil {

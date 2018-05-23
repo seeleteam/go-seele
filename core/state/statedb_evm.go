@@ -32,7 +32,7 @@ func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 		return common.EmptyHash
 	}
 
-	return stateObj.account.CodeHash
+	return common.BytesToHash(stateObj.account.CodeHash)
 }
 
 // GetCode returns the contract code associated with the specified address if any.
