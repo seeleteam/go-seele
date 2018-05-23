@@ -66,7 +66,7 @@ type Config struct {
 	NetworkID uint64
 }
 
-//OpenConfig is the open Configuration of p2p
+// P2PConfig is the open Configuration of p2p
 type P2PConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
@@ -118,7 +118,7 @@ type Server struct {
 
 func NewServer(config Config) *Server {
 	peers := make(map[uint]map[common.Address]*Peer)
-	for i := 1; i < common.ShardNumber + 1; i++ {
+	for i := 1; i < common.ShardNumber+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
 	}
 
