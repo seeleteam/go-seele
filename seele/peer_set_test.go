@@ -15,9 +15,9 @@ import (
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
-func getTestPeer() *peer {
+func getTestPeer(shard uint) *peer {
 	addr := crypto.MustGenerateRandomAddress()
-	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{}, 0)
+	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{}, shard)
 	p2pPeer := p2p.NewPeer(nil, nil, nil, node)
 	peer := newPeer(1, p2pPeer, nil)
 
@@ -27,23 +27,26 @@ func getTestPeer() *peer {
 func Test_PeerSet_Add(t *testing.T) {
 	set := newPeerSet()
 
-	peer1 := getTestPeer()
+	peer1 := getTestPeer(0)
 	set.Add(peer1)
-	assert.Equal(t, len(set.peers), 1)
+	assert.Equal(t, len(set.peerMap), 1)
+	assert.Equal(t, len(set.shardPeers[0]), 1)
 
 	set.Add(peer1)
-	assert.Equal(t, len(set.peers), 1)
+	assert.Equal(t, len(set.peerMap), 1)
+	assert.Equal(t, len(set.shardPeers[0]), 1)
 
-	peer2 := getTestPeer()
+	peer2 := getTestPeer(1)
 	set.Add(peer2)
-	assert.Equal(t, len(set.peers), 2)
+	assert.Equal(t, len(set.peerMap), 2)
+	assert.Equal(t, len(set.shardPeers[1]), 1)
 }
 
 func Test_PeerSet_Find(t *testing.T) {
 	set := newPeerSet()
-	peer1 := getTestPeer()
+	peer1 := getTestPeer(0)
 	set.Add(peer1)
-	peer2 := getTestPeer()
+	peer2 := getTestPeer(0)
 	set.Add(peer2)
 
 	assert.Equal(t, set.Find(peer1.Node.ID), peer1)
@@ -52,20 +55,20 @@ func Test_PeerSet_Find(t *testing.T) {
 
 func TestPeerSet_ForEach(t *testing.T) {
 	set := newPeerSet()
-	peer1 := getTestPeer()
+	peer1 := getTestPeer(0)
 	set.Add(peer1)
-	peer2 := getTestPeer()
+	peer2 := getTestPeer(0)
 	set.Add(peer2)
 
 	count := 0
-	set.ForEach(func(peer *peer) bool {
+	set.ForEach(0, func(peer *peer) bool {
 		count++
 		return true
 	})
 
 	assert.Equal(t, count, 2)
 
-	set.ForEach(func(peer *peer) bool {
+	set.ForEach(0, func(peer *peer) bool {
 		count++
 		if count == 3 {
 			return false
@@ -78,17 +81,22 @@ func TestPeerSet_ForEach(t *testing.T) {
 
 func Test_PeerSet_Remove(t *testing.T) {
 	set := newPeerSet()
-	peer1 := getTestPeer()
+	peer1 := getTestPeer(0)
 	set.Add(peer1)
-	peer2 := getTestPeer()
+	peer2 := getTestPeer(1)
 	set.Add(peer2)
 
-	assert.Equal(t, len(set.peers), 2)
+	assert.Equal(t, len(set.peerMap), 2)
 	set.Remove(peer1.Node.ID)
-	assert.Equal(t, len(set.peers), 1)
+	assert.Equal(t, len(set.peerMap), 1)
+	assert.Equal(t, len(set.shardPeers[0]), 0)
+	assert.Equal(t, len(set.shardPeers[1]), 1)
 	set.Remove(peer1.Node.ID)
-	assert.Equal(t, len(set.peers), 1)
+	assert.Equal(t, len(set.peerMap), 1)
 	set.Remove(peer2.Node.ID)
-	assert.Equal(t, len(set.peers), 0)
+	assert.Equal(t, len(set.peerMap), 0)
+	assert.Equal(t, len(set.shardPeers[0]), 0)
+	assert.Equal(t, len(set.shardPeers[1]), 0)
+
 
 }
