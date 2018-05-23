@@ -77,6 +77,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		log:                  log,
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
+		threads:              1,
 		hashrate:             metrics.NewMeter(),
 	}
 

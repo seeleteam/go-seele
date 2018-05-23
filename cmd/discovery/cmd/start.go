@@ -18,6 +18,7 @@ import (
 var (
 	addr          *string //node address
 	bootstrapNode *string //bootstrap node id
+	shard         *uint
 )
 
 // startCmd represents the start command
@@ -27,9 +28,9 @@ var startCmd = &cobra.Command{
 	Long: `usage example:
     discovery start 
         start a server which will generate a node id randomly. The default address is 127.0.0.1:9000
-    discovery start -i snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000
+    discovery start -i snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000[0]
         start a server with the specified node id.
-    discovery start -b snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000 -a "127.0.0.1:9001"
+    discovery start -b snode://2aa34f83208861645c9f1b26e4314ced1540788f190564e2bd9594c5da4b68d1e46a8054a590b4a923beaac6c007c120571597586ff099d06e109d7f4769f021@127.0.0.1:9000[0] -a "127.0.0.1:9001"
         start a server with a bootstrap node and specify its binding address.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		bootstrap := make([]*discovery.Node, 0)
@@ -57,7 +58,7 @@ var startCmd = &cobra.Command{
 				return
 			}
 
-			mynode = discovery.NewNodeWithAddr(*myId, myAddr)
+			mynode = discovery.NewNodeWithAddr(*myId, myAddr, *shard)
 			fmt.Println(mynode.String())
 		} else {
 			n, err := discovery.NewNodeFromString(*id)
@@ -69,7 +70,7 @@ var startCmd = &cobra.Command{
 			mynode = n
 		}
 
-		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap)
+		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
@@ -82,14 +83,5 @@ func init() {
 
 	addr = startCmd.Flags().StringP("addr", "a", "127.0.0.1:9000", "node addr")
 	bootstrapNode = startCmd.Flags().StringP("bootstrapNode", "b", "", "bootstrap node id")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// startCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will run only when this command
-	// is called directly, e.g.:
-	// startCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	shard = startCmd.Flags().UintP("shard", "s", 1, "shard number")
 }

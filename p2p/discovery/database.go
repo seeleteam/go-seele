@@ -61,6 +61,33 @@ func (db *Database) delete(id common.Hash) {
 	delete(db.m, id)
 }
 
+func (db *Database) getRandNodes(number int) []*Node {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	nodes := make([]*Node, 0)
+	count := 0
+	for _, value := range db.m {
+		if count == number {
+			break
+		}
+
+		nodes = append(nodes, value)
+		count++
+	}
+
+	return nodes
+}
+
+func (db *Database) getRandNode() *Node {
+	nodes := db.getRandNodes(1)
+	if len(nodes) != 1 {
+		return nil
+	}
+
+	return nodes[0]
+}
+
 func (db *Database) size() int {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
