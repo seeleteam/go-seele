@@ -79,7 +79,7 @@ type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string
 
-	// network id, not used now. @TODO maybe be removed or just use Version
+	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64
 }
 
@@ -88,7 +88,7 @@ type P2PConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
-	// network id, not used now. @TODO maybe be removed or just use Version
+	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts

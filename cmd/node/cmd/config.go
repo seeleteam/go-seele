@@ -14,11 +14,8 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
-<<<<<<< HEAD
 	"github.com/seeleteam/go-seele/log/comm"
-=======
 	"github.com/seeleteam/go-seele/metrics"
->>>>>>> add metrics package and entry point in cmd
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -97,6 +94,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 		WSServerConfig: cmdConfig.WSServerConfig,
 		P2PConfig:      p2p.Config{ListenAddr: cmdConfig.P2PConfig.ListenAddr, NetworkID: cmdConfig.P2PConfig.NetworkID},
 		SeeleConfig:    node.SeeleConfig{},
+		MetricsConfig:  cmdConfig.MetricsConfig,
 	}
 	return config
 }

@@ -89,9 +89,9 @@ var startCmd = &cobra.Command{
 			metrics.StartMetricsWithConfig(
 				&nCfg.MetricsConfig,
 				slog,
-				nCfg.Name,
-				nCfg.Version,
-				nCfg.SeeleConfig.NetworkID,
+				nCfg.BasicConfig.Name,
+				nCfg.BasicConfig.Version,
+				nCfg.P2PConfig.NetworkID,
 				nCfg.SeeleConfig.Coinbase,
 			)
 		}
