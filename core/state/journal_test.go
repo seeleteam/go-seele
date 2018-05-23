@@ -121,3 +121,37 @@ func Test_Journal_Suicide(t *testing.T) {
 	assert.Equal(t, statedb.HasSuicided(stateObj.address), true)
 	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(100))
 }
+
+func Test_Journal_MultipleSnapshot(t *testing.T) {
+	statedb, stateObj, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	// Snapshot 1: 2 changes
+	snapshot1 := statedb.Snapshot()
+	assert.Equal(t, snapshot1, 0)
+	statedb.SetNonce(stateObj.address, 5)
+	statedb.AddBalance(stateObj.address, big.NewInt(38))
+
+	// Snapshot 2: 2 changes
+	snapshot2 := statedb.Snapshot()
+	assert.Equal(t, snapshot2, 2) // 2 changes in snapshot 1
+	statedb.SetNonce(stateObj.address, 10)
+	statedb.AddBalance(stateObj.address, big.NewInt(62))
+
+	// Check the state object
+	assert.Equal(t, statedb.GetNonce(stateObj.address), uint64(10))
+	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(100))
+
+	// Revert snapshot 2
+	statedb.RevertToSnapshot(snapshot2)
+	assert.Equal(t, statedb.GetNonce(stateObj.address), uint64(5))
+	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(38))
+
+	// Revert snapshot 1
+	statedb.RevertToSnapshot(snapshot1)
+	assert.Equal(t, statedb.GetNonce(stateObj.address), uint64(0))
+	assert.Equal(t, statedb.GetBalance(stateObj.address), big.NewInt(0))
+
+	// Check journal info
+	assert.Equal(t, statedb.Snapshot(), 0)
+}
