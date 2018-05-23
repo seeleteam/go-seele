@@ -229,6 +229,7 @@ func (srv *Server) deletePeer(p *Peer) {
 	curPeer, ok := srv.peerMap[p.Node.ID]
 	if ok && curPeer == p {
 		delete(srv.peerMap, p.Node.ID)
+		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
 		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
 	} else {
 		srv.log.Info("server.run delPeerChan recved. peer not match")
@@ -260,7 +261,7 @@ running:
 
 	for len(peerMap) > 0 {
 		p := <-srv.delPeerChan
-		delete(peerMap, p.Node.ID)
+		srv.deletePeer(p)
 	}
 }
 
