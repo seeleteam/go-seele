@@ -86,21 +86,32 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	} else {
 		err := os.MkdirAll(LogFolder, os.ModePerm)
 		if err != nil {
-			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+			panic(fmt.Sprintf("creating log dir failed: %s", err.Error()))
 		}
-
-		err1 := os.Chmod(LogFolder, os.ModePerm)
-		if err1 != nil {
-			panic(fmt.Sprintf("chmod %s dir permision %d failed: %s", LogFolder, os.ModePerm, err.Error()))
-		}
-
 		logFullPath := filepath.Join(LogFolder, LogFile)
-		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		if err != nil {
-			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+		if _, err1 := os.Stat(logFullPath); err1 != nil {
+			if os.IsNotExist(err1) {
+				cfile, cerr := os.Create(logFullPath)
+				if cerr != nil {
+					panic(fmt.Sprintf("creating log file failed: %s", cerr.Error()))
+				}
+				cfile.Chmod(os.ModeAppend)
+				log.Out = cfile
+			}
+		} else {
+			os.Chmod(logFullPath, os.ModePerm)
+			file, err2 := os.OpenFile(logFullPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+			if err2 != nil {
+				panic(fmt.Sprintf("open %s file failed: %s", logFullPath, err2.Error()))
+			}
+			log.Out = file
 		}
 
-		log.Out = file
+		// file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		// if err != nil {
+		// 	panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+		// }
+
 	}
 
 	if common.IsDebug {
