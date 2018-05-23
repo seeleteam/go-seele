@@ -163,7 +163,7 @@ func (srv *Server) Start() (err error) {
 	srv.log.Info("Starting P2P networking...")
 
 	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
-	id = crypto.PubkeyToString(&privateKey.PublicKey)
+	id := crypto.PubkeyToString(&privateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.P2PConfig.ListenAddr)
 	//TODO define shard number
