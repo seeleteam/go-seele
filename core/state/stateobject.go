@@ -21,10 +21,27 @@ var (
 
 // Account is a balance model for blockchain
 type Account struct {
-	Nonce           uint64
-	Amount          *big.Int
-	CodeHash        common.Hash // contract code hash
-	StorageRootHash common.Hash // merkle root of the storage trie
+	Nonce              uint64
+	Amount             *big.Int
+	CodeHash           []byte // contract code hash
+	CodeCreatorAddress []byte // contract creator address
+	StorageRootHash    []byte // merkle root of the storage trie
+}
+
+func newAccount() Account {
+	return Account{
+		Amount: new(big.Int),
+	}
+}
+
+func (a Account) clone() Account {
+	return Account{
+		Nonce:              a.Nonce,
+		Amount:             new(big.Int).Set(a.Amount),
+		CodeHash:           common.CopyBytes(a.CodeHash),
+		CodeCreatorAddress: common.CopyBytes(a.CodeCreatorAddress),
+		StorageRootHash:    common.CopyBytes(a.StorageRootHash),
+	}
 }
 
 // StateObject is the state object for statedb
@@ -51,11 +68,9 @@ type StateObject struct {
 
 func newStateObject(address common.Address) *StateObject {
 	return &StateObject{
-		address:  address,
-		addrHash: crypto.HashBytes(address.Bytes()),
-		account: Account{
-			Amount: new(big.Int),
-		},
+		address:       address,
+		addrHash:      crypto.HashBytes(address.Bytes()),
+		account:       newAccount(),
 		cachedStorage: make(map[common.Hash]common.Hash),
 		dirtyStorage:  make(map[common.Hash]common.Hash),
 	}
@@ -63,14 +78,24 @@ func newStateObject(address common.Address) *StateObject {
 
 // GetCopy gets a copy of the state object
 func (s *StateObject) GetCopy() *StateObject {
-	codeCloned := make([]byte, len(s.code))
-	copy(codeCloned, s.code)
+	cloned := *s
 
-	objCloned := *s
-	objCloned.account.Amount = big.NewInt(0).Set(s.account.Amount)
-	objCloned.code = codeCloned
+	cloned.account = s.account.clone()
+	cloned.code = common.CopyBytes(s.code)
+	cloned.cachedStorage = copyStorage(s.cachedStorage)
+	cloned.dirtyStorage = copyStorage(s.dirtyStorage)
 
-	return &objCloned
+	return &cloned
+}
+
+func copyStorage(src map[common.Hash]common.Hash) map[common.Hash]common.Hash {
+	cloned := make(map[common.Hash]common.Hash)
+
+	for k, v := range src {
+		cloned[k] = v
+	}
+
+	return cloned
 }
 
 // SetNonce sets the nonce of the account in the state object
@@ -107,12 +132,17 @@ func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
 }
 
+func (s *StateObject) SetCodeCreator(addr common.Address) {
+	s.account.CodeCreatorAddress = addr.Bytes()
+	s.dirtyAccount = true
+}
+
 func (s *StateObject) loadCode(db database.Database) ([]byte, error) {
 	if s.code != nil {
 		return s.code, nil
 	}
 
-	if s.account.CodeHash.IsEmpty() {
+	if len(s.account.CodeHash) == 0 {
 		return nil, nil
 	}
 
@@ -135,9 +165,9 @@ func (s *StateObject) setCode(code []byte) {
 	s.dirtyCode = true
 
 	if len(code) == 0 {
-		s.account.CodeHash = common.EmptyHash
+		s.account.CodeHash = nil
 	} else {
-		s.account.CodeHash = crypto.HashBytes(code)
+		s.account.CodeHash = crypto.HashBytes(code).Bytes()
 	}
 	s.dirtyAccount = true
 }
@@ -151,7 +181,7 @@ func (s *StateObject) serializeCode(batch database.Batch) {
 // empty returns whether the account is considered empty (nonce == amount == 0 and no code).
 // This is used during EVM execution.
 func (s *StateObject) empty() bool {
-	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && s.account.CodeHash.IsEmpty()
+	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && len(s.account.CodeHash) == 0
 }
 
 func (s *StateObject) setState(key, value common.Hash) {
@@ -183,7 +213,12 @@ func (s *StateObject) ensureStorageTrie(db database.Database) error {
 		return nil
 	}
 
-	trie, err := trie.NewTrie(s.account.StorageRootHash, dbPrefixStorage, db)
+	rootHash := common.EmptyHash
+	if len(s.account.StorageRootHash) > 0 {
+		rootHash = common.BytesToHash(s.account.StorageRootHash)
+	}
+
+	trie, err := trie.NewTrie(rootHash, dbPrefixStorage, db)
 	if err != nil {
 		return err
 	}
@@ -215,7 +250,7 @@ func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch da
 	}
 
 	// Update the storage merkle root hash and mark account as dirty.
-	s.account.StorageRootHash = s.storageTrie.Commit(commitBatch)
+	s.account.StorageRootHash = s.storageTrie.Commit(commitBatch).Bytes()
 	s.dirtyAccount = true
 
 	// Reset dirty storage flag
