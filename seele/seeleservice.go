@@ -53,7 +53,6 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 
 // NewSeeleService create SeeleService
 func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *SeeleService, err error) {
-	shard := conf.SeeleConfig.GenesisConfig.ShardNumber
 	s = &SeeleService{
 		log:       log,
 		networkID: conf.P2PConfig.NetworkID,
