@@ -21,11 +21,10 @@ var (
 
 // Account is a balance model for blockchain
 type Account struct {
-	Nonce              uint64
-	Amount             *big.Int
-	CodeHash           []byte // contract code hash
-	CodeCreatorAddress []byte // contract creator address
-	StorageRootHash    []byte // merkle root of the storage trie
+	Nonce           uint64
+	Amount          *big.Int
+	CodeHash        []byte // contract code hash
+	StorageRootHash []byte // merkle root of the storage trie
 }
 
 func newAccount() Account {
@@ -36,11 +35,10 @@ func newAccount() Account {
 
 func (a Account) clone() Account {
 	return Account{
-		Nonce:              a.Nonce,
-		Amount:             new(big.Int).Set(a.Amount),
-		CodeHash:           common.CopyBytes(a.CodeHash),
-		CodeCreatorAddress: common.CopyBytes(a.CodeCreatorAddress),
-		StorageRootHash:    common.CopyBytes(a.StorageRootHash),
+		Nonce:           a.Nonce,
+		Amount:          new(big.Int).Set(a.Amount),
+		CodeHash:        common.CopyBytes(a.CodeHash),
+		StorageRootHash: common.CopyBytes(a.StorageRootHash),
 	}
 }
 
@@ -130,11 +128,6 @@ func (s *StateObject) AddAmount(amount *big.Int) {
 // SubAmount substracts the specified amount from the balance of the account in the state object
 func (s *StateObject) SubAmount(amount *big.Int) {
 	s.SetAmount(new(big.Int).Sub(s.account.Amount, amount))
-}
-
-func (s *StateObject) SetCodeCreator(addr common.Address) {
-	s.account.CodeCreatorAddress = addr.Bytes()
-	s.dirtyAccount = true
 }
 
 func (s *StateObject) loadCode(db database.Database) ([]byte, error) {
