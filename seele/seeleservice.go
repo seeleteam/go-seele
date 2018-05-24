@@ -7,7 +7,6 @@ package seele
 
 import (
 	"context"
-	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
