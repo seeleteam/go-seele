@@ -33,6 +33,8 @@ var testGenesisAccounts = []*testAccount{
 }
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
+	common.IsShardDisabled = true
+
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -49,12 +51,14 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
+	common.IsShardDisabled = true
+
 	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
 		accounts[account.addr] = account.data.Amount
 	}
 
-	return GetDefaultGenesis(accounts)
+	return GetGenesis(GenesisInfo{accounts, 1, 0})
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
@@ -77,7 +81,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
 	toAddress := crypto.MustGenerateRandomAddress()
 
-	tx := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), big.NewInt(0), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx
@@ -87,7 +91,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 	common.IsShardDisabled = true
 
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
-	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, big.NewInt(0), minerAccount.data.Nonce)
+	rewardTx, _ := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, big.NewInt(0), minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
 
 	txs := []*types.Transaction{rewardTx}
@@ -104,6 +108,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),
 		Nonce:             10,
+		ExtraData:         make([]byte, 0),
 	}
 
 	stateRootHash := common.EmptyHash

@@ -152,41 +152,52 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 	return nil
 }
 
-// PublicNetworkAPI provides an API to access network information.
-type PublicNetworkAPI struct {
-	p2pServer      *p2p.Server
-	networkVersion uint64
+// PrivateNetworkAPI provides an API to access network information.
+type PrivateNetworkAPI struct {
+	s *SeeleService
 }
 
-// NewPublicNetworkAPI creates a new PublicNetworkAPI object for rpc service.
-func NewPublicNetworkAPI(p2pServer *p2p.Server, networkVersion uint64) *PublicNetworkAPI {
-	return &PublicNetworkAPI{p2pServer, networkVersion}
+// NewPrivateNetworkAPI creates a new PrivateNetworkAPI object for rpc service.
+func NewPrivateNetworkAPI(s *SeeleService) *PrivateNetworkAPI {
+	return &PrivateNetworkAPI{s}
+}
+
+// GetPeersInfo returns all the information of peers at the protocol granularity.
+func (n *PrivateNetworkAPI) GetPeersInfo(input interface{}, result *[]p2p.PeerInfo) error {
+	*result = *n.s.p2pServer.PeersInfo()
+	return nil
 }
 
 // GetPeerCount returns the count of peers
-func (n *PublicNetworkAPI) GetPeerCount(input interface{}, result *int) error {
-	*result = n.p2pServer.PeerCount()
+func (n *PrivateNetworkAPI) GetPeerCount(input interface{}, result *int) error {
+	*result = n.s.p2pServer.PeerCount()
 	return nil
 }
 
 // GetNetworkVersion returns the network version
-func (n *PublicNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
-	*result = n.networkVersion
+func (n *PrivateNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
+	*result = n.s.NetVersion()
 	return nil
 }
 
-// PublicMinerAPI provides an API to access miner information.
-type PublicMinerAPI struct {
+// GetProtocolVersion returns the current seele protocol version this node supports
+func (n *PrivateNetworkAPI) GetProtocolVersion(input interface{}, result *uint) error {
+	*result = n.s.seeleProtocol.Protocol.Version
+	return nil
+}
+
+// PrivateMinerAPI provides an API to access miner information.
+type PrivateMinerAPI struct {
 	s *SeeleService
 }
 
-// NewPublicMinerAPI creates a new PublicMinerAPI object for miner rpc service.
-func NewPublicMinerAPI(s *SeeleService) *PublicMinerAPI {
-	return &PublicMinerAPI{s}
+// NewPrivateMinerAPI creates a new PrivateMinerAPI object for miner rpc service.
+func NewPrivateMinerAPI(s *SeeleService) *PrivateMinerAPI {
+	return &PrivateMinerAPI{s}
 }
 
 // Start API is used to start the miner with the given number of threads.
-func (api *PublicMinerAPI) Start(threads *int, result *string) error {
+func (api *PrivateMinerAPI) Start(threads *int, result *string) error {
 	if threads == nil {
 		threads = new(int)
 	}
@@ -200,7 +211,7 @@ func (api *PublicMinerAPI) Start(threads *int, result *string) error {
 }
 
 // Stop API is used to stop the miner.
-func (api *PublicMinerAPI) Stop(input *string, result *string) error {
+func (api *PrivateMinerAPI) Stop(input *string, result *string) error {
 	if !api.s.miner.IsMining() {
 		return miner.ErrMinerIsStopped
 	}
@@ -210,7 +221,7 @@ func (api *PublicMinerAPI) Stop(input *string, result *string) error {
 }
 
 // Hashrate returns the POW hashrate.
-func (api *PublicMinerAPI) Hashrate(input *string, hashrate *uint64) error {
+func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 	*hashrate = uint64(api.s.miner.Hashrate())
 
 	return nil

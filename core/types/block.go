@@ -23,6 +23,7 @@ type BlockHeader struct {
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	Nonce             uint64         // Nonce is the pow of the block
+	ExtraData         []byte         // ExtraData stores the extra info of block header.
 }
 
 // Clone returns a clone of the block header.
@@ -36,6 +37,8 @@ func (header *BlockHeader) Clone() *BlockHeader {
 	if clone.CreateTimestamp = new(big.Int); header.CreateTimestamp != nil {
 		clone.CreateTimestamp.Set(header.CreateTimestamp)
 	}
+
+	clone.ExtraData = common.CopyBytes(header.ExtraData)
 
 	return &clone
 }

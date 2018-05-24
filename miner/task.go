@@ -32,7 +32,10 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := pow.GetReward(blockHeight)
-	reward := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, big.NewInt(0), 0)
+	reward, err := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, big.NewInt(0), 0)
+	if err != nil {
+		return err
+	}
 	reward.Signature = &crypto.Signature{}
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
