@@ -280,7 +280,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 }
 
 func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
-	if p := s.peerSet.peers[address]; p != nil {
+	if p := s.peerSet.peerMap[address]; p != nil {
 		return p.Info()
 	}
 	return nil

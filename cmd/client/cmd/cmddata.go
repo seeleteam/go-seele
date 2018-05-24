@@ -9,7 +9,7 @@ package cmd
 func NewCmdData() []*Request {
 	return []*Request{
 		&Request{
-			Use:   "blockbyhash",
+			Use:   "getblockbyhash",
 			Short: "get block info by block hash",
 			Long: `For example:
   			client.exe getblockbyhash --hash 0x0000009721cf7bb5859f1a0ced952fcf71929ff8382db6ef20041ed441d5f92f [-f=true] [-a 127.0.0.1:55027]`,

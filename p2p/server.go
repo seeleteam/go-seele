@@ -554,10 +554,9 @@ func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // PeersInfo returns an array of metadata objects describing connected peers.
 func (srv *Server) PeersInfo() *[]PeerInfo {
 	infos := make([]PeerInfo, 0, srv.PeerCount())
-	for _, peer := range srv.peers {
+	for _, peer := range srv.peerMap {
 		if peer != nil {
 			peerInfo := peer.Info()
-			peerInfo.Name = srv.Name
 			infos = append(infos, *peerInfo)
 		}
 	}

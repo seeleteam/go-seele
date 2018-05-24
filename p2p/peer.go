@@ -252,7 +252,6 @@ func (p *Peer) LocalAddr() net.Addr {
 // PeerInfo represents a short summary of a connected peer
 type PeerInfo struct {
 	ID      string   `json:"id"`   // Unique of the node
-	Name    string   `json:"name"` // Name of the node
 	Caps    []string `json:"caps"` // Sum-protocols advertised by this particular peer
 	Network struct {
 		LocalAddress  string `json:"localAddress"`  // Local endpoint of the TCP data connection
