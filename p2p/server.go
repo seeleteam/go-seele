@@ -160,14 +160,21 @@ func (srv *Server) Start() (err error) {
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-	//TODO define shard number
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
+
+	if common.LocalShardNumber == discovery.UndefinedShardNumber {
+		if err = srv.judgeShard(); err != nil {
+			srv.log.Error("p2p.server judgeShard err. %s", err)
+			return err
+		}
+	}
+
+	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, common.LocalShardNumber)
 	if err != nil {
 		return err
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, common.LocalShardNumber)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -177,6 +184,15 @@ func (srv *Server) Start() (err error) {
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
+	return nil
+}
+
+// judgeShard determines local shardid.
+func (srv *Server) judgeShard() error {
+	// TODO wait discovery to determine local shardid
+	// should quit if srv.quit is closed.
+	common.LocalShardNumber = 1
+	srv.log.Info("p2p.server.judgeShard. LocalShardNumber=%d", common.LocalShardNumber)
 	return nil
 }
 
