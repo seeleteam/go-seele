@@ -108,9 +108,9 @@ func (sp *SeeleProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
-			go sp.synchronise(sp.peerSet.bestPeer())
+			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
 		case <-forceSync.C:
-			go sp.synchronise(sp.peerSet.bestPeer())
+			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
 		case <-sp.quitCh:
 			return
 		}
@@ -162,7 +162,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 		TD:           localTD,
 		CurrentBlock: head,
 	}
-	sp.peerSet.ForEach(func(peer *peer) bool {
+	sp.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
 			sp.log.Warn("send transaction hash failed %s", err.Error())
@@ -225,8 +225,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	p.log.Debug("find new tx")
 	tx := e.(*types.Transaction)
 
-	p.peerSet.ForEach(func(peer *peer) bool {
-
+	p.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
 			p.log.Warn("send transaction failed %s", err.Error())
 		}
@@ -238,7 +237,7 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	p.log.Debug("find new mined block")
 	block := e.(*types.Block)
 
-	p.peerSet.ForEach(func(peer *peer) bool {
+	p.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.SendBlockHash(block.HeaderHash)
 		if err != nil {
 			p.log.Warn("send mined block hash failed %s", err.Error())

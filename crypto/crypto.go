@@ -167,15 +167,32 @@ func MustGenerateRandomAddress() *common.Address {
 	return address
 }
 
-// CreateAddress returns a new address with the specified address and nonce.
-// Generally, it's used to create the contract address based on account
-// address and nonce.
+// MustGenerateShardAddress generates and returns a random address that match the specified shard number.
+// Panic on any error.
+func MustGenerateShardAddress(shardNum uint) *common.Address {
+	if shardNum == 0 || shardNum > common.ShardNumber {
+		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
+	}
+
+	for {
+		address, err := GenerateRandomAddress()
+		if err != nil {
+			panic(err)
+		}
+
+		if common.GetShardNumber(*address) == shardNum {
+			return address
+		}
+	}
+}
+
+// CreateAddress creates a new address with the specified address and nonce.
+// Generally, it's used to create a new contract address based on the account
+// address and nonce. Note, the new created contract address and the account
+// address are in the same shard.
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
 	addrHash := MustHash(addr)
 	nonceHash := MustHash(nonce)
 
-	hashBytes := addrHash.Bytes()
-	hashBytes = append(hashBytes, nonceHash.Bytes()...)
-
-	return common.BytesToAddress(hashBytes)
+	return common.CreateContractAddress(addr, addrHash.Bytes(), nonceHash.Bytes())
 }

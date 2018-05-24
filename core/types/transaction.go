@@ -8,6 +8,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -145,6 +146,16 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 
 	if tx.Data.Amount.Sign() < 0 {
 		return ErrAmountNegative
+	}
+
+	if fromShardNum := common.GetShardNumber(tx.Data.From); fromShardNum != common.LocalShardNumber {
+		return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+	}
+
+	if tx.Data.To != nil {
+		if toShardNum := common.GetShardNumber(*tx.Data.To); toShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
+		}
 	}
 
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {

@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
+	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele/download"
@@ -51,12 +52,12 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *SeeleService, err error) {
 	s = &SeeleService{
-		networkID: conf.NetworkID,
-		log:       log,
+		log: log,
 	}
-	s.Coinbase = conf.Coinbase
+	s.networkID = conf.P2PConfig.NetworkID
+	s.Coinbase = conf.SeeleConfig.Coinbase
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
 
 	// Initialize blockchain DB.
@@ -80,7 +81,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 
 	// initialize and validate genesis
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
-	genesis := core.GetGenesis(conf.GenesisConfig)
+	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
 	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
@@ -97,7 +98,7 @@ func NewSeeleService(ctx context.Context, conf *Config, log *log.SeeleLog) (s *S
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.TxConf, s.chain)
+	s.txPool = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()

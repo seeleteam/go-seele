@@ -23,12 +23,17 @@ func (j *journal) append(entry journalEntry) {
 	j.entries = append(j.entries, entry)
 }
 
-func (j *journal) revert(statedb *Statedb) {
-	for i := len(j.entries) - 1; i >= 0; i-- {
+func (j *journal) snapshot() int {
+	return len(j.entries)
+}
+
+func (j *journal) revert(statedb *Statedb, snapshot int) {
+	for i := len(j.entries) - 1; i >= snapshot; i-- {
 		j.entries[i].revert(statedb)
+		j.entries[i] = nil
 	}
 
-	j.entries = j.entries[:0]
+	j.entries = j.entries[:snapshot]
 }
 
 type (

@@ -8,6 +8,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -16,6 +17,8 @@ import (
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
+	common.IsShardDisabled = true
+
 	privKey, keyErr := crypto.GenerateKey()
 	if keyErr != nil {
 		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
@@ -65,7 +68,7 @@ func (db *mockStateDB) GetNonce(address common.Address) uint64 {
 	return 0
 }
 
-func newTestStateDB(address common.Address, nonce, balance uint64) stateDB {
+func newTestStateDB(address common.Address, nonce, balance uint64) *mockStateDB {
 	return &mockStateDB{
 		balances: map[common.Address]*big.Int{address: new(big.Int).SetUint64(balance)},
 		nonces:   map[common.Address]uint64{address: nonce},
@@ -156,4 +159,62 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 
 	err = tx.Validate(statedb)
 	assert.Equal(t, err, ErrPayloadOversized)
+}
+
+func prepareShardEnv(localShard uint) func() {
+	prevDisabled := common.IsShardDisabled
+	prevNum := common.LocalShardNumber
+
+	common.IsShardDisabled = false
+	common.LocalShardNumber = localShard
+
+	return func() {
+		common.LocalShardNumber = prevNum
+		common.IsShardDisabled = prevDisabled
+	}
+}
+
+func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
+	dispose := prepareShardEnv(9)
+	defer dispose()
+
+	from := crypto.MustGenerateShardAddress(1) // invalid shard
+	to := crypto.MustGenerateShardAddress(9)
+	tx := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+
+	statedb := newTestStateDB(tx.Data.From, 5, 100)
+
+	err := tx.Validate(statedb)
+	assert.Equal(t, strings.Contains(err.Error(), "invalid from address"), true)
+}
+
+func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
+	dispose := prepareShardEnv(9)
+	defer dispose()
+
+	from := crypto.MustGenerateShardAddress(9)
+	to := crypto.MustGenerateShardAddress(1) // invalid shard
+	tx := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+
+	statedb := newTestStateDB(tx.Data.From, 5, 100)
+
+	err := tx.Validate(statedb)
+	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
+}
+
+func Test_Transaction_Validate_InvalidContractShard(t *testing.T) {
+	dispose := prepareShardEnv(9)
+	defer dispose()
+
+	// From address in one shard, but contract address in another shard.
+	from := crypto.MustGenerateShardAddress(9)
+	to := crypto.MustGenerateShardAddress(15)
+	contractAddr := crypto.CreateAddress(*to, 38)
+	tx, err := NewMessageTransaction(*from, contractAddr, big.NewInt(20), big.NewInt(10), 5, []byte("contract message"))
+	assert.Equal(t, err, error(nil))
+
+	statedb := newTestStateDB(tx.Data.From, 5, 100)
+
+	err = tx.Validate(statedb)
+	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
 }

@@ -64,6 +64,10 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 	}
 }
 
+func (p *Peer) getShardNumber() uint {
+	return p.Node.Shard
+}
+
 // run assumes that SubProtocol will never quit, otherwise proto.DelPeerCh may be closed before peer.run quits?
 func (p *Peer) run() (err error) {
 	var readErr = make(chan error, 1)

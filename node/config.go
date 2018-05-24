@@ -6,10 +6,12 @@
 package node
 
 import (
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log/comm"
+	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/seele"
 )
 
 // Config is the Configuration of node
@@ -27,10 +29,13 @@ type Config struct {
 	HTTPServer HTTPServer
 
 	// The SeeleConfig is the configuration to create the seele service.
-	SeeleConfig seele.Config
+	SeeleConfig SeeleConfig
 
 	// The configuration of websocket rpc service
 	WSServerConfig rpc.WSServerConfig
+
+	// metrics config info
+	MetricsConfig metrics.Config `json:"metrics"`
 }
 
 // BasicConfig config for Node
@@ -49,9 +54,6 @@ type BasicConfig struct {
 
 	// coinbase used by the miner
 	Coinbase string `json:"coinbase"`
-
-	// capacity of the transaction pool
-	Capacity uint `json:"capacity"`
 }
 
 // HTTPServer config for http server
@@ -66,4 +68,13 @@ type HTTPServer struct {
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
 	HTTPWhiteHost []string `json:"whiteHost"`
+}
+
+// Config is the seele's configuration to create seele service
+type SeeleConfig struct {
+	TxConf core.TransactionPoolConfig
+
+	Coinbase common.Address
+
+	GenesisConfig core.GenesisInfo
 }
