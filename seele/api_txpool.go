@@ -17,18 +17,18 @@ var (
 	errTransactionNotFound = errors.New("transaction not found")
 )
 
-// PublicTransactionPoolAPI provides an API to access transaction pool information.
-type PublicTransactionPoolAPI struct {
+// PrivateTransactionPoolAPI provides an API to access transaction pool information.
+type PrivateTransactionPoolAPI struct {
 	s *SeeleService
 }
 
-// NewPublicTransactionPoolAPI creates a new PublicTransactionPoolAPI object for transaction pool rpc service.
-func NewPublicTransactionPoolAPI(s *SeeleService) *PublicTransactionPoolAPI {
-	return &PublicTransactionPoolAPI{s}
+// NewPrivateTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
+func NewPrivateTransactionPoolAPI(s *SeeleService) *PrivateTransactionPoolAPI {
+	return &PrivateTransactionPoolAPI{s}
 }
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(height *int64, result *int) error {
+func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height *int64, result *int) error {
 	block, err := getBlock(api.s.chain, *height)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHeight(height *in
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
-func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash *string, result *int) error {
+func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash *string, result *int) error {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(*blockHash)
 	if err != nil {
@@ -55,7 +55,7 @@ func (api *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash *s
 }
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
-func (api *PublicTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request *GetTxByBlockHeightAndIndexRequest, result *map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request *GetTxByBlockHeightAndIndexRequest, result *map[string]interface{}) error {
 	block, err := getBlock(api.s.chain, request.Height)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
-func (api *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *GetTxByBlockHashAndIndexRequest, result *map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *GetTxByBlockHashAndIndexRequest, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(request.HashHex)
 	if err != nil {
@@ -93,7 +93,7 @@ func (api *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *
 }
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
-func (api *PublicTransactionPoolAPI) GetTransactionByHash(txHash *string, result *map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, result *map[string]interface{}) error {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(*txHash)
 	if err != nil {
