@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
@@ -541,4 +542,24 @@ func (srv *Server) Stop() {
 
 	close(srv.quit)
 	srv.Wait()
+}
+
+// PeerInfos array of PeerInfo for sort alphabetically by node identifier
+type PeerInfos []PeerInfo
+
+func (p PeerInfos) Len() int           { return len(p) }
+func (p PeerInfos) Less(i, j int) bool { return p[i].ID < p[j].ID }
+func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// PeersInfo returns an array of metadata objects describing connected peers.
+func (srv *Server) PeersInfo() *[]PeerInfo {
+	infos := make([]PeerInfo, 0, srv.PeerCount())
+	for _, peer := range srv.peerMap {
+		if peer != nil {
+			peerInfo := peer.Info()
+			infos = append(infos, *peerInfo)
+		}
+	}
+	sort.Sort(PeerInfos(infos))
+	return &infos
 }
