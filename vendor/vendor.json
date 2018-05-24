@@ -172,6 +172,24 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
+			"checksumSHA1": "6vTja7ze8y5kSlxsp1r21v5vQC4=",
+			"path": "github.com/influxdata/influxdb/client",
+			"revision": "e62b1a02fb8e218c64fea5e34a39f74d1eaef60b",
+			"revisionTime": "2018-05-22T02:00:47Z"
+		},
+		{
+			"checksumSHA1": "nL/JsA/5FQVi4zZGPJjLM2WPqGo=",
+			"path": "github.com/influxdata/influxdb/models",
+			"revision": "e62b1a02fb8e218c64fea5e34a39f74d1eaef60b",
+			"revisionTime": "2018-05-22T02:00:47Z"
+		},
+		{
+			"checksumSHA1": "Z0Bb5PWa5WL/j5Dm2KJCLGn1l7U=",
+			"path": "github.com/influxdata/influxdb/pkg/escape",
+			"revision": "e62b1a02fb8e218c64fea5e34a39f74d1eaef60b",
+			"revisionTime": "2018-05-22T02:00:47Z"
+		},
+		{
 			"checksumSHA1": "n0vM9ZdqBSklFaH4RpNla332aVs=",
 			"path": "github.com/magiconair/properties",
 			"revision": "49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934",
