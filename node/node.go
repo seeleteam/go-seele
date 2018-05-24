@@ -14,6 +14,9 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/seeleteam/go-seele/p2p/discovery"
+
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -88,6 +91,12 @@ func (n *Node) Start() error {
 	if n.server != nil {
 		return ErrNodeRunning
 	}
+
+	// TODO try load shardid from config if it exists
+	// TODO try load blockchain from directory, it must match with config
+	// TODO try load coinbase, it must match with shardid.
+	// if shardid can not be determined, it should be set by discovery routine in p2p.server.
+	common.LocalShardNumber = discovery.UndefinedShardNumber
 
 	n.serverConfig = n.config.P2PConfig
 	running := p2p.NewServer(n.serverConfig)
