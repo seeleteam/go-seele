@@ -31,6 +31,9 @@ var (
 	// ErrBalanceNotEnough is returned when the account balance is not enough to transfer to another account.
 	ErrBalanceNotEnough = errors.New("balance not enough")
 
+	// ErrFeeNegative is returned when the transaction fee is negative.
+	ErrFeeNegative = errors.New("failed to create tx, fee is negative")
+
 	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
 
@@ -102,8 +105,8 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 		panic("Failed to create tx, amount is negative.")
 	}
 
-	if fee.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("failed to create tx, fee is negative")
+	if fee.Sign() < 0 {
+		return nil, ErrFeeNegative
 	}
 
 	if len(payload) > MaxPayloadSize {

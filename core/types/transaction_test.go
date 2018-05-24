@@ -245,5 +245,5 @@ func Test_Transaction_InvalidFee(t *testing.T) {
 	contractAddr := crypto.MustGenerateShardAddress(9)
 	tx, err := NewTransaction(*from, *contractAddr, big.NewInt(20), big.NewInt(-1), 5)
 	assert.Equal(t, tx, (*Transaction)(nil))
-	assert.Equal(t, err.Error(), "failed to create tx, fee is negative")
+	assert.Equal(t, err, ErrFeeNegative)
 }
