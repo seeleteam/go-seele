@@ -186,15 +186,13 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 	}
 }
 
-// CreateAddress returns a new address with the specified address and nonce.
-// Generally, it's used to create the contract address based on account
-// address and nonce.
+// CreateAddress creates a new address with the specified address and nonce.
+// Generally, it's used to create a new contract address based on the account
+// address and nonce. Note, the new created contract address and the account
+// address are in the same shard.
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
 	addrHash := MustHash(addr)
 	nonceHash := MustHash(nonce)
 
-	hashBytes := addrHash.Bytes()
-	hashBytes = append(hashBytes, nonceHash.Bytes()...)
-
-	return common.BytesToAddress(hashBytes)
+	return common.CreateContractAddress(addr, addrHash.Bytes(), nonceHash.Bytes())
 }
