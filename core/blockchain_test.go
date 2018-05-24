@@ -346,5 +346,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 		panic(err)
 	}
 
-	assert.Equal(t, bc.GetShardNumber(), uint(8))
+	shardNum, err := bc.GetShardNumber()
+	assert.Equal(t, err, nil)
+	assert.Equal(t, shardNum, uint(8))
 }
