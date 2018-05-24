@@ -325,3 +325,26 @@ func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHa
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, hash, expectedHash)
 }
+
+func Test_Blockchain_Shard(t *testing.T) {
+	common.IsShardDisabled = false
+	defer func() {
+		common.IsShardDisabled = true
+	}()
+
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bcStore := store.NewBlockchainDatabase(db)
+	genesis := GetGenesis(GenesisInfo{nil, 1, 8})
+	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
+		panic(err)
+	}
+
+	bc, err := NewBlockchain(bcStore, db)
+	if err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, bc.GetShardNumber(), uint(8))
+}

@@ -138,3 +138,20 @@ func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 
 	return statedb, nil
 }
+
+// getGenesisExtraData returns the extra data of specified genesis block.
+// Return nil if the specified block is invalid, e.g. block height is not 0,
+// or failed to deserialize data.
+func getGenesisExtraData(genesisBlock *types.Block) *genesisExtraData {
+	if genesisBlock.Header.Height != genesisBlockHeight {
+		return nil
+	}
+
+	data := genesisExtraData{}
+	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
+		// Do not return the error to simplify the return value.
+		return nil
+	}
+
+	return &data
+}

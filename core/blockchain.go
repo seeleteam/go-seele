@@ -448,3 +448,12 @@ func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
 
 	return nil
 }
+
+// GetShardNumber returns the shard number of blockchian. If error occur, return 0.
+func (bc *Blockchain) GetShardNumber() uint {
+	if data := getGenesisExtraData(bc.genesisBlock); data != nil {
+		return data.ShardNumber
+	}
+
+	return 0
+}
