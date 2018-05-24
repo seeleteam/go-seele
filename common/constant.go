@@ -48,7 +48,7 @@ func GetDefaultDataFolder() string {
 }
 
 // GetMapOnlyValue gets the map only value
-func GetMapOnlyValue(privateKey map[string]*ecdsa.PrivateKey) *ecdsa.PrivateKey {
+func GetMapOnlyValue(privateKey map[string]*ecdsa.PrivateKey) (*ecdsa.PrivateKey){
 	if (len(privateKey) == 1) {
 		for _, v := range privateKey {
 			return v

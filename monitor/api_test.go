@@ -43,7 +43,7 @@ func createTestAPI() *PublicMonitorAPI {
 			DataDir: "node1",
 			RPCAddr: "127.0.0.1:55027",
 		},
-		P2PConfig: p2p.P2PConfig{
+		P2PConfig: p2p.Config{
 			PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
 			ListenAddr: "0.0.0.0:39007",
 		},
@@ -106,7 +106,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				DataDir: "node1",
 				RPCAddr: "127.0.0.1:55028",
 			},
-			P2PConfig: p2p.P2PConfig{
+			P2PConfig: p2p.Config{
 				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
 				ListenAddr: "0.0.0.0:39008",
 			},
@@ -121,7 +121,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				DataDir: "node1",
 				RPCAddr: "127.0.0.1:55029",
 			},
-			P2PConfig: p2p.P2PConfig{
+			P2PConfig: p2p.Config{
 				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
 				ListenAddr: "0.0.0.0:39009",
 			},

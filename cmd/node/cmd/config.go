@@ -30,7 +30,7 @@ type Config struct {
 	BasicConfig node.BasicConfig `json:"basic"`
 
 	// The configuration of p2p network
-	P2PConfig p2p.P2PConfig `json:"p2p"`
+	P2PConfig p2p.Config `json:"p2p"`
 
 	// HttpServer config for http server
 	HTTPServer node.HTTPServer `json:"httpServer"`
@@ -95,7 +95,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 }
 
 // GetP2pConfig get P2PConfig from the given config
-func GetP2pConfig(cmdConfig *Config) (p2p.P2PConfig, error) {
+func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
 	if cmdConfig.P2PConfig.StaticNodes != nil {
 		_,err := GetP2pConfigResolveStaticNodes(cmdConfig)
 		if err != nil{
@@ -115,11 +115,11 @@ func GetP2pConfig(cmdConfig *Config) (p2p.P2PConfig, error) {
 // GetP2pConfigResolveStaticNodes get ResolveStaticNodes from the given config
 func GetP2pConfigResolveStaticNodes(cmdConfig *Config) (map[string]*discovery.Node, error) {
 	for id, _ := range cmdConfig.P2PConfig.StaticNodes {
-		n, err := discovery.NewNodeFromString(id)
+		address, n, err := discovery.NewNodeFromString(id)
 		if err != nil {
 			return nil, err
 		}
-		cmdConfig.P2PConfig.StaticNodes[id] = n
+		cmdConfig.P2PConfig.StaticNodes[address] = n
 	}
 	return cmdConfig.P2PConfig.StaticNodes, nil
 }

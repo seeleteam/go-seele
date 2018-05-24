@@ -51,8 +51,9 @@ const (
 	hsExtraDataLen = 32
 )
 
+//TODO to delete after check
 // Config holds Server options.
-type Config struct {
+//type Config struct {
 	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
 	//PrivateKey *ecdsa.PrivateKey
 
@@ -60,17 +61,17 @@ type Config struct {
 	//ResolveStaticNodes []*discovery.Node
 
 	// Protocols should contain the protocols supported by the server.
-	Protocols []Protocol
+	//Protocols []Protocol
 
 	 //p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	//ListenAddr string
 
 	// network id, not used now. @TODO maybe be removed or just use Version
 	//NetworkID uint64
-}
+//}
 
 //P2PConfig is the Configuration of p2p
-type P2PConfig struct {
+type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
@@ -82,15 +83,15 @@ type P2PConfig struct {
 
 	// ServerPrivateKey private key for p2p module, do not use it as any accounts
 	PrivateKey map[string]*ecdsa.PrivateKey `json:"privateKey"`
+
+	// Protocols should contain the protocols supported by the server.
+	Protocols []Protocol
 }
 
 // Server manages all p2p peer connections.
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
-
-	//P2PConfig is the Configuration of p2p
-	P2PConfig
 
 	lock    sync.Mutex // protects running
 	running bool
@@ -122,14 +123,14 @@ type Server struct {
 	SelfNode *discovery.Node
 }
 
-func NewServer(config P2PConfig) *Server {
+func NewServer(config Config) *Server {
 	peers := make(map[uint]map[common.Address]*Peer)
 	for i := 1; i < common.ShardNumber+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
 	}
 
 	return &Server{
-		P2PConfig:          config,
+		Config:          config,
 		running:         false,
 		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
 		MaxPeers:        defaultMaxPeers,
@@ -161,11 +162,10 @@ func (srv *Server) Start() (err error) {
 
 	srv.running = true
 	srv.log.Info("Starting P2P networking...")
-
 	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
 	id := crypto.PubkeyToString(&privateKey.PublicKey)
 	address := common.HexMustToAddres(id)
-	addr, err := net.ResolveUDPAddr("udp", srv.P2PConfig.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.Config.ListenAddr)
 	//TODO define shard number
 	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
 	if err != nil {
@@ -173,7 +173,7 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
-	srv.kadDB = discovery.StartService(address, addr, srv.P2PConfig.StaticNodes, 0)
+	srv.kadDB = discovery.StartService(address, addr, srv.Config.StaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -273,13 +273,13 @@ running:
 
 func (srv *Server) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.P2PConfig.ListenAddr)
+	listener, err := net.Listen("tcp", srv.Config.ListenAddr)
 	if err != nil {
 		return err
 	}
 
 	laddr := listener.Addr().(*net.TCPAddr)
-	srv.P2PConfig.ListenAddr = laddr.String()
+	srv.Config.ListenAddr = laddr.String()
 	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()

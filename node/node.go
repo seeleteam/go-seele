@@ -43,7 +43,7 @@ func (se *StopError) Error() string {
 type Node struct {
 	config *Config
 
-	serverConfig p2p.P2PConfig
+	serverConfig p2p.Config
 	server       *p2p.Server
 
 	services []Service
@@ -90,7 +90,7 @@ func (n *Node) Start() error {
 	}
 
 	n.serverConfig = n.config.P2PConfig
-	running := &p2p.Server{P2PConfig: n.serverConfig}
+	running := &p2p.Server{Config: n.serverConfig}
 	for _, service := range n.services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
