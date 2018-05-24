@@ -46,6 +46,7 @@ func newTestBlockHeader() *types.BlockHeader {
 		Height:            1,
 		CreateTimestamp:   big.NewInt(1),
 		Nonce:             1,
+		ExtraData:         make([]byte, 0),
 	}
 }
 

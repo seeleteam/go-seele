@@ -34,6 +34,12 @@ func Test_CreateAddress(t *testing.T) {
 	assert.Equal(t, true, addr1.Equal(addr2))
 }
 
+func Test_CreateAddress_Shard(t *testing.T) {
+	fromAddr := MustGenerateShardAddress(9)
+	contractAddr := CreateAddress(*fromAddr, 38)
+	assert.Equal(t, common.GetShardNumber(contractAddr), uint(9))
+}
+
 func Test_MustGenerateShardAddress(t *testing.T) {
 	addr := MustGenerateShardAddress(5)
 	assert.Equal(t, common.GetShardNumber(*addr), uint(5))

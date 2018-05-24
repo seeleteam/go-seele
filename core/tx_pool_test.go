@@ -33,7 +33,7 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *poolTransaction {
 	fromPrivKey, fromAddress := randomAccount(t)
 	_, toAddress := randomAccount(t)
 
-	tx := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 	tx.Sign(fromPrivKey)
 
 	return &poolTransaction{
@@ -149,7 +149,7 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 	for i, amount := range amounts {
 		_, toAddress := randomAccount(t)
 
-		tx := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonces[i])
+		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonces[i])
 		tx.Sign(fromPrivKey)
 
 		txs = append(txs, tx)

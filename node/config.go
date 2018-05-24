@@ -9,6 +9,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log/comm"
+	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
@@ -32,6 +33,9 @@ type Config struct {
 
 	// The configuration of websocket rpc service
 	WSServerConfig rpc.WSServerConfig
+
+	// metrics config info
+	MetricsConfig metrics.Config `json:"metrics"`
 }
 
 // BasicConfig config for Node
