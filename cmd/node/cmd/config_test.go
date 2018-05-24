@@ -30,6 +30,6 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	assert.Equal(t, (int)(config.P2PConfig.NetworkID), 1,"10")
 
 	assert.Equal(t, len(config.SeeleConfig.GenesisConfig.Accounts), 2)
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, 22)
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, 12)
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, int64(22))
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12))
 }

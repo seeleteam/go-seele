@@ -105,11 +105,17 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 	storedGenesis, err := bcStore.GetBlock(storedGenesisHash)
 	if err != nil {
-		return err
+		return errors.New(fmt.Sprintf("get genesis block failed. %s", err))
 	}
 
-	//if storedGenesis
-	//errors.New("specific shard is not matched with shard number in genesis info")
+	data, err := getGenesisExtraData(storedGenesis)
+	if err != nil {
+		return errors.New(fmt.Sprintf("get genesis extra data failed. %s", err))
+	}
+
+	if data.ShardNumber != genesis.info.ShardNumber {
+		return	errors.New("specific shard is not matched with shard number in genesis info")
+	}
 
 	headerHash := genesis.header.Hash()
 	if !headerHash.Equal(storedGenesisHash) {
