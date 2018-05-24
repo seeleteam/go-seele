@@ -14,7 +14,7 @@ import (
 var LocalShardNumber uint
 
 // IsShardDisabled indicates if the shard is disabled.
-// THIS IS FOR TEST PURPOSE ONLY!!!
+// THIS IS FOR UNIT TEST PURPOSE ONLY!!!
 var IsShardDisabled = false
 
 // GetShardNumber calculates and returns the shard number for the specified address.
