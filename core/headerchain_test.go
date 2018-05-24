@@ -18,7 +18,7 @@ import (
 func newTestHeaderChain(db database.Database) *HeaderChain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := GetGenesis(GenesisInfo{nil, 1}, 0)
+	genesis := GetGenesis(GenesisInfo{})
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}

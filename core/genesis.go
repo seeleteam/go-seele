@@ -41,19 +41,23 @@ type GenesisInfo struct {
 
 	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is choose by total difficult
 	Difficult int64 `json:"difficult"`
+
+	// ShardNumber is the shard number of genesis block.
+	ShardNumber uint `json:"shard"`
 }
 
+// genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
 type genesisExtraData struct {
 	ShardNumber uint
 }
 
 // GetGenesis gets the genesis block according to accounts' balance
-func GetGenesis(info GenesisInfo, shardNum uint) *Genesis {
+func GetGenesis(info GenesisInfo) *Genesis {
 	if info.Difficult == 0 {
 		info.Difficult = 1
 	}
 
-	statedb, err := getStateDB(info.Accounts, shardNum)
+	statedb, err := getStateDB(info)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +67,7 @@ func GetGenesis(info GenesisInfo, shardNum uint) *Genesis {
 		panic(err)
 	}
 
-	extraData := genesisExtraData{shardNum}
+	extraData := genesisExtraData{info.ShardNumber}
 
 	return &Genesis{
 		header: &types.BlockHeader{
@@ -106,7 +110,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 // store atomically stores the genesis block in the blockchain store.
 func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB database.Database) error {
-	statedb, err := getStateDB(genesis.info.Accounts, genesis.extraData.ShardNumber)
+	statedb, err := getStateDB(genesis.info)
 	if err != nil {
 		return err
 	}
@@ -120,14 +124,14 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
 }
 
-func getStateDB(accounts map[common.Address]*big.Int, shardNum uint) (*state.Statedb, error) {
+func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 	statedb, err := state.NewStatedb(common.EmptyHash, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	for addr, amount := range accounts {
-		if addrShardNum := common.GetShardNumber(addr); addrShardNum == shardNum {
+	for addr, amount := range info.Accounts {
+		if addrShardNum := common.GetShardNumber(addr); addrShardNum == info.ShardNumber {
 			stateObj := statedb.GetOrNewStateObject(addr)
 			stateObj.SetNonce(0)
 			stateObj.SetAmount(amount)

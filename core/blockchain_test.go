@@ -58,7 +58,7 @@ func newTestGenesis() *Genesis {
 		accounts[account.addr] = account.data.Amount
 	}
 
-	return GetGenesis(GenesisInfo{accounts, 1}, 0)
+	return GetGenesis(GenesisInfo{accounts, 1, 0})
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
