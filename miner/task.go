@@ -53,13 +53,13 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit - 1; {
+	for i := 0; i < core.BlockTransactionNumberLimit-1; {
 		tx := popBestFeeTx(txs)
 		if tx == nil {
 			break
 		}
 
-		seele.TxPool().RemoveTransaction(tx.Hash)
+		seele.TxPool().ReflushTransactionStatus(tx.Hash, core.PROCESSING)
 
 		err := tx.Validate(statedb)
 		if err != nil {
@@ -75,7 +75,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
-		
+
 		i++
 	}
 }
