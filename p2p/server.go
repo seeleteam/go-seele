@@ -134,7 +134,7 @@ func NewServer(config Config, protocols []Protocol) *Server {
 		delPeerChan:     make(chan *Peer),
 		shardPeerMap:    peers,
 		MaxPendingPeers: 0,
-		Protocols:protocols,
+		Protocols:       protocols,
 	}
 }
 

@@ -85,6 +85,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 	}
 }
 
+// GetShardNumber get shard number of genesis
 func (genesis *Genesis) GetShardNumber() uint {
 	return genesis.info.ShardNumber
 }
@@ -114,7 +115,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {
-		return	errors.New("specific shard is not matched with shard number in genesis info")
+		return errors.New("specific shard is not matched with shard number in genesis info")
 	}
 
 	headerHash := genesis.header.Hash()

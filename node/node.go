@@ -8,13 +8,13 @@ package node
 import (
 	"errors"
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
 	"net"
 	"net/http"
 	netrpc "net/rpc"
 	"reflect"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -44,7 +44,7 @@ func (se *StopError) Error() string {
 type Node struct {
 	config *Config
 
-	server       *p2p.Server
+	server   *p2p.Server
 	services []Service
 
 	rpcAPIs []rpc.API
@@ -89,10 +89,16 @@ func (n *Node) Start() error {
 	}
 
 	//check config
-	coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
 	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
+	if specificShard == 0 {
+		return errors.New("auto shard is not supported yet")
+	}
+
+	common.LocalShardNumber = specificShard
+
+	coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
 	if specificShard != 0 && coinbaseShard != specificShard {
-		return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, " +
+		return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
 			"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
 	}
 
