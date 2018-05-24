@@ -28,9 +28,8 @@ const genesisBlockHeight = uint64(0)
 
 // Genesis represents the genesis block in the blockchain.
 type Genesis struct {
-	header    *types.BlockHeader
-	info      GenesisInfo
-	extraData genesisExtraData
+	header *types.BlockHeader
+	info   GenesisInfo
 }
 
 // GenesisInfo genesis info for generating genesis block, it could be used for initializing account balance
@@ -81,8 +80,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 			Nonce:             1,
 			ExtraData:         common.SerializePanic(extraData),
 		},
-		info:      info,
-		extraData: extraData,
+		info: info,
 	}
 }
 
