@@ -14,14 +14,14 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-// Signature is a wrapper for signed message, and is serializable.
+// Signature is a wrapper for the signed message and it is serializable.
 type Signature struct {
 	R *big.Int // Signature of elliptic curve cryptography.
 	S *big.Int // Signature of elliptic curve cryptography.
 }
 
-// NewSignature sign the specified hash with private key and returns a signature.
-// Panics if failed to sign hash.
+// NewSignature signs the specified hash with private key and returns a signature.
+// Panic if failed to sign the hash.
 func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
 	r, s, err := ecdsa.Sign(rand.Reader, privKey, hash)
 	if err != nil {
@@ -32,7 +32,7 @@ func NewSignature(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
 }
 
 // Verify verifies the signature against the specified hash.
-// Return true if signature is valid, otherwise false.
+// Return true if the signature is valid, otherwise false.
 func (sig *Signature) Verify(signerAddress *common.Address, hash []byte) bool {
 	pubKey := ToECDSAPub(signerAddress.Bytes())
 	return ecdsa.Verify(pubKey, hash, sig.R, sig.S)

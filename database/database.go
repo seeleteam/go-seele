@@ -5,7 +5,7 @@
 
 package database
 
-// Database interface of store
+// Database represents the interface of store
 type Database interface {
 	Close()
 	Put(key []byte, value []byte) error
@@ -19,7 +19,7 @@ type Database interface {
 	NewBatch() Batch
 }
 
-// Batch interface of batch for database
+// Batch is the interface of batch for database
 type Batch interface {
 	Put(key []byte, value []byte)
 	Delete(key []byte)

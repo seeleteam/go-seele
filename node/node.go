@@ -7,7 +7,11 @@ package node
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"net/http"
+	netrpc "net/rpc"
+	"reflect"
 	"sync"
 
 	"github.com/seeleteam/go-seele/log"
@@ -17,11 +21,23 @@ import (
 
 // error infos
 var (
+	ErrConfigIsNull       = errors.New("config info is null")
+	ErrLogIsNull          = errors.New("SeeleLog is null")
 	ErrNodeRunning        = errors.New("node is already running")
 	ErrNodeStopped        = errors.New("node is not started")
-	ErrServiceStartFailed = errors.New("node service start failed")
-	ErrServiceStopFailed  = errors.New("node service stop failed")
+	ErrServiceStartFailed = errors.New("node service starting failed")
+	ErrServiceStopFailed  = errors.New("node service stopping failed")
 )
+
+// StopError represents an error which is returned when a node fails to stop any registered service
+type StopError struct {
+	Services map[reflect.Type]error // Services is a container mapping the type of services which fail to stop to error
+}
+
+// Error returns a string representation of the stop error.
+func (se *StopError) Error() string {
+	return fmt.Sprintf("services: %v", se.Services)
+}
 
 // Node is a container for registering services.
 type Node struct {
@@ -42,7 +58,7 @@ type Node struct {
 func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
-	nlog := log.GetLogger("node", true)
+	nlog := log.GetLogger("node", conf.LogConfig.PrintLog)
 
 	return &Node{
 		config:   conf,
@@ -51,7 +67,7 @@ func New(conf *Config) (*Node, error) {
 	}, nil
 }
 
-// Register append a new service into the node's stack.
+// Register appends a new service into the node's stack.
 func (n *Node) Register(service Service) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -64,7 +80,7 @@ func (n *Node) Register(service Service) error {
 	return nil
 }
 
-// Start create a p2p node.
+// Start starts the p2p node.
 func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -73,8 +89,8 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
-	n.serverConfig = n.config.P2P
-	running := &p2p.Server{Config: n.serverConfig}
+	n.serverConfig = n.config.P2PConfig
+	running := p2p.NewServer(n.serverConfig)
 	for _, service := range n.services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
@@ -87,18 +103,25 @@ func (n *Node) Start() error {
 	for i, service := range n.services {
 		if err := service.Start(running); err != nil {
 			for j := 0; j < i; j++ {
-				service.Stop()
+				n.services[j].Stop()
 			}
+
+			// stop the p2p server
+			running.Stop()
 
 			return err
 		}
 	}
 
 	// Start RPC server
-	if err := n.startRPC(n.services); err != nil {
+	if err := n.startRPC(n.services, n.config); err != nil {
 		for _, service := range n.services {
 			service.Stop()
 		}
+
+		// stop the p2p server
+		running.Stop()
+
 		return err
 	}
 
@@ -107,30 +130,40 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// startRPC starts all RPC
-func (n *Node) startRPC(services []Service) error {
+// startRPC starts all RPCs
+func (n *Node) startRPC(services []Service, conf *Config) error {
 	apis := []rpc.API{}
 	for _, service := range services {
 		apis = append(apis, service.APIs()...)
 	}
 
 	if err := n.startJSONRPC(apis); err != nil {
-		n.log.Error("startProc err", err)
+		n.log.Error("starting json rpc failed", err)
+		return err
+	}
+
+	if err := n.startHTTPRPC(apis, conf.HTTPServer.HTTPWhiteHost, conf.HTTPServer.HTTPCors); err != nil {
+		n.log.Error("starting http rpc failed", err)
+		return err
+	}
+
+	if err := n.startWSRPC(apis); err != nil {
+		n.log.Error("start websocket err", err)
 		return err
 	}
 
 	return nil
 }
 
-// startJSONRPC starts JSONRPC server
+// startJSONRPC starts the json rpc server
 func (n *Node) startJSONRPC(apis []rpc.API) error {
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registered failed", "service", api.Service, "namespace", api.Namespace)
+			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("Proc registered service namespace %s", api.Namespace)
+		n.log.Debug("registered service namespace: %s in json rpc successful", api.Namespace)
 	}
 
 	var (
@@ -138,8 +171,8 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		err       error
 	)
 
-	if listerner, err = net.Listen("tcp", n.config.RPCAddr); err != nil {
-		n.log.Error("Listen failed", "err", err)
+	if listerner, err = net.Listen("tcp", n.config.BasicConfig.RPCAddr); err != nil {
+		n.log.Error("Listening failed", "err", err)
 		return err
 	}
 
@@ -148,17 +181,60 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		for {
 			conn, err := listerner.Accept()
 			if err != nil {
-				n.log.Error("RPC accept failed", "err", err)
+				n.log.Error("RPC accepting failed", "err", err)
 				continue
 			}
-			go handler.ServeCodec(rpc.NewJsonCodec(conn))
+			go handler.ServeCodec(rpc.NewJSONCodec(conn, nil))
 		}
 	}()
 
 	return nil
 }
 
-// Stop terminates the running the node and the services registered.
+// startHTTPRPC starts the http rpc server
+func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []string) error {
+	httpServer, httpHandler := rpc.NewHTTPServer(whitehosts, corsList)
+	rpcServer := httpServer.GetRPCServer()
+	for _, api := range apis {
+		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
+			return err
+		}
+		n.log.Debug("registered service namespace: %s in http rpc successful", api.Namespace)
+	}
+
+	var (
+		listerner net.Listener
+		err       error
+	)
+	rpcServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
+	if listerner, err = net.Listen("tcp", n.config.HTTPServer.HTTPAddr); err != nil {
+		n.log.Error("HTTP listening failed", "err", err)
+		return err
+	}
+
+	go http.Serve(listerner, httpHandler)
+
+	return nil
+}
+
+// startWSRPC starts websocket rpc server
+func (n *Node) startWSRPC(apis []rpc.API) error {
+	handler := rpc.NewWsRPCServer()
+	rpcServer := handler.GetWsRPCServer()
+	for _, api := range apis {
+		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
+			n.log.Error("Websocket registration failed", "service", api.Service, "namespace", api.Namespace)
+			return err
+		}
+	}
+	http.HandleFunc(n.config.WSServerConfig.WSPattern, handler.ServeWS)
+	go http.ListenAndServe(n.config.WSServerConfig.WSAddr, nil)
+
+	return nil
+}
+
+// Stop terminates the running node and services registered.
 func (n *Node) Stop() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -166,19 +242,33 @@ func (n *Node) Stop() error {
 	if n.server == nil {
 		return ErrNodeStopped
 	}
+
+	// stopErr is intended for possible stop errors
+	stopErr := &StopError{
+		Services: make(map[reflect.Type]error),
+	}
+
 	for _, service := range n.services {
 		if err := service.Stop(); err != nil {
-			return ErrNodeStopped
+			stopErr.Services[reflect.TypeOf(service)] = err
 		}
 	}
+
+	// stop the p2p server
+	n.server.Stop()
 
 	n.services = nil
 	n.server = nil
 
+	// return the stop errors if any
+	if len(stopErr.Services) > 0 {
+		return stopErr
+	}
+
 	return nil
 }
 
-// Restart stop a running node and start a new one.
+// Restart stops the running node and starts it again.
 func (n *Node) Restart() error {
 	if err := n.Stop(); err != nil {
 		return err

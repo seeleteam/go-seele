@@ -1,0 +1,10 @@
+{
+	"version": 1,
+	"address": "0x23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad",
+	"crypto": {
+		"ciphertext": "5a787ee0aaf575263bd7be7a30d556bf7a6d3c5cd96559f534901aed5151419c",
+		"iv": "948fe6ce76ddffa9d255147cd4ce890a",
+		"salt": "fc36ec2db1c5e2a2e813b1be2e0098cb8db9bda089e1f0ae4d83ea75d4987155",
+		"mac": "0x62cea9d0c7cb6899616348ccaa767b0a3e353b4c1159886f681c4ce64fa583df"
+	}
+}

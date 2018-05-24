@@ -10,9 +10,13 @@ import (
 	"os"
 	"testing"
 
+	"math/big"
+
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
@@ -35,11 +39,23 @@ func newTestDatabase() (db database.Database, dispose func()) {
 	}
 }
 
-func Test_Genesis_DefaultGenesis(t *testing.T) {
-	default1 := DefaultGenesis(nil)
-	default2 := DefaultGenesis(nil)
+func Test_Genesis_GetGenesis(t *testing.T) {
+	genesis1 := GetDefaultGenesis(nil)
+	genesis2 := GetDefaultGenesis(nil)
 
-	assert.Equal(t, default1.header, default2.header)
+	assert.Equal(t, genesis1.header, genesis2.header)
+
+	addr := crypto.MustGenerateRandomAddress()
+	accounts := make(map[common.Address]*big.Int)
+	accounts[*addr] = big.NewInt(10)
+	genesis3 := GetDefaultGenesis(accounts)
+	if genesis3.header.StateHash == common.EmptyHash {
+		panic("genesis3 state hash should not equal to empty hash")
+	}
+
+	if genesis3.header == genesis2.header {
+		panic("genesis3 should not equal to genesis2")
+	}
 }
 
 func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
@@ -48,10 +64,10 @@ func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
 
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := DefaultGenesis(bcStore)
+	genesis := GetDefaultGenesis(nil)
 	genesisHash := genesis.header.Hash()
 
-	err := genesis.Initialize(db)
+	err := genesis.InitializeAndValidate(bcStore, db)
 	if err != nil {
 		panic(err)
 	}
@@ -74,11 +90,11 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 
 	bcStore := store.NewBlockchainDatabase(db)
 
-	header := DefaultGenesis(bcStore).header.Clone()
+	header := GetDefaultGenesis(nil).header.Clone()
 	header.Nonce = 38
 	bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
 
-	genesis := DefaultGenesis(bcStore)
-	err := genesis.Initialize(db)
+	genesis := GetDefaultGenesis(nil)
+	err := genesis.InitializeAndValidate(bcStore, db)
 	assert.Equal(t, err, ErrGenesisHashMismatch)
 }

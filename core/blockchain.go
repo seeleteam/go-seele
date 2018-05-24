@@ -10,54 +10,95 @@ import (
 	"errors"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
-	// ErrBlockHashMismatch is returned when block hash does not match the header hash.
+	// limit block should not be ahead of 10 seconds of current time
+	futureBlockLimit int64 = 10
+
+	// block transaction number limit
+	BlockTransactionNumberLimit = 500
+)
+
+var (
+	// ErrBlockHashMismatch is returned when the block hash does not match the header hash.
 	ErrBlockHashMismatch = errors.New("block header hash mismatch")
 
-	// ErrBlockTxsHashMismatch is returned when block transations hash does not match
-	// the transaction root hash in header.
+	// ErrBlockTxsHashMismatch is returned when the block transactions hash does not match
+	// the transaction root hash in the header.
 	ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch")
 
-	// ErrBlockInvalidParentHash is returned when insert a new header with invalid parent block hash.
+	// ErrBlockInvalidParentHash is returned when inserting a new header with invalid parent block hash.
 	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
 
-	// ErrBlockInvalidHeight is returned when insert a new header with invalid block height.
+	// ErrBlockInvalidHeight is returned when inserting a new header with invalid block height.
 	ErrBlockInvalidHeight = errors.New("invalid block height")
 
-	// ErrBlockAlreadyExist is returned when inserted block already exist
-	ErrBlockAlreadyExist = errors.New("block already exist")
+	// ErrBlockAlreadyExists is returned when inserted block already exists
+	ErrBlockAlreadyExists = errors.New("block already exists")
 
 	// ErrBlockStateHashMismatch is returned when the calculated account state hash of block
 	// does not match the state root hash in block header.
 	ErrBlockStateHashMismatch = errors.New("block state hash mismatch")
 
-	// ErrBlockEmptyTxs is returned when write a block with empty transactions.
+	// ErrBlockReceiptHashMismatch is returned when the calculated receipts hash of block
+	// does not match the receipts root hash in block header.
+	ErrBlockReceiptHashMismatch = errors.New("block receipts hash mismatch")
+
+	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
 
 	// ErrBlockInvalidToAddress is returned when the to address of miner reward tx is nil.
 	ErrBlockInvalidToAddress = errors.New("invalid to address")
 
 	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
-	// the creator address in block header.
+	// the creator address in the block header.
 	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
+
+	// ErrBlockCreateTimeNull is returned when block create time is nil
+	ErrBlockCreateTimeNull = errors.New("block must have create time")
+
+	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
+	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
+
+	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
+	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
+
+	// ErrBlockDifficultInvalid is returned when block difficult is invalid
+	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
+
+	// ErrBlockTooManyTxs is returned when block have too many txs
+	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
 	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
 )
 
+type consensusEngine interface {
+	// ValidateHeader validates the specified header and return error if validation failed.
+	// Generally, need to validate the block nonce.
+	ValidateHeader(blockHeader *types.BlockHeader) error
+
+	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
+	// The amount of miner reward will change over time.
+	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
+}
+
 // Blockchain represents the block chain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
-// This is a thread safe structure. we must keep all of its parameter are thread safe too.
+// This is a thread safe structure. we must keep all of its parameters are thread safe too.
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
+	engine         consensusEngine
 	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
@@ -65,11 +106,12 @@ type Blockchain struct {
 	blockLeaves *BlockLeaves
 }
 
-// NewBlockchain returns a initialized block chain with given store and account state DB.
+// NewBlockchain returns an initialized block chain with the given store and account state DB.
 func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
+		engine:         &pow.Engine{},
 	}
 
 	var err error
@@ -78,7 +120,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	// Get genesis block from store
+	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
 		return nil, err
@@ -89,7 +131,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	// Get HEAD block from store
+	// Get the HEAD block from store
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
 		return nil, err
@@ -105,20 +147,20 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	// Get the state DB of current block
+	// Get the state DB of the current block
 	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
 	if err != nil {
 		return nil, err
 	}
 
 	blockIndex := NewBlockIndex(currentState, currentBlock, td)
-	bc.blockLeaves = NewBlockLeaf()
+	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
 
 	return bc, nil
 }
 
-// CurrentBlock returns the HEAD block of blockchain.
+// CurrentBlock returns the HEAD block of the blockchain.
 func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
@@ -131,22 +173,22 @@ func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
 	return index.currentBlock, index.state
 }
 
-// CurrentState returns state DB of current block.
+// CurrentState returns the state DB of the current block.
 func (bc *Blockchain) CurrentState() *state.Statedb {
 	_, state := bc.CurrentBlock()
 	return state
 }
 
-// WriteBlock writes the block to the blockchain store.
+// WriteBlock writes the specified block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
-	// Do not write block if already exists.
-	exist, err := bc.bcStore.HashBlock(block.HeaderHash)
+	// Do not write the block if already exists.
+	exist, err := bc.bcStore.HasBlock(block.HeaderHash)
 	if err != nil {
 		return err
 	}
 
 	if exist {
-		return ErrBlockAlreadyExist
+		return ErrBlockAlreadyExists
 	}
 
 	bc.lock.Lock()
@@ -162,12 +204,19 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
-	// Process the txs in block and check the state root hash.
+	// Process the txs in the block and check the state root hash.
 	var blockStatedb *state.Statedb
-	if blockStatedb, err = bc.applyTxs(block, preBlock); err != nil {
+	var receipts []*types.Receipt
+	if blockStatedb, receipts, err = bc.applyTxs(block, preBlock); err != nil {
 		return err
 	}
 
+	// Validate receipts root hash.
+	if receiptsRootHash := types.ReceiptMerkleRootHash(receipts); !receiptsRootHash.Equal(block.Header.ReceiptHash) {
+		return ErrBlockReceiptHashMismatch
+	}
+
+	// Validate state root hash.
 	batch := bc.accountStateDB.NewBatch()
 	committed := false
 	defer func() {
@@ -185,7 +234,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return ErrBlockStateHashMismatch
 	}
 
-	// Update block leaves and write block into store.
+	// Update block leaves and write the block into store.
 	currentBlock := &types.Block{
 		HeaderHash:   block.HeaderHash,
 		Header:       block.Header.Clone(),
@@ -205,11 +254,23 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 	bc.headerChain.WriteHeader(currentBlock.Header)
 
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
+	if isHead {
+		if err = bc.updateHashByHeight(block); err != nil {
+			return err
+		}
+	}
+
 	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
 		return err
 	}
 
-	// FIXME: write block and update account state in a batch.
+	if err = bc.bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
+		return err
+	}
+
+	// FIXME: write the block and update the account state in a batch.
 	// Otherwise, restore the account state during service startup.
 	if err = batch.Commit(); err != nil {
 		return err
@@ -221,6 +282,10 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 }
 
 func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
+	if len(block.Transactions) > BlockTransactionNumberLimit {
+		return ErrBlockTooManyTxs
+	}
+
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
@@ -234,9 +299,25 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockInvalidHeight
 	}
 
-	// @todo validate nonce via miner engine.
+	if block.Header.CreateTimestamp == nil {
+		return ErrBlockCreateTimeNull
+	}
 
-	return nil
+	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
+	}
+
+	future := new(big.Int).SetInt64(time.Now().Unix() + futureBlockLimit)
+	if block.Header.CreateTimestamp.Cmp(future) > 0 {
+		return ErrBlockCreateTimeInFuture
+	}
+
+	difficult := pow.GetDifficult(block.Header.CreateTimestamp.Uint64(), preBlock.Header)
+	if difficult == nil || difficult.Cmp(block.Header.Difficulty) != 0 {
+		return ErrBlockDifficultInvalid
+	}
+
+	return bc.engine.ValidateHeader(block.Header)
 }
 
 // GetStore returns the blockchain store instance.
@@ -244,27 +325,28 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 	return bc.bcStore
 }
 
-// applyTxs process the txs in block and return the new state DB of block.
-// This method suppose the specified block is validated.
-func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, error) {
-	minerRewardTx, err := validateMinerRewardTx(block)
+// applyTxs processes the txs in the specified block and returns the new state DB of the block.
+// This method supposes the specified block is validated.
+func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, []*types.Receipt, error) {
+	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	statedb, err := state.NewStatedb(preBlock.Header.StateHash, bc.accountStateDB)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if err := updateStatedb(statedb, minerRewardTx, block.Transactions[1:]); err != nil {
-		return nil, err
+	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return statedb, nil
+	return statedb, receipts, nil
 }
 
-func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
+func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 	if len(block.Transactions) == 0 {
 		return nil, ErrBlockEmptyTxs
 	}
@@ -286,32 +368,82 @@ func validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
 		return nil, types.ErrAmountNegative
 	}
 
-	// @todo verify the amount via miner engine.
+	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
+		return nil, err
+	}
 
 	return minerRewardTx, nil
 }
 
-func updateStatedb(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction) error {
+func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
 	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
+	receipts := make([]*types.Receipt, len(txs))
 	// process other txs
-	for _, tx := range txs {
+	for i, tx := range txs {
 		if err := tx.Validate(statedb); err != nil {
+			return nil, err
+		}
+
+		receipt, err := bc.ApplyTransaction(tx, i, *minerRewardTx.Data.To, statedb, blockHeader)
+		if err != nil {
+			return nil, err
+		}
+
+		receipts[i] = receipt
+	}
+
+	return receipts, nil
+}
+
+// ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
+func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
+	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
+	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	return receipt, nil
+}
+
+// updateHashByHeight updates the height-to-hash mapping for the specified new HEAD block in the canonical chain.
+func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
+	// Delete height-to-hash mappings with the larger height than that of the new HEAD block in the canonical chain.
+	for i := block.Header.Height + 1; ; i++ {
+		deleted, err := bc.bcStore.DeleteBlockHash(i)
+		if err != nil {
 			return err
 		}
 
-		if tx.Data.To == nil {
-			return errContractCreationNotSupported
+		if !deleted {
+			break
+		}
+	}
+
+	// Overwrite stale canonical height-to-hash mappings
+	for headerHash := block.Header.PreviousBlockHash; !headerHash.Equal(common.EmptyHash); {
+		header, err := bc.bcStore.GetBlockHeader(headerHash)
+		if err != nil {
+			return err
 		}
 
-		fromStateObj := statedb.GetOrNewStateObject(tx.Data.From)
-		fromStateObj.SubAmount(tx.Data.Amount)
-		fromStateObj.SetNonce(fromStateObj.GetNonce() + 1)
+		canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return err
+		}
 
-		toStateObj := statedb.GetOrNewStateObject(*tx.Data.To)
-		toStateObj.AddAmount(tx.Data.Amount)
+		if headerHash.Equal(canonicalHash) {
+			break
+		}
+
+		if err = bc.bcStore.PutBlockHash(header.Height, headerHash); err != nil {
+			return err
+		}
+
+		headerHash = header.PreviousBlockHash
 	}
 
 	return nil

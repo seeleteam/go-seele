@@ -12,10 +12,16 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/crypto"
+	log2 "github.com/seeleteam/go-seele/log"
 )
 
+func getBuckets() *bucket {
+	log := log2.GetLogger("test", true)
+	return newBuckets(log)
+}
+
 func Test_Bucket(t *testing.T) {
-	b := bucket{}
+	b := getBuckets()
 
 	n := getNode("9000")
 	b.addNode(n)
@@ -26,7 +32,7 @@ func Test_Bucket(t *testing.T) {
 	assert.Equal(t, b.size(), 1)
 
 	// copy node of n
-	n3 := NewNode(n.ID, n.IP, int(n.UDPPort))
+	n3 := NewNode(n.ID, n.IP, int(n.UDPPort), 0)
 	b.addNode(n3)
 	assert.Equal(t, b.size(), 1)
 
@@ -42,7 +48,7 @@ func Test_Bucket(t *testing.T) {
 }
 
 func Test_AddNode(t *testing.T) {
-	b := bucket{}
+	b := getBuckets()
 
 	var n1 *Node
 	for i := 0; i < 17; i++ {
@@ -66,7 +72,7 @@ func getNode(port string) *Node {
 	}
 
 	addr, _ := net.ResolveUDPAddr("udp", ":"+port)
-	n := NewNode(*id, addr.IP, addr.Port)
+	n := NewNode(*id, addr.IP, addr.Port, 0)
 
 	return n
 }

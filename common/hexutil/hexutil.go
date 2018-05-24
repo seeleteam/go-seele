@@ -43,10 +43,12 @@ func HexToBytes(input string) ([]byte, error) {
 	return b, err
 }
 
+// Has0xPrefix returns true if input starts with 0x, otherwise false
 func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
+// mapError maps err to a more specific error
 func mapError(err error) error {
 	if _, ok := err.(hex.InvalidByteError); ok {
 		return ErrSyntax

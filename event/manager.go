@@ -10,19 +10,18 @@ import (
 	"sync"
 )
 
-// EventManager interface defines the event manager behavior
-// Note, it is thread safe
+// EventManager is an interface which defines the event manager behaviors
+// Note that it is thread safe
 type EventManager struct {
 	lock      sync.RWMutex
 	listeners []eventListener
 }
 
-// Fire fire the event and returns it after all listeners do
-// their jobs.
+// Fire triggers all listeners with the specified event and removes listeners which run only once.
 func (h *EventManager) Fire(e Event) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-
+	
 	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)
@@ -34,8 +33,8 @@ func (h *EventManager) Fire(e Event) {
 	h.removeOnceListener()
 }
 
-// AddListener register a listener.
-// If there already has a same listener (same method pointer), we will not add it
+// AddListener registers a listener.
+// If there is already a same listener (same method pointer), we will not add it
 func (h *EventManager) AddListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable: callback,
@@ -44,7 +43,7 @@ func (h *EventManager) AddListener(callback EventHandleMethod) {
 	h.addEventListener(listener)
 }
 
-// AddOnceListener register a listener which only run once
+// AddOnceListener registers a listener which only runs once
 func (h *EventManager) AddOnceListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:       callback,
@@ -54,7 +53,7 @@ func (h *EventManager) AddOnceListener(callback EventHandleMethod) {
 	h.addEventListener(listener)
 }
 
-// AddOnceListener register a listener which only run once and async
+// AddOnceListener registers a listener which only runs once and async
 func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:        callback,
@@ -65,7 +64,7 @@ func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
 	h.addEventListener(listener)
 }
 
-// AddOnceListener register a listener which run async
+// AddOnceListener registers a listener which runs async
 func (h *EventManager) AddAsyncListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:        callback,
@@ -76,7 +75,7 @@ func (h *EventManager) AddAsyncListener(callback EventHandleMethod) {
 }
 
 // addEventListener registers a event listener.
-// If there already has a same listener (same method pointer), we will not add it
+// If there is already a same listener (same method pointer), we will not add it
 func (h *EventManager) addEventListener(listener eventListener) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
@@ -99,19 +98,20 @@ func (h *EventManager) RemoveListener(callback EventHandleMethod) {
 	h.listeners = append(h.listeners[:index], h.listeners[index+1:]...)
 }
 
-func (h *EventManager) removeOnceListener() {
-	listener := make([]eventListener, 0, len(h.listeners))
+// removeOnceListener removes all listeners which run only once
+func (h *EventManager) removeOnceListener() {	
+	listeners := make([]eventListener, 0, len(h.listeners))
 	for _, l := range h.listeners {
 		if !l.IsOnceListener {
-			listener = append(listener, l)
+			listeners = append(listeners, l)
 		}
 	}
 
-	h.listeners = listener
+	h.listeners = listeners
 }
 
-// find find listener already in the manager
-// return -1 not found, otherwise return the index of the listener
+// find finds listener existing in the manager
+// returns -1 if not found, otherwise the index of the listener
 func (h *EventManager) find(callback EventHandleMethod) int {
 	p := reflect.ValueOf(callback).Pointer()
 

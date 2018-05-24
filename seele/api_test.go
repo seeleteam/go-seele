@@ -14,15 +14,17 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/node"
 )
 
-func getTmpConfig() *Config {
+func getTmpConfig() *node.Config {
 	acctAddr := crypto.MustGenerateRandomAddress()
 
-	return &Config{
-		TxConf:    *core.DefaultTxPoolConfig(),
-		NetworkID: 1,
-		Coinbase:  *acctAddr,
+	return &node.Config{
+		SeeleConfig: node.SeeleConfig{
+			TxConf:   *core.DefaultTxPoolConfig(),
+			Coinbase: *acctAddr,
+		},
 	}
 }
 
@@ -42,10 +44,10 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	}
 
 	api := NewPublicSeeleAPI(ss)
-	var addr common.Address
-	api.Coinbase(nil, &addr)
+	var info MinerInfo
+	api.GetInfo(nil, &info)
 
-	if !bytes.Equal(conf.Coinbase[0:], addr[0:]) {
+	if !bytes.Equal(conf.SeeleConfig.Coinbase[0:], info.Coinbase[0:]) {
 		t.Fail()
 	}
 }

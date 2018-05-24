@@ -6,7 +6,9 @@
 package common
 
 import (
+	"bytes"
 	"fmt"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
@@ -29,12 +31,16 @@ func NewAddress(b []byte) (Address, error) {
 }
 
 // Bytes get the actual bytes
-func (id *Address) Bytes() []byte {
+func (id Address) Bytes() []byte {
 	return id[:]
 }
 
 func (id *Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
+}
+
+func (id *Address) Equal(b Address) bool {
+	return bytes.Equal(id[:], b[:])
 }
 
 func HexToAddress(id string) (Address, error) {
@@ -58,4 +64,38 @@ func HexMustToAddres(id string) Address {
 	}
 
 	return a
+}
+
+// BytesToAddress converts the specified byte array to Address.
+func BytesToAddress(bs []byte) Address {
+	var addr Address
+
+	if len(bs) > len(addr) {
+		bs = bs[len(bs)-len(addr):]
+	}
+
+	copy(addr[len(addr)-len(bs):], bs)
+
+	return addr
+}
+
+// BigToAddress converts a big int to address.
+func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
+
+// Big converts address to a big int.
+func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
+
+func (id Address) MarshalText() ([]byte, error) {
+	str := id.ToHex()
+	return []byte(str), nil
+}
+
+func (id *Address) UnmarshalText(json []byte) error {
+	a, err := HexToAddress(string(json))
+	if err != nil {
+		return err
+	}
+
+	copy(id[:], a[:])
+	return nil
 }

@@ -73,7 +73,7 @@ func Test_trie_Update(t *testing.T) {
 	fmt.Println(string(value))
 	assert.Equal(t, string(value), "test7")
 	batch := db.NewBatch()
-	_, err = trie.Commit(batch)
+	trie.Commit(batch)
 	assert.Equal(t, err, nil)
 	err = batch.Commit()
 	assert.Equal(t, err, nil)
@@ -148,8 +148,7 @@ func Test_trie_Commit(t *testing.T) {
 	trie.Put([]byte("24355879"), []byte("test7"))
 
 	batch := db.NewBatch()
-	hash, err := trie.Commit(batch)
-	assert.Equal(t, err, nil)
+	hash := trie.Commit(batch)
 	batch.Commit()
 	fmt.Println(hash)
 

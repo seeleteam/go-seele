@@ -1,0 +1,30 @@
+{
+  "basic":{
+    "name": "seele node2",
+    "version": "1.0",
+    "dataDir": "node2",
+    "address": "0.0.0.0:55028",
+    "coinbase": "0x4dd6881d13ab5152127533c5954e4e062eb4bb2dcd93becf4f4e9b1d2d69f1363eea0395e8e76a2716b033d1e3cc8da2bf24811b1e31a86ac8bcacca4c4b29bd"
+  },
+  "p2p": {
+    "address": "0.0.0.0:39008",
+    "privateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
+    "staticNodes": [
+      "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007[0]"
+    ],
+    "networkID": 1
+  },
+  "log": {
+    "isDebug": true,
+    "printLog": true
+  },
+  "httpServer": {
+    "address": "127.0.0.1:65027",
+    "crosssorgins": [
+      "*"
+    ],
+    "whiteHost": [
+      "*"
+    ]
+  }
+}

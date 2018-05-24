@@ -7,16 +7,23 @@ package common
 
 import (
 	"os"
-	"path/filepath"
 	"os/user"
+	"path/filepath"
+
+	"github.com/seeleteam/go-seele/log/comm"
 )
+
+const ShardNumber = 20
 
 var (
 	// tempFolder used to store temp file, such as log files
 	tempFolder string
 
-	// defaultDataFolder used to store persist data info. such as database and keystore
+	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
+
+	// LogConfig is the Configuration of log
+	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 )
 
 func init() {
@@ -29,12 +36,12 @@ func init() {
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
 }
 
-// GetTempFolder use a getter to implement readonly
+// GetTempFolder uses a getter to implement readonly
 func GetTempFolder() string {
 	return tempFolder
 }
 
+// GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
 }
-

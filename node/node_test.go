@@ -9,20 +9,27 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
 var (
 	testNodeKey, _ = crypto.GenerateKey()
-	testECDSAKey   = "0x445e92837140929b190e89818c39223d1d2b9c07388d80e907adf2e3ba187563"
 )
 
 func testNodeConfig() *Config {
 	return &Config{
-		Name:    "test node",
-		Version: "test version",
-		P2P:     p2p.Config{PrivateKey: testNodeKey, ECDSAKey: testECDSAKey},
+		BasicConfig: BasicConfig{
+			Name:    "test node",
+			Version: "test version",
+		},
+		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
+		WSServerConfig: rpc.WSServerConfig{
+			WSAddr:    "127.0.0.1:8080",
+			WSPattern: "/ws",
+		},
+		LogConfig: comm.LogConfig{PrintLog: true, IsDebug: true},
 	}
 }
 

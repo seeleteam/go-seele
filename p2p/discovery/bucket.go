@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
+	log2 "github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -20,12 +21,15 @@ const (
 type bucket struct {
 	peers []*Node
 	lock  sync.RWMutex //used for peers change
+
+	log *log2.SeeleLog
 }
 
-func newBuckets() *bucket {
+func newBuckets(log *log2.SeeleLog) *bucket {
 	return &bucket{
 		peers: make([]*Node, 0),
 		lock:  sync.RWMutex{},
+		log:   log,
 	}
 }
 
@@ -40,7 +44,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
-		log.Info("add node: %s", hexutil.BytesToHex(node.ID.Bytes()))
+		b.log.Info("add node: %s", node)
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {
@@ -77,13 +81,47 @@ func (b *bucket) deleteNode(target common.Hash) {
 	}
 
 	if index == -1 {
-		log.Error("Failed to find the node to delete\n")
+		b.log.Error("Failed to find the node to delete")
 		return
 	}
 
-	log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
+	b.log.Info("delete node: %s", hexutil.BytesToHex(b.peers[index].ID.Bytes()))
 
 	b.peers = append(b.peers[:index], b.peers[index+1:]...)
+}
+
+func (b *bucket) getRandNodes(number int) []*Node {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	var result []*Node
+	if len(b.peers) > number {
+		result = make([]*Node, number)
+		// @TODO use random selection
+		for i := 0; i < number; i++ {
+			result[i] = &Node{}
+			*result[i] = *b.peers[i]
+		}
+	} else {
+		result = make([]*Node, len(b.peers))
+		for i := 0; i < len(result); i++ {
+			result[i] = &Node{}
+			*(result[i]) = *(b.peers[i])
+		}
+	}
+
+	return result
+}
+
+func (b *bucket) get(index int) *Node {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if index < len(b.peers) {
+		return b.peers[index]
+	}
+
+	return nil
 }
 
 func (b *bucket) size() int {
@@ -95,9 +133,9 @@ func (b *bucket) size() int {
 
 // printNodeList only use for debug test
 func (b *bucket) printNodeList() {
-	log.Debug("bucket size %d", len(b.peers))
+	b.log.Debug("bucket size %d", len(b.peers))
 
 	for _, n := range b.peers {
-		log.Debug("%s", hexutil.BytesToHex(n.ID.Bytes()))
+		b.log.Debug("%s", hexutil.BytesToHex(n.ID.Bytes()))
 	}
 }

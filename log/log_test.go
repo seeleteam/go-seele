@@ -19,6 +19,7 @@ func Test_Log(t *testing.T) {
 	lg.Info("info msg")
 	lg.Warn("warn msg")
 	lg.Error("error msg")
+	lg.Info("fold is:", LogFolder)
 	//Fatal("fatal msg")
 	//panic("panic msg")
 }
@@ -27,7 +28,11 @@ func Test_LogFile(t *testing.T) {
 	log := GetLogger("test2", false)
 
 	log.Debug("debug")
-
-	exist := common.IsFileOrFolderExist(filepath.Join(logFolder, "test2.log"))
+	log.Info("info msg")
+	log.Warn("warn msg")
+	log.Error("error msg")
+	log.Info("fold is:", LogFolder)
+	log.Info("log file is:%s/", LogFolder, LogFile)
+	exist := common.FileOrFolderExists(filepath.Join(LogFolder, LogFile))
 	assert.Equal(t, exist, true)
 }

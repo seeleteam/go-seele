@@ -7,62 +7,112 @@ package cmd
 
 import (
 	"fmt"
-	"net/rpc/jsonrpc"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/seele"
+	"github.com/seeleteam/go-seele/common/keystore"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
-var (
-	amount *uint64
-	to     *string
-)
+type txInfo struct {
+	amount *string // amount specifies the coin amount to be transferred
+	to     *string // to is the public address of the receiver
+	from   *string // from is the key file path of the sender
+	fee    *string // transaction fee
+}
+
+var parameter = txInfo{}
 
 // sendtxCmd represents the sendtx command
 var sendtxCmd = &cobra.Command{
 	Use:   "sendtx",
-	Short: "send tx to miner",
-	Long: `send tx to miner
+	Short: "send a tx to the miner",
+	Long: `send a tx to the miner
   For example:
-    client.exe sendtx -m 0 -t 0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb
-    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x1cba7cc4097c34ef9d90c0bf1fa9babd7e2fb26db7b49d7b1eb8f580726e3a99d3aec263fc8de535e74a79138622d320b3765b0a75fabd084985c456c6fe65bb`,
+    client.exe sendtx -m 0 -t 0x<public address> -f keyfile
+    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x<public address> -f keyfile `,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := jsonrpc.Dial("tcp", rpcAddr)
+		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
-			fmt.Printf("invalid address. %s\n", err.Error())
+			fmt.Printf("invalid address: %s\n", err.Error())
 			return
 		}
 		defer client.Close()
 
-		toAddr, err := common.HexToAddress(*to)
+		toAddr, err := common.HexToAddress(*parameter.to)
 		if err != nil {
-			fmt.Printf("invalid to address. %s\n", err.Error())
+			fmt.Printf("invalid receiver address: %s\n", err.Error())
 			return
 		}
 
-		rpcArgs := seele.AddTxArgs{
-			To:     toAddr,
-			Amount: *amount,
+		pass, err := common.GetPassword()
+		if err != nil {
+			fmt.Printf("get password failed %s\n", err.Error())
+			return
 		}
+
+		key, err := keystore.GetKey(*parameter.from, pass)
+		if err != nil {
+			fmt.Printf("invalid sender key file. it should be a private key: %s\n", err.Error())
+			return
+		}
+
+		from, err := crypto.GetAddress(key.PrivateKey)
+		if err != nil {
+			fmt.Printf("generating the sender address failed: %s\n", err.Error())
+			return
+		}
+
+		var nonce uint64
+		err = client.Call("seele.GetAccountNonce", &from, &nonce)
+		if err != nil {
+			fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+			return
+		}
+
+		fmt.Printf("got the sender account nonce: %d\n", nonce)
+
+		amount, ok := big.NewInt(0).SetString(*parameter.amount, 10)
+		if !ok {
+			fmt.Println("invalid amount value")
+			return
+		}
+
+		fee, ok := big.NewInt(0).SetString(*parameter.fee, 10)
+		if !ok {
+			fmt.Println("invalid fee value")
+			return
+		}
+
+		tx := types.NewTransaction(*from, toAddr, amount, fee, nonce)
+		tx.Sign(key.PrivateKey)
 
 		var result bool
-		err = client.Call("seele.AddTx", rpcArgs, &result)
+		err = client.Call("seele.AddTx", &tx, &result)
 		if !result || err != nil {
-			fmt.Printf("add tx failed. %s\n", err.Error())
+			fmt.Printf("adding the tx failed: %s\n", err.Error())
 			return
 		}
 
-		fmt.Println("add tx successful.")
+		fmt.Println("adding the tx succeeded.")
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(sendtxCmd)
 
-	to = sendtxCmd.Flags().StringP("to", "t", "", "to user's public key")
+	parameter.to = sendtxCmd.Flags().StringP("to", "t", "", "public address of the receiver")
 	sendtxCmd.MarkFlagRequired("to")
 
-	amount = sendtxCmd.Flags().Uint64P("amount", "m", 0, "the number of the transaction value")
+	parameter.amount = sendtxCmd.Flags().StringP("amount", "m", "", "the amount of the transferred coins")
 	sendtxCmd.MarkFlagRequired("amount")
+
+	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "key file path of the sender")
+	sendtxCmd.MarkFlagRequired("from")
+
+	parameter.fee = sendtxCmd.Flags().StringP("fee", "", "", "transaction fee")
+	sendtxCmd.MarkFlagRequired("fee")
 }

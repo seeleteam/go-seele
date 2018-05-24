@@ -9,7 +9,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-// Batch batch  implementation for leveldb
+// Batch implements batch for leveldb
 type Batch struct {
 	leveldb *leveldb.DB
 	batch   *leveldb.Batch
@@ -25,12 +25,12 @@ func (b *Batch) Delete(key []byte) {
 	b.batch.Delete(key)
 }
 
-// Commit commit batch operator.
+// Commit commits batch operation.
 func (b *Batch) Commit() error {
 	return b.leveldb.Write(b.batch, nil)
 }
 
-// Rollback rollback batch operator.
+// Rollback rollbacks batch operation.
 func (b *Batch) Rollback() {
 	b.batch.Reset()
 }

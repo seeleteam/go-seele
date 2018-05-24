@@ -10,40 +10,53 @@ import (
 	"sort"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	alpha              = 3 // Kademlia concurrency factor
-	responseNodeNumber = 5 // TODO with this number for test
-	hashBits           = len(common.Hash{}) * 8
-	nBuckets           = hashBits + 1 // Number of buckets
+	alpha                = 3 // Kademlia concurrency factor
+	responseNodeNumber   = 5 // TODO with this number for test
+	hashBits             = len(common.Hash{}) * 8
+	nBuckets             = hashBits + 1 // Number of buckets
+	shardTargeNodeNumber = 2            // other shard minimal node number for start
+	UndefinedShardNumber = 0 // shard number indicate its shard is undefined
 )
 
 type Table struct {
-	buckets  [nBuckets]*bucket
-	count    int   //total number of nodes
-	selfNode *Node //info of local node
+	buckets      [nBuckets]*bucket
+	shardBuckets [common.ShardNumber + 1]*bucket // 0 represents undefined shard number node.
+	selfNode     *Node                           //info of local node
+
+	log *log.SeeleLog
 }
 
-func newTable(id common.Address, addr *net.UDPAddr) *Table {
-	selfNode := NewNodeWithAddr(id, addr)
+func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLog) *Table {
+	selfNode := NewNodeWithAddr(id, addr, shard)
 
 	table := &Table{
-		count:    0,
 		selfNode: selfNode,
+		log:      log,
 	}
 
 	for i := 0; i < nBuckets; i++ {
-		table.buckets[i] = newBuckets()
+		table.buckets[i] = newBuckets(log)
+	}
+
+	for i := 0; i < common.ShardNumber+1; i++ {
+		table.shardBuckets[i] = newBuckets(log)
 	}
 
 	return table
 }
 
 func (t *Table) addNode(node *Node) {
-	dis := logDist(t.selfNode.getSha(), node.getSha())
+	if node.Shard != t.selfNode.Shard {
+		t.shardBuckets[node.Shard].addNode(node)
+	} else {
+		dis := logDist(t.selfNode.getSha(), node.getSha())
 
-	t.buckets[dis].addNode(node)
+		t.buckets[dis].addNode(node)
+	}
 }
 
 func (t *Table) updateNode(node *Node) {
@@ -51,26 +64,27 @@ func (t *Table) updateNode(node *Node) {
 }
 
 // findNodeWithTarget find nodes that distance of target is less than measure with target
-func (t *Table) findNodeWithTarget(target common.Hash, measure common.Hash) []*Node {
+func (t *Table) findNodeWithTarget(target common.Hash) []*Node {
 	nodes := t.findMinDisNodes(target, responseNodeNumber)
 
 	minDis := []*Node{}
 	for _, e := range nodes {
 		if distCmp(target, t.selfNode.getSha(), e.getSha()) > 0 {
-			//log.Debug("add node: %s", hexutil.BytesToHex(e.ID.Bytes()))
 			minDis = append(minDis, e)
-		} else {
-			//log.Debug("skip node:%s", hexutil.BytesToHex(e.ID.Bytes()))
 		}
 	}
 
 	return minDis
 }
 
-func (t *Table) deleteNode(target common.Hash) {
-	dis := logDist(t.selfNode.getSha(), target)
-
-	t.buckets[dis].deleteNode(target)
+func (t *Table) deleteNode(n *Node) {
+	sha := n.getSha()
+	if n.Shard != t.selfNode.Shard {
+		t.shardBuckets[n.Shard].deleteNode(sha)
+	} else {
+		dis := logDist(t.selfNode.getSha(), sha)
+		t.buckets[dis].deleteNode(sha)
+	}
 }
 
 // findNodeForRequest calls when start find node, find the initialize nodes
@@ -92,6 +106,29 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node {
 	}
 
 	return result.entries
+}
+
+func (t *Table) GetRandNodes(number int) []*Node {
+	// TODO get nodes randomly
+	nodes := make([]*Node, 0)
+	count := 0
+	for i := 0; i < nBuckets; i++ {
+		b := t.buckets[i]
+		if b.size() > 0 {
+			bnodes := b.getRandNodes(number)
+
+			for j := 0; j < len(bnodes); j++ {
+				nodes = append(nodes, bnodes[j])
+				count++
+
+				if count == number {
+					return nodes
+				}
+			}
+		}
+	}
+
+	return nodes
 }
 
 // nodesByDistance is a list of nodes, ordered by

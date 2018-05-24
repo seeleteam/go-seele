@@ -7,9 +7,8 @@ package p2p
 
 import (
 	"bytes"
-	"crypto/md5"
-
 	"crypto/ecdsa"
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
@@ -29,7 +28,7 @@ import (
 
 const (
 	// Maximun number of peers that can be connected
-	defaultMaxPeers = 50
+	defaultMaxPeers = 500
 
 	// Maximum number of concurrently handshaking inbound connections.
 	maxAcceptConns = 50
@@ -54,34 +53,32 @@ const (
 
 // Config holds Server options.
 type Config struct {
-	// Name node's name
-	Name string //`toml:"-"`
-
-	// ECDSAKey dumped string of Node's ecdsa.PrivateKey
-	ECDSAKey string
-
-	// PrivateKey Node's ecdsa.PrivateKey
+	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
 	PrivateKey *ecdsa.PrivateKey
 
-	// MyNodeID public key extracted from PrivateKey, so need not load from config
-	MyNodeID string `toml:"-"`
-
-	// MaxPeers max number of peers that can be connected
-	MaxPeers int
-
-	// MaxPendingPeers is the maximum number of peers that can be pending in the
-	// handshake phase, counted separately for inbound and outbound connections.
-	// Zero defaults to preset values.
-	MaxPendingPeers int `toml:",omitempty"`
-
 	// pre-configured nodes.
-	StaticNodes []*discovery.Node
-
-	// Protocols should contain the protocols supported by the server.
-	Protocols []Protocol `toml:"-"`
+	ResolveStaticNodes []*discovery.Node
 
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string
+
+	// network id, not used now. @TODO maybe be removed or just use Version
+	NetworkID uint64
+}
+
+// P2PConfig is the open Configuration of p2p
+type P2PConfig struct {
+	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
+	ListenAddr string `json:"address"`
+
+	// network id, not used now. @TODO maybe be removed or just use Version
+	NetworkID uint64 `json:"networkID"`
+
+	// static nodes which will be connected to find more nodes when the node starts
+	StaticNodes []string `json:"staticNodes"`
+
+	// ServerPrivateKey private key for p2p module, do not use it as any accounts
+	ServerPrivateKey string `json:"privateKey"`
 }
 
 // Server manages all p2p peer connections.
@@ -97,12 +94,55 @@ type Server struct {
 
 	quit chan struct{}
 
-	addpeer chan *Peer
-	delpeer chan *Peer
-	loopWG  sync.WaitGroup // loop, listenLoop
+	addPeerChan chan *Peer
+	delPeerChan chan *Peer
+	loopWG      sync.WaitGroup // loop, listenLoop
 
-	peers map[common.Address]*Peer
-	log   *log.SeeleLog
+	peerMap      map[common.Address]*Peer
+	shardPeerMap map[uint]map[common.Address]*Peer
+	log          *log.SeeleLog
+
+	// MaxPeers max number of peers that can be connected
+	MaxPeers int
+
+	// MaxPendingPeers is the maximum number of peers that can be pending in the
+	// handshake phase, counted separately for inbound and outbound connections.
+	// Zero defaults to preset values.
+	MaxPendingPeers int
+
+	// Protocols should contain the protocols supported by the server.
+	Protocols []Protocol
+
+	SelfNode *discovery.Node
+}
+
+func NewServer(config Config) *Server {
+	peers := make(map[uint]map[common.Address]*Peer)
+	for i := 1; i < common.ShardNumber+1; i++ {
+		peers[uint(i)] = make(map[common.Address]*Peer)
+	}
+
+	return &Server{
+		Config:          config,
+		running:         false,
+		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
+		MaxPeers:        defaultMaxPeers,
+		peerMap:         make(map[common.Address]*Peer),
+		quit:            make(chan struct{}),
+		addPeerChan:     make(chan *Peer),
+		delPeerChan:     make(chan *Peer),
+		shardPeerMap:    peers,
+		MaxPendingPeers: 0,
+	}
+}
+
+// PeerCount return the count of peers
+func (srv *Server) PeerCount() int {
+	if srv.peerMap != nil {
+		return len(srv.peerMap)
+	}
+
+	return 0
 }
 
 // Start starts running the server.
@@ -112,37 +152,22 @@ func (srv *Server) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.log = log.GetLogger("p2p", true)
-	if srv.log == nil {
-		return errors.New("p2p Create logger error")
-	}
-
-	if srv.MaxPeers == 0 {
-		srv.MaxPeers = defaultMaxPeers
-	}
 
 	srv.running = true
-	srv.peers = make(map[common.Address]*Peer)
-
 	srv.log.Info("Starting P2P networking...")
-	srv.quit = make(chan struct{})
-	srv.addpeer = make(chan *Peer)
-	srv.delpeer = make(chan *Peer)
 
-	srv.PrivateKey, err = crypto.LoadECDSAFromString(srv.ECDSAKey)
-	if err != nil {
-		return err
-	}
-
-	srv.log.Debug("my ecdsa key: %s", srv.ECDSAKey)
-
-	srv.MyNodeID = crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
+	// self node
+	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
+	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	//TODO define shard number
+	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s][%s]", srv.MyNodeID, addr)
-	srv.kadDB = discovery.StartService(common.HexMustToAddres(srv.MyNodeID), addr, srv.StaticNodes)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
+
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -156,7 +181,12 @@ func (srv *Server) Start() (err error) {
 }
 
 func (srv *Server) addNode(node *discovery.Node) {
-	_, ok := srv.peers[node.ID]
+	if node.Shard == discovery.UndefinedShardNumber {
+		return
+	}
+
+	srv.log.Info("got discovery a new node event, node info:%s", node)
+	_, ok := srv.peerMap[node.ID]
 	if ok {
 		return
 	}
@@ -166,6 +196,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	srv.log.Info("connecting to a new node... %s", addr.String())
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
+		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
 			conn.Close()
 		}
@@ -178,48 +209,59 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 }
 
+func (srv *Server) addPeer(p *Peer) {
+	srv.log.Info("server addPeer, len(peers)=%d", len(srv.peerMap))
+	oldPeer, ok := srv.peerMap[p.Node.ID]
+
+	if ok {
+		srv.log.Info("peer already exists, disconnect it and update the new peer")
+		p.Disconnect(discAlreadyConnected)
+
+		peerMap := srv.shardPeerMap[oldPeer.getShardNumber()]
+		delete(peerMap, oldPeer.Node.ID)
+	}
+
+	srv.shardPeerMap[p.getShardNumber()][p.Node.ID] = p
+	srv.peerMap[p.Node.ID] = p
+}
+
+func (srv *Server) deletePeer(p *Peer) {
+	curPeer, ok := srv.peerMap[p.Node.ID]
+	if ok && curPeer == p {
+		delete(srv.peerMap, p.Node.ID)
+		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
+		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
+	} else {
+		srv.log.Info("server.run delPeerChan recved. peer not match")
+	}
+}
+
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
-	peers := srv.peers
+	peerMap := srv.peerMap
 	srv.log.Info("p2p start running...")
 
 running:
 	for {
 		select {
 		case <-srv.quit:
-			// The server was stopped. Run the cleanup logic.
+			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
-		case c := <-srv.addpeer:
-			_, ok := peers[c.Node.ID]
-
-			if ok {
-				// node already connected, need close this connection
-				srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d. nodeid already connected", len(peers))
-				c.Disconnect(discAlreadyConnected)
-			} else {
-				peers[c.Node.ID] = c
-				//srv.log.Info("server.run  <-srv.addpeer, len(peers)=%d, len(srv.peers)=%d", len(peers), len(srv.peers))
-				srv.log.Info("server.run  <-srv.addpeer %s", c.Node.ID.ToHex())
-			}
-		case pd := <-srv.delpeer:
-			curPeer, ok := peers[pd.Node.ID]
-			if ok && curPeer == pd {
-				delete(peers, pd.Node.ID)
-				srv.log.Info("server.run delpeer recved. peer match. remove peer. peers num=%d", len(peers))
-			} else {
-				srv.log.Info("server.run delpeer recved. peer not match")
-			}
+		case p := <-srv.addPeerChan:
+			srv.addPeer(p)
+		case p := <-srv.delPeerChan:
+			srv.deletePeer(p)
 		}
 	}
 
 	// Disconnect all peers.
-	for _, p := range peers {
+	for _, p := range peerMap {
 		p.Disconnect(discServerQuit)
 	}
 
-	for len(peers) > 0 {
-		p := <-srv.delpeer
-		delete(peers, p.Node.ID)
+	for len(peerMap) > 0 {
+		p := <-srv.delPeerChan
+		srv.deletePeer(p)
 	}
 }
 
@@ -229,6 +271,7 @@ func (srv *Server) startListening() error {
 	if err != nil {
 		return err
 	}
+
 	laddr := listener.Addr().(*net.TCPAddr)
 	srv.ListenAddr = laddr.String()
 	srv.listener = listener
@@ -291,6 +334,7 @@ func (srv *Server) listenLoop() {
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
+	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd}, srv.Protocols, srv.log, dialDest)
 
 	var caps []Cap
@@ -300,6 +344,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
+		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
@@ -310,7 +355,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		if !ok {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
-			return errors.New("not found nodeID in discovery database!")
+			return errors.New("Not found nodeID in discovery database")
 		}
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
@@ -320,9 +365,9 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	srv.log.Debug("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
-		srv.addpeer <- peer
+		srv.addPeerChan <- peer
 		peer.run()
-		srv.delpeer <- peer
+		srv.delPeerChan <- peer
 		srv.loopWG.Done()
 	}()
 
@@ -332,7 +377,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 // doHandShake Communicate each other
 func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
 	handshakeMsg := &ProtoHandShake{Caps: caps}
-	nodeID := common.HexMustToAddres(srv.MyNodeID)
+	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
 
 	if flags == outboundConn {
@@ -478,4 +523,22 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	}
 	srv.log.Info("unPackWrapHSMsg: verify OK!")
 	return
+}
+
+// Stop terminates the execution of the p2p server
+func (srv *Server) Stop() {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return
+	}
+	srv.running = false
+
+	if srv.listener != nil {
+		srv.listener.Close()
+	}
+
+	close(srv.quit)
+	srv.Wait()
 }

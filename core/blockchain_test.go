@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 type testAccount struct {
@@ -26,12 +27,12 @@ type testAccount struct {
 }
 
 var testGenesisAccounts = []*testAccount{
-	newTestAccount(100, 0),
-	newTestAccount(100, 0),
-	newTestAccount(100, 0),
+	newTestAccount(big.NewInt(100), 0),
+	newTestAccount(big.NewInt(100), 0),
+	newTestAccount(big.NewInt(100), 0),
 }
 
-func newTestAccount(amount, nonce uint64) *testAccount {
+func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -41,56 +42,26 @@ func newTestAccount(amount, nonce uint64) *testAccount {
 		addr:    *addr,
 		privKey: privKey,
 		data: state.Account{
-			Amount: new(big.Int).SetUint64(amount),
+			Amount: amount,
 			Nonce:  nonce,
 		},
 	}
 }
 
-func newTestGenesis(bcStore store.BlockchainStore) *Genesis {
-	statedb, err := state.NewStatedb(common.EmptyHash, nil)
-	if err != nil {
-		panic(err)
-	}
-
+func newTestGenesis() *Genesis {
+	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
-		stateObj := statedb.GetOrNewStateObject(account.addr)
-		stateObj.SetNonce(account.data.Nonce)
-		stateObj.SetAmount(account.data.Amount)
+		accounts[account.addr] = account.data.Amount
 	}
 
-	stateRootHash, err := statedb.Commit(nil)
-	if err != nil {
-		panic(err)
-	}
-
-	genesis := Genesis{
-		bcStore: bcStore,
-		header: &types.BlockHeader{
-			PreviousBlockHash: common.EmptyHash,
-			Creator:           common.Address{},
-			StateHash:         stateRootHash,
-			TxHash:            types.MerkleRootHash(nil),
-			Difficulty:        big.NewInt(1),
-			Height:            genesisBlockHeight,
-			CreateTimestamp:   big.NewInt(0),
-			Nonce:             1,
-		},
-		accounts: make(map[common.Address]state.Account),
-	}
-
-	for _, account := range testGenesisAccounts {
-		genesis.accounts[account.addr] = account.data
-	}
-
-	return &genesis
+	return GetDefaultGenesis(accounts)
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := newTestGenesis(bcStore)
-	if err := genesis.Initialize(db); err != nil {
+	genesis := newTestGenesis()
+	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
 
@@ -106,15 +77,17 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
 	toAddress := crypto.MustGenerateRandomAddress()
 
-	tx := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), nonce)
+	tx := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), big.NewInt(0), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	minerAccount := newTestAccount(50, 0)
-	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, minerAccount.data.Nonce)
+	common.IsShardDisabled = true
+
+	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
+	rewardTx := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, big.NewInt(0), minerAccount.data.Nonce)
 	rewardTx.Sign(minerAccount.privKey)
 
 	txs := []*types.Transaction{rewardTx}
@@ -122,7 +95,19 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 		txs = append(txs, newTestBlockTx(0, 1, startNonce+i))
 	}
 
+	header := &types.BlockHeader{
+		PreviousBlockHash: parentHash,
+		Creator:           minerAccount.addr,
+		StateHash:         common.EmptyHash,
+		TxHash:            types.MerkleRootHash(txs),
+		Height:            blockHeight,
+		Difficulty:        big.NewInt(1),
+		CreateTimestamp:   big.NewInt(1),
+		Nonce:             10,
+	}
+
 	stateRootHash := common.EmptyHash
+	receiptsRootHash := common.EmptyHash
 	parentBlock, err := bc.bcStore.GetBlock(parentHash)
 	if err == nil {
 		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
@@ -130,25 +115,20 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 			panic(err)
 		}
 
-		if err = updateStatedb(statedb, rewardTx, txs[1:]); err != nil {
+		var receipts []*types.Receipt
+		if receipts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
 			panic(err)
 		}
 
 		if stateRootHash, err = statedb.Commit(nil); err != nil {
 			panic(err)
 		}
+
+		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
 	}
 
-	header := &types.BlockHeader{
-		PreviousBlockHash: parentHash,
-		Creator:           minerAccount.addr,
-		StateHash:         stateRootHash,
-		TxHash:            types.MerkleRootHash(txs),
-		Height:            blockHeight,
-		Difficulty:        big.NewInt(1),
-		CreateTimestamp:   big.NewInt(1),
-		Nonce:             10,
-	}
+	header.StateHash = stateRootHash
+	header.ReceiptHash = receiptsRootHash
 
 	return &types.Block{
 		HeaderHash:   header.Hash(),
@@ -230,7 +210,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
-	assert.Equal(t, err, ErrBlockAlreadyExist)
+	assert.Equal(t, err, ErrBlockAlreadyExists)
 }
 
 func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
@@ -293,4 +273,50 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
 	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidHeight)
+}
+
+func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	assertCanonicalHash(t, bc, 0, bc.genesisBlock.HeaderHash)
+
+	// genesis <- block11
+	block11 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	assert.Equal(t, bc.WriteBlock(block11), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+
+	// genesis <- block11 <- block12
+	block12 := newTestBlock(bc, block11.HeaderHash, 2, 3, 3)
+	assert.Equal(t, bc.WriteBlock(block12), error(nil))
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12 (canonical)
+	//         <- block21
+	block21 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	assert.Equal(t, bc.WriteBlock(block21), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12 (canonical)
+	//         <- block21 <- block22
+	block22 := newTestBlock(bc, block21.HeaderHash, 2, 3, 3)
+	assert.Equal(t, bc.WriteBlock(block22), error(nil))
+	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+
+	// genesis <- block11 <- block12
+	//         <- block21 <- block22 <- block23 (canonical)
+	block23 := newTestBlock(bc, block22.HeaderHash, 3, 3, 6)
+	assert.Equal(t, bc.WriteBlock(block23), error(nil))
+	assertCanonicalHash(t, bc, 1, block21.HeaderHash)
+	assertCanonicalHash(t, bc, 2, block22.HeaderHash)
+	assertCanonicalHash(t, bc, 3, block23.HeaderHash)
+}
+
+func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHash common.Hash) {
+	hash, err := bc.bcStore.GetBlockHash(height)
+	assert.Equal(t, err, error(nil))
+	assert.Equal(t, hash, expectedHash)
 }

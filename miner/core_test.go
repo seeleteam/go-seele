@@ -6,13 +6,16 @@
 package miner
 
 import (
+	"math"
 	"math/big"
 	"sync"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var logger = log.GetLogger("test", true)
@@ -30,11 +33,14 @@ func Test_Worker(t *testing.T) {
 
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
-	go StartMining(task, 0, result, abort, logger)
+	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
+
+	go StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 
 	select {
 	case found := <-result:
-		target := new(big.Int).Div(maxUint256, task.header.Difficulty)
+		target := pow.GetMiningTarget(task.header.Difficulty)
 
 		assert.Equal(t, found.task, task)
 
@@ -50,11 +56,13 @@ func Test_WorkerStop(t *testing.T) {
 
 	result := make(chan *Result, 1)
 	abort := make(chan struct{}, 1)
+	isNonceFound := new(int32)
+	hashrate := metrics.NewMeter()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		StartMining(task, 0, result, abort, logger)
+		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 		wg.Done()
 	}()
 

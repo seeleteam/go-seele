@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	// DiscHandShakeErr peer handshake error
-	DiscHandShakeErr = 100
+	DiscHandShakeErr = 100 // DiscHandShakeErr peer handshake error
 
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
@@ -105,9 +104,6 @@ func (p *peer) sendTransactionRequest(txHash common.Hash) error {
 }
 
 func (p *peer) sendTransaction(tx *types.Transaction) error {
-	if p.knownTxs.Has(tx.Hash) {
-		return nil
-	}
 	return p2p.SendMessage(p.rw, transactionsMsgCode, common.SerializePanic([]*types.Transaction{tx}))
 }
 
@@ -160,7 +156,7 @@ func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amou
 	query := &blockHeadersQuery{
 		Hash:    origin,
 		Number:  num,
-		Amount:  amount,
+		Amount:  uint64(amount),
 		Reverse: reverse,
 	}
 	return p2p.SendMessage(p.rw, downloader.GetBlockHeadersMsg, common.SerializePanic(query))
@@ -176,7 +172,7 @@ func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amoun
 	query := &blocksQuery{
 		Hash:   origin,
 		Number: num,
-		Amount: amount,
+		Amount: uint64(amount),
 	}
 	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, common.SerializePanic(query))
 }

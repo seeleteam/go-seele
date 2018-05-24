@@ -35,6 +35,7 @@ type Peer struct {
 }
 
 func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
+	closed := make(chan struct{})
 	offset := baseProtoCode
 	protoMap := make(map[string]protocolRW)
 	for _, p := range protocols {
@@ -43,21 +44,27 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 			offset:   offset,
 			Protocol: p,
 			in:       make(chan Message, 1),
+			close:    closed,
 		}
 
 		protoMap[p.cap().String()] = protoRW
 		offset += p.Length
+		log.Debug("NewPeer called, add protocol: %s", p.cap())
 	}
 
 	return &Peer{
 		rw:            conn,
 		protocolMap:   protoMap,
 		disconnection: make(chan uint),
-		closed:        make(chan struct{}),
+		closed:        closed,
 		log:           log,
 		protocolErr:   make(chan error),
 		Node:          node,
 	}
+}
+
+func (p *Peer) getShardNumber() uint {
+	return p.Node.Shard
 }
 
 // run assumes that SubProtocol will never quit, otherwise proto.DelPeerCh may be closed before peer.run quits?
@@ -77,7 +84,7 @@ errLoop:
 			break errLoop
 		case <-p.disconnection:
 			p.log.Info("p2p peer got disconnection request")
-			err = errors.New("disconnection error recved")
+			err = errors.New("disconnection error received")
 			break errLoop
 		case err = <-p.protocolErr:
 			p.log.Warn("p2p peer got protocol err %s", err.Error())
@@ -85,8 +92,8 @@ errLoop:
 		}
 	}
 
-	p.close()
 	p.wg.Wait()
+	p.close()
 	p.log.Info("p2p.peer.run quit. err=%s", err)
 
 	return err
@@ -116,6 +123,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
+		//p.log.Debug("got msg from peer: %s, code: %d",p.Node, msgRecv.Code)
 		if err != nil {
 			readErr <- err
 			return
@@ -129,11 +137,13 @@ func (p *Peer) readLoop(readErr chan<- error) {
 
 func (p *Peer) notifyProtocols() {
 	p.wg.Add(len(p.protocolMap))
+	p.log.Debug("notifyProtocols called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
 		go func() {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
+				p.log.Debug("notifyProtocols.AddPeer called. protocol:%s", proto.cap())
 				proto.AddPeer(p, &proto)
 			}
 		}()
@@ -199,6 +209,7 @@ type protocolRW struct {
 	offset uint16
 	in     chan Message // read message channel, message will be transferred here when it is a protocol message
 	rw     MsgReadWriter
+	close  chan struct{}
 }
 
 func (rw *protocolRW) WriteMsg(msg Message) (err error) {
@@ -217,5 +228,7 @@ func (rw *protocolRW) ReadMsg() (Message, error) {
 		msg.Code -= rw.offset
 
 		return msg, nil
+	case <-rw.close:
+		return Message{}, errors.New("peer connection closed")
 	}
 }
