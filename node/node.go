@@ -43,9 +43,7 @@ func (se *StopError) Error() string {
 type Node struct {
 	config *Config
 
-	serverConfig p2p.Config
 	server       *p2p.Server
-
 	services []Service
 
 	rpcAPIs []rpc.API
@@ -89,25 +87,25 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
-	n.serverConfig = n.config.P2PConfig
-	running := p2p.NewServer(n.serverConfig)
+	protocols := make([]p2p.Protocol, 0)
 	for _, service := range n.services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
+		protocols = append(protocols, service.Protocols()...)
 	}
 
-	if err := running.Start(); err != nil {
+	p2pSever := p2p.NewServer(n.config.P2PConfig, protocols)
+	if err := p2pSever.Start(); err != nil {
 		return ErrServiceStartFailed
 	}
 
 	// Start services
 	for i, service := range n.services {
-		if err := service.Start(running); err != nil {
+		if err := service.Start(p2pSever); err != nil {
 			for j := 0; j < i; j++ {
 				n.services[j].Stop()
 			}
 
 			// stop the p2p server
-			running.Stop()
+			p2pSever.Stop()
 
 			return err
 		}
@@ -120,12 +118,12 @@ func (n *Node) Start() error {
 		}
 
 		// stop the p2p server
-		running.Stop()
+		p2pSever.Stop()
 
 		return err
 	}
 
-	n.server = running
+	n.server = p2pSever
 
 	return nil
 }

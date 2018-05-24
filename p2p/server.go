@@ -116,7 +116,7 @@ type Server struct {
 	SelfNode *discovery.Node
 }
 
-func NewServer(config Config) *Server {
+func NewServer(config Config, protocols []Protocol) *Server {
 	peers := make(map[uint]map[common.Address]*Peer)
 	for i := 1; i < common.ShardNumber+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
@@ -133,6 +133,7 @@ func NewServer(config Config) *Server {
 		delPeerChan:     make(chan *Peer),
 		shardPeerMap:    peers,
 		MaxPendingPeers: 0,
+		Protocols:protocols,
 	}
 }
 
