@@ -68,6 +68,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		log.Error("NewSeeleService Create BlockChain err. %s", err)
 		return nil, err
 	}
+	leveldb.Metrics(s.chainDB, "chainDB", log)
 
 	// Initialize account state info DB.
 	accountStateDBPath := filepath.Join(serviceContext.DataDir, AccountStateDir)

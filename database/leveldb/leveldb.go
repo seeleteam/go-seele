@@ -14,7 +14,8 @@ import (
 
 // LevelDB wraps the leveldb
 type LevelDB struct {
-	db *leveldb.DB
+	db       *leveldb.DB
+	quitChan chan struct{}
 }
 
 // NewLevelDB constructs and returns a LevelDB instance
@@ -38,7 +39,10 @@ func NewLevelDB(path string) (database.Database, error) {
 
 // Close is used to close the db when not used
 func (db *LevelDB) Close() {
+	db.quitChan = make(chan struct{})
+	db.quitChan <- struct{}{}
 	db.db.Close()
+	close(db.quitChan)
 }
 
 // GetString gets the value for the given key
