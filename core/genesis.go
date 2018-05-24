@@ -6,6 +6,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -137,4 +138,18 @@ func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 	}
 
 	return statedb, nil
+}
+
+// getGenesisExtraData returns the extra data of specified genesis block.
+func getGenesisExtraData(genesisBlock *types.Block) (*genesisExtraData, error) {
+	if genesisBlock.Header.Height != genesisBlockHeight {
+		return nil, fmt.Errorf("invalid genesis block height %v", genesisBlock.Header.Height)
+	}
+
+	data := genesisExtraData{}
+	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }
