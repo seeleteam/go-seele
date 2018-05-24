@@ -33,6 +33,8 @@ var testGenesisAccounts = []*testAccount{
 }
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
+	common.IsShardDisabled = true
+
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -49,12 +51,14 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
+	common.IsShardDisabled = true
+
 	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
 		accounts[account.addr] = account.data.Amount
 	}
 
-	return GetDefaultGenesis(accounts)
+	return GetGenesis(GenesisInfo{accounts, 1, 0})
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
@@ -104,6 +108,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),
 		Nonce:             10,
+		ExtraData:         make([]byte, 0),
 	}
 
 	stateRootHash := common.EmptyHash
