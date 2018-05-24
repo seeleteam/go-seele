@@ -79,7 +79,6 @@ type TxIndex struct {
 type stateDB interface {
 	GetBalance(common.Address) *big.Int
 	GetNonce(common.Address) uint64
-	GetContractCreator(contractAddr common.Address) (common.Address, bool)
 }
 
 // NewTransaction creates a new transaction to transfer asset.
@@ -154,13 +153,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if tx.Data.To != nil {
-		toAddr := *tx.Data.To
-
-		if contractCreator, ok := statedb.GetContractCreator(*tx.Data.To); ok {
-			toAddr = contractCreator
-		}
-
-		if toShardNum := common.GetShardNumber(toAddr); toShardNum != common.LocalShardNumber {
+		if toShardNum := common.GetShardNumber(*tx.Data.To); toShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
 	}
