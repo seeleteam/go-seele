@@ -37,5 +37,9 @@
     "Database": "influxdb",
     "Username": "test",
     "Password": "test123"
+  },
+  "genesis": {
+    "difficult":10000000,
+    "shard":2
   }
 }

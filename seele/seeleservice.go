@@ -7,6 +7,7 @@ package seele
 
 import (
 	"context"
+	"gx/ipfs/QmVmDhyTTUcQXFD1rRQ64fGLMSAoaQvNH3hwuaCFAPq2hy/errors"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -35,6 +36,8 @@ type SeeleService struct {
 	chainDB        database.Database // database used to store blocks.
 	accountStateDB database.Database // database used to store account state info.
 	miner          *miner.Miner
+
+	shardNumber uint
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -53,11 +56,14 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 
 // NewSeeleService create SeeleService
 func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *SeeleService, err error) {
+	shard := conf.SeeleConfig.GenesisConfig.ShardNumber
 	s = &SeeleService{
-		log: log,
+		log:         log,
+		shardNumber: shard,
+		networkID: conf.P2PConfig.NetworkID,
+		Coinbase: conf.SeeleConfig.Coinbase,
 	}
-	s.networkID = conf.P2PConfig.NetworkID
-	s.Coinbase = conf.SeeleConfig.Coinbase
+
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
 
 	// Initialize blockchain DB.

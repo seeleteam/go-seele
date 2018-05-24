@@ -148,7 +148,7 @@ func (srv *Server) PeerCount() int {
 }
 
 // Start starts running the server.
-func (srv *Server) Start() (err error) {
+func (srv *Server) Start(shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -162,14 +162,13 @@ func (srv *Server) Start() (err error) {
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-	//TODO define shard number
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
+	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, shard)
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {

@@ -8,6 +8,7 @@ package node
 import (
 	"errors"
 	"fmt"
+	"github.com/seeleteam/go-seele/common"
 	"net"
 	"net/http"
 	netrpc "net/rpc"
@@ -87,13 +88,21 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
+	//check config
+	coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
+	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
+	if specificShard != 0 && coinbaseShard != specificShard {
+		return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, " +
+			"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
+	}
+
 	protocols := make([]p2p.Protocol, 0)
 	for _, service := range n.services {
 		protocols = append(protocols, service.Protocols()...)
 	}
 
 	p2pSever := p2p.NewServer(n.config.P2PConfig, protocols)
-	if err := p2pSever.Start(); err != nil {
+	if err := p2pSever.Start(n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
 		return ErrServiceStartFailed
 	}
 
