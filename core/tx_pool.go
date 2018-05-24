@@ -7,6 +7,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -145,7 +146,9 @@ func (pool *TransactionPool) ReflushTransactionStatus(txHash common.Hash, status
 	if poolTx == nil {
 		return
 	}
+	fmt.Println("++++++before", poolTx.txStatus)
 	poolTx.txStatus = status
+	fmt.Println("++++++after", poolTx.txStatus)
 }
 
 func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
