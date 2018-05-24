@@ -52,9 +52,9 @@ func NewNodeWithAddr(id common.Address, addr *net.UDPAddr, shard uint) *Node {
 	return NewNode(id, addr.IP, addr.Port, shard)
 }
 
-func NewNodeFromString(id string) (string,*Node, error) {
+func NewNodeFromString(id string) (*Node, error) {
 	if !strings.HasPrefix(id, nodeHeader) {
-		return "", nil, errNodeHeaderInvalid
+		return nil, errNodeHeaderInvalid
 	}
 
 	// cut prefix header
@@ -63,43 +63,43 @@ func NewNodeFromString(id string) (string,*Node, error) {
 	// node id
 	idSplit := strings.Split(id, "@")
 	if len(idSplit) != 2 {
-		return "", nil, errInvalidNodeString
+		return nil, errInvalidNodeString
 	}
 
 	nodeId, err := hex.DecodeString(idSplit[0])
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	publicKey, err := common.NewAddress(nodeId)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	// udp address
 	addrSplit := strings.Split(idSplit[1], "[")
 	if len(addrSplit) != 2 {
-		return "", nil, errInvalidNodeString
+		return nil, errInvalidNodeString
 	}
 
 	addr, err := net.ResolveUDPAddr("udp", addrSplit[0])
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	// shard
 	if len(addrSplit[1]) < 1 {
-		return "", nil, errInvalidNodeString
+		return nil, errInvalidNodeString
 	}
 
 	shardStr := addrSplit[1][:len(addrSplit[1])-1]
 	shard, err := strconv.Atoi(shardStr)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	node := NewNodeWithAddr(publicKey, addr, uint(shard))
-	return string(nodeId),node, nil
+	return node, nil
 }
 
 func (n *Node) GetUDPAddr() *net.UDPAddr {

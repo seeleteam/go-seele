@@ -51,25 +51,6 @@ const (
 	hsExtraDataLen = 32
 )
 
-//TODO to delete after check
-// Config holds Server options.
-//type Config struct {
-	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
-	//PrivateKey *ecdsa.PrivateKey
-
-	// pre-configured nodes.
-	//ResolveStaticNodes []*discovery.Node
-
-	// Protocols should contain the protocols supported by the server.
-	//Protocols []Protocol
-
-	 //p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	//ListenAddr string
-
-	// network id, not used now. @TODO maybe be removed or just use Version
-	//NetworkID uint64
-//}
-
 //P2PConfig is the Configuration of p2p
 type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol

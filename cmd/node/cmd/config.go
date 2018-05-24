@@ -115,11 +115,11 @@ func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
 // GetP2pConfigResolveStaticNodes get ResolveStaticNodes from the given config
 func GetP2pConfigResolveStaticNodes(cmdConfig *Config) (map[string]*discovery.Node, error) {
 	for id, _ := range cmdConfig.P2PConfig.StaticNodes {
-		address, n, err := discovery.NewNodeFromString(id)
+		n, err := discovery.NewNodeFromString(id)
 		if err != nil {
 			return nil, err
 		}
-		cmdConfig.P2PConfig.StaticNodes[address] = n
+		cmdConfig.P2PConfig.StaticNodes[id] = n
 	}
 	return cmdConfig.P2PConfig.StaticNodes, nil
 }
