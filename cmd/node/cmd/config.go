@@ -97,16 +97,16 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 // GetP2pConfig get P2PConfig from the given config
 func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
 	if cmdConfig.P2PConfig.StaticNodes != nil {
-		_,err := GetP2pConfigResolveStaticNodes(cmdConfig)
-		if err != nil{
-			return cmdConfig.P2PConfig,err
+		_, err := GetP2pConfigResolveStaticNodes(cmdConfig)
+		if err != nil {
+			return cmdConfig.P2PConfig, err
 		}
 	}
 
 	if cmdConfig.P2PConfig.PrivateKey != nil {
-		_,err := GetP2pConfigPrivateKey(cmdConfig)
-		if err != nil{
-			return cmdConfig.P2PConfig,err
+		_, err := GetP2pConfigPrivateKey(cmdConfig)
+		if err != nil {
+			return cmdConfig.P2PConfig, err
 		}
 	}
 	return cmdConfig.P2PConfig, nil
@@ -125,11 +125,11 @@ func GetP2pConfigResolveStaticNodes(cmdConfig *Config) (map[string]*discovery.No
 }
 
 // GetP2pConfigPrivateKey get privateKey from the given config
-func GetP2pConfigPrivateKey(cmdConfig *Config) (map[string]*ecdsa.PrivateKey,error) {
+func GetP2pConfigPrivateKey(cmdConfig *Config) (map[string]*ecdsa.PrivateKey, error) {
 	for k, _ := range cmdConfig.P2PConfig.PrivateKey {
 		key, err := crypto.LoadECDSAFromString(k)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		cmdConfig.P2PConfig.PrivateKey[k] = key
 	}

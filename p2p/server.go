@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/crypto/ecies"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 

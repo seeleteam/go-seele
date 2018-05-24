@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 
+	"crypto/ecdsa"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
@@ -19,7 +21,6 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
-	"crypto/ecdsa"
 )
 
 func getTmpConfig() *node.Config {
@@ -44,7 +45,7 @@ func createTestAPI() *PublicMonitorAPI {
 			RPCAddr: "127.0.0.1:55027",
 		},
 		P2PConfig: p2p.Config{
-			PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
+			PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()): key},
 			ListenAddr: "0.0.0.0:39007",
 		},
 		WSServerConfig: rpc.WSServerConfig{
@@ -107,7 +108,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				RPCAddr: "127.0.0.1:55028",
 			},
 			P2PConfig: p2p.Config{
-				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
+				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()): key},
 				ListenAddr: "0.0.0.0:39008",
 			},
 			SeeleConfig: conf.SeeleConfig,
@@ -122,7 +123,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				RPCAddr: "127.0.0.1:55029",
 			},
 			P2PConfig: p2p.Config{
-				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()):key},
+				PrivateKey: map[string]*ecdsa.PrivateKey{string(key.D.Bytes()): key},
 				ListenAddr: "0.0.0.0:39009",
 			},
 			SeeleConfig: conf.SeeleConfig,
