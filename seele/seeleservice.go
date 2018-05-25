@@ -54,10 +54,11 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 // NewSeeleService create SeeleService
 func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *SeeleService, err error) {
 	s = &SeeleService{
-		log: log,
+		log:       log,
+		networkID: conf.P2PConfig.NetworkID,
+		Coinbase:  conf.SeeleConfig.Coinbase,
 	}
-	s.networkID = conf.P2PConfig.NetworkID
-	s.Coinbase = conf.SeeleConfig.Coinbase
+
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
 
 	// Initialize blockchain DB.

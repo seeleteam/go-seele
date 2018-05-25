@@ -85,6 +85,11 @@ func GetGenesis(info GenesisInfo) *Genesis {
 	}
 }
 
+// GetShardNumber get shard number of genesis
+func (genesis *Genesis) GetShardNumber() uint {
+	return genesis.info.ShardNumber
+}
+
 // InitializeAndValidate writes the genesis block in the blockchain store if unavailable.
 // Otherwise, check if the existing genesis block is valid in the blockchain store.
 func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, accountStateDB database.Database) error {
@@ -97,6 +102,20 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 	if err != nil {
 		return err
+	}
+
+	storedGenesis, err := bcStore.GetBlock(storedGenesisHash)
+	if err != nil {
+		return errors.New(fmt.Sprintf("get genesis block failed. %s", err))
+	}
+
+	data, err := getGenesisExtraData(storedGenesis)
+	if err != nil {
+		return errors.New(fmt.Sprintf("get genesis extra data failed. %s", err))
+	}
+
+	if data.ShardNumber != genesis.info.ShardNumber {
+		return errors.New("specific shard is not matched with shard number in genesis info")
 	}
 
 	headerHash := genesis.header.Hash()
