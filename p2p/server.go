@@ -224,6 +224,9 @@ func (srv *Server) addPeer(p *Peer) {
 
 	srv.shardPeerMap[p.getShardNumber()][p.Node.ID] = p
 	srv.peerMap[p.Node.ID] = p
+
+	metricsAddPeerMeter.Mark(1)
+	metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
 }
 
 func (srv *Server) deletePeer(p *Peer) {
@@ -232,6 +235,8 @@ func (srv *Server) deletePeer(p *Peer) {
 		delete(srv.peerMap, p.Node.ID)
 		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
 		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
+		metricsDeletePeerMeter.Mark(1)
+		metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
 	} else {
 		srv.log.Info("server.run delPeerChan recved. peer not match")
 	}
