@@ -52,9 +52,6 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 	if metrics.UseNilMetrics {
 		return
 	}
-	db.quitLock.Lock()
-	db.quitChan = make(chan struct{})
-	db.quitLock.Unlock()
 
 	// Create the counters to store current and previous compaction values
 	compactions := make([][]float64, 2)
@@ -164,8 +161,4 @@ MetricsLoop:
 		case <-time.After(time.Second * 3): // wait 3 seconds
 		}
 	}
-
-	db.quitLock.Lock()
-	db.quitChan = nil
-	db.quitLock.Unlock()
 }
