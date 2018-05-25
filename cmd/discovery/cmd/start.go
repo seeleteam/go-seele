@@ -40,7 +40,6 @@ var startCmd = &cobra.Command{
 				fmt.Println(err.Error())
 				return
 			}
-
 			bootstrap = append(bootstrap, n)
 		}
 
