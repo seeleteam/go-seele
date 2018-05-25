@@ -358,6 +358,11 @@ handler:
 			p.log.Debug("got tx request %s", txHash.ToHex())
 
 			tx := p.txPool.GetTransaction(txHash)
+			if tx == nil {
+			    p.log.Warn("requested transaction not found")
+				continue
+			}
+			
 			err = peer.sendTransaction(tx)
 			if err != nil {
 				p.log.Warn("send transaction msg failed %s", err.Error())
