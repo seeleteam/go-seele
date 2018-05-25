@@ -40,6 +40,9 @@ type Config struct {
 
 	// metrics config info
 	MetricsConfig metrics.Config `json:"metrics"`
+
+	// genesis config info
+	GenesisConfig core.GenesisInfo `json:"genesis"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file
@@ -55,7 +58,7 @@ func GetConfigFromFile(filepath string) (*Config, error) {
 }
 
 // LoadConfigFromFile gets node config from the given file
-func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Config, error) {
+func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	cmdConfig, err := GetConfigFromFile(configFile)
 	if err != nil {
 		return nil, err
@@ -68,16 +71,9 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 		return config, err
 	}
 
-	if genesisConfigFile != "" {
-		info, err := GetGenesisInfoFromFile(genesisConfigFile)
-		if err != nil {
-			return nil, err
-		}
-		config.SeeleConfig.GenesisConfig = info
-	}
-
 	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
 	config.SeeleConfig.TxConf = *core.DefaultTxPoolConfig()
+	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	common.LogConfig.PrintLog = config.LogConfig.PrintLog
 	common.LogConfig.IsDebug = config.LogConfig.IsDebug
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
@@ -121,16 +117,4 @@ func GetP2pConfigPrivateKey(cmdConfig *Config) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 	return key, err
-}
-
-// GetGenesisInfoFromFile get genesis info from a specific file
-func GetGenesisInfoFromFile(filepath string) (core.GenesisInfo, error) {
-	var info core.GenesisInfo
-	buff, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return info, err
-	}
-
-	err = json.Unmarshal(buff, &info)
-	return info, err
 }

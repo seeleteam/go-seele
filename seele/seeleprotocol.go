@@ -252,7 +252,6 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
-
 	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
 		p2pPeer.Disconnect(DiscHandShakeErr)
 		p.log.Info("handleAddPeer called, but peer of this public-key has already existed, so need quit!")

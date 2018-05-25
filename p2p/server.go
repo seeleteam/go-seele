@@ -105,7 +105,7 @@ type Server struct {
 	SelfNode *discovery.Node
 }
 
-func NewServer(config Config) *Server {
+func NewServer(config Config, protocols []Protocol) *Server {
 	peers := make(map[uint]map[common.Address]*Peer)
 	for i := 1; i < common.ShardNumber+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
@@ -122,6 +122,7 @@ func NewServer(config Config) *Server {
 		delPeerChan:     make(chan *Peer),
 		shardPeerMap:    peers,
 		MaxPendingPeers: 0,
+		Protocols:       protocols,
 	}
 }
 
@@ -135,7 +136,7 @@ func (srv *Server) PeerCount() int {
 }
 
 // Start starts running the server.
-func (srv *Server) Start() (err error) {
+func (srv *Server) Start(shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -147,16 +148,15 @@ func (srv *Server) Start() (err error) {
 	// self node
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
-	addr, err := net.ResolveUDPAddr("udp", srv.Config.ListenAddr)
-	//TODO define shard number
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
+	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, shard)
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
 	// bootstrap []*Node
-	srv.kadDB = discovery.StartService(address, addr, srv.Config.StaticNodes, 0)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
+	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
