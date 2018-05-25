@@ -132,10 +132,6 @@ func (node *Node) UnmarshalText(json []byte) error {
 	if err != nil {
 		return err
 	}
-	node.ID = n.ID
-	node.IP = n.IP
-	node.UDPPort = n.UDPPort
-	node.Shard = n.Shard
-	node.sha = n.sha
+	*node = *n
 	return nil
 }
