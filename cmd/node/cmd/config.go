@@ -6,7 +6,6 @@
 package cmd
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
@@ -97,24 +96,11 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 // GetP2pConfig get P2PConfig from the given config
 func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
 	if cmdConfig.P2PConfig.PrivateKey == nil {
-		if privateKey, err := GetP2pConfigPrivateKey(cmdConfig); err == nil {
-			cmdConfig.P2PConfig.PrivateKey = privateKey
-		} else {
+		key, err := crypto.LoadECDSAFromString(cmdConfig.P2PConfig.SubPrivateKey) // GetP2pConfigPrivateKey get privateKey from the given config
+		if err != nil {
 			return cmdConfig.P2PConfig, err
 		}
+		cmdConfig.P2PConfig.PrivateKey = key
 	}
 	return cmdConfig.P2PConfig, nil
-}
-
-// GetP2pConfigPrivateKey get privateKey from the given config
-func GetP2pConfigPrivateKey(cmdConfig *Config) (*ecdsa.PrivateKey, error) {
-	if cmdConfig.P2PConfig.PrivateKey != nil {
-		return cmdConfig.P2PConfig.PrivateKey, nil
-	}
-
-	key, err := crypto.LoadECDSAFromString(cmdConfig.P2PConfig.SubPrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	return key, err
 }
