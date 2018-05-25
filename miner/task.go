@@ -37,6 +37,9 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
+	
+	// add the receipt of the reward tx
+	task.receipts = append(task.receipts, &types.Receipt{TxHash: reward.Hash,})
 
 	task.chooseTransactions(seele, statedb, txs, log)
 

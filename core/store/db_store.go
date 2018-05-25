@@ -298,21 +298,17 @@ func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.
 	if err != nil {
 		return nil, err
 	}
- 
-    if txIndex.Index == 0 {
-	    return nil, fmt.Errorf("reward tx has no receipt")
-	}
 	
 	receipts, err := store.GetReceiptsByBlockHash(txIndex.BlockHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if uint(len(receipts)) < txIndex.Index {
+	if uint(len(receipts)) <= txIndex.Index {
 		return nil, fmt.Errorf("invalid tx index, txIndex = %v, receiptsLen = %v", *txIndex, len(receipts))
 	}
 
-	return receipts[txIndex.Index-1], nil
+	return receipts[txIndex.Index], nil
 }
 
 // getTxIndex retrieves the tx index for the specified tx hash.

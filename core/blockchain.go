@@ -380,7 +380,11 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
-	receipts := make([]*types.Receipt, len(txs))
+	receipts := make([]*types.Receipt, len(txs)+1)
+	
+	// add the receipt of the reward tx
+	receipts[0] = &types.Receipt{TxHash: minerRewardTx.Hash,}
+	
 	// process other txs
 	for i, tx := range txs {
 		if err := tx.Validate(statedb); err != nil {
@@ -392,7 +396,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 			return nil, err
 		}
 
-		receipts[i] = receipt
+		receipts[i+1] = receipt
 	}
 
 	return receipts, nil
