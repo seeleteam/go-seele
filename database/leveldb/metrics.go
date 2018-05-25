@@ -32,7 +32,7 @@ type DBMetrics struct {
 }
 
 // Metrics create metrics and run a goroutine to collect
-func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
+func StartMetrics(db database.Database, dbname string, log *log.SeeleLog) {
 	m := DBMetrics{
 		metricsCompTimeMeter:    metrics.GetOrRegisterMeter(dbname+".compact.time", nil),
 		metricsCompReadMeter:    metrics.GetOrRegisterMeter(dbname+".compact.input", nil),
@@ -42,13 +42,13 @@ func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
 	}
 
 	if lvdb, ok := db.(*LevelDB); ok {
-		go startMetrics(lvdb, &m, log)
+		go collectDBMetrics(lvdb, &m, log)
 	} else {
 		log.Error(dbname, ": Error db type ! Expect type 'LevelDB'")
 	}
 }
 
-func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
+func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 	if metrics.UseNilMetrics {
 		return
 	}
