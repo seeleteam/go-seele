@@ -8,6 +8,7 @@ package node
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	netrpc "net/rpc"
@@ -91,15 +92,18 @@ func (n *Node) Start() error {
 	//check config
 	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
 	if specificShard == 0 {
-		return errors.New("auto shard is not supported yet")
+		// select a shard randomly
+		specificShard = uint(rand.Intn(common.ShardNumber) + 1)
 	}
 
 	common.LocalShardNumber = specificShard
 
-	coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
-	if specificShard != 0 && coinbaseShard != specificShard {
-		return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
-			"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
+	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
+		coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
+		if specificShard != 0 && coinbaseShard != specificShard {
+			return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
+				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
+		}
 	}
 
 	protocols := make([]p2p.Protocol, 0)
