@@ -31,7 +31,8 @@ func NewLevelDB(path string) (database.Database, error) {
 	}
 
 	result := &LevelDB{
-		db: db,
+		db:       db,
+		quitChan: make(chan struct{}),
 	}
 
 	return result, nil
@@ -39,7 +40,6 @@ func NewLevelDB(path string) (database.Database, error) {
 
 // Close is used to close the db when not used
 func (db *LevelDB) Close() {
-	db.quitChan = make(chan struct{})
 	db.quitChan <- struct{}{}
 	db.db.Close()
 	close(db.quitChan)
