@@ -6,6 +6,8 @@
 package leveldb
 
 import (
+	"sync"
+
 	"github.com/seeleteam/go-seele/database"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -15,7 +17,8 @@ import (
 // LevelDB wraps the leveldb
 type LevelDB struct {
 	db       *leveldb.DB
-	quitChan chan struct{}
+	quitChan chan struct{} // used by metrics
+	quitLock sync.Mutex
 }
 
 // NewLevelDB constructs and returns a LevelDB instance
@@ -31,8 +34,7 @@ func NewLevelDB(path string) (database.Database, error) {
 	}
 
 	result := &LevelDB{
-		db:       db,
-		quitChan: make(chan struct{}),
+		db: db,
 	}
 
 	return result, nil
@@ -40,9 +42,13 @@ func NewLevelDB(path string) (database.Database, error) {
 
 // Close is used to close the db when not used
 func (db *LevelDB) Close() {
-	db.quitChan <- struct{}{}
+	db.quitLock.Lock()
+	defer db.quitLock.Unlock()
+
+	if db.quitChan != nil {
+		db.quitChan <- struct{}{}
+	}
 	db.db.Close()
-	close(db.quitChan)
 }
 
 // GetString gets the value for the given key

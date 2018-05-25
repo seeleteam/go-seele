@@ -24,7 +24,7 @@ type Config struct {
 	Duration time.Duration `json:"Duration"`
 }
 
-// StartMetricsWithConfig start recording metrics with configeration
+// StartMetricsWithConfig start recording metrics with configure
 func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
 	StartMetrics(
 		time.Second*conf.Duration,

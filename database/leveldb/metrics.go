@@ -31,7 +31,7 @@ type DBMetrics struct {
 	metricsWriteDelayMeter  metrics.Meter // Meter for measuring the write delay duration due to database compaction
 }
 
-// Metrics create metrics and run a goroutine to collect
+// StartMetrics create metrics and run a goroutine to collect
 func StartMetrics(db database.Database, dbname string, log *log.SeeleLog) {
 	m := DBMetrics{
 		metricsCompTimeMeter:    metrics.GetOrRegisterMeter(dbname+".compact.time", nil),
@@ -52,6 +52,9 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 	if metrics.UseNilMetrics {
 		return
 	}
+	db.quitLock.Lock()
+	db.quitChan = make(chan struct{})
+	db.quitLock.Unlock()
 
 	// Create the counters to store current and previous compaction values
 	compactions := make([][]float64, 2)
@@ -67,12 +70,13 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 	)
 
 	// Iterate ad infinitum and collect the stats
+MetricsLoop:
 	for i := 1; ; i++ {
 		// Retrieve the database stats
 		stats, err := db.db.GetProperty("leveldb.stats")
 		if err != nil {
 			log.Error("Failed to read database stats", "err", err)
-			return
+			break MetricsLoop
 		}
 		// Find the compaction table, skip the header
 		lines := strings.Split(stats, "\n")
@@ -81,7 +85,7 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 		}
 		if len(lines) <= 3 {
 			log.Error("Compaction table not found")
-			return
+			break MetricsLoop
 		}
 		lines = lines[3:]
 
@@ -98,7 +102,7 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 				value, err := strconv.ParseFloat(strings.TrimSpace(counter), 64)
 				if err != nil {
 					log.Error("Compaction entry parsing failed", "err", err)
-					return
+					break MetricsLoop
 				}
 				compactions[i%2][idx] += value
 			}
@@ -112,7 +116,7 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 		writedelay, err := db.db.GetProperty("leveldb.writedelay")
 		if err != nil {
 			log.Error("Failed to read database write delay statistic", "err", err)
-			return
+			break MetricsLoop
 		}
 		var (
 			delayN        int64
@@ -121,12 +125,12 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 		)
 		if n, err := fmt.Sscanf(writedelay, "DelayN:%d Delay:%s", &delayN, &delayDuration); n != 2 || err != nil {
 			log.Error("Write delay statistic not found")
-			return
+			break MetricsLoop
 		}
 		duration, err = time.ParseDuration(delayDuration)
 		if err != nil {
 			log.Error("Failed to parse delay duration", "err", err)
-			return
+			break MetricsLoop
 		}
 
 		m.metricsWriteDelayNMeter.Mark(delayN - delaystats[0])
@@ -160,4 +164,8 @@ func collectDBMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 		case <-time.After(time.Second * 3): // wait 3 seconds
 		}
 	}
+
+	db.quitLock.Lock()
+	db.quitChan = nil
+	db.quitLock.Unlock()
 }
