@@ -8,13 +8,12 @@ package node
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	netrpc "net/rpc"
 	"reflect"
 	"sync"
-
-	"github.com/seeleteam/go-seele/p2p/discovery"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
@@ -46,9 +45,7 @@ func (se *StopError) Error() string {
 type Node struct {
 	config *Config
 
-	serverConfig p2p.Config
-	server       *p2p.Server
-
+	server   *p2p.Server
 	services []Service
 
 	rpcAPIs []rpc.API
@@ -92,31 +89,42 @@ func (n *Node) Start() error {
 		return ErrNodeRunning
 	}
 
-	// TODO try load shardid from config if it exists
-	// TODO try load blockchain from directory, it must match with config
-	// TODO try load coinbase, it must match with shardid.
-	// if shardid can not be determined, it should be set by discovery routine in p2p.server.
-	common.LocalShardNumber = discovery.UndefinedShardNumber
-
-	n.serverConfig = n.config.P2PConfig
-	running := p2p.NewServer(n.serverConfig)
-	for _, service := range n.services {
-		running.Protocols = append(running.Protocols, service.Protocols()...)
+	//check config
+	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
+	if specificShard == 0 {
+		// select a shard randomly
+		specificShard = uint(rand.Intn(common.ShardNumber) + 1)
 	}
 
-	if err := running.Start(); err != nil {
+	common.LocalShardNumber = specificShard
+
+	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
+		coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
+		if specificShard != 0 && coinbaseShard != specificShard {
+			return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
+				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
+		}
+	}
+
+	protocols := make([]p2p.Protocol, 0)
+	for _, service := range n.services {
+		protocols = append(protocols, service.Protocols()...)
+	}
+
+	p2pSever := p2p.NewServer(n.config.P2PConfig, protocols)
+	if err := p2pSever.Start(n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
 		return ErrServiceStartFailed
 	}
 
 	// Start services
 	for i, service := range n.services {
-		if err := service.Start(running); err != nil {
+		if err := service.Start(p2pSever); err != nil {
 			for j := 0; j < i; j++ {
 				n.services[j].Stop()
 			}
 
 			// stop the p2p server
-			running.Stop()
+			p2pSever.Stop()
 
 			return err
 		}
@@ -129,12 +137,12 @@ func (n *Node) Start() error {
 		}
 
 		// stop the p2p server
-		running.Stop()
+		p2pSever.Stop()
 
 		return err
 	}
 
-	n.server = running
+	n.server = p2pSever
 
 	return nil
 }

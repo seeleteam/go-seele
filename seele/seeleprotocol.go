@@ -77,6 +77,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 
 	s.Protocol.AddPeer = s.handleAddPeer
 	s.Protocol.DeletePeer = s.handleDelPeer
+	s.Protocol.GetPeer = s.handleGetPeer
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
@@ -253,7 +254,6 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
-
 	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
 		p2pPeer.Disconnect(DiscHandShakeErr)
 		p.log.Info("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
@@ -285,6 +285,13 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
+}
+
+func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
+	if p := s.peerSet.peerMap[address]; p != nil {
+		return p.Info()
+	}
+	return nil
 }
 
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {

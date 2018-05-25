@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
@@ -62,7 +63,7 @@ type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string
 
-	// network id, not used now. @TODO maybe be removed or just use Version
+	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64
 }
 
@@ -71,7 +72,7 @@ type P2PConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
-	// network id, not used now. @TODO maybe be removed or just use Version
+	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts
@@ -116,7 +117,7 @@ type Server struct {
 	SelfNode *discovery.Node
 }
 
-func NewServer(config Config) *Server {
+func NewServer(config Config, protocols []Protocol) *Server {
 	peers := make(map[uint]map[common.Address]*Peer)
 	for i := 1; i < common.ShardNumber+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
@@ -133,6 +134,7 @@ func NewServer(config Config) *Server {
 		delPeerChan:     make(chan *Peer),
 		shardPeerMap:    peers,
 		MaxPendingPeers: 0,
+		Protocols:       protocols,
 	}
 }
 
@@ -146,7 +148,7 @@ func (srv *Server) PeerCount() int {
 }
 
 // Start starts running the server.
-func (srv *Server) Start() (err error) {
+func (srv *Server) Start(shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -160,21 +162,13 @@ func (srv *Server) Start() (err error) {
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-
-	if common.LocalShardNumber == discovery.UndefinedShardNumber {
-		if err = srv.judgeShard(); err != nil {
-			srv.log.Error("p2p.server judgeShard err. %s", err)
-			return err
-		}
-	}
-
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, common.LocalShardNumber)
+	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, shard)
 	if err != nil {
 		return err
 	}
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, common.LocalShardNumber)
+	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
+	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -184,15 +178,6 @@ func (srv *Server) Start() (err error) {
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
-	return nil
-}
-
-// judgeShard determines local shardid.
-func (srv *Server) judgeShard() error {
-	// TODO wait discovery to determine local shardid
-	// should quit if srv.quit is closed.
-	common.LocalShardNumber = 1
-	srv.log.Info("p2p.server.judgeShard. LocalShardNumber=%d", common.LocalShardNumber)
 	return nil
 }
 
@@ -557,4 +542,24 @@ func (srv *Server) Stop() {
 
 	close(srv.quit)
 	srv.Wait()
+}
+
+// PeerInfos array of PeerInfo for sort alphabetically by node identifier
+type PeerInfos []PeerInfo
+
+func (p PeerInfos) Len() int           { return len(p) }
+func (p PeerInfos) Less(i, j int) bool { return p[i].ID < p[j].ID }
+func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// PeersInfo returns an array of metadata objects describing connected peers.
+func (srv *Server) PeersInfo() *[]PeerInfo {
+	infos := make([]PeerInfo, 0, srv.PeerCount())
+	for _, peer := range srv.peerMap {
+		if peer != nil {
+			peerInfo := peer.Info()
+			infos = append(infos, *peerInfo)
+		}
+	}
+	sort.Sort(PeerInfos(infos))
+	return &infos
 }
