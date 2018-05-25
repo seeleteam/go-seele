@@ -52,9 +52,9 @@ var getbalanceCmd = &cobra.Command{
 		}
 
 		if address == nil {
-			fmt.Printf("no account is provided. the coinbase balance: %s\n", BigToDecimal(amount))
+			fmt.Printf("no account is provided. the coinbase balance: %s\n", common.BigToDecimal(amount))
 		} else {
-			fmt.Printf("Account: %s\nBalance: %s\n", address.ToHex(), BigToDecimal(amount))
+			fmt.Printf("Account: %s\nBalance: %s\n", address.ToHex(), common.BigToDecimal(amount))
 		}
 	},
 }
