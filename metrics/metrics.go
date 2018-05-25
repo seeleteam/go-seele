@@ -69,4 +69,6 @@ func StartMetrics(
 		},
 		log,
 	)
+
+	go collectRuntimeMetrics()
 }

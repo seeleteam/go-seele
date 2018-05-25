@@ -13,7 +13,7 @@ import (
 )
 
 // CollectRuntimeMetrics collected runtime datas
-func CollectRuntimeMetrics() {
+func collectRuntimeMetrics() {
 	if metrics.UseNilMetrics {
 		return
 	}

@@ -31,7 +31,7 @@ type DBMetrics struct {
 	metricsWriteDelayMeter  metrics.Meter // Meter for measuring the write delay duration due to database compaction
 }
 
-// Metrics create metrics and create a goroutine to collect
+// Metrics create metrics and run a goroutine to collect
 func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
 	m := DBMetrics{
 		metricsCompTimeMeter:    metrics.GetOrRegisterMeter(dbname+".compact.time", nil),
@@ -49,6 +49,10 @@ func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
 }
 
 func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
+	if metrics.UseNilMetrics {
+		return
+	}
+
 	// Create the counters to store current and previous compaction values
 	compactions := make([][]float64, 2)
 	for i := 0; i < 2; i++ {
@@ -124,37 +128,36 @@ func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 			log.Error("Failed to parse delay duration", "err", err)
 			return
 		}
-		if m.metricsWriteDelayNMeter != nil {
-			m.metricsWriteDelayNMeter.Mark(delayN - delaystats[0])
-			// If the write delay number been collected in the last minute exceeds the predefined threshold,
-			// print a warning log here.
-			// If a warning that db performance is laggy has been displayed,
-			// any subsequent warnings will be withhold for 1 minute to don't overwhelm the user.
-			if int(m.metricsWriteDelayNMeter.Rate1()) > writeDelayNThreshold &&
-				time.Now().After(lastWriteDelayN.Add(writeDelayWarningThrottler)) {
-				log.Warn("Write delay number exceeds the threshold (200 per second) in the last minute")
-				lastWriteDelayN = time.Now()
-			}
+
+		m.metricsWriteDelayNMeter.Mark(delayN - delaystats[0])
+		// If the write delay number been collected in the last minute exceeds the predefined threshold,
+		// print a warning log here.
+		// If a warning that db performance is laggy has been displayed,
+		// any subsequent warnings will be withhold for 1 minute to don't overwhelm the user.
+		if int(m.metricsWriteDelayNMeter.Rate1()) > writeDelayNThreshold &&
+			time.Now().After(lastWriteDelayN.Add(writeDelayWarningThrottler)) {
+			log.Warn("Write delay number exceeds the threshold (200 per second) in the last minute")
+			lastWriteDelayN = time.Now()
 		}
-		if m.metricsWriteDelayMeter != nil {
-			m.metricsWriteDelayMeter.Mark(duration.Nanoseconds() - delaystats[1])
-			// If the write delay duration been collected in the last minute exceeds the predefined threshold,
-			// print a warning log here.
-			// If a warning that db performance is laggy has been displayed,
-			// any subsequent warnings will be withhold for 1 minute to don't overwhelm the user.
-			if int64(m.metricsWriteDelayMeter.Rate1()) > writeDelayThreshold.Nanoseconds() &&
-				time.Now().After(lastWriteDelay.Add(writeDelayWarningThrottler)) {
-				log.Warn("Write delay duration exceeds the threshold (35% of the time) in the last minute")
-				lastWriteDelay = time.Now()
-			}
+
+		m.metricsWriteDelayMeter.Mark(duration.Nanoseconds() - delaystats[1])
+		// If the write delay duration been collected in the last minute exceeds the predefined threshold,
+		// print a warning log here.
+		// If a warning that db performance is laggy has been displayed,
+		// any subsequent warnings will be withhold for 1 minute to don't overwhelm the user.
+		if int64(m.metricsWriteDelayMeter.Rate1()) > writeDelayThreshold.Nanoseconds() &&
+			time.Now().After(lastWriteDelay.Add(writeDelayWarningThrottler)) {
+			log.Warn("Write delay duration exceeds the threshold (35% of the time) in the last minute")
+			lastWriteDelay = time.Now()
 		}
+
 		delaystats[0], delaystats[1] = delayN, duration.Nanoseconds()
 
 		// Sleep a bit, then repeat the stats collection
 		select {
 		case <-db.quitChan:
 			return
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * 3): // wait 3 seconds
 		}
 	}
 }
