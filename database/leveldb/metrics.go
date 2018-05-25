@@ -41,8 +41,7 @@ func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
 		metricsWriteDelayNMeter: metrics.GetOrRegisterMeter(dbname+".writedelay.counter", nil),
 	}
 
-	lvdb, ok := db.(*LevelDB)
-	if ok {
+	if lvdb, ok := db.(*LevelDB); ok {
 		go startMetrics(lvdb, &m, log)
 	} else {
 		log.Error(dbname, ": Error db type ! Expect type 'LevelDB'")
