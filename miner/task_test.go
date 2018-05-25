@@ -20,13 +20,13 @@ func Test_PopBestTx(t *testing.T) {
 	txs := make(map[common.Address][]*types.Transaction)
 
 	addr1 := *crypto.MustGenerateRandomAddress()
-	t1 := types.NewTransaction(addr1, addr1, big.NewInt(0), big.NewInt(11), 10)
-	t2 := types.NewTransaction(addr1, addr1, big.NewInt(0), big.NewInt(5), 11)
+	t1, _ := types.NewTransaction(addr1, addr1, big.NewInt(0), big.NewInt(11), 10)
+	t2, _ := types.NewTransaction(addr1, addr1, big.NewInt(0), big.NewInt(5), 11)
 	txs[addr1] = []*types.Transaction{t1, t2}
 
 	addr2 := *crypto.MustGenerateRandomAddress()
-	t3 := types.NewTransaction(addr2, addr2, big.NewInt(0), big.NewInt(10), 10)
-	t4 := types.NewTransaction(addr2, addr2, big.NewInt(0), big.NewInt(12), 11)
+	t3, _ := types.NewTransaction(addr2, addr2, big.NewInt(0), big.NewInt(10), 10)
+	t4, _ := types.NewTransaction(addr2, addr2, big.NewInt(0), big.NewInt(12), 11)
 	txs[addr2] = []*types.Transaction{t3, t4}
 
 	tt1 := popBestFeeTx(txs)

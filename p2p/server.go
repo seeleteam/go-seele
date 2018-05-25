@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
@@ -56,7 +57,7 @@ type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
-	// network id, not used now. @TODO maybe be removed or just use Version
+	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts
@@ -532,4 +533,24 @@ func (srv *Server) Stop() {
 
 	close(srv.quit)
 	srv.Wait()
+}
+
+// PeerInfos array of PeerInfo for sort alphabetically by node identifier
+type PeerInfos []PeerInfo
+
+func (p PeerInfos) Len() int           { return len(p) }
+func (p PeerInfos) Less(i, j int) bool { return p[i].ID < p[j].ID }
+func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// PeersInfo returns an array of metadata objects describing connected peers.
+func (srv *Server) PeersInfo() *[]PeerInfo {
+	infos := make([]PeerInfo, 0, srv.PeerCount())
+	for _, peer := range srv.peerMap {
+		if peer != nil {
+			peerInfo := peer.Info()
+			infos = append(infos, *peerInfo)
+		}
+	}
+	sort.Sort(PeerInfos(infos))
+	return &infos
 }

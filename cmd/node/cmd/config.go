@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log/comm"
+	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
@@ -37,6 +38,9 @@ type Config struct {
 
 	// The configuration of websocket rpc service
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
+
+	// metrics config info
+	MetricsConfig metrics.Config `json:"metrics"`
 }
 
 // GetConfigFromFile unmarshals the config from the given file
@@ -90,6 +94,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 		WSServerConfig: cmdConfig.WSServerConfig,
 		P2PConfig:      cmdConfig.P2PConfig,
 		SeeleConfig:    node.SeeleConfig{},
+		MetricsConfig:  cmdConfig.MetricsConfig,
 	}
 	return config
 }

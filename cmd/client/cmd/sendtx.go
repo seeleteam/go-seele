@@ -87,7 +87,11 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		tx := types.NewTransaction(*from, toAddr, amount, fee, nonce)
+		tx, err := types.NewTransaction(*from, toAddr, amount, fee, nonce)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 		tx.Sign(key.PrivateKey)
 
 		var result bool
@@ -97,6 +101,7 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
+		fmt.Println("txhash:", tx.Hash.ToHex())
 		fmt.Println("adding the tx succeeded.")
 	},
 }
