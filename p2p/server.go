@@ -68,9 +68,6 @@ type Config struct {
 
 	// PrivateKey private key for p2p module, do not use it as any accounts
 	PrivateKey *ecdsa.PrivateKey
-
-	// Protocols should contain the protocols supported by the server.
-	Protocols []Protocol
 }
 
 // Server manages all p2p peer connections.
@@ -147,6 +144,7 @@ func (srv *Server) Start() (err error) {
 
 	srv.running = true
 	srv.log.Info("Starting P2P networking...")
+	// self node
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.Config.ListenAddr)

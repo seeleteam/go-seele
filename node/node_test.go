@@ -6,7 +6,6 @@
 package node
 
 import (
-	"crypto/ecdsa"
 	"testing"
 
 	"github.com/seeleteam/go-seele/crypto"
@@ -20,13 +19,12 @@ var (
 )
 
 func testNodeConfig() *Config {
-	privateKey := &ecdsa.PrivateKey{PublicKey: testNodeKey.PublicKey, D: testNodeKey.D}
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",
 			Version: "test version",
 		},
-		P2PConfig: p2p.Config{PrivateKey: privateKey},
+		P2PConfig: p2p.Config{PrivateKey: testNodeKey},
 		WSServerConfig: rpc.WSServerConfig{
 			WSAddr:    "127.0.0.1:8080",
 			WSPattern: "/ws",
