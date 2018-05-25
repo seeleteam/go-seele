@@ -7,6 +7,7 @@ package monitor
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"testing"
@@ -43,7 +44,7 @@ func createTestAPI() *PublicMonitorAPI {
 			RPCAddr: "127.0.0.1:55027",
 		},
 		P2PConfig: p2p.Config{
-			PrivateKey: key,
+			PrivateKey: &ecdsa.PrivateKey{PublicKey: key.PublicKey, D: key.D},
 			ListenAddr: "0.0.0.0:39007",
 		},
 		WSServerConfig: rpc.WSServerConfig{
@@ -106,7 +107,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				RPCAddr: "127.0.0.1:55028",
 			},
 			P2PConfig: p2p.Config{
-				PrivateKey: key,
+				PrivateKey: &ecdsa.PrivateKey{PublicKey: key.PublicKey, D: key.D},
 				ListenAddr: "0.0.0.0:39008",
 			},
 			SeeleConfig: conf.SeeleConfig,
@@ -121,7 +122,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 				RPCAddr: "127.0.0.1:55029",
 			},
 			P2PConfig: p2p.Config{
-				PrivateKey: key,
+				PrivateKey: &ecdsa.PrivateKey{PublicKey: key.PublicKey, D: key.D},
 				ListenAddr: "0.0.0.0:39009",
 			},
 			SeeleConfig: conf.SeeleConfig,

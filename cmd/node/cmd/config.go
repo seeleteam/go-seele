@@ -6,10 +6,11 @@
 package cmd
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+
+	"crypto/ecdsa"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -18,7 +19,6 @@ import (
 	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
@@ -31,7 +31,7 @@ type Config struct {
 	BasicConfig node.BasicConfig `json:"basic"`
 
 	// The configuration of p2p network
-	P2PConfig p2p.P2PConfig `json:"p2p"`
+	P2PConfig p2p.Config `json:"p2p"`
 
 	// HttpServer config for http server
 	HTTPServer node.HTTPServer `json:"httpServer"`
@@ -64,7 +64,7 @@ func LoadConfigFromFile(configFile string, genesisConfigFile string) (*node.Conf
 
 	config := CopyConfig(cmdConfig)
 
-	config.P2PConfig, err = GetP2pConfig(config, cmdConfig)
+	config.P2PConfig, err = GetP2pConfig(cmdConfig)
 	if err != nil {
 		return config, err
 	}
@@ -92,7 +92,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 		LogConfig:      cmdConfig.LogConfig,
 		HTTPServer:     cmdConfig.HTTPServer,
 		WSServerConfig: cmdConfig.WSServerConfig,
-		P2PConfig:      p2p.Config{ListenAddr: cmdConfig.P2PConfig.ListenAddr, NetworkID: cmdConfig.P2PConfig.NetworkID},
+		P2PConfig:      cmdConfig.P2PConfig,
 		SeeleConfig:    node.SeeleConfig{},
 		MetricsConfig:  cmdConfig.MetricsConfig,
 	}
@@ -100,56 +100,24 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 }
 
 // GetP2pConfig get P2PConfig from the given config
-func GetP2pConfig(config *node.Config, cmdConfig *Config) (p2p.Config, error) {
-	if config.P2PConfig.ResolveStaticNodes != nil && config.P2PConfig.PrivateKey != nil {
-		return config.P2PConfig, nil
-	}
-
-	if config.P2PConfig.ResolveStaticNodes == nil {
-		if resolveStaticNodes, err := GetP2pConfigResolveStaticNodes(config, cmdConfig); err == nil {
-			config.P2PConfig.ResolveStaticNodes = resolveStaticNodes
+func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
+	if cmdConfig.P2PConfig.PrivateKey == nil {
+		if privateKey, err := GetP2pConfigPrivateKey(cmdConfig); err == nil {
+			cmdConfig.P2PConfig.PrivateKey = privateKey
 		} else {
-			return config.P2PConfig, err
+			return cmdConfig.P2PConfig, err
 		}
 	}
-
-	if config.P2PConfig.PrivateKey == nil {
-		if privateKey, err := GetP2pConfigPrivateKey(config, cmdConfig); err == nil {
-			config.P2PConfig.PrivateKey = privateKey
-		} else {
-			return config.P2PConfig, err
-		}
-	}
-	return config.P2PConfig, nil
-}
-
-// GetP2pConfigResolveStaticNodes get ResolveStaticNodes from the given config
-func GetP2pConfigResolveStaticNodes(config *node.Config, cmdConfig *Config) ([]*discovery.Node, error) {
-	if config.P2PConfig.ResolveStaticNodes != nil {
-		return config.P2PConfig.ResolveStaticNodes, nil
-	}
-
-	if len(cmdConfig.P2PConfig.StaticNodes) != 0 && len(config.P2PConfig.ResolveStaticNodes) == 0 {
-		for _, id := range cmdConfig.P2PConfig.StaticNodes {
-			n, err := discovery.NewNodeFromString(id)
-			if err != nil {
-				return nil, err
-			}
-
-			config.P2PConfig.ResolveStaticNodes = append(config.P2PConfig.ResolveStaticNodes, n)
-		}
-	}
-
-	return config.P2PConfig.ResolveStaticNodes, nil
+	return cmdConfig.P2PConfig, nil
 }
 
 // GetP2pConfigPrivateKey get privateKey from the given config
-func GetP2pConfigPrivateKey(config *node.Config, cmdConfig *Config) (*ecdsa.PrivateKey, error) {
-	if config.P2PConfig.PrivateKey != nil {
-		return config.P2PConfig.PrivateKey, nil
+func GetP2pConfigPrivateKey(cmdConfig *Config) (*ecdsa.PrivateKey, error) {
+	if cmdConfig.P2PConfig.PrivateKey != nil {
+		return cmdConfig.P2PConfig.PrivateKey, nil
 	}
 
-	key, err := crypto.LoadECDSAFromString(cmdConfig.P2PConfig.ServerPrivateKey)
+	key, err := crypto.LoadECDSAFromString(cmdConfig.P2PConfig.SubPrivateKey)
 	if err != nil {
 		return nil, err
 	}

@@ -52,23 +52,8 @@ const (
 	hsExtraDataLen = 32
 )
 
-// Config holds Server options.
+//P2PConfig is the Configuration of p2p
 type Config struct {
-	// PrivateKey Node's ecdsa.PrivateKey, use in p2p module. Do not use it as account.
-	PrivateKey *ecdsa.PrivateKey
-
-	// pre-configured nodes.
-	ResolveStaticNodes []*discovery.Node
-
-	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string
-
-	// NetworkID used to define net type, for example main net and test net.
-	NetworkID uint64
-}
-
-// P2PConfig is the open Configuration of p2p
-type P2PConfig struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
 
@@ -76,10 +61,16 @@ type P2PConfig struct {
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes []string `json:"staticNodes"`
+	StaticNodes []*discovery.Node `json:"staticNodes"`
 
-	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	ServerPrivateKey string `json:"privateKey"`
+	// SubPrivateKey which will be make PrivateKey
+	SubPrivateKey string `json:"privateKey"`
+
+	// PrivateKey private key for p2p module, do not use it as any accounts
+	PrivateKey *ecdsa.PrivateKey
+
+	// Protocols should contain the protocols supported by the server.
+	Protocols []Protocol
 }
 
 // Server manages all p2p peer connections.
@@ -156,11 +147,9 @@ func (srv *Server) Start() (err error) {
 
 	srv.running = true
 	srv.log.Info("Starting P2P networking...")
-
-	// self node
 	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
-	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.Config.ListenAddr)
 	//TODO define shard number
 	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, 0)
 	if err != nil {
@@ -168,7 +157,8 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
-	srv.kadDB = discovery.StartService(address, addr, srv.ResolveStaticNodes, 0)
+	// bootstrap []*Node
+	srv.kadDB = discovery.StartService(address, addr, srv.Config.StaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {
@@ -268,13 +258,13 @@ running:
 
 func (srv *Server) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.ListenAddr)
+	listener, err := net.Listen("tcp", srv.Config.ListenAddr)
 	if err != nil {
 		return err
 	}
 
 	laddr := listener.Addr().(*net.TCPAddr)
-	srv.ListenAddr = laddr.String()
+	srv.Config.ListenAddr = laddr.String()
 	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()
@@ -495,7 +485,8 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	}
 
 	// Decrypt with local private key, make sure it is sended to local
-	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
+	privateKey := ecdsa.PrivateKey{PublicKey: srv.PrivateKey.PublicKey, D: srv.PrivateKey.D}
+	eciesPriKey := ecies.ImportECDSA(&privateKey)
 	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
 	if err != nil {
 		return
