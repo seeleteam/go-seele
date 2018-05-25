@@ -27,27 +27,26 @@ type DBMetrics struct {
 	metricsCompTimeMeter    metrics.Meter // Meter for measuring the total time spent in database compaction
 	metricsCompReadMeter    metrics.Meter // Meter for measuring the data read during compaction
 	metricsCompWriteMeter   metrics.Meter // Meter for measuring the data written during compaction
-	metricsDiskReadMeter    metrics.Meter // Meter for measuring the effective amount of data read
-	metricsDiskWriteMeter   metrics.Meter // Meter for measuring the effective amount of data written
 	metricsWriteDelayNMeter metrics.Meter // Meter for measuring the write delay number due to database compaction
 	metricsWriteDelayMeter  metrics.Meter // Meter for measuring the write delay duration due to database compaction
 }
 
 // Metrics create metrics and create a goroutine to collect
 func Metrics(db database.Database, dbname string, log *log.SeeleLog) {
-	// m := DBMetrics{
-	// 	metricsCompTimeMeter:    metrics.GetOrRegisterMeter(dbname+".compact.time", nil),
-	// 	metricsCompReadMeter:    metrics.GetOrRegisterMeter(dbname+".compact.input", nil),
-	// 	metricsCompWriteMeter:   metrics.GetOrRegisterMeter(dbname+".compact.output", nil),
-	// 	metricsDiskReadMeter:    metrics.GetOrRegisterMeter(dbname+".disk.input", nil),
-	// 	metricsDiskWriteMeter:   metrics.GetOrRegisterMeter(dbname+".disk.output", nil),
-	// 	metricsWriteDelayMeter:  metrics.GetOrRegisterMeter(dbname+".writedelay.duration", nil),
-	// 	metricsWriteDelayNMeter: metrics.GetOrRegisterMeter(dbname+".writedelay.counter", nil),
-	// }
+	m := DBMetrics{
+		metricsCompTimeMeter:    metrics.GetOrRegisterMeter(dbname+".compact.time", nil),
+		metricsCompReadMeter:    metrics.GetOrRegisterMeter(dbname+".compact.input", nil),
+		metricsCompWriteMeter:   metrics.GetOrRegisterMeter(dbname+".compact.output", nil),
+		metricsWriteDelayMeter:  metrics.GetOrRegisterMeter(dbname+".writedelay.duration", nil),
+		metricsWriteDelayNMeter: metrics.GetOrRegisterMeter(dbname+".writedelay.counter", nil),
+	}
 
-	// lvdb, _ := db.(*LevelDB)
-
-	//go startMetrics(lvdb, &m, log)
+	lvdb, ok := db.(*LevelDB)
+	if ok {
+		go startMetrics(lvdb, &m, log)
+	} else {
+		log.Error(dbname, ": Error db type ! Expect type 'LevelDB'")
+	}
 }
 
 func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
@@ -56,8 +55,6 @@ func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 	for i := 0; i < 2; i++ {
 		compactions[i] = make([]float64, 3)
 	}
-	// Create storage for iostats.
-	var iostats [2]float64
 
 	// Create storage and warning log tracer for write delay.
 	var (
@@ -153,46 +150,6 @@ func startMetrics(db *LevelDB, m *DBMetrics, log *log.SeeleLog) {
 			}
 		}
 		delaystats[0], delaystats[1] = delayN, duration.Nanoseconds()
-
-		// Retrieve the database iostats.
-		ioStats, err := db.db.GetProperty("leveldb.iostats")
-		if err != nil {
-			log.Error("Failed to read database iostats", "err", err)
-			return
-		}
-		parts := strings.Split(ioStats, " ")
-		if len(parts) < 2 {
-			log.Error("Bad syntax of ioStats", "ioStats", ioStats)
-			return
-		}
-		r := strings.Split(parts[0], ":")
-		if len(r) < 2 {
-			log.Error("Bad syntax of read entry", "entry", parts[0])
-			return
-		}
-		read, err := strconv.ParseFloat(r[1], 64)
-		if err != nil {
-			log.Error("Read entry parsing failed", "err", err)
-			return
-		}
-		w := strings.Split(parts[1], ":")
-		if len(w) < 2 {
-			log.Error("Bad syntax of write entry", "entry", parts[1])
-			return
-		}
-		write, err := strconv.ParseFloat(w[1], 64)
-		if err != nil {
-			log.Error("Write entry parsing failed", "err", err)
-			return
-		}
-		if m.metricsDiskReadMeter != nil {
-			m.metricsDiskReadMeter.Mark(int64((read - iostats[0]) * 1024 * 1024))
-		}
-		if m.metricsDiskWriteMeter != nil {
-			m.metricsDiskWriteMeter.Mark(int64((write - iostats[1]) * 1024 * 1024))
-		}
-		iostats[0] = read
-		iostats[1] = write
 
 		// Sleep a bit, then repeat the stats collection
 		select {
