@@ -56,7 +56,7 @@ func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
 	fromPrivKey, fromAddress := randomAccount(t)
 	_, toAddress := randomAccount(t)
 
-	tx := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 	tx.Sign(fromPrivKey)
 
 	return tx
@@ -111,7 +111,7 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 func newTestBlockchain(db database.Database) *core.Blockchain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := core.GetDefaultGenesis(nil)
+	genesis := core.GetGenesis(core.GenesisInfo{})
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}

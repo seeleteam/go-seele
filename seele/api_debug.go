@@ -11,18 +11,18 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
-// PublicDebugAPI provides an API to access full node-related information for debug.
-type PublicDebugAPI struct {
+// PrivateDebugAPI provides an API to access full node-related information for debug.
+type PrivateDebugAPI struct {
 	s *SeeleService
 }
 
-// NewPublicDebugAPI creates a new NewPublicDebugAPI object for rpc service.
-func NewPublicDebugAPI(s *SeeleService) *PublicDebugAPI {
-	return &PublicDebugAPI{s}
+// NewPrivateDebugAPI creates a new NewPrivateDebugAPI object for rpc service.
+func NewPrivateDebugAPI(s *SeeleService) *PrivateDebugAPI {
+	return &PrivateDebugAPI{s}
 }
 
 // GetBlockRlp retrieves the RLP encoded for of a single block, when height is -1 the chain head is returned
-func (api *PublicDebugAPI) GetBlockRlp(height *int64, result *string) error {
+func (api *PrivateDebugAPI) GetBlockRlp(height *int64, result *string) error {
 	block, err := getBlock(api.s.chain, *height)
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (api *PublicDebugAPI) GetBlockRlp(height *int64, result *string) error {
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form, when height is -1 the chain head is returned
-func (api *PublicDebugAPI) PrintBlock(height *int64, result *string) error {
+func (api *PrivateDebugAPI) PrintBlock(height *int64, result *string) error {
 	block, err := getBlock(api.s.chain, *height)
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func (api *PublicDebugAPI) PrintBlock(height *int64, result *string) error {
 }
 
 // GetTxPoolContent returns the transactions contained within the transaction pool
-func (api *PublicDebugAPI) GetTxPoolContent(input interface{}, result *map[string][]map[string]interface{}) error {
+func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[string][]map[string]interface{}) error {
 	txPool := api.s.TxPool()
 	data := txPool.GetProcessableTransactions()
 
@@ -67,7 +67,7 @@ func (api *PublicDebugAPI) GetTxPoolContent(input interface{}, result *map[strin
 }
 
 // GetTxPoolTxCount returns the number of transaction in the pool
-func (api *PublicDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
+func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
 	txPool := api.s.TxPool()
 	*result = uint64(txPool.GetProcessableTransactionsCount())
 	return nil

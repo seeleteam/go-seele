@@ -40,15 +40,15 @@ func newTestDatabase() (db database.Database, dispose func()) {
 }
 
 func Test_Genesis_GetGenesis(t *testing.T) {
-	genesis1 := GetDefaultGenesis(nil)
-	genesis2 := GetDefaultGenesis(nil)
+	genesis1 := GetGenesis(GenesisInfo{})
+	genesis2 := GetGenesis(GenesisInfo{})
 
 	assert.Equal(t, genesis1.header, genesis2.header)
 
 	addr := crypto.MustGenerateRandomAddress()
 	accounts := make(map[common.Address]*big.Int)
 	accounts[*addr] = big.NewInt(10)
-	genesis3 := GetDefaultGenesis(accounts)
+	genesis3 := GetGenesis(GenesisInfo{accounts, 1, 0})
 	if genesis3.header.StateHash == common.EmptyHash {
 		panic("genesis3 state hash should not equal to empty hash")
 	}
@@ -64,7 +64,7 @@ func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
 
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := GetDefaultGenesis(nil)
+	genesis := GetGenesis(GenesisInfo{})
 	genesisHash := genesis.header.Hash()
 
 	err := genesis.InitializeAndValidate(bcStore, db)
@@ -90,11 +90,11 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 
 	bcStore := store.NewBlockchainDatabase(db)
 
-	header := GetDefaultGenesis(nil).header.Clone()
+	header := GetGenesis(GenesisInfo{}).header.Clone()
 	header.Nonce = 38
 	bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
 
-	genesis := GetDefaultGenesis(nil)
+	genesis := GetGenesis(GenesisInfo{})
 	err := genesis.InitializeAndValidate(bcStore, db)
 	assert.Equal(t, err, ErrGenesisHashMismatch)
 }

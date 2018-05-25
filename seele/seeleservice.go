@@ -151,32 +151,32 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 		{
 			Namespace: "txpool",
 			Version:   "1.0",
-			Service:   NewPublicTransactionPoolAPI(s),
-			Public:    true,
+			Service:   NewPrivateTransactionPoolAPI(s),
+			Public:    false,
 		},
 		{
 			Namespace: "download",
 			Version:   "1.0",
-			Service:   downloader.NewPublicdownloaderAPI(s.seeleProtocol.downloader),
-			Public:    true,
+			Service:   downloader.NewPrivatedownloaderAPI(s.seeleProtocol.downloader),
+			Public:    false,
 		},
 		{
 			Namespace: "network",
 			Version:   "1.0",
-			Service:   NewPublicNetworkAPI(s.p2pServer, s.NetVersion()),
-			Public:    true,
+			Service:   NewPrivateNetworkAPI(s),
+			Public:    false,
 		},
 		{
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPublicDebugAPI(s),
-			Public:    true,
+			Service:   NewPrivateDebugAPI(s),
+			Public:    false,
 		},
 		{
 			Namespace: "miner",
 			Version:   "1.0",
-			Service:   NewPublicMinerAPI(s),
-			Public:    true,
+			Service:   NewPrivateMinerAPI(s),
+			Public:    false,
 		},
 	}...)
 }

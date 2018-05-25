@@ -6,6 +6,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -40,6 +41,14 @@ type GenesisInfo struct {
 
 	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is choose by total difficult
 	Difficult int64 `json:"difficult"`
+
+	// ShardNumber is the shard number of genesis block.
+	ShardNumber uint `json:"shard"`
+}
+
+// genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
+type genesisExtraData struct {
+	ShardNumber uint
 }
 
 // GetGenesis gets the genesis block according to accounts' balance
@@ -48,7 +57,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 		info.Difficult = 1
 	}
 
-	statedb, err := getStateDB(info.Accounts)
+	statedb, err := getStateDB(info)
 	if err != nil {
 		panic(err)
 	}
@@ -57,6 +66,8 @@ func GetGenesis(info GenesisInfo) *Genesis {
 	if err != nil {
 		panic(err)
 	}
+
+	extraData := genesisExtraData{info.ShardNumber}
 
 	return &Genesis{
 		header: &types.BlockHeader{
@@ -68,20 +79,10 @@ func GetGenesis(info GenesisInfo) *Genesis {
 			Height:            genesisBlockHeight,
 			CreateTimestamp:   big.NewInt(0),
 			Nonce:             1,
+			ExtraData:         common.SerializePanic(extraData),
 		},
 		info: info,
 	}
-}
-
-// GetDefaultGenesis get the default genesis block.
-// This is for test only.
-func GetDefaultGenesis(accounts map[common.Address]*big.Int) *Genesis {
-	info := GenesisInfo{
-		Accounts:  accounts,
-		Difficult: 1,
-	}
-
-	return GetGenesis(info)
 }
 
 // InitializeAndValidate writes the genesis block in the blockchain store if unavailable.
@@ -108,7 +109,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 // store atomically stores the genesis block in the blockchain store.
 func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB database.Database) error {
-	statedb, err := getStateDB(genesis.info.Accounts)
+	statedb, err := getStateDB(genesis.info)
 	if err != nil {
 		return err
 	}
@@ -122,17 +123,33 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
 }
 
-func getStateDB(accounts map[common.Address]*big.Int) (*state.Statedb, error) {
+func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 	statedb, err := state.NewStatedb(common.EmptyHash, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	for addr, amount := range accounts {
-		stateObj := statedb.GetOrNewStateObject(addr)
-		stateObj.SetNonce(0)
-		stateObj.SetAmount(amount)
+	for addr, amount := range info.Accounts {
+		if addrShardNum := common.GetShardNumber(addr); addrShardNum == info.ShardNumber {
+			stateObj := statedb.GetOrNewStateObject(addr)
+			stateObj.SetNonce(0)
+			stateObj.SetAmount(amount)
+		}
 	}
 
 	return statedb, nil
+}
+
+// getGenesisExtraData returns the extra data of specified genesis block.
+func getGenesisExtraData(genesisBlock *types.Block) (*genesisExtraData, error) {
+	if genesisBlock.Header.Height != genesisBlockHeight {
+		return nil, fmt.Errorf("invalid genesis block height %v", genesisBlock.Header.Height)
+	}
+
+	data := genesisExtraData{}
+	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }

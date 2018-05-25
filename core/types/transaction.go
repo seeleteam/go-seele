@@ -31,6 +31,9 @@ var (
 	// ErrBalanceNotEnough is returned when the account balance is not enough to transfer to another account.
 	ErrBalanceNotEnough = errors.New("balance not enough")
 
+	// ErrFeeNegative is returned when the transaction fee is negative.
+	ErrFeeNegative = errors.New("failed to create tx, fee is negative")
+
 	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
 
@@ -79,15 +82,17 @@ type TxIndex struct {
 type stateDB interface {
 	GetBalance(common.Address) *big.Int
 	GetNonce(common.Address) uint64
-	GetContractCreator(contractAddr common.Address) (common.Address, bool)
 }
 
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 // panic if the amount is nil or negative.
-func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) *Transaction {
-	tx, _ := newTx(from, &to, amount, fee, nonce, nil)
-	return tx
+func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
+	tx, err := newTx(from, &to, amount, fee, nonce, nil)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
@@ -97,6 +102,10 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 
 	if amount.Sign() < 0 {
 		panic("Failed to create tx, amount is negative.")
+	}
+
+	if fee.Sign() < 0 {
+		return nil, ErrFeeNegative
 	}
 
 	if len(payload) > MaxPayloadSize {
@@ -154,13 +163,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if tx.Data.To != nil {
-		toAddr := *tx.Data.To
-
-		if contractCreator, ok := statedb.GetContractCreator(*tx.Data.To); ok {
-			toAddr = contractCreator
-		}
-
-		if toShardNum := common.GetShardNumber(toAddr); toShardNum != common.LocalShardNumber {
+		if toShardNum := common.GetShardNumber(*tx.Data.To); toShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
 	}

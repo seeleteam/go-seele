@@ -82,10 +82,6 @@ func processContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 		return nil, err
 	}
 
-	if tx.Data.To == nil {
-		statedb.SetCodeCreator(tx.Data.From, receipt.ContractAddress)
-	}
-
 	if receipt.PostState, err = statedb.Commit(nil); err != nil {
 		return nil, err
 	}
