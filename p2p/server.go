@@ -60,10 +60,13 @@ type Config struct {
 	NetworkID uint64 `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes map[string]*discovery.Node `json:"staticNodes"`
+	StaticNodes []*discovery.Node `json:"staticNodes"`
 
-	// ServerPrivateKey private key for p2p module, do not use it as any accounts
-	PrivateKey map[string]*ecdsa.PrivateKey `json:"privateKey"`
+	// SubPrivateKey which will be make PrivateKey
+	SubPrivateKey string `json:"privateKey"`
+
+	// PrivateKey private key for p2p module, do not use it as any accounts
+	PrivateKey *ecdsa.PrivateKey
 
 	// Protocols should contain the protocols supported by the server.
 	Protocols []Protocol
@@ -143,8 +146,7 @@ func (srv *Server) Start() (err error) {
 
 	srv.running = true
 	srv.log.Info("Starting P2P networking...")
-	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
-	id := crypto.PubkeyToString(&privateKey.PublicKey)
+	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
 	address := common.HexMustToAddres(id)
 	addr, err := net.ResolveUDPAddr("udp", srv.Config.ListenAddr)
 	//TODO define shard number
@@ -154,6 +156,7 @@ func (srv *Server) Start() (err error) {
 	}
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 
+	// bootstrap []*Node
 	srv.kadDB = discovery.StartService(address, addr, srv.Config.StaticNodes, 0)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
@@ -435,9 +438,8 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	binary.BigEndian.PutUint64(extBuf[16:], nounceCnt)
 	binary.BigEndian.PutUint64(extBuf[24:], nounceSvr)
 
-	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
 	// 1. Sign with local privateKey first
-	priKeyLocal := math.PaddedBigBytes(privateKey.D, 32)
+	priKeyLocal := math.PaddedBigBytes(srv.PrivateKey.D, 32)
 	sig, err := secp256k1.Sign(extBuf, priKeyLocal)
 	if err != nil {
 		return Message{}, err
@@ -481,9 +483,9 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 		return
 	}
 
-	privateKey := common.GetMapOnlyValue(srv.PrivateKey)
 	// Decrypt with local private key, make sure it is sended to local
-	eciesPriKey := ecies.ImportECDSA(privateKey)
+	privateKey := ecdsa.PrivateKey{PublicKey: srv.PrivateKey.PublicKey, D: srv.PrivateKey.D}
+	eciesPriKey := ecies.ImportECDSA(&privateKey)
 	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
 	if err != nil {
 		return

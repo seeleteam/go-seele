@@ -10,8 +10,6 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"crypto/ecdsa"
-
 	"github.com/seeleteam/go-seele/log/comm"
 )
 
@@ -46,14 +44,4 @@ func GetTempFolder() string {
 // GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
-}
-
-// GetMapOnlyValue gets the map only value
-func GetMapOnlyValue(privateKey map[string]*ecdsa.PrivateKey) *ecdsa.PrivateKey {
-	if len(privateKey) == 1 {
-		for _, v := range privateKey {
-			return v
-		}
-	}
-	return nil
 }

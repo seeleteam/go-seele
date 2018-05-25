@@ -6,9 +6,8 @@
 package node
 
 import (
-	"testing"
-
 	"crypto/ecdsa"
+	"testing"
 
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log/comm"
@@ -21,7 +20,7 @@ var (
 )
 
 func testNodeConfig() *Config {
-	privateKey := map[string]*ecdsa.PrivateKey{string(testNodeKey.D.Bytes()): testNodeKey}
+	privateKey := &ecdsa.PrivateKey{PublicKey: testNodeKey.PublicKey, D: testNodeKey.D}
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",

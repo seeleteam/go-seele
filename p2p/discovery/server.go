@@ -11,7 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-func StartService(myId common.Address, myAddr *net.UDPAddr, bootstrap map[string]*Node, shard uint) *Database {
+func StartService(myId common.Address, myAddr *net.UDPAddr, bootstrap []*Node, shard uint) *Database {
 	udp := newUDP(myId, myAddr, shard)
 
 	if bootstrap != nil {

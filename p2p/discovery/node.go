@@ -126,3 +126,16 @@ func (n *Node) String() string {
 	hex := hex.EncodeToString(n.ID.Bytes())
 	return fmt.Sprintf(nodeHeader+"%s@%s[%d]", hex, addr, n.Shard)
 }
+
+func (node *Node) UnmarshalText(json []byte) error {
+	n, err := NewNodeFromString(string(json))
+	if err != nil {
+		return err
+	}
+	node.ID = n.ID
+	node.IP = n.IP
+	node.UDPPort = n.UDPPort
+	node.Shard = n.Shard
+	node.sha = n.sha
+	return nil
+}

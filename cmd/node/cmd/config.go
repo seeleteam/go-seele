@@ -6,10 +6,11 @@
 package cmd
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+
+	"crypto/ecdsa"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -17,7 +18,6 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
@@ -96,45 +96,27 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 
 // GetP2pConfig get P2PConfig from the given config
 func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
-	if cmdConfig.P2PConfig.StaticNodes != nil {
-		_, err := GetP2pConfigResolveStaticNodes(cmdConfig)
-		if err != nil {
-			return cmdConfig.P2PConfig, err
-		}
-	}
-
-	if cmdConfig.P2PConfig.PrivateKey != nil {
-		_, err := GetP2pConfigPrivateKey(cmdConfig)
-		if err != nil {
+	if cmdConfig.P2PConfig.PrivateKey == nil {
+		if privateKey, err := GetP2pConfigPrivateKey(cmdConfig); err == nil {
+			cmdConfig.P2PConfig.PrivateKey = privateKey
+		} else {
 			return cmdConfig.P2PConfig, err
 		}
 	}
 	return cmdConfig.P2PConfig, nil
 }
 
-// GetP2pConfigResolveStaticNodes get ResolveStaticNodes from the given config
-func GetP2pConfigResolveStaticNodes(cmdConfig *Config) (map[string]*discovery.Node, error) {
-	for id, _ := range cmdConfig.P2PConfig.StaticNodes {
-		n, err := discovery.NewNodeFromString(id)
-		if err != nil {
-			return nil, err
-		}
-		cmdConfig.P2PConfig.StaticNodes[id] = n
-	}
-	return cmdConfig.P2PConfig.StaticNodes, nil
-}
-
 // GetP2pConfigPrivateKey get privateKey from the given config
-func GetP2pConfigPrivateKey(cmdConfig *Config) (map[string]*ecdsa.PrivateKey, error) {
-	for k, _ := range cmdConfig.P2PConfig.PrivateKey {
-		key, err := crypto.LoadECDSAFromString(k)
-		if err != nil {
-			return nil, err
-		}
-		cmdConfig.P2PConfig.PrivateKey[k] = key
+func GetP2pConfigPrivateKey(cmdConfig *Config) (*ecdsa.PrivateKey, error) {
+	if cmdConfig.P2PConfig.PrivateKey != nil {
+		return cmdConfig.P2PConfig.PrivateKey, nil
 	}
 
-	return cmdConfig.P2PConfig.PrivateKey, nil
+	key, err := crypto.LoadECDSAFromString(cmdConfig.P2PConfig.SubPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	return key, err
 }
 
 // GetGenesisInfoFromFile get genesis info from a specific file
