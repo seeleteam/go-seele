@@ -483,8 +483,7 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	}
 
 	// Decrypt with local private key, make sure it is sended to local
-	privateKey := ecdsa.PrivateKey{PublicKey: srv.PrivateKey.PublicKey, D: srv.PrivateKey.D}
-	eciesPriKey := ecies.ImportECDSA(&privateKey)
+	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
 	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
 	if err != nil {
 		return

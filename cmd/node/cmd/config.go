@@ -6,11 +6,10 @@
 package cmd
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
-
-	"crypto/ecdsa"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
