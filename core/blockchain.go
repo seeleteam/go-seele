@@ -383,7 +383,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	receipts := make([]*types.Receipt, len(txs)+1)
 	
 	// add the receipt of the reward tx
-	receipts[0] = &types.Receipt{TxHash: minerRewardTx.Hash,}
+	receipts[0] = &types.Receipt{Result: []byte{0x01}, TxHash: minerRewardTx.Hash,}
 	
 	// process other txs
 	for i, tx := range txs {
