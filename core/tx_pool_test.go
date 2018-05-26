@@ -29,14 +29,14 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 	return privKey, common.HexMustToAddres(hexAddress)
 }
 
-func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *poolTransaction {
+func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
 	_, toAddress := randomAccount(t)
 
 	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 	tx.Sign(fromPrivKey)
 
-	return &poolTransaction{
+	return &pooledTx{
 		transaction: tx,
 		txStatus:    PENDING,
 	}
