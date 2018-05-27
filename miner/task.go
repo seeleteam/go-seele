@@ -40,6 +40,9 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
+	
+	// add the receipt of the reward tx
+	task.receipts = append(task.receipts, types.MakeRewardReceipt(reward))
 
 	task.chooseTransactions(seele, statedb, txs, log)
 
@@ -70,7 +73,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			continue
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, seele.GetCoinbase(), statedb, task.header)
 		if err != nil {
 			log.Error("apply tx failed, %s", err.Error())
 			continue
