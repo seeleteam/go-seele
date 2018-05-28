@@ -77,6 +77,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 
 	s.Protocol.AddPeer = s.handleAddPeer
 	s.Protocol.DeletePeer = s.handleDelPeer
+	s.Protocol.GetPeer = s.handleGetPeer
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
@@ -224,7 +225,9 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	p.log.Debug("find new tx")
 	tx := e.(*types.Transaction)
 
-	p.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
+	// find shardid by tx from address.
+	shardid := common.GetShardNumber(tx.Data.From)
+	p.peerSet.ForEach(shardid, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
 			p.log.Warn("send transaction failed %s", err.Error())
 		}
@@ -251,7 +254,6 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
-
 	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
 		p2pPeer.Disconnect(DiscHandShakeErr)
 		p.log.Info("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
@@ -259,6 +261,13 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	}
 
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
+	// if shardid not matchs, just add to peerSet
+	if p2pPeer.Node.Shard != common.LocalShardNumber {
+		p.peerSet.Add(newPeer)
+		p.log.Info("newPeer.add peer to other shard slot.peer=%s shardid=%d", newPeer.peerStrID, p2pPeer.Node.Shard)
+		return
+	}
+
 	block, _ := p.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
@@ -278,10 +287,36 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	go p.handleMsg(newPeer)
 }
 
+func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
+	if p := s.peerSet.peerMap[address]; p != nil {
+		return p.Info()
+	}
+	return nil
+}
+
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
 }
 
+func (p *SeeleProtocol) handleMsgForOtherShardPeer(peer *peer) {
+	// only need to handle tcp broken event.
+	for {
+		_, err := peer.rw.ReadMsg()
+		if err != nil {
+			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
+			break
+		}
+	}
+	p.peerSet.Remove(peer.peerID)
+	p.log.Debug("seele. other shard peer.run out. peer=%s!", peer.peerStrID)
+}
+
 func (p *SeeleProtocol) handleMsg(peer *peer) {
+
+	if peer.Node.Shard != common.LocalShardNumber {
+		p.handleMsgForOtherShardPeer(peer)
+		return
+	}
+
 handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
@@ -515,5 +550,5 @@ handler:
 
 	p.peerSet.Remove(peer.peerID)
 	p.downloader.UnRegisterPeer(peer.peerStrID)
-	p.log.Debug("seele.peer.run out!")
+	p.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
 }

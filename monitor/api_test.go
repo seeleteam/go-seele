@@ -22,17 +22,21 @@ import (
 )
 
 func getTmpConfig() *node.Config {
-	acctAddr := crypto.MustGenerateRandomAddress()
+	acctAddr := crypto.MustGenerateShardAddress(1)
 
 	return &node.Config{
 		SeeleConfig: node.SeeleConfig{
 			TxConf:   *core.DefaultTxPoolConfig(),
 			Coinbase: *acctAddr,
+			GenesisConfig: core.GenesisInfo{
+				Difficult:   1,
+				ShardNumber: 1,
+			},
 		},
 	}
 }
 
-func createTestAPI() *PublicMonitorAPI {
+func createTestAPI(t *testing.T) *PublicMonitorAPI {
 	conf := getTmpConfig()
 	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
@@ -64,13 +68,13 @@ func createTestAPI() *PublicMonitorAPI {
 
 	seeleNode, err := node.New(&testConf)
 	if err != nil {
-		fmt.Println(err)
+		t.Fatal(err)
 		return nil
 	}
 
 	seeleService, err := seele.NewSeeleService(ctx, conf, log)
 	if err != nil {
-		fmt.Println(err)
+		t.Fatal(err)
 		return nil
 	}
 
@@ -83,6 +87,7 @@ func createTestAPI() *PublicMonitorAPI {
 
 	err = seeleNode.Start()
 	if err != nil {
+		t.Fatal(err)
 		return nil
 	}
 
@@ -166,9 +171,9 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 }
 
 func Test_PublicMonitorAPI_Allright(t *testing.T) {
-	api := createTestAPI()
+	api := createTestAPI(t)
 	if api == nil {
-		t.Fatal()
+		t.Fatal("create api failed")
 	}
 	nodeInfo := NodeInfo{}
 	if err := api.NodeInfo(0, &nodeInfo); err != nil {
@@ -184,7 +189,7 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 func Test_PublicMonitorAPI_Err(t *testing.T) {
 	api := createTestAPIErr(1)
 	if api == nil {
-		t.Fatal()
+		t.Fatal("create api failed")
 	}
 	nodeStats := NodeStats{}
 	if err := api.NodeStats(0, &nodeStats); err == nil {
