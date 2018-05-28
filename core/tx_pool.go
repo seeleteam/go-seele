@@ -136,7 +136,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
-// UpdateTransactionStatus reflush the pool transaction status
+// UpdateTransactionStatus updates the pool transaction status
 func (pool *TransactionPool) UpdateTransactionStatus(txHash common.Hash, status byte) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
