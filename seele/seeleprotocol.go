@@ -359,7 +359,7 @@ handler:
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
-			    p.log.Warn("requested transaction not found")
+			    p.log.Warn("requested transaction %s not found", txHash.ToHex())
 				continue
 			}
 			
