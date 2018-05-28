@@ -22,7 +22,7 @@ func newTxCollection() *txCollection {
 }
 
 func (collection *txCollection) add(tx *pooledTx) {
-	collection.nonceToTxMap[tx.transaction.Data.AccountNonce] = tx
+	collection.nonceToTxMap[tx.Data.AccountNonce] = tx
 }
 
 func (collection *txCollection) getTxs(status byte) []*types.Transaction {
@@ -30,7 +30,7 @@ func (collection *txCollection) getTxs(status byte) []*types.Transaction {
 
 	for _, tx := range collection.nonceToTxMap {
 		if tx.txStatus&status != 0 {
-			txs = append(txs, tx.transaction)
+			txs = append(txs, tx.Transaction)
 		}
 	}
 
@@ -39,7 +39,7 @@ func (collection *txCollection) getTxs(status byte) []*types.Transaction {
 
 func (collection *txCollection) findTx(nonce uint64, status byte) *types.Transaction {
 	if collection.nonceToTxMap[nonce] != nil && collection.nonceToTxMap[nonce].txStatus&status != 0 {
-		return collection.nonceToTxMap[nonce].transaction
+		return collection.nonceToTxMap[nonce].Transaction
 	}
 	return nil
 }

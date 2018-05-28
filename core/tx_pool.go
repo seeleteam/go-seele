@@ -37,8 +37,8 @@ type blockchain interface {
 }
 
 type pooledTx struct {
-	transaction *types.Transaction
-	txStatus    byte
+	*types.Transaction
+	txStatus byte
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -130,14 +130,14 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	defer pool.mutex.RUnlock()
 
 	if pooledTx, ok := pool.hashToTxMap[txHash]; ok {
-		return pooledTx.transaction
+		return pooledTx.Transaction
 	}
 
 	return nil
 }
 
-// ReflushTransactionStatus reflush the pool transaction status
-func (pool *TransactionPool) ReflushTransactionStatus(txHash common.Hash, status byte) {
+// UpdateTransactionStatus reflush the pool transaction status
+func (pool *TransactionPool) UpdateTransactionStatus(txHash common.Hash, status byte) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -154,11 +154,11 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 		return
 	}
 
-	collection := pool.accountToTxsMap[tx.transaction.Data.From]
+	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
-		collection.remove(tx.transaction.Data.AccountNonce)
+		collection.remove(tx.Data.AccountNonce)
 		if collection.count(ALL) == 0 {
-			delete(pool.accountToTxsMap, tx.transaction.Data.From)
+			delete(pool.accountToTxsMap, tx.Data.From)
 		}
 	}
 
@@ -171,17 +171,17 @@ func (pool *TransactionPool) RemoveTransactions() {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 
 		state := pool.chain.CurrentState()
-		nonce := state.GetNonce(poolTx.transaction.Data.From)
+		nonce := state.GetNonce(poolTx.Data.From)
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.transaction.Data.AccountNonce+1 < nonce || poolTx.txStatus&ERROR != 0 {
+		if txIndex != nil || poolTx.Data.AccountNonce+1 < nonce || poolTx.txStatus&ERROR != 0 {
 			delete(pool.hashToTxMap, txHash)
 
-			collection := pool.accountToTxsMap[poolTx.transaction.Data.From]
+			collection := pool.accountToTxsMap[poolTx.Data.From]
 			if collection != nil {
-				collection.remove(poolTx.transaction.Data.AccountNonce)
+				collection.remove(poolTx.Data.AccountNonce)
 				if collection.count(ALL) == 0 {
-					delete(pool.accountToTxsMap, poolTx.transaction.Data.From)
+					delete(pool.accountToTxsMap, poolTx.Data.From)
 				}
 			}
 		}

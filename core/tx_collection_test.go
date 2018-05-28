@@ -19,7 +19,7 @@ func Test_txCollection_add(t *testing.T) {
 
 	txs := collection.getTxsOrderByNonceAsc(ALL)
 	assert.Equal(t, len(txs), 1)
-	assert.Equal(t, txs[0], poolTx.transaction)
+	assert.Equal(t, txs[0], poolTx.Transaction)
 }
 
 func Test_txCollection_add_txsWithSameNonce(t *testing.T) {
@@ -39,7 +39,7 @@ func Test_txCollection_Remove(t *testing.T) {
 	collection.add(poolTx)
 
 	assert.Equal(t, collection.count(ALL), 1)
-	collection.remove(poolTx.transaction.Data.AccountNonce)
+	collection.remove(poolTx.Data.AccountNonce)
 	assert.Equal(t, collection.count(ALL), 0)
 }
 
@@ -111,11 +111,11 @@ func Test_txCollection_findTx(t *testing.T) {
 	collection.add(poolTx3)
 
 	tx := collection.findTx(9, ALL)
-	assert.Equal(t, tx, poolTx1.transaction)
+	assert.Equal(t, tx, poolTx1.Transaction)
 	tx = collection.findTx(5, ALL)
-	assert.Equal(t, tx, poolTx2.transaction)
+	assert.Equal(t, tx, poolTx2.Transaction)
 	tx = collection.findTx(7, ALL)
-	assert.Equal(t, tx, poolTx3.transaction)
+	assert.Equal(t, tx, poolTx3.Transaction)
 
 }
 
@@ -130,11 +130,11 @@ func Test_txCollection_findPendingTx(t *testing.T) {
 	collection.add(poolTx3)
 
 	tx := collection.findTx(9, PENDING)
-	assert.Equal(t, tx, poolTx1.transaction)
+	assert.Equal(t, tx, poolTx1.Transaction)
 	tx = collection.findTx(5, PENDING)
 	assert.Equal(t, tx, (*types.Transaction)(nil))
 	tx = collection.findTx(10, PENDING)
 	assert.Equal(t, tx, (*types.Transaction)(nil))
 	tx = collection.findTx(7, PENDING)
-	assert.Equal(t, tx, poolTx3.transaction)
+	assert.Equal(t, tx, poolTx3.Transaction)
 }
