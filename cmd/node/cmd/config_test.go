@@ -24,12 +24,16 @@ func Test_LoadConfigFromFile(t *testing.T) {
 
 	assert.Equal(t, config.HTTPServer.HTTPCors[0], "*", "6")
 	assert.Equal(t, config.HTTPServer.HTTPCors[0], "*", "7")
-	assert.Equal(t, config.HTTPServer.HTTPAddr, "127.0.0.1:65027","8")
+	assert.Equal(t, config.HTTPServer.HTTPAddr, "127.0.0.1:65027", "8")
 
-	assert.Equal(t, config.P2PConfig.ListenAddr, "0.0.0.0:39008","9")
-	assert.Equal(t, (int)(config.P2PConfig.NetworkID), 1,"10")
+	assert.Equal(t, config.P2PConfig.ListenAddr, "0.0.0.0:39008", "9")
+	assert.Equal(t, (int)(config.P2PConfig.NetworkID), 1, "10")
+	assert.Equal(t, len(config.P2PConfig.StaticNodes), 1, "10")
+	assert.Equal(t, config.P2PConfig.StaticNodes[0].UDPPort, 39007, "11")
+	assert.Equal(t, len(config.P2PConfig.StaticNodes[0].IP), 16, "12")
+	assert.Equal(t, config.P2PConfig.StaticNodes[0].TCPPort, 0, "13")
 
-	assert.Equal(t, len(config.SeeleConfig.GenesisConfig.Accounts), 2)
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, int64(22))
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12))
+	assert.Equal(t, len(config.SeeleConfig.GenesisConfig.Accounts), 2, "14")
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, int64(22), "15")
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12), "16")
 }
