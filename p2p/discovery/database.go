@@ -10,6 +10,12 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"io/ioutil"
+	"encoding/json"
+	"fmt"
+	"os"
+	"bufio"
+	"strconv"
 )
 
 type NodeHook func(node *Node)
@@ -21,6 +27,37 @@ type Database struct {
 	addNodeHook    NodeHook
 	deleteNodeHook NodeHook
 }
+
+func SaveM2File(m map[common.Hash]*Node) {
+	filePth := "C:\\Users\\dell-3\\.seele\\node1\\db\\node.txt"
+	if nodeJson, err := json.Marshal(m); err == nil {
+		nodeJson = strconv.AppendQuote(nodeJson, "\n")
+		ioutil.WriteFile(filePth, nodeJson, os.ModeAppend)
+		fmt.Printf("%s\n", nodeJson)
+	}
+	//go checkM(filePth, m)
+}
+
+func checkM(filePth string, m map[common.Hash]*Node){
+	f, err := os.Open(filePth)
+	if err != nil {
+	}
+	defer f.Close()
+
+	bfRd := bufio.NewReader(f)
+
+	line, isPrefix, err := bfRd.ReadLine();
+
+	for line != nil && isPrefix && err == nil {
+		mc := map[common.Hash]*Node{}
+		json.Unmarshal(line, &mc)
+		if mc != nil {
+
+		}
+		line, isPrefix, err = bfRd.ReadLine();
+	}
+}
+
 
 func NewDatabase() *Database {
 	return &Database{
