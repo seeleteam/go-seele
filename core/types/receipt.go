@@ -58,3 +58,10 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 
 	return bmt.MerkleRoot()
 }
+
+// MakeRewardReceipt generates the receipt for the specified reward transaction
+func MakeRewardReceipt(reward *Transaction) *Receipt {
+    return &Receipt{
+	    TxHash: reward.Hash,
+	}
+}

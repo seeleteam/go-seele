@@ -42,6 +42,9 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
+	// add the receipt of the reward tx
+	task.receipts = append(task.receipts, types.MakeRewardReceipt(reward))
+
 	task.chooseTransactions(seele, statedb, txs, log)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
@@ -71,7 +74,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			continue
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, task.coinbase, statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
 		if err != nil {
 			log.Error("apply tx failed, %s", err.Error())
 			continue
