@@ -10,12 +10,14 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"io/ioutil"
 	"encoding/json"
 	"fmt"
 	"os"
 	"bufio"
+	//"strconv"
+	"path/filepath"
 	"strconv"
+	"io/ioutil"
 )
 
 type NodeHook func(node *Node)
@@ -29,10 +31,23 @@ type Database struct {
 }
 
 func SaveM2File(m map[common.Hash]*Node) {
-	filePth := "C:\\Users\\dell-3\\.seele\\node1\\db\\node.txt"
+	filePth := "C:\\tmp"
+	fileName := "/node.txt"
+	fileFullPath := filepath.Join(filePth, fileName)
+
 	if nodeJson, err := json.Marshal(m); err == nil {
 		nodeJson = strconv.AppendQuote(nodeJson, "\n")
-		ioutil.WriteFile(filePth, nodeJson, os.ModeAppend)
+		if err != nil {
+			if !common.FileOrFolderExists(fileFullPath) {
+				err := os.MkdirAll(filePth, os.ModePerm)
+				file, err := os.OpenFile(fileFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+				if err == nil {
+					file.Write(nodeJson)
+				}
+			}else{
+				ioutil.WriteFile(filePth, nodeJson, os.ModeAppend)
+			}
+		}
 		fmt.Printf("%s\n", nodeJson)
 	}
 	//go checkM(filePth, m)
