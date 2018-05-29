@@ -261,12 +261,6 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	}
 
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
-	// if shardid not matchs, just add to peerSet
-	if p2pPeer.Node.Shard != common.LocalShardNumber {
-		p.peerSet.Add(newPeer)
-		p.log.Info("newPeer.add peer to other shard slot.peer=%s shardid=%d", newPeer.peerStrID, p2pPeer.Node.Shard)
-		return
-	}
 
 	block, _ := p.chain.CurrentBlock()
 	head := block.HeaderHash
@@ -297,32 +291,32 @@ func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
 func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
 }
 
-func (p *SeeleProtocol) handleMsgForOtherShardPeer(peer *peer) {
-	// only need to handle tcp broken event.
-	for {
-		_, err := peer.rw.ReadMsg()
+func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
+	p.peerSet.ForEach(shard, func(peer *peer) bool {
+		err := peer.sendTransaction(tx)
 		if err != nil {
-			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
-			break
+			p.log.Warn("send transaction to peer %s failed, tx hash %s", peer.Node, tx.Hash)
 		}
-	}
-	p.peerSet.Remove(peer.peerID)
-	p.log.Debug("seele. other shard peer.run out. peer=%s!", peer.peerStrID)
+
+		return true
+	})
 }
 
 func (p *SeeleProtocol) handleMsg(peer *peer) {
-
-	if peer.Node.Shard != common.LocalShardNumber {
-		p.handleMsgForOtherShardPeer(peer)
-		return
-	}
-
 handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
 			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
+		}
+
+		// skip unsupported message from different shard peer
+		if peer.Node.Shard != common.LocalShardNumber {
+			issupported := msg.Code == transactionsMsgCode
+			if !issupported {
+				continue
+			}
 		}
 
 		switch msg.Code {
@@ -358,6 +352,11 @@ handler:
 			p.log.Debug("got tx request %s", txHash.ToHex())
 
 			tx := p.txPool.GetTransaction(txHash)
+			if tx == nil {
+				p.log.Info("[transactionRequestMsgCode] not found tx %s", txHash.ToHex())
+				continue
+			}
+
 			err = peer.sendTransaction(tx)
 			if err != nil {
 				p.log.Warn("send transaction msg failed %s", err.Error())
@@ -374,8 +373,13 @@ handler:
 
 			p.log.Debug("received %d transactions", len(txs))
 			for _, tx := range txs {
-				p.txPool.AddTransaction(tx)
-				peer.markTransaction(tx.Hash)
+				shard := common.GetShardNumber(tx.Data.From)
+				if shard != common.LocalShardNumber {
+					break
+				} else {
+					p.txPool.AddTransaction(tx)
+					peer.markTransaction(tx.Hash)
+				}
 			}
 
 		case blockHashMsgCode:

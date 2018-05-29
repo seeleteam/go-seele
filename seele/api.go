@@ -85,7 +85,14 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 
 // AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
-	err := api.s.txPool.AddTransaction(tx)
+	shard := common.GetShardNumber(tx.Data.From)
+	var err error
+	if shard != common.LocalShardNumber {
+		api.s.seeleProtocol.SendDifferentShardTx(tx, shard)
+	} else {
+		err = api.s.txPool.AddTransaction(tx)
+	}
+
 	if err != nil {
 		*result = false
 		return err

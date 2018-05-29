@@ -97,13 +97,18 @@ func (n *Node) Start() error {
 	}
 
 	common.LocalShardNumber = specificShard
+	n.log.Info("local shard number is %d", common.LocalShardNumber)
 
 	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
 		coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
-		if specificShard != 0 && coinbaseShard != specificShard {
+		n.log.Debug("check coinbase shard %d", coinbaseShard)
+
+		if coinbaseShard != specificShard {
 			return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
 				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
 		}
+
+		n.log.Debug("coinbase is matched with shard number")
 	}
 
 	protocols := make([]p2p.Protocol, 0)
