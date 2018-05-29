@@ -63,7 +63,7 @@ func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 	block, _ := api.s.chain.CurrentBlock()
 
 	*info = MinerInfo{
-		Coinbase:           api.s.Coinbase,
+		Coinbase:           api.s.miner.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
 	}
@@ -74,7 +74,7 @@ func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) error {
 	if account == nil || account.Equal(common.Address{}) {
-		*account = api.s.Coinbase
+		*account = api.s.Miner().GetCoinbase()
 	}
 
 	state := api.s.chain.CurrentState()

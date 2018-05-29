@@ -25,6 +25,7 @@ type Task struct {
 	receipts []*types.Receipt
 
 	createdAt time.Time
+	coinbase  common.Address
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
@@ -32,12 +33,12 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := pow.GetReward(blockHeight)
-	reward, err := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, big.NewInt(0), 0)
+	reward, err := types.NewTransaction(common.Address{}, task.coinbase, rewardValue, big.NewInt(0), 0)
 	if err != nil {
 		return err
 	}
 	reward.Signature = &crypto.Signature{}
-	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
+	stateObj := statedb.GetOrNewStateObject(task.coinbase)
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
 
@@ -56,7 +57,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit - 1; {
+	for i := 0; i < core.BlockTransactionNumberLimit-1; {
 		tx := popBestFeeTx(txs)
 		if tx == nil {
 			break
@@ -70,7 +71,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			continue
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, task.coinbase, statedb, task.header)
 		if err != nil {
 			log.Error("apply tx failed, %s", err.Error())
 			continue
@@ -78,7 +79,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
-		
+
 		i++
 	}
 }

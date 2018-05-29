@@ -199,6 +199,11 @@ func (srv *Server) addNode(node *discovery.Node) {
 }
 
 func (srv *Server) addPeer(p *Peer) {
+	if p.getShardNumber() == discovery.UndefinedShardNumber {
+		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
+		return
+	}
+
 	srv.log.Info("server addPeer, len(peers)=%d", len(srv.peerMap))
 	oldPeer, ok := srv.peerMap[p.Node.ID]
 

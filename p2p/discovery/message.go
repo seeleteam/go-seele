@@ -147,7 +147,7 @@ func (m *ping) send(t *udp) {
 
 // handle response find node request
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
-	t.log.Debug("received request [findNodeMsg] from: %s, id: %s", from, m.SelfID)
+	t.log.Debug("received request [findNodeMsg] from: %s, id: %s", from, m.SelfID.ToHex())
 
 	nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
 

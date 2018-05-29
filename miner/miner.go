@@ -39,7 +39,6 @@ var (
 type SeeleBackend interface {
 	TxPool() *core.TransactionPool
 	BlockChain() *core.Blockchain
-	GetCoinbase() common.Address
 }
 
 // Miner defines base elements of miner
@@ -85,6 +84,10 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
 
 	return miner
+}
+
+func (miner *Miner) GetCoinbase() common.Address {
+	return miner.coinbase
 }
 
 // SetThreads sets the number of mining threads.
@@ -239,9 +242,11 @@ func (miner *Miner) prepareNewBlock() error {
 		Difficulty:        difficult,
 	}
 
+	miner.log.Info("miner a block with coinbase %s", miner.coinbase.ToHex())
 	miner.current = &Task{
 		header:    header,
 		createdAt: time.Now(),
+		coinbase:  miner.coinbase,
 	}
 
 	txs := miner.seele.TxPool().GetProcessableTransactions()

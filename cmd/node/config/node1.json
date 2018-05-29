@@ -4,10 +4,10 @@
     "version": "1.0",
     "dataDir": "node1",
     "address": "0.0.0.0:55027",
-    "coinbase": "0x23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad"
+    "coinbase": "0x1953af4c1f4b658f2b190aa3b622554bc7579f87776bbff2745e79a0850897a33b855cb70f7eb8a29355e08ed706b2cc858c19f3b4522f352fc48aeb6f02f8db"
   },
   "p2p": {
-    "privateKey": "0x0de1ffef23f127f53b7d784bc78887465f7802de1ab8b02a8243b7c60cc32f58",
+    "privateKey": "0x8c5fe84f836732ae7935e70ed7f578851fabf533d327a36b4e9fc49b455aa721",
     "staticNodes": [],
     "address": "0.0.0.0:39007",
     "networkID": 1
@@ -42,6 +42,6 @@
       "0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23":200
     },
     "difficult":10000000,
-    "shard":15
+    "shard":1
   }
 }
