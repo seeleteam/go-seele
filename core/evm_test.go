@@ -20,6 +20,12 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 )
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// PLEASE USE REMIX (OR OTHER TOOLS) TO GENERATE CONTRACT CODE AND INPUT MESSAGE.
+// Online: https://remix.ethereum.org/
+// Github: https://github.com/ethereum/remix-ide
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 func mustHexToBytes(hex string) []byte {
 	code, err := hexutil.HexToBytes(hex)
 	if err != nil {
