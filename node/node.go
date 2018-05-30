@@ -97,7 +97,7 @@ func (n *Node) Start() error {
 	}
 
 	if specificShard > common.ShardNumber {
-		return errors.New(fmt.Sprintf("unsupported shard number, it must in range [0, %d]", common.ShardNumber))
+		return fmt.Errorf("unsupported shard number, it must in range [0, %d]", common.ShardNumber)
 	}
 
 	common.LocalShardNumber = specificShard
@@ -108,8 +108,8 @@ func (n *Node) Start() error {
 		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.ToHex())
 
 		if coinbaseShard != specificShard {
-			return errors.New(fmt.Sprintf("coinbase is not matched with specific shard number, "+
-				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard))
+			return fmt.Errorf("coinbase is not matched with specific shard number, "+
+				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard)
 		}
 	}
 

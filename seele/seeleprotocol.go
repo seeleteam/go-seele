@@ -313,8 +313,7 @@ handler:
 
 		// skip unsupported message from different shard peer
 		if peer.Node.Shard != common.LocalShardNumber {
-			issupported := msg.Code == transactionsMsgCode
-			if !issupported {
+			if msg.Code != transactionsMsgCode {
 				continue
 			}
 		}
@@ -375,7 +374,7 @@ handler:
 			for _, tx := range txs {
 				shard := common.GetShardNumber(tx.Data.From)
 				if shard != common.LocalShardNumber {
-					break
+					continue
 				} else {
 					p.txPool.AddTransaction(tx)
 					peer.markTransaction(tx.Hash)

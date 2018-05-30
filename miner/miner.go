@@ -242,7 +242,7 @@ func (miner *Miner) prepareNewBlock() error {
 		Difficulty:        difficult,
 	}
 
-	miner.log.Info("miner a block with coinbase %s", miner.coinbase.ToHex())
+	miner.log.Debug("miner a block with coinbase %s", miner.coinbase.ToHex())
 	miner.current = &Task{
 		header:    header,
 		createdAt: time.Now(),
