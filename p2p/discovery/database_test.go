@@ -9,14 +9,12 @@ import (
 )
 
 func Test_SaveNodes(t *testing.T) {
-	fileFullPath := common.GetNodeBackups()
+	fileFullPath := common.GetNodeBackupPath()
+	str1 := "12345678901234567890123456789022"
+	str2 := "12345678901234567890123456789026"
+	key1 := common.StringToHash(str1)
+	key2 := common.StringToHash(str2)
 
-	var key1 common.Hash
-	var key2 common.Hash
-	str := "12345678901234567890123456789022"
-	te := []byte(str)
-	copy(key1[:], te[:])
-	copy(key2[1:], te[:])
 	m := map[common.Hash]*Node{
 		key1: &Node{
 			UDPPort: 66,

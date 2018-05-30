@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
@@ -29,52 +31,57 @@ type Database struct {
 
 var dblog = log.GetLogger("discovery", common.LogConfig.PrintLog)
 
+// SaveNodes will save to a file and open a timer to backups the nodes info
 func (db *Database) SaveNodes() {
-	SaveNodes2File(db.m)
-	StartNewTicker(db.m)
+	saveNodes2File(db.m)
+	startNewTicker(db.m)
 }
 
-func StartNewTicker(m map[common.Hash]*Node) {
+func startNewTicker(m map[common.Hash]*Node) {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			dblog.Debug("backups nodes\n")
-			if m == nil {
-				continue
-			}
-			go SaveNodes2File(m)
+			go saveNodes2File(m)
 		}
 	}
 }
 
-func SaveNodes2File(m map[common.Hash]*Node) {
+func saveNodes2File(m map[common.Hash]*Node) {
+	if m == nil {
+		return
+	}
 	filePath := common.GetDefaultDataFolder()
-	fileFullPath := common.GetNodeBackups()
+	fileFullPath := common.GetNodeBackupPath()
 
 	nodeStr := make([]string, len(m))
 	i := 0
 	for k, v := range m {
 		if i != len(m)-1 {
-			nodeStr[i] = k.String() + "--" + v.String() + ",\n\r"
+			nodeStr[i] = fmt.Sprintln(k.String() + "--" + v.String() + ",")
 		} else {
-			nodeStr[i] = k.String() + "--" + v.String() + "\n\r"
+			nodeStr[i] = fmt.Sprintln(k.String() + "--" + v.String())
 		}
 		i++
 	}
 
-	byteContent := "[\n\r" + strings.Join(nodeStr, "") + "]"
+	byteContent := fmt.Sprintln("[\n" + strings.Join(nodeStr, "") + "]")
 	nodeByte := []byte(byteContent)
 	if !common.FileOrFolderExists(fileFullPath) {
 		err := os.MkdirAll(filePath, os.ModePerm)
 		if err != nil {
-			dblog.Error("filePath:[%s] create folder failed, for:[%s]\n", filePath, err.Error())
+			dblog.Error("filePath:[%s] create folder failed, for:[%s]", filePath, err.Error())
 			return
 		}
 	}
 
-	ioutil.WriteFile(fileFullPath, nodeByte, 0666)
+	err := ioutil.WriteFile(fileFullPath, nodeByte, 0666)
+	if err != nil {
+		dblog.Error("nodes info backup failed, for:[%s]", err.Error())
+		return
+	}
 	dblog.Debug("data:%s write to file\n", nodeByte)
 }
 
