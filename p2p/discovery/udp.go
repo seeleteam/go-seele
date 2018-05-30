@@ -425,6 +425,7 @@ func (u *udp) StartServe() {
 	go u.discoveryWithTwoStags()
 	go u.pingPongService()
 	go u.sendLoop()
+	go u.db.SaveNodes()
 }
 
 func (u *udp) addNode(n *Node) {

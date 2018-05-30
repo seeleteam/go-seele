@@ -79,18 +79,3 @@ func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
 
 // Big converts this Hash to a big int.
 func (a Hash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
-
-func (a Hash) MarshalText() ([]byte, error) {
-	str := a.ToHex()
-	return []byte(str), nil
-}
-
-func (a *Hash) UnmarshalText(json []byte) error {
-	jr, err := HexToHash(string(json))
-	if err != nil {
-		return err
-	}
-
-	copy(a[:], jr[:])
-	return nil
-}

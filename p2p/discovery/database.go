@@ -6,18 +6,15 @@
 package discovery
 
 import (
+	"io/ioutil"
+	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"encoding/json"
-	"fmt"
-	"os"
-	"bufio"
-	//"strconv"
-	"path/filepath"
-	"strconv"
-	"io/ioutil"
+	"github.com/seeleteam/go-seele/log"
 )
 
 type NodeHook func(node *Node)
@@ -30,49 +27,56 @@ type Database struct {
 	deleteNodeHook NodeHook
 }
 
-func SaveM2File(m map[common.Hash]*Node) {
-	filePth := "C:\\tmp"
-	fileName := "/node.txt"
-	fileFullPath := filepath.Join(filePth, fileName)
+var dblog = log.GetLogger("discovery", common.LogConfig.PrintLog)
 
-	if nodeJson, err := json.Marshal(m); err == nil {
-		nodeJson = strconv.AppendQuote(nodeJson, "\n")
-		if err != nil {
-			if !common.FileOrFolderExists(fileFullPath) {
-				err := os.MkdirAll(filePth, os.ModePerm)
-				file, err := os.OpenFile(fileFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
-				if err == nil {
-					file.Write(nodeJson)
-				}
-			}else{
-				ioutil.WriteFile(filePth, nodeJson, os.ModeAppend)
+func (db *Database) SaveNodes() {
+	SaveNodes2File(db.m)
+	StartNewTicker(db.m)
+}
+
+func StartNewTicker(m map[common.Hash]*Node) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			dblog.Debug("backups nodes\n")
+			if m == nil {
+				continue
 			}
+			go SaveNodes2File(m)
 		}
-		fmt.Printf("%s\n", nodeJson)
-	}
-	//go checkM(filePth, m)
-}
-
-func checkM(filePth string, m map[common.Hash]*Node){
-	f, err := os.Open(filePth)
-	if err != nil {
-	}
-	defer f.Close()
-
-	bfRd := bufio.NewReader(f)
-
-	line, isPrefix, err := bfRd.ReadLine();
-
-	for line != nil && isPrefix && err == nil {
-		mc := map[common.Hash]*Node{}
-		json.Unmarshal(line, &mc)
-		if mc != nil {
-
-		}
-		line, isPrefix, err = bfRd.ReadLine();
 	}
 }
 
+func SaveNodes2File(m map[common.Hash]*Node) {
+	filePath := common.GetDefaultDataFolder()
+	fileFullPath := common.GetNodeBackups()
+
+	nodeStr := make([]string, len(m))
+	i := 0
+	for k, v := range m {
+		if i != len(m)-1 {
+			nodeStr[i] = k.String() + "--" + v.String() + ",\n\r"
+		} else {
+			nodeStr[i] = k.String() + "--" + v.String() + "\n\r"
+		}
+		i++
+	}
+
+	byteContent := "[\n\r" + strings.Join(nodeStr, "") + "]"
+	nodeByte := []byte(byteContent)
+	if !common.FileOrFolderExists(fileFullPath) {
+		err := os.MkdirAll(filePath, os.ModePerm)
+		if err != nil {
+			dblog.Error("filePath:[%s] create folder failed, for:[%s]\n", filePath, err.Error())
+			return
+		}
+	}
+
+	ioutil.WriteFile(fileFullPath, nodeByte, 0666)
+	dblog.Debug("data:%s write to file\n", nodeByte)
+}
 
 func NewDatabase() *Database {
 	return &Database{

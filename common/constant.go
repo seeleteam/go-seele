@@ -22,6 +22,9 @@ var (
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
 
+	// nodeBackups used to backups nodes data info
+	nodeBackups string
+
 	// LogConfig is the Configuration of log
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 )
@@ -34,6 +37,8 @@ func init() {
 		panic(err)
 	}
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
+
+	nodeBackups = filepath.Join(defaultDataFolder, "nodes.txt")
 }
 
 // GetTempFolder uses a getter to implement readonly
@@ -44,4 +49,9 @@ func GetTempFolder() string {
 // GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
+}
+
+// GetNodeBackups gets the backups node file path
+func GetNodeBackups() string {
+	return nodeBackups
 }
