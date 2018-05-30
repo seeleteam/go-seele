@@ -15,7 +15,7 @@ func NewCmdData() []*Request {
   			client.exe getblockbyhash --hash 0x0000009721cf7bb5859f1a0ced952fcf71929ff8382db6ef20041ed441d5f92f [-f=true] [-a 127.0.0.1:55027]`,
 			ParamReflectType: "GetBlockByHashRequest",
 			Method:           "seele.GetBlockByHash",
-			UseWebsocket:     true,
+			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
@@ -44,7 +44,7 @@ func NewCmdData() []*Request {
   			client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:55027]`,
 			ParamReflectType: "GetBlockByHeightRequest",
 			Method:           "seele.GetBlockByHeight",
-			UseWebsocket:     true,
+			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",

@@ -1,14 +1,14 @@
 {
   "basic":{
-    "name": "seele node2",
+    "name": "seele node4",
     "version": "1.0",
-    "dataDir": "node2",
-    "address": "0.0.0.0:55028",
-    "coinbase": "0x7fccd27bf1d784fa728e41555c73f3c231017050aec2ba1a3c725a03fd758d3cbc66062cc76ade1c8264b7ba9ff9e825c3a1c60133d78190f4b736935639a5e4"
+    "dataDir": "node4",
+    "address": "0.0.0.0:55026",
+    "coinbase": "0x753349a20837e3ec0ca506faf7a7ef40d63f319e2fd1f5141252f7864bae8416a15618225b963862828ff942edabee8d043e2c1ee7f22642702b7576246b9d46"
   },
   "p2p": {
-    "address": "0.0.0.0:39008",
-    "privateKey": "0xb88c2ae292728ce0b3254831e8423531b85e9d6ff3691359e6dbe9310fed903e",
+    "address": "0.0.0.0:39006",
+    "privateKey": "0x22f81fcecbff483488458d97ed3e91d4b0c8a844548f509675c165fcb5d75737",
     "staticNodes": [
       "snode://1953af4c1f4b658f2b190aa3b622554bc7579f87776bbff2745e79a0850897a33b855cb70f7eb8a29355e08ed706b2cc858c19f3b4522f352fc48aeb6f02f8db@127.0.0.1:39007[0]"
     ],
@@ -19,7 +19,7 @@
     "printLog": true
   },
   "httpServer": {
-    "address": "127.0.0.1:65028",
+    "address": "127.0.0.1:65026",
     "crosssorgins": [
       "*"
     ],
@@ -28,7 +28,7 @@
     ]
   },
   "wsserver": {
-    "address": "127.0.0.1:8081",
+    "address": "127.0.0.1:8083",
     "pattern": "/ws"
   },
   "metrics": {
@@ -44,6 +44,6 @@
       "0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23":200
     },
     "difficult":10000000,
-    "shard":2
+    "shard":1
   }
 }
