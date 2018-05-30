@@ -257,7 +257,7 @@ func (miner *Miner) prepareNewBlock() error {
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
 	miner.commitTask(miner.current)
-	miner.seele.TxPool().ReflushTransactions()
+	miner.seele.TxPool().RemoveTransactions()
 
 	return nil
 }

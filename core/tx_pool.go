@@ -23,9 +23,22 @@ var (
 	errTxNonceUsed  = errors.New("transaction from this address already used its nonce")
 )
 
+// The status of transaction in tx pool
+const (
+	PENDING    byte = 0x01
+	PROCESSING byte = 0x02
+	ERROR      byte = 0x04
+	ALL        byte = PENDING | PROCESSING | ERROR
+)
+
 type blockchain interface {
 	CurrentState() *state.Statedb
 	GetStore() store.BlockchainStore
+}
+
+type pooledTx struct {
+	*types.Transaction
+	txStatus byte
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -35,7 +48,7 @@ type TransactionPool struct {
 	mutex           sync.RWMutex
 	config          TransactionPoolConfig
 	chain           blockchain
-	hashToTxMap     map[common.Hash]*types.Transaction
+	hashToTxMap     map[common.Hash]*pooledTx
 	accountToTxsMap map[common.Address]*txCollection // Account address to tx collection mapping.
 }
 
@@ -44,7 +57,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	pool := &TransactionPool{
 		config:          config,
 		chain:           chain,
-		hashToTxMap:     make(map[common.Hash]*types.Transaction),
+		hashToTxMap:     make(map[common.Hash]*pooledTx),
 		accountToTxsMap: make(map[common.Address]*txCollection),
 	}
 
@@ -74,11 +87,10 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return errTxFeeNil
 	}
 
-	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce)
+	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce, PENDING)
 	if existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
 			pool.removeTransaction(existTx.Hash)
-			delete(pool.hashToTxMap, existTx.Hash)
 		} else {
 			return errTxNonceUsed
 		}
@@ -93,22 +105,23 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 }
 
 func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
-	pool.hashToTxMap[tx.Hash] = tx
+	poolTx := &pooledTx{tx, PENDING}
+	pool.hashToTxMap[tx.Hash] = poolTx
 
 	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
 		pool.accountToTxsMap[tx.Data.From] = newTxCollection()
 	}
 
-	pool.accountToTxsMap[tx.Data.From].add(tx)
+	pool.accountToTxsMap[tx.Data.From].add(pool.hashToTxMap[tx.Hash])
 }
 
-func (pool *TransactionPool) findTransaction(from common.Address, nonce uint64) *types.Transaction {
+func (pool *TransactionPool) findTransaction(from common.Address, nonce uint64, status byte) *types.Transaction {
 	col, ok := pool.accountToTxsMap[from]
 	if !ok {
 		return nil
 	}
 
-	return col.findTx(nonce)
+	return col.findTx(nonce, status)
 }
 
 // GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
@@ -116,15 +129,23 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	return pool.hashToTxMap[txHash]
+	if pooledTx, ok := pool.hashToTxMap[txHash]; ok {
+		return pooledTx.Transaction
+	}
+
+	return nil
 }
 
-// RemoveTransaction removes a transaction with the specified hash
-func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
+// UpdateTransactionStatus updates the pool transaction status
+func (pool *TransactionPool) UpdateTransactionStatus(txHash common.Hash, status byte) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
-	pool.removeTransaction(txHash)
+	poolTx := pool.hashToTxMap[txHash]
+	if poolTx == nil {
+		return
+	}
+	poolTx.txStatus = status
 }
 
 func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
@@ -136,23 +157,33 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
 		collection.remove(tx.Data.AccountNonce)
-		if collection.count() == 0 {
+		if collection.count(ALL) == 0 {
 			delete(pool.accountToTxsMap, tx.Data.From)
 		}
 	}
+
+	delete(pool.hashToTxMap, txHash)
 }
 
-// ReflushTransactions removes finalized and old transactions in hashToTxMap
-func (pool *TransactionPool) ReflushTransactions() {
-	for txHash, tx := range pool.hashToTxMap {
+// RemoveTransactions removes finalized and old transactions in hashToTxMap
+func (pool *TransactionPool) RemoveTransactions() {
+	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 
 		state := pool.chain.CurrentState()
-		nonce := state.GetNonce(tx.Data.From)
+		nonce := state.GetNonce(poolTx.Data.From)
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || tx.Data.AccountNonce+1 < nonce {
+		if txIndex != nil || poolTx.Data.AccountNonce+1 < nonce || poolTx.txStatus&ERROR != 0 {
 			delete(pool.hashToTxMap, txHash)
+
+			collection := pool.accountToTxsMap[poolTx.Data.From]
+			if collection != nil {
+				collection.remove(poolTx.Data.AccountNonce)
+				if collection.count(ALL) == 0 {
+					delete(pool.accountToTxsMap, poolTx.Data.From)
+				}
+			}
 		}
 	}
 }
@@ -166,7 +197,10 @@ func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*
 	allAccountTxs := make(map[common.Address][]*types.Transaction)
 
 	for account, txs := range pool.accountToTxsMap {
-		allAccountTxs[account] = txs.getTxsOrderByNonceAsc()
+		processableTxs := txs.getTxsOrderByNonceAsc(PENDING)
+		if len(processableTxs) != 0 {
+			allAccountTxs[account] = processableTxs
+		}
 	}
 
 	return allAccountTxs
@@ -180,7 +214,7 @@ func (pool *TransactionPool) GetProcessableTransactionsCount() int {
 	status := 0
 	for _, collection := range pool.accountToTxsMap {
 		if collection != nil {
-			status += collection.count()
+			status += collection.count(PENDING)
 		}
 	}
 	return status
