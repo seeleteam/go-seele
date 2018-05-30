@@ -395,7 +395,7 @@ func (u *udp) discoveryWithTwoStags() {
 	// discovery with two stage
 	// 1. fast discovery, with small network interval. fast stage will stop when got minimal number of peers
 	// 2. normal discovery, with normal network interval
-	u.discovery(true)
+	//u.discovery(true) // disable fast discovery
 
 	u.discovery(false)
 }
