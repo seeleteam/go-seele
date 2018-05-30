@@ -29,14 +29,14 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 	return privKey, common.HexMustToAddres(hexAddress)
 }
 
-func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
+func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
 	_, toAddress := randomAccount(t)
 
 	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 	tx.Sign(fromPrivKey)
 
-	return tx
+	return &pooledTx{tx, PENDING}
 }
 
 type mockBlockchain struct {
@@ -69,10 +69,10 @@ func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint6
 func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
-	tx := newTestTx(t, 10, 100)
-	chain.addAccount(tx.Data.From, 20, 100)
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
 
-	err := pool.AddTransaction(tx)
+	err := pool.AddTransaction(poolTx.Transaction)
 
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, len(pool.hashToTxMap), 1)
@@ -81,12 +81,12 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
-	tx := newTestTx(t, 10, 100)
-	chain.addAccount(tx.Data.From, 20, 100)
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
 
 	// Change the amount in tx.
-	tx.Data.Amount.SetInt64(20)
-	err := pool.AddTransaction(tx)
+	poolTx.Data.Amount.SetInt64(20)
+	err := pool.AddTransaction(poolTx.Transaction)
 
 	if err == nil {
 		t.Fatal("The error is nil when add invalid tx to pool.")
@@ -96,13 +96,13 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
-	tx := newTestTx(t, 10, 100)
-	chain.addAccount(tx.Data.From, 20, 100)
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
 
-	err := pool.AddTransaction(tx)
+	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, error(nil))
 
-	err = pool.AddTransaction(tx)
+	err = pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, errTxHashExists)
 }
 
@@ -112,27 +112,27 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*config, chain)
 
-	tx1 := newTestTx(t, 10, 100)
-	chain.addAccount(tx1.Data.From, 20, 100)
-	tx2 := newTestTx(t, 20, 101)
-	chain.addAccount(tx2.Data.From, 20, 101)
+	poolTx1 := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx1.Data.From, 20, 100)
+	poolTx2 := newTestPoolTx(t, 20, 101)
+	chain.addAccount(poolTx2.Data.From, 20, 101)
 
-	err := pool.AddTransaction(tx1)
+	err := pool.AddTransaction(poolTx1.Transaction)
 	assert.Equal(t, err, error(nil))
 
-	err = pool.AddTransaction(tx2)
+	err = pool.AddTransaction(poolTx2.Transaction)
 	assert.Equal(t, err, errTxPoolFull)
 }
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
-	tx := newTestTx(t, 10, 100)
-	chain.addAccount(tx.Data.From, 20, 100)
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
 
-	pool.AddTransaction(tx)
+	pool.AddTransaction(poolTx.Transaction)
 
-	assert.Equal(t, pool.GetTransaction(tx.Hash), tx)
+	assert.Equal(t, pool.GetTransaction(poolTx.Hash), poolTx.Transaction)
 }
 
 func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.Address, []*types.Transaction) {
@@ -186,14 +186,32 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	chain := newMockBlockchain()
 	pool := NewTransactionPool(*config, chain)
 
-	tx := newTestTx(t, 10, 100)
-	chain.addAccount(tx.Data.From, 20, 100)
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
 
-	err := pool.AddTransaction(tx)
+	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(pool.hashToTxMap), 1)
 	assert.Equal(t, len(pool.accountToTxsMap), 1)
 
-	pool.RemoveTransaction(tx.Hash)
+	pool.removeTransaction(poolTx.Hash)
 	assert.Equal(t, len(pool.accountToTxsMap), 0)
+}
+
+func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
+	config := DefaultTxPoolConfig()
+	chain := newMockBlockchain()
+	pool := NewTransactionPool(*config, chain)
+
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	pool.UpdateTransactionStatus(poolTx.Hash, PROCESSING)
+	assert.Equal(t, pool.hashToTxMap[poolTx.Hash].txStatus, PROCESSING)
+	assert.Equal(t, pool.accountToTxsMap[poolTx.Data.From].nonceToTxMap[100].txStatus, PROCESSING)
 }

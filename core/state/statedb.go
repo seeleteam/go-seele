@@ -177,7 +177,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 	}
 
 	// Commit code change.
-	if obj.dirtyCode {
+	if obj.dirtyCode && batch != nil {
 		obj.serializeCode(batch)
 		obj.dirtyCode = false
 	}
@@ -190,7 +190,7 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 	}
 
 	// Remove the account from state DB if suicided.
-	if obj.suicided {
+	if obj.suicided && !obj.deleted {
 		obj.deleted = true
 		s.trie.Delete(addr.Bytes())
 	}

@@ -72,7 +72,10 @@ func processContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 
 	// Currently, use math.MaxUint64 gas to bypass ErrInsufficientBalance error.
 	if tx.Data.To == nil {
-		receipt.Result, receipt.ContractAddress, _, err = evm.Create(caller, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
+		var createdContractAddr common.Address
+		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, math.MaxUint64, tx.Data.Amount); err == nil {
+			receipt.ContractAddress = createdContractAddr.Bytes()
+		}
 	} else {
 		statedb.SetNonce(tx.Data.From, statedb.GetNonce(tx.Data.From)+1)
 		receipt.Result, _, err = evm.Call(caller, *tx.Data.To, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)

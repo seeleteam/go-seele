@@ -14,11 +14,10 @@ import (
 
 func newTestReceipt() *Receipt {
 	return &Receipt{
-		Result:          []byte("result"),
-		PostState:       common.StringToHash("post state"),
-		Logs:            []*Log{&Log{}, &Log{}, &Log{}},
-		TxHash:          common.StringToHash("tx hash"),
-		ContractAddress: common.Address{},
+		Result:    []byte("result"),
+		PostState: common.StringToHash("post state"),
+		Logs:      []*Log{&Log{}, &Log{}, &Log{}},
+		TxHash:    common.StringToHash("tx hash"),
 	}
 }
 

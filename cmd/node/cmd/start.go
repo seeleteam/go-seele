@@ -72,10 +72,16 @@ var startCmd = &cobra.Command{
 		for _, service := range services {
 			if err := seeleNode.Register(service); err != nil {
 				fmt.Println(err.Error())
+				return
 			}
 		}
 
-		seeleNode.Start()
+		err = seeleNode.Start()
+		if err != nil {
+			fmt.Printf("got error when start node: %s\n", err)
+			return
+		}
+
 		if strings.ToLower(*miner) == "start" {
 			err = seeleService.Miner().Start()
 			if err != nil {
