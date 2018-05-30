@@ -25,6 +25,7 @@ type Task struct {
 	receipts []*types.Receipt
 
 	createdAt time.Time
+	coinbase  common.Address
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
@@ -32,14 +33,17 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	rewardValue := pow.GetReward(blockHeight)
-	reward, err := types.NewTransaction(common.Address{}, seele.GetCoinbase(), rewardValue, big.NewInt(0), 0)
+	reward, err := types.NewTransaction(common.Address{}, task.coinbase, rewardValue, big.NewInt(0), 0)
 	if err != nil {
 		return err
 	}
 	reward.Signature = &crypto.Signature{}
-	stateObj := statedb.GetOrNewStateObject(seele.GetCoinbase())
+	stateObj := statedb.GetOrNewStateObject(task.coinbase)
 	stateObj.AddAmount(rewardValue)
 	task.txs = append(task.txs, reward)
+
+	// add the receipt of the reward tx
+	task.receipts = append(task.receipts, types.MakeRewardReceipt(reward))
 
 	task.chooseTransactions(seele, statedb, txs, log)
 
@@ -56,29 +60,31 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit - 1; {
+	for i := 0; i < core.BlockTransactionNumberLimit-1; {
 		tx := popBestFeeTx(txs)
 		if tx == nil {
 			break
 		}
 
-		seele.TxPool().RemoveTransaction(tx.Hash)
+		seele.TxPool().UpdateTransactionStatus(tx.Hash, core.PROCESSING)
 
 		err := tx.Validate(statedb)
 		if err != nil {
+			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
 			log.Error("validating tx failed, for %s", err.Error())
 			continue
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i, seele.GetCoinbase(), statedb, task.header)
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
 		if err != nil {
+			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
 			log.Error("apply tx failed, %s", err.Error())
 			continue
 		}
 
 		task.txs = append(task.txs, tx)
 		task.receipts = append(task.receipts, receipt)
-		
+
 		i++
 	}
 }

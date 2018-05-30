@@ -6,6 +6,7 @@
 package pow
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"math/big"
 )
 
@@ -18,8 +19,8 @@ var (
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
 	blockNumberPerEra uint64 = 525000 * 4
-
-	SeeleToCoin = big.NewInt(100000000)
+	//SeeleToCoin base coin number
+	SeeleToCoin = common.SeeleToCoin
 )
 
 func init() {

@@ -9,7 +9,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -28,7 +27,6 @@ type SeeleService struct {
 	p2pServer     *p2p.Server
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
-	Coinbase      common.Address // account address that mining rewards will be send to.
 
 	txPool         *core.TransactionPool
 	chain          *core.Blockchain
@@ -46,7 +44,6 @@ func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
 func (s *SeeleService) Miner() *miner.Miner           { return s.miner }
-func (s *SeeleService) GetCoinbase() common.Address   { return s.Coinbase }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
 }
@@ -56,7 +53,6 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	s = &SeeleService{
 		log:       log,
 		networkID: conf.P2PConfig.NetworkID,
-		Coinbase:  conf.SeeleConfig.Coinbase,
 	}
 
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
@@ -84,6 +80,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	// initialize and validate genesis
 	bcStore := store.NewBlockchainDatabase(s.chainDB)
 	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
+
 	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
 	if err != nil {
 		s.chainDB.Close()
@@ -109,7 +106,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.miner = miner.NewMiner(s.Coinbase, s, s.log)
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.log)
 
 	return s, nil
 }

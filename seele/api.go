@@ -63,7 +63,7 @@ func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 	block, _ := api.s.chain.CurrentBlock()
 
 	*info = MinerInfo{
-		Coinbase:           api.s.Coinbase,
+		Coinbase:           api.s.miner.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
 	}
@@ -74,7 +74,7 @@ func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) error {
 	if account == nil || account.Equal(common.Address{}) {
-		*account = api.s.Coinbase
+		*account = api.s.Miner().GetCoinbase()
 	}
 
 	state := api.s.chain.CurrentState()
@@ -85,7 +85,14 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 
 // AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
-	err := api.s.txPool.AddTransaction(tx)
+	shard := common.GetShardNumber(tx.Data.From)
+	var err error
+	if shard != common.LocalShardNumber {
+		api.s.seeleProtocol.SendDifferentShardTx(tx, shard)
+	} else {
+		err = api.s.txPool.AddTransaction(tx)
+	}
+
 	if err != nil {
 		*result = false
 		return err
