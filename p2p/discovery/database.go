@@ -6,13 +6,12 @@
 package discovery
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
