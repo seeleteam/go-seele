@@ -153,7 +153,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
-		//log.Debug("msg type: %d", code)
+		u.log.Debug("receive msg type: %s", codeToStr(code))
 		switch code {
 		case pingMsgType:
 			msg := &ping{}
@@ -314,7 +314,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					u.log.Info("time out to wait for msg with msg type %d", p.code)
+					u.log.Info("time out to wait for msg with msg type %d", codeToStr(p.code))
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}

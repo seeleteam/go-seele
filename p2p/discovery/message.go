@@ -24,6 +24,25 @@ const (
 	shardNodeMsgType     msgType = 6
 )
 
+func codeToStr(code msgType) string {
+	switch code {
+	case pingMsgType:
+		return "pingMsgType"
+	case pongMsgType:
+		return "pongMsgType"
+	case findNodeMsgType:
+		return "findNodeMsgType"
+	case neighborsMsgType:
+		return "neighborsMsgType"
+	case findShardNodeMsgType:
+		return "findShardNodeMsgType"
+	case shardNodeMsgType:
+		return "shardNodeMsgType"
+	default:
+		return "unkwown"
+	}
+}
+
 const (
 	discoveryProtocolVersion uint = 1
 )
