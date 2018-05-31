@@ -17,8 +17,8 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 )
 
-// newEVMContext creates a new context for use in the EVM.
-func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
+// NewEVMContext creates a new context for use in the EVM.
+func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 		return db.GetBalance(addr).Cmp(amount) >= 0
 	}
@@ -61,8 +61,8 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 	}
 }
 
-// processContract process the specified contract tx and return the receipt.
-func processContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
+// ProcessContract process the specified contract tx and return the receipt.
+func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
 	statedb.Prepare(txIndex)
 	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
 

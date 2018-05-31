@@ -24,8 +24,8 @@ func init() {
 
 var callCmd = &cobra.Command{
 	Use:   "call",
-	Short: "vm monitor callCmd",
-	Long:  `All contract could callable. This is monitor's`,
+	Short: "call a contract",
+	Long:  `All contract could callable. This is seele-vm's`,
 	Run: func(cmd *cobra.Command, args []string) {
 		callContract(contractAddr, input)
 	},

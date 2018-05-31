@@ -32,8 +32,8 @@ func init() {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "vm createCmd",
-	Long:  `All software has creates. This is vm's`,
+	Short: "create a contract",
+	Long:  `All software has creates. This is seele-vm's`,
 	Run: func(cmd *cobra.Command, args []string) {
 		createContract()
 	},
