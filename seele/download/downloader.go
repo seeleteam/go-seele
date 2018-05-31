@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	MaxBlockFetch  = 128 // Amount of blocks to be fetched per retrieval request
+	MaxBlockFetch  = 10 // Amount of blocks to be fetched per retrieval request
 	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
 
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
@@ -161,19 +161,19 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	if err != nil {
 		return err
 	}
-	d.log.Debug("Downloader.findCommonAncestorHeight start, ancestor=%d", ancestor)
+	d.log.Debug("start task manager from height:%d, target height:%d", ancestor, height)
 	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	for _, c := range d.peers {
-		_, peerTD := c.peer.Head()
+	for _, pConn := range d.peers {
+		_, peerTD := pConn.peer.Head()
 		if localTD.Cmp(peerTD) >= 0 {
 			continue
 		}
 		d.sessionWG.Add(1)
 
-		go d.peerDownload(c, tm)
+		go d.peerDownload(pConn, tm)
 	}
 	d.lock.Unlock()
 	d.sessionWG.Wait()
@@ -436,9 +436,8 @@ outLoop:
 
 // processBlocks writes blocks to the blockchain.
 func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
-
 	for _, h := range headInfos {
-		d.log.Debug("%d %s <- %s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
+		d.log.Debug("height:%d hash:%s <- preHash:%s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
 	}
 
 	for _, h := range headInfos {
