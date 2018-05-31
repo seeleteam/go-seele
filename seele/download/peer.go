@@ -7,12 +7,16 @@ package downloader
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p"
 )
+
+const MsgWaitTimeout = time.Second * 10
 
 var (
 	errRecvedQuitMsg = errors.New("Recved quit msg")
@@ -52,6 +56,8 @@ func (p *peerConn) waitMsg(msgCode uint16, cancelCh chan struct{}) (*p2p.Message
 	p.lockForWaiting.Lock()
 	p.waitingMsgMap[msgCode] = rcvCh
 	p.lockForWaiting.Unlock()
+
+	timeout := time.NewTimer(MsgWaitTimeout)
 	select {
 	case <-p.quitCh:
 		return nil, errPeerQuit
@@ -66,6 +72,8 @@ func (p *peerConn) waitMsg(msgCode uint16, cancelCh chan struct{}) (*p2p.Message
 		p.lockForWaiting.Unlock()
 		close(rcvCh)
 		return msg, nil
+	case <- timeout.C:
+		return nil, fmt.Errorf("wait for msg %s timeout", codeToStr(msgCode))
 	}
 }
 

@@ -28,6 +28,23 @@ const (
 	BlocksMsg          uint16 = 12
 )
 
+func codeToStr(code uint16) string {
+	switch code {
+	case GetBlockHeadersMsg:
+		return "downloader.GetBlockHeadersMsg"
+	case BlockHeadersMsg:
+		return "downloader.BlockHeadersMsg"
+	case GetBlocksMsg:
+		return "downloader.GetBlocksMsg"
+	case BlocksPreMsg:
+		return "downloader.BlocksPreMsg"
+	case BlocksMsg:
+		return "downloader.BlocksMsg"
+	default:
+		return "unknown"
+	}
+}
+
 var (
 	MaxBlockFetch  = 10 // Amount of blocks to be fetched per retrieval request
 	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
