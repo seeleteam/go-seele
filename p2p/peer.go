@@ -75,7 +75,7 @@ func (p *Peer) run() (err error) {
 	go p.readLoop(readErr)
 	go p.pingLoop()
 
-	p.notifyProtocols()
+	p.notifyProtocolsAddPeer()
 	// Wait for an error or disconnect.
 errLoop:
 	for {
@@ -136,16 +136,31 @@ func (p *Peer) readLoop(readErr chan<- error) {
 	}
 }
 
-func (p *Peer) notifyProtocols() {
+func (p *Peer) notifyProtocolsAddPeer() {
 	p.wg.Add(len(p.protocolMap))
-	p.log.Debug("notifyProtocols called, len(protocolMap)=%d", len(p.protocolMap))
+	p.log.Debug("notifyProtocolsAddPeer called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
 		go func() {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
-				p.log.Debug("notifyProtocols.AddPeer called. protocol:%s", proto.cap())
+				p.log.Debug("protocol.AddPeer called. protocol:%s", proto.cap())
 				proto.AddPeer(p, &proto)
+			}
+		}()
+	}
+}
+
+func (p *Peer) notifyProtocolsDeletePeer() {
+	p.wg.Add(len(p.protocolMap))
+	p.log.Debug("notifyProtocolsDeletePeer called, len(protocolMap)=%d", len(p.protocolMap))
+	for _, proto := range p.protocolMap {
+		go func() {
+			defer p.wg.Done()
+
+			if proto.DeletePeer != nil {
+				p.log.Debug("protocol.DeletePeer called. protocol:%s", proto.cap())
+				proto.DeletePeer(p)
 			}
 		}()
 	}

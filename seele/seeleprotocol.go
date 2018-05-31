@@ -288,7 +288,9 @@ func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
 	return nil
 }
 
-func (p *SeeleProtocol) handleDelPeer(p2pPeer *p2p.Peer) {
+func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
+	s.log.Debug("delete peer from peer set. %s", peer.Node)
+	s.peerSet.Remove(peer.Node.ID)
 }
 
 func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
