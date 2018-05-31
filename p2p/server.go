@@ -158,6 +158,7 @@ func (srv *Server) Start(nodeName string, shard uint) (err error) {
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 	srv.kadDB = discovery.StartService(nodeName, address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
+	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 
 	if err := srv.startListening(); err != nil {
 		return err
@@ -198,6 +199,10 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 }
 
+func (srv *Server) deleteNode(node *discovery.Node) {
+	srv.deletePeer(node.ID)
+}
+
 func (srv *Server) addPeer(p *Peer) {
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
@@ -222,12 +227,14 @@ func (srv *Server) addPeer(p *Peer) {
 	metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
 }
 
-func (srv *Server) deletePeer(p *Peer) {
-	curPeer, ok := srv.peerMap[p.Node.ID]
-	if ok && curPeer == p {
+func (srv *Server) deletePeer(id common.Address) {
+	p, ok := srv.peerMap[id]
+	if ok {
 		delete(srv.peerMap, p.Node.ID)
 		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
+		p.notifyProtocolsDeletePeer()
 		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
+
 		metricsDeletePeerMeter.Mark(1)
 		metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
 	} else {
@@ -249,7 +256,7 @@ running:
 		case p := <-srv.addPeerChan:
 			srv.addPeer(p)
 		case p := <-srv.delPeerChan:
-			srv.deletePeer(p)
+			srv.deletePeer(p.Node.ID)
 		}
 	}
 
@@ -260,7 +267,7 @@ running:
 
 	for len(peerMap) > 0 {
 		p := <-srv.delPeerChan
-		srv.deletePeer(p)
+		srv.deletePeer(p.Node.ID)
 	}
 }
 
