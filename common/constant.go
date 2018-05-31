@@ -22,7 +22,7 @@ var (
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
 
-	// nodeBackups used to backups nodes data info
+	// nodeBackupPath used to backup nodes data info
 	nodeBackupPath string
 
 	// LogConfig is the Configuration of log
@@ -51,7 +51,7 @@ func GetDefaultDataFolder() string {
 	return defaultDataFolder
 }
 
-// GetNodeBackups gets the backups node file path
+// GetNodeBackupPath gets the backup path of node info
 func GetNodeBackupPath() string {
 	return nodeBackupPath
 }

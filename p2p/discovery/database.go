@@ -30,7 +30,7 @@ type Database struct {
 
 var dblog = log.GetLogger("discovery", common.LogConfig.PrintLog)
 
-// SaveNodes will save to a file and open a timer to backups the nodes info
+// SaveNodes will save to a file and open a timer to backup the nodes info
 func (db *Database) SaveNodes() {
 	saveNodes2File(db.m)
 	startNewTicker(db.m)
