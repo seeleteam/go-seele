@@ -30,32 +30,30 @@ type Database struct {
 
 var dblog *log.SeeleLog
 
-// SaveNodes will save to a file and open a timer to backup the nodes info
-func (db *Database) SaveNodes(nodeName string) {
-	saveNodes2File(nodeName, db.m)
-	startNewTicker(nodeName, db.m, nil)
-}
-
-func startNewTicker(nodeName string, m map[common.Hash]*Node, done chan bool) {
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			dblog.Debug("backups nodes\n")
-			go saveNodes2File(nodeName, m)
-		case <-done:
-			return
+// StartSaveNodes will save to a file and open a timer to backup the nodes info
+func (db *Database) StartSaveNodes(nodeDir string, done chan bool) {
+	saveNodes(nodeDir, db.m)
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				dblog.Debug("backups nodes...\n")
+				go saveNodes(nodeDir, db.m)
+			case <-done:
+				return
+			}
 		}
-	}
+	}()
 }
 
-func saveNodes2File(nodeName string, m map[common.Hash]*Node) {
+func saveNodes(nodeDir string, m map[common.Hash]*Node) {
 	if m == nil {
 		return
 	}
-	filePath := filepath.Join(common.GetDefaultDataFolder(), nodeName)
-	fileFullPath := filepath.Join(common.GetDefaultDataFolder(), nodeName, "nodes.txt")
+	filePath := filepath.Join(common.GetDefaultDataFolder(), nodeDir)
+	fileFullPath := filepath.Join(common.GetDefaultDataFolder(), nodeDir, "nodes.txt")
 
 	nodeStr := make([]string, len(m))
 	i := 0

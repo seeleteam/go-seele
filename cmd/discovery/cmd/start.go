@@ -69,7 +69,7 @@ var startCmd = &cobra.Command{
 			mynode = n
 		}
 
-		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
+		discovery.StartService("tmp", mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)

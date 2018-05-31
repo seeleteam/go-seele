@@ -419,13 +419,13 @@ func (u *udp) pingPongService() {
 	}
 }
 
-func (u *udp) StartServe(nodeName string) {
+func (u *udp) StartServe(nodeDir string) {
 	go u.readLoop()
 	go u.loopReply()
 	go u.discoveryWithTwoStags()
 	go u.pingPongService()
 	go u.sendLoop()
-	go u.db.SaveNodes(nodeName)
+	go u.db.StartSaveNodes(nodeDir, make(chan bool))
 }
 
 func (u *udp) addNode(n *Node) {

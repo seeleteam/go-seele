@@ -1,9 +1,10 @@
 package discovery
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
@@ -25,14 +26,19 @@ func Test_SaveNodes(t *testing.T) {
 			TCPPort: 66,
 		},
 		key2: &Node{
-			UDPPort: 86,
-			TCPPort: 86,
+			UDPPort: 66,
+			TCPPort: 66,
 		},
 	}
 
 	db := NewDatabase(log)
 	db.m = m
-	go db.SaveNodes("node1")
-	time.Sleep(2 * time.Second)
+	db.StartSaveNodes("node1", make(chan bool))
 	assert.Equal(t, common.FileOrFolderExists(fileFullPath), true)
+	data, err := ioutil.ReadFile(fileFullPath)
+	assert.Equal(t, err, nil)
+	cnode := make([]string, 2)
+	err = json.Unmarshal(data, &cnode)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, cnode[0], "snode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000@:66[0]")
 }
