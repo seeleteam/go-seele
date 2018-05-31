@@ -270,7 +270,7 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	return nil
 }
 
-// deliverBlockPreMsg recved blocks-pre msg from peer.
+// deliverBlockPreMsg received blocks-pre msg from peer.
 func (t *taskMgr) deliverBlockPreMsg(peerID string, blockNums []uint64) {
 	t.lock.Lock()
 	defer t.lock.Unlock()

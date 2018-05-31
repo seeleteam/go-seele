@@ -475,7 +475,6 @@ handler:
 				p.log.Error("deserialize downloader.GetBlockHeadersMsg failed, quit! %s", err.Error())
 				break
 			}
-			p.log.Debug("Recved downloader.GetBlockHeadersMsg")
 			var headList []*types.BlockHeader
 			var head *types.BlockHeader
 			orgNum := query.Number
@@ -488,6 +487,7 @@ handler:
 				orgNum = head.Height
 			}
 
+			p.log.Debug("Received downloader.GetBlockHeadersMsg start %d, amount %d", orgNum, query.Amount)
 			for cnt := uint64(0); cnt < query.Amount; cnt++ {
 				var curNum uint64
 				if query.Reverse {
