@@ -6,10 +6,10 @@
 package discovery
 
 import (
-	"fmt"
+	"encoding/json"
 	"io/ioutil"
 	"os"
-	"strings"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -21,53 +21,53 @@ import (
 type NodeHook func(node *Node)
 
 type Database struct {
-	m map[common.Hash]*Node // TODO use memory for temp, will use level db later
+	m map[common.Hash]*Node
 
 	mutex          sync.Mutex
 	addNodeHook    NodeHook
 	deleteNodeHook NodeHook
 }
 
-var dblog = log.GetLogger("discovery", common.LogConfig.PrintLog)
+var dblog *log.SeeleLog
 
 // SaveNodes will save to a file and open a timer to backup the nodes info
-func (db *Database) SaveNodes() {
-	saveNodes2File(db.m)
-	startNewTicker(db.m)
+func (db *Database) SaveNodes(nodeName string) {
+	saveNodes2File(nodeName, db.m)
+	startNewTicker(nodeName, db.m)
 }
 
-func startNewTicker(m map[common.Hash]*Node) {
+func startNewTicker(nodeName string, m map[common.Hash]*Node) {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			dblog.Debug("backups nodes\n")
-			go saveNodes2File(m)
+			go saveNodes2File(nodeName, m)
 		}
 	}
 }
 
-func saveNodes2File(m map[common.Hash]*Node) {
+func saveNodes2File(nodeName string, m map[common.Hash]*Node) {
 	if m == nil {
 		return
 	}
-	filePath := common.GetDefaultDataFolder()
-	fileFullPath := common.GetNodeBackupPath()
+	filePath := filepath.Join(common.GetDefaultDataFolder(), nodeName)
+	fileFullPath := filepath.Join(common.GetDefaultDataFolder(), nodeName, "nodes.txt")
 
 	nodeStr := make([]string, len(m))
 	i := 0
-	for k, v := range m {
-		if i != len(m)-1 {
-			nodeStr[i] = fmt.Sprintln(k.String() + "--" + v.String() + ",")
-		} else {
-			nodeStr[i] = fmt.Sprintln(k.String() + "--" + v.String())
-		}
+	for _, v := range m {
+		nodeStr[i] = v.String()
 		i++
 	}
 
-	byteContent := fmt.Sprintln("[\n" + strings.Join(nodeStr, "") + "]")
-	nodeByte := []byte(byteContent)
+	nodeByte, err := json.MarshalIndent(nodeStr, "", " ")
+	if err != nil {
+		dblog.Error("json marshal occur error, for:[%s]", err.Error())
+		return
+	}
+
 	if !common.FileOrFolderExists(fileFullPath) {
 		err := os.MkdirAll(filePath, os.ModePerm)
 		if err != nil {
@@ -76,15 +76,16 @@ func saveNodes2File(m map[common.Hash]*Node) {
 		}
 	}
 
-	err := ioutil.WriteFile(fileFullPath, nodeByte, 0666)
+	err = ioutil.WriteFile(fileFullPath, nodeByte, 0666)
 	if err != nil {
 		dblog.Error("nodes info backup failed, for:[%s]", err.Error())
 		return
 	}
-	dblog.Debug("data:%s write to file\n", nodeByte)
+	dblog.Debug("nodes:%s info backup success\n", nodeByte)
 }
 
-func NewDatabase() *Database {
+func NewDatabase(log *log.SeeleLog) *Database {
+	dblog = log
 	return &Database{
 		m: make(map[common.Hash]*Node),
 	}

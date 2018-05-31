@@ -136,7 +136,7 @@ func (srv *Server) PeerCount() int {
 }
 
 // Start starts running the server.
-func (srv *Server) Start(shard uint) (err error) {
+func (srv *Server) Start(nodeName string, shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -156,7 +156,7 @@ func (srv *Server) Start(shard uint) (err error) {
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes, shard)
+	srv.kadDB = discovery.StartService(nodeName, address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 
 	if err := srv.startListening(); err != nil {

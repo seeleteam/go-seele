@@ -119,7 +119,7 @@ func (n *Node) Start() error {
 	}
 
 	p2pSever := p2p.NewServer(n.config.P2PConfig, protocols)
-	if err := p2pSever.Start(n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
+	if err := p2pSever.Start(n.config.BasicConfig.Name, n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
 		return ErrServiceStartFailed
 	}
 
