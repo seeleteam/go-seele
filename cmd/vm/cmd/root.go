@@ -19,9 +19,6 @@ var rootCmd = &cobra.Command{
 	Use:   "vm",
 	Short: "vm command for contract monitor test",
 	Long:  `use "vm help [<command>]" for detailed usage`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
