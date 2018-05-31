@@ -139,11 +139,14 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 }
 
 func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
+	d.log.Info("download starting")
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
+			d.log.Info("download end with failed, err %s", err)
 			event.BlockDownloaderEventManager.Fire(event.DownloaderFailedEvent)
 		} else {
+			d.log.Info("download end success")
 			event.BlockDownloaderEventManager.Fire(event.DownloaderDoneEvent)
 		}
 	}()
