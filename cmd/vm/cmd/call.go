@@ -25,7 +25,7 @@ func init() {
 var callCmd = &cobra.Command{
 	Use:   "call",
 	Short: "call a contract",
-	Long:  `All contract could callable. This is seele-vm's`,
+	Long:  `All contract could callable. This is Seele contract simulator's`,
 	Run: func(cmd *cobra.Command, args []string) {
 		callContract(contractAddr, input)
 	},
@@ -44,14 +44,22 @@ func callContract(contractAddr string, input string) {
 		panic(err)
 	}
 
-	statedb, bcStore, dispose := preprocessContract()
+	statedb, bcStore, dispose, err := preprocessContract()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	defer dispose()
 
-	// Create a call message trascation
-	callContractTx, err := types.NewMessageTransaction(*crypto.MustGenerateRandomAddress(), contract, big.NewInt(0), big.NewInt(0), NONCE, msg)
+	// Create a call message transaction
+	callContractTx, err := types.NewMessageTransaction(*crypto.MustGenerateRandomAddress(), contract, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
 
-	receipt := processContract(statedb, bcStore, callContractTx)
+	receipt, err := processContract(statedb, bcStore, callContractTx)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 	// Print the result
-	fmt.Println("Contract call success, The result: ", string(receipt.Result))
+	fmt.Println("Contract call success, The result: ", receipt.Result)
 }
