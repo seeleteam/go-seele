@@ -33,10 +33,10 @@ var dblog *log.SeeleLog
 // SaveNodes will save to a file and open a timer to backup the nodes info
 func (db *Database) SaveNodes(nodeName string) {
 	saveNodes2File(nodeName, db.m)
-	startNewTicker(nodeName, db.m)
+	startNewTicker(nodeName, db.m, nil)
 }
 
-func startNewTicker(nodeName string, m map[common.Hash]*Node) {
+func startNewTicker(nodeName string, m map[common.Hash]*Node, done chan bool) {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
@@ -44,6 +44,8 @@ func startNewTicker(nodeName string, m map[common.Hash]*Node) {
 		case <-ticker.C:
 			dblog.Debug("backups nodes\n")
 			go saveNodes2File(nodeName, m)
+		case <-done:
+			return
 		}
 	}
 }
@@ -69,15 +71,13 @@ func saveNodes2File(nodeName string, m map[common.Hash]*Node) {
 	}
 
 	if !common.FileOrFolderExists(fileFullPath) {
-		err := os.MkdirAll(filePath, os.ModePerm)
-		if err != nil {
+		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
 			dblog.Error("filePath:[%s] create folder failed, for:[%s]", filePath, err.Error())
 			return
 		}
 	}
 
-	err = ioutil.WriteFile(fileFullPath, nodeByte, 0666)
-	if err != nil {
+	if err = ioutil.WriteFile(fileFullPath, nodeByte, 0666); err != nil {
 		dblog.Error("nodes info backup failed, for:[%s]", err.Error())
 		return
 	}
