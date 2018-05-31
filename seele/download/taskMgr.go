@@ -214,6 +214,7 @@ func (t *taskMgr) getReqBlocks(conn *peerConn) (uint64, int) {
 func (t *taskMgr) isDone() bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+	t.log.Debug("task is done check cur:%d, target:%d", t.curNo, t.toNo)
 	return t.curNo == t.toNo+1
 }
 

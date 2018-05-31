@@ -410,6 +410,7 @@ outLoop:
 		}
 
 		if hasReqData {
+			d.log.Debug("got request data, continue to request")
 			continue
 		}
 
