@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"runtime/pprof"
 	"sync"
 	"time"
 
