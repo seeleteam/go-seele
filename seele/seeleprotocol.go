@@ -354,7 +354,7 @@ handler:
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
-				p.log.Info("[transactionRequestMsgCode] not found tx %s", txHash.ToHex())
+				p.log.Info("[transactionRequestMsgCode] tx %s not found", txHash.ToHex())
 				continue
 			}
 
