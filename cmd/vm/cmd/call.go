@@ -35,13 +35,15 @@ func callContract(contractAddr string, input string) {
 	// Contract address
 	contract, err := common.HexToAddress(contractAddr)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		return
 	}
 
 	// Call method and input parameters
 	msg, err := hexutil.HexToBytes(input)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		return
 	}
 
 	statedb, bcStore, dispose, err := preprocessContract()
