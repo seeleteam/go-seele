@@ -37,6 +37,39 @@ var (
 	protocolMsgCodeLength uint16 = 13
 )
 
+func codeToStr(code uint16) string {
+	switch code {
+	case transactionHashMsgCode:
+		return "transactionHashMsgCode"
+	case transactionRequestMsgCode:
+		return "transactionRequestMsgCode"
+	case transactionsMsgCode:
+		return "transactionsMsgCode"
+	case blockHashMsgCode:
+		return "blockHashMsgCode"
+	case blockRequestMsgCode:
+		return "blockRequestMsgCode"
+	case blockMsgCode:
+		return "blockMsgCode"
+	case statusDataMsgCode:
+		return "statusDataMsgCode"
+	case statusChainHeadMsgCode:
+		return "statusChainHeadMsgCode"
+	case downloader.GetBlockHeadersMsg:
+		return "downloader.GetBlockHeadersMsg"
+	case downloader.BlockHeadersMsg:
+		return "downloader.BlockHeadersMsg"
+	case downloader.GetBlocksMsg:
+		return "downloader.GetBlocksMsg"
+	case downloader.BlocksPreMsg:
+		return "downloader.BlocksPreMsg"
+	case downloader.BlocksMsg:
+		return "downloader.BlocksMsg"
+	default:
+		return "unknown"
+	}
+}
+
 // SeeleProtocol service implementation of seele
 type SeeleProtocol struct {
 	p2p.Protocol
@@ -320,6 +353,7 @@ handler:
 			}
 		}
 
+		p.log.Info("got msg with type:%s", codeToStr(msg.Code))
 		switch msg.Code {
 		case transactionHashMsgCode:
 			var txHash common.Hash
@@ -533,7 +567,7 @@ handler:
 			p.log.Debug("send downloader.sendBlockHeaders")
 
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
-			p.log.Debug("Recved downloader Msg. %d", msg.Code)
+			p.log.Debug("Received downloader Msg. %s", codeToStr(msg.Code))
 			p.downloader.DeliverMsg(peer.peerStrID, &msg)
 
 		case statusChainHeadMsgCode:

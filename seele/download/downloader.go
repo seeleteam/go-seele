@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime/pprof"
 	"sync"
 	"time"
 
@@ -351,60 +352,64 @@ outLoop:
 			d.log.Debug("tm.getReqHeaderInfo. startNo:%d amount:%d", startNo, amount)
 			hasReqData = true
 			if err = conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, startNo, amount, false); err != nil {
-				d.log.Info("RequestHeadersByHashOrNumber err!")
+				d.log.Warn("RequestHeadersByHashOrNumber err! %s", err)
 				break
 			}
 			msg, err := conn.waitMsg(BlockHeadersMsg, d.cancelCh)
 			if err != nil {
-				d.log.Info("peerDownload waitMsg BlockHeadersMsg err! %s", err)
+				d.log.Warn("peerDownload waitMsg BlockHeadersMsg err! %s", err)
 				break
 			}
 			var headers []*types.BlockHeader
 			if err = common.Deserialize(msg.Payload, &headers); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
+				d.log.Warn("peerDownload Deserialize err! %s", err)
 				break
 			}
 
 			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
-				d.log.Info("peerDownload deliverHeaderMsg err! %s", err)
+				d.log.Warn("peerDownload deliverHeaderMsg err! %s", err)
 				break
 			}
+
+			d.log.Debug("get request header info success")
 		}
 
 		if startNo, amount := tm.getReqBlocks(conn); amount > 0 {
 			d.log.Debug("download.peerdown getReqBlocks startNo=%d amount=%d", startNo, amount)
 			hasReqData = true
 			if err = conn.peer.RequestBlocksByHashOrNumber(common.Hash{}, startNo, amount); err != nil {
-				d.log.Info("RequestBlocksByHashOrNumber err!")
+				d.log.Warn("RequestBlocksByHashOrNumber err! %s", err)
 				break
 			}
 
 			msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
 			if err != nil {
-				d.log.Info("peerDownload waitMsg BlocksPreMsg err! %s", err)
+				d.log.Warn("peerDownload waitMsg BlocksPreMsg err! %s", err)
 				break
 			}
 
 			var blockNums []uint64
 			if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
+				d.log.Warn("peerDownload Deserialize err! %s", err)
 				break
 			}
 			tm.deliverBlockPreMsg(peerID, blockNums)
 
 			msg, err = conn.waitMsg(BlocksMsg, d.cancelCh)
 			if err != nil {
-				d.log.Info("peerDownload waitMsg BlocksMsg err! %s", err)
+				d.log.Warn("peerDownload waitMsg BlocksMsg err! %s", err)
 				break
 			}
 
 			var blocks []*types.Block
 			if err = common.Deserialize(msg.Payload, &blocks); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
+				d.log.Warn("peerDownload Deserialize err! %s", err)
 				break
 			}
 			tm.deliverBlockMsg(peerID, blocks)
+			d.log.Debug("get request blocks success")
 		}
+
 		if hasReqData {
 			continue
 		}

@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	responseTimeout = 10 * time.Second
+	responseTimeout = 15 * time.Second
 
-	pingpongInterval  = 15 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 20 * time.Second // sleep between discovery, must big than response time out
+	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
 )
 
 type udp struct {
