@@ -106,6 +106,7 @@ func (p *Peer) close() {
 
 	close(p.closed)
 	close(p.disconnection)
+	p.disconnection = nil
 }
 
 func (p *Peer) pingLoop() {

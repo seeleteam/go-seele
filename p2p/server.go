@@ -83,12 +83,10 @@ type Server struct {
 
 	quit chan struct{}
 
-	addPeerChan chan *Peer
-	delPeerChan chan *Peer
 	loopWG      sync.WaitGroup // loop, listenLoop
 
 	peerSet *peerSet
-	log          *log.SeeleLog
+	log     *log.SeeleLog
 
 	// MaxPeers max number of peers that can be connected
 	MaxPeers int
@@ -111,9 +109,7 @@ func NewServer(config Config, protocols []Protocol) *Server {
 		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
 		MaxPeers:        defaultMaxPeers,
 		quit:            make(chan struct{}),
-		addPeerChan:     make(chan *Peer),
-		delPeerChan:     make(chan *Peer),
-		peerSet:NewPeerSet(),
+		peerSet:         NewPeerSet(),
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
 	}
@@ -192,17 +188,17 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 	srv.deletePeer(node.ID)
 }
 
-func (srv *Server) addPeer(p *Peer) {
+func (srv *Server) addPeer(p *Peer) bool {
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
-		return
+		return false
 	}
 
 	srv.log.Info("server addPeer, len(peers)=%d", srv.PeerCount())
 	peer := srv.peerSet.find(p.Node.ID)
-	// if peer is already exist, skip
 	if peer != nil {
-		return
+		srv.log.Debug("peer is already exist, skip")
+		return false
 	}
 
 	srv.peerSet.add(p)
@@ -210,6 +206,7 @@ func (srv *Server) addPeer(p *Peer) {
 
 	metricsAddPeerMeter.Mark(1)
 	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+	return true
 }
 
 func (srv *Server) deletePeer(id common.Address) {
@@ -236,10 +233,6 @@ running:
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
-		case p := <-srv.addPeerChan:
-			srv.addPeer(p)
-		case p := <-srv.delPeerChan:
-			srv.deletePeer(p.Node.ID)
 		}
 	}
 
@@ -247,11 +240,6 @@ running:
 	srv.peerSet.foreach(func(p *Peer) {
 		p.Disconnect(discServerQuit)
 	})
-
-	for srv.PeerCount() > 0 {
-		p := <-srv.delPeerChan
-		srv.deletePeer(p.Node.ID)
-	}
 }
 
 func (srv *Server) startListening() error {
@@ -344,7 +332,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		if !ok {
 			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
-			return errors.New("Not found nodeID in discovery database")
+			return errors.New("not found nodeID in discovery database")
 		}
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
@@ -354,9 +342,10 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	srv.log.Debug("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
-		srv.addPeerChan <- peer
-		peer.run()
-		srv.delPeerChan <- peer
+		if srv.addPeer(peer) {
+			peer.run()
+			srv.deletePeer(peer.Node.ID)
+		}
 		srv.loopWG.Done()
 	}()
 
