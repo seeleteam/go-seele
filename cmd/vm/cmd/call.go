@@ -67,5 +67,7 @@ func callContract(contractAddr string, input string) {
 	}
 
 	// Print the result
-	fmt.Println("Succeed to call contract, result is", receipt.Result)
+	fmt.Println()
+	fmt.Println("Succeed to call contract!")
+	fmt.Println("Result:", receipt.Result)
 }
