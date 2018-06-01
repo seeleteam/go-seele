@@ -385,8 +385,8 @@ outLoop:
 				break
 			}
 
-			var startHeight uint64 = 0
-			var endHeight uint64 = 0
+			startHeight := uint64(0)
+			endHeight := uint64(0)
 			if len(headers) == 0 {
 				startHeight = headers[0].Height
 				endHeight = headers[len(headers) - 1].Height
@@ -412,22 +412,22 @@ outLoop:
 				break
 			}
 
-			msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
-			if err != nil {
-				d.log.Warn("peerDownload waitMsg BlocksPreMsg err! %s", err)
-				break
-			}
+			//msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
+			//if err != nil {
+			//	d.log.Warn("peerDownload waitMsg BlocksPreMsg err! %s", err)
+			//	break
+			//}
+			//
+			//var blockNums []uint64
+			//if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
+			//	d.log.Warn("peerDownload Deserialize err! %s", err)
+			//	break
+			//}
+			//
+			//d.log.Debug("got block previous message length %d", len(blockNums))
+			//tm.deliverBlockPreMsg(peerID, blockNums)
 
-			var blockNums []uint64
-			if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
-				d.log.Warn("peerDownload Deserialize err! %s", err)
-				break
-			}
-
-			d.log.Debug("got block previous message length %d", len(blockNums))
-			tm.deliverBlockPreMsg(peerID, blockNums)
-
-			msg, err = conn.waitMsg(BlocksMsg, d.cancelCh)
+			msg, err := conn.waitMsg(BlocksMsg, d.cancelCh)
 			if err != nil {
 				d.log.Warn("peerDownload waitMsg BlocksMsg err! %s", err)
 				break
@@ -439,8 +439,8 @@ outLoop:
 				break
 			}
 
-			var startHeight uint64 = 0
-			var endHeight uint64 = 0
+			startHeight := uint64(0)
+			endHeight := uint64(0)
 			if len(blocks) == 0 {
 				startHeight = blocks[0].Header.Height
 				endHeight = blocks[len(blocks) - 1].Header.Height

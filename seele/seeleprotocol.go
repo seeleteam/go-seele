@@ -518,7 +518,7 @@ handler:
 			p.log.Debug("send downloader.sendBlockHeaders. len=%d", len(headList))
 
 		case downloader.GetBlocksMsg:
-			p.log.Debug("Recved downloader.GetBlocksMsg")
+			p.log.Debug("Received downloader.GetBlocksMsg")
 			var query blocksQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
@@ -537,6 +537,8 @@ handler:
 				}
 				orgNum = head.Height
 			}
+
+			p.log.Debug("Received downloader.GetBlocksMsg length %d, start %d, end %d", query.Amount, orgNum, orgNum + query.Amount)
 
 			totalLen := 0
 			var numL []uint64
@@ -562,15 +564,22 @@ handler:
 				numL = append(numL, curNum)
 			}
 
-			if err = peer.sendPreBlocksMsg(numL); err != nil {
-				p.log.Error("HandleMsg GetBlocksMsg sendPreBlocksMsg err. %s", err)
-				break handler
+			//if err = peer.sendPreBlocksMsg(numL); err != nil {
+			//	p.log.Error("HandleMsg GetBlocksMsg sendPreBlocksMsg err. %s", err)
+			//	break handler
+			//}
+
+			if len(blocksL) == 0 {
+				p.log.Debug("send blocks with empty")
+			} else {
+				p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL) -1].Header.Height)
 			}
 
 			if err = peer.sendBlocks(blocksL); err != nil {
 				p.log.Error("HandleMsg GetBlocksMsg sendBlocks err. %s", err)
 				break handler
 			}
+
 			p.log.Debug("send downloader.sendBlocks")
 
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
