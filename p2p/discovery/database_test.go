@@ -12,7 +12,7 @@ import (
 )
 
 func Test_SaveNodes(t *testing.T) {
-	fileFullPath := filepath.Join(common.GetTempFolder(), "nodes.txt")
+	fileFullPath := filepath.Join(common.GetTempFolder(), "nodes.json")
 	str1 := "12345678901234567890123456789022"
 	str2 := "12345678901234567890123456789026"
 	key1 := common.StringToHash(str1)
