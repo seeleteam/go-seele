@@ -82,7 +82,7 @@ func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
 		self:      NewNodeWithAddr(id, addr, shard),
 		localAddr: addr,
 
-		db: NewDatabase(),
+		db: NewDatabase(log),
 
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
@@ -419,12 +419,13 @@ func (u *udp) pingPongService() {
 	}
 }
 
-func (u *udp) StartServe() {
+func (u *udp) StartServe(nodeDir string) {
 	go u.readLoop()
 	go u.loopReply()
 	go u.discoveryWithTwoStags()
 	go u.pingPongService()
 	go u.sendLoop()
+	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
 }
 
 func (u *udp) addNode(n *Node) {
