@@ -28,9 +28,17 @@ type Database struct {
 	deleteNodeHook NodeHook
 }
 
+const (
+	// NodesBackupInterval is the nodes info of backup interval time
+	NodesBackupInterval = time.Hour
+
+	// NodesBackupFileName is the nodes info of backup file name
+	NodesBackupFileName = "nodes.txt"
+)
+
 // StartSaveNodes will save to a file and open a timer to backup the nodes info
 func (db *Database) StartSaveNodes(nodeDir string, done chan struct{}) {
-	ticker := time.NewTicker(common.NodesBackupInterval)
+	ticker := time.NewTicker(NodesBackupInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -48,7 +56,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 	if db.m == nil {
 		return
 	}
-	fileFullPath := filepath.Join(nodeDir, common.NodesBackupFileName)
+	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
 
 	nodeStr := make([]string, len(db.m))
 	i := 0

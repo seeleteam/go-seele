@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/log/comm"
-	"time"
 )
 
 const ShardNumber = 20
@@ -25,12 +24,6 @@ var (
 
 	// LogConfig is the Configuration of log
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
-
-	// NodesBackupInterval is the nodes info of backup interval time
-	NodesBackupInterval = time.Hour
-
-	// NodesBackupFileName is the nodes info of backup file name
-	NodesBackupFileName = "nodes.txt"
 )
 
 func init() {
