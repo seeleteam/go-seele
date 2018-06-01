@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
@@ -16,19 +17,46 @@ import (
 )
 
 const (
-	addressIDBits = 512 // the length of the public key
+	addressLen = 32 // length in bytes
+
+	addressTypeExternal = byte(1)
+	addressTypeContract = byte(2)
+
+	// Address format: version(1) + type(1) + hash[12:] + misc(10)
+	// - external account misc: hash[:10]
+	// - contract account misc: shardMod(2) + hash[:8]
+	addressVersion1 = byte(1)
 )
 
+// EmptyAddress presents an empty address
+var EmptyAddress = Address{}
+
 // Address we use public key as node id
-type Address [addressIDBits / 8]byte
+type Address [addressLen]byte
 
 // NewAddress converts a byte slice to a Address
 func NewAddress(b []byte) (Address, error) {
-	var id Address
-	if len(b) != len(id) {
-		return id, fmt.Errorf("wrong length, want %d bytes", len(id))
+	// Validate length
+	if len(b) != addressLen {
+		return EmptyAddress, fmt.Errorf("wrong length, want %d bytes", addressLen)
 	}
+
+	// Validate address version
+	if b[0] != addressVersion1 {
+		return EmptyAddress, fmt.Errorf("invalid address version %v, expected version is %v", b[0], addressVersion1)
+	}
+
+	// Validate address type
+	switch b[1] {
+	case addressTypeExternal:
+	case addressTypeContract:
+	default:
+		return EmptyAddress, fmt.Errorf("invalid address type %v", b[1])
+	}
+
+	var id Address
 	copy(id[:], b)
+
 	return id, nil
 }
 
@@ -112,4 +140,21 @@ func (id *Address) UnmarshalText(json []byte) error {
 
 	copy(id[:], a[:])
 	return nil
+}
+
+// Shard returns the shard number of address.
+func (id Address) Shard() uint {
+	var sum uint
+
+	// sum [2, 21]
+	for _, b := range id[2:22] {
+		sum += uint(b)
+	}
+
+	// sum [22, 23] for contract address
+	if id[1] == addressTypeContract {
+		sum += uint(binary.BigEndian.Uint16(id[22:24]))
+	}
+
+	return (sum % ShardNumber) + 1
 }
