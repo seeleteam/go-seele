@@ -53,12 +53,12 @@ func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error)
 		batch := db.NewBatch()
 		hash, err := statedb.Commit(batch)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Failed to commit state DB,", err.Error())
 			return
 		}
 
 		if err := batch.Commit(); err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Failed to commit batch,", err.Error())
 			return
 		}
 
