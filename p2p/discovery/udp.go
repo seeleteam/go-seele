@@ -425,7 +425,7 @@ func (u *udp) StartServe(nodeDir string) {
 	go u.discoveryWithTwoStags()
 	go u.pingPongService()
 	go u.sendLoop()
-	go u.db.StartSaveNodes(nodeDir, make(chan bool))
+	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
 }
 
 func (u *udp) addNode(n *Node) {

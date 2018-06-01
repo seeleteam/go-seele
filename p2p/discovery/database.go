@@ -23,19 +23,18 @@ type NodeHook func(node *Node)
 type Database struct {
 	m              map[common.Hash]*Node
 	log            *log.SeeleLog
-	mutex          sync.Mutex
+	mutex          sync.RWMutex
 	addNodeHook    NodeHook
 	deleteNodeHook NodeHook
 }
 
 // StartSaveNodes will save to a file and open a timer to backup the nodes info
-func (db *Database) StartSaveNodes(nodeDir string, done chan bool) {
-	ticker := time.NewTicker(time.Hour)
+func (db *Database) StartSaveNodes(nodeDir string, done chan struct{}) {
+	ticker := time.NewTicker(common.NodesBackupInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			db.log.Debug("backups nodes...\n")
 			go db.SaveNodes(nodeDir)
 		case <-done:
 			return
@@ -49,13 +48,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 	if db.m == nil {
 		return
 	}
-	var filePath string
-	if len(nodeDir) > 0 {
-		filePath = nodeDir
-	} else {
-		filePath = filepath.Join(common.GetTempFolder(), nodeDir)
-	}
-	fileFullPath := filepath.Join(filePath, "nodes.txt")
+	fileFullPath := filepath.Join(nodeDir, common.NodesBackupFileName)
 
 	nodeStr := make([]string, len(db.m))
 	i := 0
@@ -71,17 +64,18 @@ func (db *Database) SaveNodes(nodeDir string) {
 	}
 
 	if !common.FileOrFolderExists(fileFullPath) {
-		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-			db.log.Error("filePath:[%s] create folder failed, for:[%s]", filePath, err.Error())
+		if err := os.MkdirAll(nodeDir, os.ModePerm); err != nil {
+			db.log.Error("filePath:[%s] create folder failed, for:[%s]", nodeDir, err.Error())
 			return
 		}
 	}
 
+	db.log.Info("backups nodes. node length %d", len(db.m))
 	if err = ioutil.WriteFile(fileFullPath, nodeByte, 0666); err != nil {
 		db.log.Error("nodes info backup failed, for:[%s]", err.Error())
 		return
 	}
-	db.log.Info("nodes:%s info backup success\n", nodeByte)
+	db.log.Info("nodes:%s info backup success\n", string(nodeByte))
 }
 
 func NewDatabase(log *log.SeeleLog) *Database {
@@ -104,8 +98,8 @@ func (db *Database) add(value *Node) {
 }
 
 func (db *Database) FindByNodeID(id common.Address) (*Node, bool) {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	sha := crypto.HashBytes(id.Bytes())
 	val, ok := db.m[sha]
@@ -125,8 +119,8 @@ func (db *Database) delete(id common.Hash) {
 }
 
 func (db *Database) getRandNodes(number int) []*Node {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	nodes := make([]*Node, 0)
 	count := 0
@@ -152,8 +146,8 @@ func (db *Database) getRandNode() *Node {
 }
 
 func (db *Database) size() int {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	return len(db.m)
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func Test_SaveNodes(t *testing.T) {
-	fileFullPath := filepath.Join(common.GetTempFolder(), "", "nodes.txt")
+	fileFullPath := filepath.Join(common.GetTempFolder(), "nodes.txt")
 	str1 := "12345678901234567890123456789022"
 	str2 := "12345678901234567890123456789026"
 	key1 := common.StringToHash(str1)
@@ -33,7 +33,7 @@ func Test_SaveNodes(t *testing.T) {
 
 	db := NewDatabase(log)
 	db.m = m
-	db.SaveNodes("")
+	db.SaveNodes(common.GetTempFolder())
 	assert.Equal(t, common.FileOrFolderExists(fileFullPath), true)
 	data, err := ioutil.ReadFile(fileFullPath)
 	assert.Equal(t, err, nil)
