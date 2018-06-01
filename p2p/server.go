@@ -87,8 +87,7 @@ type Server struct {
 	delPeerChan chan *Peer
 	loopWG      sync.WaitGroup // loop, listenLoop
 
-	peerMap      map[common.Address]*Peer
-	shardPeerMap map[uint]map[common.Address]*Peer
+	peerSet *peerSet
 	log          *log.SeeleLog
 
 	// MaxPeers max number of peers that can be connected
@@ -106,21 +105,15 @@ type Server struct {
 }
 
 func NewServer(config Config, protocols []Protocol) *Server {
-	peers := make(map[uint]map[common.Address]*Peer)
-	for i := 1; i < common.ShardNumber+1; i++ {
-		peers[uint(i)] = make(map[common.Address]*Peer)
-	}
-
 	return &Server{
 		Config:          config,
 		running:         false,
 		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
 		MaxPeers:        defaultMaxPeers,
-		peerMap:         make(map[common.Address]*Peer),
 		quit:            make(chan struct{}),
 		addPeerChan:     make(chan *Peer),
 		delPeerChan:     make(chan *Peer),
-		shardPeerMap:    peers,
+		peerSet:NewPeerSet(),
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
 	}
@@ -128,11 +121,7 @@ func NewServer(config Config, protocols []Protocol) *Server {
 
 // PeerCount return the count of peers
 func (srv *Server) PeerCount() int {
-	if srv.peerMap != nil {
-		return len(srv.peerMap)
-	}
-
-	return 0
+	return srv.peerSet.count()
 }
 
 // Start starts running the server.
@@ -176,8 +165,8 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	srv.log.Info("got discovery a new node event, node info:%s", node)
-	_, ok := srv.peerMap[node.ID]
-	if ok {
+	p := srv.peerSet.find(node.ID)
+	if p != nil {
 		return
 	}
 
@@ -209,30 +198,29 @@ func (srv *Server) addPeer(p *Peer) {
 		return
 	}
 
-	srv.log.Info("server addPeer, len(peers)=%d", len(srv.peerMap))
-	_, ok := srv.peerMap[p.Node.ID]
+	srv.log.Info("server addPeer, len(peers)=%d", srv.PeerCount())
+	peer := srv.peerSet.find(p.Node.ID)
 	// if peer is already exist, skip
-	if ok {
+	if peer != nil {
 		return
 	}
 
-	srv.shardPeerMap[p.getShardNumber()][p.Node.ID] = p
-	srv.peerMap[p.Node.ID] = p
+	srv.peerSet.add(p)
+	p.notifyProtocolsAddPeer()
 
 	metricsAddPeerMeter.Mark(1)
-	metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
+	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
 }
 
 func (srv *Server) deletePeer(id common.Address) {
-	p, ok := srv.peerMap[id]
-	if ok {
-		delete(srv.peerMap, p.Node.ID)
-		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
+	p := srv.peerSet.find(id)
+	if p != nil {
+		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
-		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
+		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", srv.PeerCount())
 
 		metricsDeletePeerMeter.Mark(1)
-		metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
+		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
 	} else {
 		srv.log.Info("server.run delPeerChan recved. peer not match")
 	}
@@ -240,7 +228,6 @@ func (srv *Server) deletePeer(id common.Address) {
 
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
-	peerMap := srv.peerMap
 	srv.log.Info("p2p start running...")
 
 running:
@@ -257,11 +244,11 @@ running:
 	}
 
 	// Disconnect all peers.
-	for _, p := range peerMap {
+	srv.peerSet.foreach(func(p *Peer) {
 		p.Disconnect(discServerQuit)
-	}
+	})
 
-	for len(peerMap) > 0 {
+	for srv.PeerCount() > 0 {
 		p := <-srv.delPeerChan
 		srv.deletePeer(p.Node.ID)
 	}
@@ -555,12 +542,13 @@ func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // PeersInfo returns an array of metadata objects describing connected peers.
 func (srv *Server) PeersInfo() *[]PeerInfo {
 	infos := make([]PeerInfo, 0, srv.PeerCount())
-	for _, peer := range srv.peerMap {
+	srv.peerSet.foreach(func(peer *Peer) {
 		if peer != nil {
 			peerInfo := peer.Info()
 			infos = append(infos, *peerInfo)
 		}
-	}
+	})
+
 	sort.Sort(PeerInfos(infos))
 	return &infos
 }
