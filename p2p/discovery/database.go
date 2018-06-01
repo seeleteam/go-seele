@@ -51,7 +51,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 	}
 	var filePath string
 	if len(nodeDir) > 0 {
-		filePath = filepath.Join(common.GetDefaultDataFolder(), nodeDir)
+		filePath = nodeDir
 	} else {
 		filePath = filepath.Join(common.GetTempFolder(), nodeDir)
 	}
