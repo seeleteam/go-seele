@@ -28,7 +28,7 @@ const (
 	BlocksMsg          uint16 = 12
 )
 
-func codeToStr(code uint16) string {
+func CodeToStr(code uint16) string {
 	switch code {
 	case GetBlockHeadersMsg:
 		return "downloader.GetBlockHeadersMsg"
@@ -46,7 +46,7 @@ func codeToStr(code uint16) string {
 }
 
 var (
-	MaxBlockFetch  = 10 // Amount of blocks to be fetched per retrieval request
+	MaxBlockFetch  = 10  // Amount of blocks to be fetched per retrieval request
 	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
 
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
@@ -389,9 +389,8 @@ outLoop:
 			endHeight := uint64(0)
 			if len(headers) == 0 {
 				startHeight = headers[0].Height
-				endHeight = headers[len(headers) - 1].Height
+				endHeight = headers[len(headers)-1].Height
 			}
-
 			d.log.Debug("got block header msg length %d. start %d, end %d", len(headers), startHeight, endHeight)
 
 			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
@@ -412,21 +411,6 @@ outLoop:
 				break
 			}
 
-			//msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
-			//if err != nil {
-			//	d.log.Warn("peerDownload waitMsg BlocksPreMsg err! %s", err)
-			//	break
-			//}
-			//
-			//var blockNums []uint64
-			//if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
-			//	d.log.Warn("peerDownload Deserialize err! %s", err)
-			//	break
-			//}
-			//
-			//d.log.Debug("got block previous message length %d", len(blockNums))
-			//tm.deliverBlockPreMsg(peerID, blockNums)
-
 			msg, err := conn.waitMsg(BlocksMsg, d.cancelCh)
 			if err != nil {
 				d.log.Warn("peerDownload waitMsg BlocksMsg err! %s", err)
@@ -443,7 +427,7 @@ outLoop:
 			endHeight := uint64(0)
 			if len(blocks) == 0 {
 				startHeight = blocks[0].Header.Height
-				endHeight = blocks[len(blocks) - 1].Header.Height
+				endHeight = blocks[len(blocks)-1].Header.Height
 			}
 			d.log.Debug("got blocks message length %d. start %d, end %d", len(blocks), startHeight, endHeight)
 

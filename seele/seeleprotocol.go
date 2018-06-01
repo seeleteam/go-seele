@@ -55,19 +55,9 @@ func codeToStr(code uint16) string {
 		return "statusDataMsgCode"
 	case statusChainHeadMsgCode:
 		return "statusChainHeadMsgCode"
-	case downloader.GetBlockHeadersMsg:
-		return "downloader.GetBlockHeadersMsg"
-	case downloader.BlockHeadersMsg:
-		return "downloader.BlockHeadersMsg"
-	case downloader.GetBlocksMsg:
-		return "downloader.GetBlocksMsg"
-	case downloader.BlocksPreMsg:
-		return "downloader.BlocksPreMsg"
-	case downloader.BlocksMsg:
-		return "downloader.BlocksMsg"
-	default:
-		return "unknown"
 	}
+
+	return downloader.CodeToStr(code)
 }
 
 // SeeleProtocol service implementation of seele
@@ -538,7 +528,7 @@ handler:
 				orgNum = head.Height
 			}
 
-			p.log.Debug("Received downloader.GetBlocksMsg length %d, start %d, end %d", query.Amount, orgNum, orgNum + query.Amount)
+			p.log.Debug("Received downloader.GetBlocksMsg length %d, start %d, end %d", query.Amount, orgNum, orgNum+query.Amount)
 
 			totalLen := 0
 			var numL []uint64
@@ -564,15 +554,10 @@ handler:
 				numL = append(numL, curNum)
 			}
 
-			//if err = peer.sendPreBlocksMsg(numL); err != nil {
-			//	p.log.Error("HandleMsg GetBlocksMsg sendPreBlocksMsg err. %s", err)
-			//	break handler
-			//}
-
 			if len(blocksL) == 0 {
 				p.log.Debug("send blocks with empty")
 			} else {
-				p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL) -1].Header.Height)
+				p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL)-1].Header.Height)
 			}
 
 			if err = peer.sendBlocks(blocksL); err != nil {

@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	taskStatusIdle           = 0    // request task is not assigned
-	taskStatusDownloading    = 1    // block is downloading
-	taskStatusWaitProcessing = 2    // block is downloaded, needs to process
-	taskStatusProcessed      = 3    // block is written to chain
+	taskStatusIdle           = 0 // request task is not assigned
+	taskStatusDownloading    = 1 // block is downloading
+	taskStatusWaitProcessing = 2 // block is downloaded, needs to process
+	taskStatusProcessed      = 3 // block is written to chain
 
-	maxBlocksWaiting         = 1024 // max blocks waiting to download
+	maxBlocksWaiting = 1024 // max blocks waiting to download
 )
 
 var (
@@ -88,7 +88,7 @@ func (t *taskMgr) run() {
 loopOut:
 	for {
 		t.lock.Lock()
-		startPos:= int(t.curNo-t.fromNo)
+		startPos := int(t.curNo - t.fromNo)
 		num := 0
 		for (startPos+num < len(t.downloadInfoList)) && (t.downloadInfoList[startPos+num].status == taskStatusWaitProcessing) {
 			num = num + 1
@@ -240,7 +240,7 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	if len(headers) == 0{
+	if len(headers) == 0 {
 		t.log.Warn("get block header msg with empty header info")
 		return nil
 	}
@@ -272,32 +272,6 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	}
 
 	return nil
-}
-
-// deliverBlockPreMsg received blocks-pre msg from peer.
-func (t *taskMgr) deliverBlockPreMsg(peerID string, blockNums []uint64) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	for _, masterHead := range t.downloadInfoList[t.curNo-t.fromNo:] {
-		if masterHead.status != taskStatusDownloading || masterHead.peerID != peerID {
-			continue
-		}
-
-		curNo := masterHead.header.Height
-		bFind := false
-		for _, n := range blockNums {
-			if n == curNo {
-				bFind = true
-				break
-			}
-		}
-
-		if !bFind {
-			masterHead.peerID = ""
-			masterHead.status = taskStatusIdle
-		}
-	}
 }
 
 // deliverBlockMsg recved blocks msg from peer.
