@@ -49,7 +49,12 @@ func (db *Database) SaveNodes(nodeDir string) {
 	if db.m == nil {
 		return
 	}
-	filePath := filepath.Join(common.GetDefaultDataFolder(), nodeDir)
+	var filePath string
+	if len(nodeDir) > 0 {
+		filePath = filepath.Join(common.GetDefaultDataFolder(), nodeDir)
+	} else {
+		filePath = filepath.Join(common.GetTempFolder(), nodeDir)
+	}
 	fileFullPath := filepath.Join(filePath, "nodes.txt")
 
 	nodeStr := make([]string, len(db.m))

@@ -10,7 +10,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
@@ -70,7 +69,7 @@ var startCmd = &cobra.Command{
 			mynode = n
 		}
 
-		discovery.StartService(common.GetTempFolder(), mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
+		discovery.StartService("", mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)
