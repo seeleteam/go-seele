@@ -189,7 +189,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	sp.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
-			sp.log.Warn("send transaction hash failed %s", err.Error())
+			sp.log.Warn("send chain head info failed %s", err)
 		}
 		return true
 	})
@@ -279,8 +279,7 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
-		p2pPeer.Disconnect(DiscHandShakeErr)
-		p.log.Info("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
+		p.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
 		return
 	}
 
@@ -294,8 +293,8 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	}
 
 	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
-		newPeer.Disconnect(DiscHandShakeErr)
 		p.log.Error("handleAddPeer err. %s", err)
+		newPeer.Disconnect(DiscHandShakeErr)
 		return
 	}
 	p.log.Info("newPeer.HandShake ok")

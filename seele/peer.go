@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DiscHandShakeErr = 100 // DiscHandShakeErr peer handshake error
+	DiscHandShakeErr = "disconnect because got handshake error" // DiscHandShakeErr peer handshake error
 
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
