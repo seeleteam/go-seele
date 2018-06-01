@@ -140,14 +140,14 @@ func (p *Peer) notifyProtocolsAddPeer() {
 	p.wg.Add(len(p.protocolMap))
 	p.log.Debug("notifyProtocolsAddPeer called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
-		go func() {
+		go func(proto protocolRW) {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
 				p.log.Debug("protocol.AddPeer called. protocol:%s", proto.cap())
 				proto.AddPeer(p, &proto)
 			}
-		}()
+		}(proto)
 	}
 }
 
@@ -155,14 +155,14 @@ func (p *Peer) notifyProtocolsDeletePeer() {
 	p.wg.Add(len(p.protocolMap))
 	p.log.Debug("notifyProtocolsDeletePeer called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
-		go func() {
+		go func(proto protocolRW) {
 			defer p.wg.Done()
 
 			if proto.DeletePeer != nil {
 				p.log.Debug("protocol.DeletePeer called. protocol:%s", proto.cap())
 				proto.DeletePeer(p)
 			}
-		}()
+		}(proto)
 	}
 }
 
