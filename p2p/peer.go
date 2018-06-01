@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	pingInterval         = 15 * time.Second // ping interval for peer tcp connection. Should be 15
-	discAlreadyConnected = 10               // node already has connection
-	discServerQuit       = 11               // p2p.server need quit, all peers should quit as it can
+	pingInterval         = 15 * time.Second                 // ping interval for peer tcp connection. Should be 15
+	discServerQuit       = "disconnect because server quit" // p2p.server need quit, all peers should quit as it can
 )
 
 // Peer represents a connected remote node.
@@ -27,12 +26,13 @@ type Peer struct {
 	protocolErr   chan error
 	closed        chan struct{}
 	Node          *discovery.Node // remote peer that this peer connects
-	disconnection chan uint
+	disconnection chan string
 	protocolMap   map[string]protocolRW // protocol cap => protocol read write wrapper
 	rw            *connection
 
-	wg  sync.WaitGroup
-	log *log.SeeleLog
+	wg   sync.WaitGroup
+	log  *log.SeeleLog
+	lock sync.Mutex
 }
 
 func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
@@ -50,17 +50,18 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 
 		protoMap[p.cap().String()] = protoRW
 		offset += p.Length
-			log.Debug("NewPeer called, add protocol: %s", p.cap())
+		log.Debug("NewPeer called, add protocol: %s", p.cap())
 	}
 
 	return &Peer{
 		rw:            conn,
 		protocolMap:   protoMap,
-		disconnection: make(chan uint),
+		disconnection: make(chan string),
 		closed:        closed,
 		log:           log,
 		protocolErr:   make(chan error),
 		Node:          node,
+		lock:          sync.Mutex{},
 	}
 }
 
@@ -82,9 +83,9 @@ errLoop:
 		case err = <-readErr:
 			p.log.Warn("p2p.peer.run read err %s", err)
 			break errLoop
-		case <-p.disconnection:
+		case reason := <-p.disconnection:
 			p.log.Info("p2p peer got disconnection request")
-			err = errors.New("disconnection error received")
+			err = fmt.Errorf("disconnection error received, %s", reason)
 			break errLoop
 		case err = <-p.protocolErr:
 			p.log.Warn("p2p peer got protocol err %s", err.Error())
@@ -100,6 +101,9 @@ errLoop:
 }
 
 func (p *Peer) close() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	close(p.closed)
 	close(p.disconnection)
 }
@@ -213,10 +217,12 @@ func (p *Peer) sendCtlMsg(msgCode uint16) error {
 
 // Disconnect terminates the peer connection with the given reason.
 // It returns immediately and does not wait until the connection is closed.
-func (p *Peer) Disconnect(reason uint) {
-	select {
-	case p.disconnection <- reason:
-	case <-p.closed:
+func (p *Peer) Disconnect(reason string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if p.disconnection != nil {
+		p.disconnection <- reason
 	}
 }
 
