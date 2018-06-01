@@ -156,7 +156,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 }
 
 func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
-	d.log.Info("download starting")
+	d.log.Debug("Downloader.doSynchronise start")
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
@@ -167,7 +167,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 			event.BlockDownloaderEventManager.Fire(event.DownloaderDoneEvent)
 		}
 	}()
-	d.log.Debug("Downloader.doSynchronise start")
+
 	latest, err := d.fetchHeight(conn)
 	if err != nil {
 		return err
@@ -478,7 +478,7 @@ outLoop:
 }
 
 // processBlocks writes blocks to the blockchain.
-func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
+func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
 		d.log.Debug("height:%d hash:%s <- preHash:%s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
 	}

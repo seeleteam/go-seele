@@ -151,10 +151,11 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
-	sp.log.Info("sp.synchronise called.")
 	if p == nil {
 		return
 	}
+
+	sp.log.Info("sp.synchronise called.")
 	block, _ := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
@@ -324,6 +325,7 @@ func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
 func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
 	s.log.Debug("delete peer from peer set. %s", peer.Node)
 	s.peerSet.Remove(peer.Node.ID)
+	s.downloader.UnRegisterPeer(idToStr(peer.Node.ID))
 }
 
 func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
@@ -540,7 +542,12 @@ handler:
 			var numL []uint64
 			for cnt := uint64(0); cnt < query.Amount; cnt++ {
 				curNum := orgNum + cnt
-				hash, _ := p.chain.GetStore().GetBlockHash(curNum)
+				hash, err := p.chain.GetStore().GetBlockHash(curNum)
+				if err != nil {
+					p.log.Warn("get block with height %d failed, err %s", curNum, err)
+					break
+				}
+
 				if block, err = p.chain.GetStore().GetBlock(hash); err != nil {
 					p.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
 					break handler
@@ -564,7 +571,7 @@ handler:
 				p.log.Error("HandleMsg GetBlocksMsg sendBlocks err. %s", err)
 				break handler
 			}
-			p.log.Debug("send downloader.sendBlockHeaders")
+			p.log.Debug("send downloader.sendBlocks")
 
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
 			p.log.Debug("Received downloader Msg. %s", codeToStr(msg.Code))
@@ -587,7 +594,6 @@ handler:
 		}
 	}
 
-	p.peerSet.Remove(peer.peerID)
-	p.downloader.UnRegisterPeer(peer.peerStrID)
+	p.handleDelPeer(peer.Peer)
 	p.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
 }

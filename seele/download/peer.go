@@ -16,7 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
-const MsgWaitTimeout = time.Second * 10
+const MsgWaitTimeout = time.Second * 120
 
 var (
 	errRecvedQuitMsg = errors.New("Recved quit msg")

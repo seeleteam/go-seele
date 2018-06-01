@@ -123,7 +123,7 @@ func (c *connection) WriteMsg(msg Message) error {
 	}
 
 	if len(msg.Payload) > 0 {
-		_, err = c.fd.Write(msg.Payload)
+		err = c.writeFull(msg.Payload)
 		if err != nil {
 			return err
 		}
