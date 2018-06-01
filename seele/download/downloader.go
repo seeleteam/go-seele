@@ -387,7 +387,7 @@ outLoop:
 
 			startHeight := uint64(0)
 			endHeight := uint64(0)
-			if len(headers) == 0 {
+			if len(headers) > 0 {
 				startHeight = headers[0].Height
 				endHeight = headers[len(headers)-1].Height
 			}
@@ -425,7 +425,7 @@ outLoop:
 
 			startHeight := uint64(0)
 			endHeight := uint64(0)
-			if len(blocks) == 0 {
+			if len(blocks) > 0 {
 				startHeight = blocks[0].Header.Height
 				endHeight = blocks[len(blocks)-1].Header.Height
 			}
