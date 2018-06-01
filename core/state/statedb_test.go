@@ -187,7 +187,7 @@ func TestStatedb_Cache(t *testing.T) {
 	}
 }
 
-func Test_Commit(t *testing.T) {
+func Test_Commit_AccountStorages(t *testing.T) {
 	db, remove := newTestStateDB()
 	defer remove()
 
