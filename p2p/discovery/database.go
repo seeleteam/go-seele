@@ -33,7 +33,8 @@ func (db *Database) add(value *Node) {
 	defer db.mutex.Unlock()
 
 	sha := value.getSha()
-	if _, ok := db.m[sha]; !ok && db.addNodeHook != nil {
+	// always notify add node event
+	if db.addNodeHook != nil {
 		go db.addNodeHook(value)
 	}
 

@@ -210,14 +210,10 @@ func (srv *Server) addPeer(p *Peer) {
 	}
 
 	srv.log.Info("server addPeer, len(peers)=%d", len(srv.peerMap))
-	oldPeer, ok := srv.peerMap[p.Node.ID]
-
+	_, ok := srv.peerMap[p.Node.ID]
+	// if peer is already exist, skip
 	if ok {
-		srv.log.Info("peer already exists, disconnect it and update the new peer")
-		p.Disconnect(discAlreadyConnected)
-
-		peerMap := srv.shardPeerMap[oldPeer.getShardNumber()]
-		delete(peerMap, oldPeer.Node.ID)
+		return
 	}
 
 	srv.shardPeerMap[p.getShardNumber()][p.Node.ID] = p

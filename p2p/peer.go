@@ -81,7 +81,7 @@ errLoop:
 	for {
 		select {
 		case err = <-readErr:
-			p.log.Warn("p2p.peer.run read err %s", err.Error())
+			p.log.Warn("p2p.peer.run read err %s", err)
 			break errLoop
 		case <-p.disconnection:
 			p.log.Info("p2p peer got disconnection request")
@@ -93,8 +93,8 @@ errLoop:
 		}
 	}
 
-	p.wg.Wait()
 	p.close()
+	p.wg.Wait()
 	p.log.Info("p2p.peer.run quit. err=%s", err)
 
 	return err
@@ -107,6 +107,7 @@ func (p *Peer) close() {
 
 func (p *Peer) pingLoop() {
 	ping := time.NewTimer(pingInterval)
+	defer p.log.Debug("exit ping loop.")
 	defer p.wg.Done()
 	defer ping.Stop()
 	for {
@@ -121,10 +122,10 @@ func (p *Peer) pingLoop() {
 }
 
 func (p *Peer) readLoop(readErr chan<- error) {
+	defer p.log.Debug("exit read loop")
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
-		//p.log.Debug("got msg from peer: %s, code: %d",p.Node, msgRecv.Code)
 		if err != nil {
 			readErr <- err
 			return

@@ -189,7 +189,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	sp.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
-			sp.log.Warn("send transaction hash failed %s", err.Error())
+			sp.log.Warn("send chain head info failed %s", err)
 		}
 		return true
 	})
