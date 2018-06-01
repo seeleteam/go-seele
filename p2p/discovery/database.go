@@ -33,7 +33,7 @@ const (
 	NodesBackupInterval = time.Hour
 
 	// NodesBackupFileName is the nodes info of backup file name
-	NodesBackupFileName = "nodes.txt"
+	NodesBackupFileName = "nodes.json"
 )
 
 // StartSaveNodes will save to a file and open a timer to backup the nodes info
@@ -51,8 +51,8 @@ func (db *Database) StartSaveNodes(nodeDir string, done chan struct{}) {
 }
 
 func (db *Database) SaveNodes(nodeDir string) {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 	if db.m == nil {
 		return
 	}
@@ -161,8 +161,8 @@ func (db *Database) size() int {
 }
 
 func (db *Database) GetCopy() map[common.Hash]*Node {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	copyMap := make(map[common.Hash]*Node)
 	for key, value := range db.m {
