@@ -33,7 +33,7 @@ func Test_SaveNodes(t *testing.T) {
 
 	db := NewDatabase(log)
 	db.m = m
-	db.StartSaveNodes("node1", make(chan bool))
+	db.SaveNodes("node1")
 	assert.Equal(t, common.FileOrFolderExists(fileFullPath), true)
 	data, err := ioutil.ReadFile(fileFullPath)
 	assert.Equal(t, err, nil)
@@ -41,4 +41,5 @@ func Test_SaveNodes(t *testing.T) {
 	err = json.Unmarshal(data, &cnode)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, cnode[0], "snode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000@:66[0]")
+	assert.Equal(t, len(cnode), 2)
 }
