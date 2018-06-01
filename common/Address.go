@@ -7,6 +7,8 @@ package common
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"fmt"
 	"math/big"
 
@@ -30,16 +32,28 @@ func NewAddress(b []byte) (Address, error) {
 	return id, nil
 }
 
+// PubKeyToAddress converts a ECC public key to a address.
+func PubKeyToAddress(pubKey *ecdsa.PublicKey) Address {
+	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+
+	addr, err := NewAddress(buf[1:])
+	if err != nil {
+		panic(err)
+	}
+
+	return addr
+}
+
 // Bytes get the actual bytes
 func (id Address) Bytes() []byte {
 	return id[:]
 }
 
-func (id *Address) ToHex() string {
+func (id Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
-func (id *Address) Equal(b Address) bool {
+func (id Address) Equal(b Address) bool {
 	return bytes.Equal(id[:], b[:])
 }
 

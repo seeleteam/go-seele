@@ -28,8 +28,25 @@ const (
 	BlocksMsg          uint16 = 12
 )
 
+func CodeToStr(code uint16) string {
+	switch code {
+	case GetBlockHeadersMsg:
+		return "downloader.GetBlockHeadersMsg"
+	case BlockHeadersMsg:
+		return "downloader.BlockHeadersMsg"
+	case GetBlocksMsg:
+		return "downloader.GetBlocksMsg"
+	case BlocksPreMsg:
+		return "downloader.BlocksPreMsg"
+	case BlocksMsg:
+		return "downloader.BlocksMsg"
+	default:
+		return "unknown"
+	}
+}
+
 var (
-	MaxBlockFetch  = 128 // Amount of blocks to be fetched per retrieval request
+	MaxBlockFetch  = 10  // Amount of blocks to be fetched per retrieval request
 	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
 
 	MaxForkAncestry = 90000       // Maximum chain reorganisation
@@ -139,15 +156,18 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 }
 
 func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
+	d.log.Debug("Downloader.doSynchronise start")
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
+			d.log.Info("download end with failed, err %s", err)
 			event.BlockDownloaderEventManager.Fire(event.DownloaderFailedEvent)
 		} else {
+			d.log.Info("download end success")
 			event.BlockDownloaderEventManager.Fire(event.DownloaderDoneEvent)
 		}
 	}()
-	d.log.Debug("Downloader.doSynchronise start")
+
 	latest, err := d.fetchHeight(conn)
 	if err != nil {
 		return err
@@ -158,19 +178,19 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	if err != nil {
 		return err
 	}
-	d.log.Debug("Downloader.findCommonAncestorHeight start, ancestor=%d", ancestor)
+	d.log.Debug("start task manager from height:%d, target height:%d", ancestor, height)
 	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	for _, c := range d.peers {
-		_, peerTD := c.peer.Head()
+	for _, pConn := range d.peers {
+		_, peerTD := pConn.peer.Head()
 		if localTD.Cmp(peerTD) >= 0 {
 			continue
 		}
 		d.sessionWG.Add(1)
 
-		go d.peerDownload(c, tm)
+		go d.peerDownload(pConn, tm)
 	}
 	d.lock.Unlock()
 	d.sessionWG.Wait()
@@ -347,62 +367,76 @@ outLoop:
 		if startNo, amount := tm.getReqHeaderInfo(conn); amount > 0 {
 			d.log.Debug("tm.getReqHeaderInfo. startNo:%d amount:%d", startNo, amount)
 			hasReqData = true
+
+			d.log.Debug("request header by number. start %d, amount %d", startNo, amount)
 			if err = conn.peer.RequestHeadersByHashOrNumber(common.Hash{}, startNo, amount, false); err != nil {
-				d.log.Info("RequestHeadersByHashOrNumber err!")
+				d.log.Warn("RequestHeadersByHashOrNumber err! %s", err)
 				break
 			}
 			msg, err := conn.waitMsg(BlockHeadersMsg, d.cancelCh)
 			if err != nil {
-				d.log.Info("peerDownload waitMsg BlockHeadersMsg err! %s", err)
-				break
-			}
-			var headers []*types.BlockHeader
-			if err = common.Deserialize(msg.Payload, &headers); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
+				d.log.Warn("peerDownload waitMsg BlockHeadersMsg err! %s", err)
 				break
 			}
 
-			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
-				d.log.Info("peerDownload deliverHeaderMsg err! %s", err)
+			var headers []*types.BlockHeader
+			if err = common.Deserialize(msg.Payload, &headers); err != nil {
+				d.log.Warn("peerDownload Deserialize err! %s", err)
 				break
 			}
+
+			startHeight := uint64(0)
+			endHeight := uint64(0)
+			if len(headers) > 0 {
+				startHeight = headers[0].Height
+				endHeight = headers[len(headers)-1].Height
+			}
+			d.log.Debug("got block header msg length %d. start %d, end %d", len(headers), startHeight, endHeight)
+
+			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
+				d.log.Warn("peerDownload deliverHeaderMsg err! %s", err)
+				break
+			}
+
+			d.log.Debug("get request header info success")
 		}
 
 		if startNo, amount := tm.getReqBlocks(conn); amount > 0 {
 			d.log.Debug("download.peerdown getReqBlocks startNo=%d amount=%d", startNo, amount)
 			hasReqData = true
+
+			d.log.Debug("request block by number. start %d, amount %d", startNo, amount)
 			if err = conn.peer.RequestBlocksByHashOrNumber(common.Hash{}, startNo, amount); err != nil {
-				d.log.Info("RequestBlocksByHashOrNumber err!")
+				d.log.Warn("RequestBlocksByHashOrNumber err! %s", err)
 				break
 			}
 
-			msg, err := conn.waitMsg(BlocksPreMsg, d.cancelCh)
+			msg, err := conn.waitMsg(BlocksMsg, d.cancelCh)
 			if err != nil {
-				d.log.Info("peerDownload waitMsg BlocksPreMsg err! %s", err)
-				break
-			}
-
-			var blockNums []uint64
-			if err = common.Deserialize(msg.Payload, &blockNums); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
-				break
-			}
-			tm.deliverBlockPreMsg(peerID, blockNums)
-
-			msg, err = conn.waitMsg(BlocksMsg, d.cancelCh)
-			if err != nil {
-				d.log.Info("peerDownload waitMsg BlocksMsg err! %s", err)
+				d.log.Warn("peerDownload waitMsg BlocksMsg err! %s", err)
 				break
 			}
 
 			var blocks []*types.Block
 			if err = common.Deserialize(msg.Payload, &blocks); err != nil {
-				d.log.Info("peerDownload Deserialize err! %s", err)
+				d.log.Warn("peerDownload Deserialize err! %s", err)
 				break
 			}
+
+			startHeight := uint64(0)
+			endHeight := uint64(0)
+			if len(blocks) > 0 {
+				startHeight = blocks[0].Header.Height
+				endHeight = blocks[len(blocks)-1].Header.Height
+			}
+			d.log.Debug("got blocks message length %d. start %d, end %d", len(blocks), startHeight, endHeight)
+
 			tm.deliverBlockMsg(peerID, blocks)
+			d.log.Debug("get request blocks success")
 		}
+
 		if hasReqData {
+			d.log.Debug("got request data, continue to request")
 			continue
 		}
 
@@ -428,10 +462,9 @@ outLoop:
 }
 
 // processBlocks writes blocks to the blockchain.
-func (d *Downloader) processBlocks(headInfos []*masterHeadInfo) {
-
+func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
-		d.log.Debug("%d %s <- %s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
+		d.log.Debug("height:%d hash:%s <- preHash:%s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
 	}
 
 	for _, h := range headInfos {

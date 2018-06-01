@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	responseTimeout = 10 * time.Second
+	responseTimeout = 15 * time.Second
 
-	pingpongInterval  = 15 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 20 * time.Second // sleep between discovery, must big than response time out
+	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
 )
 
 type udp struct {
@@ -153,7 +153,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
-		//log.Debug("msg type: %d", code)
+		u.log.Debug("receive msg type: %s", codeToStr(code))
 		switch code {
 		case pingMsgType:
 			msg := &ping{}
@@ -314,7 +314,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					u.log.Info("time out to wait for msg with msg type %d", p.code)
+					u.log.Info("time out to wait for msg with msg type %s", codeToStr(p.code))
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}

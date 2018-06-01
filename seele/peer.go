@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	DiscHandShakeErr = 100 // DiscHandShakeErr peer handshake error
+	DiscHandShakeErr = "disconnect because got handshake error" // DiscHandShakeErr peer handshake error
 
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
@@ -53,13 +53,17 @@ type peer struct {
 	knownBlocks *set.Set // Set of block hashes known by this peer
 }
 
+func idToStr(id common.Address) string {
+	return fmt.Sprintf("%x", id[:8])
+}
+
 func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 	return &peer{
 		Peer:        p,
 		version:     version,
 		td:          big.NewInt(0),
 		peerID:      p.Node.ID,
-		peerStrID:   fmt.Sprintf("%x", p.Node.ID[:8]),
+		peerStrID:   idToStr(p.Node.ID),
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		rw:          rw,

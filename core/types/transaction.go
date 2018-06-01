@@ -145,7 +145,7 @@ func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.In
 // Sign signs the transaction with the specified private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Hash = crypto.MustHash(tx.Data)
-	tx.Signature = crypto.NewSignature(privKey, tx.Hash.Bytes())
+	tx.Signature = crypto.MustSign(privKey, tx.Hash)
 }
 
 // Validate returns true if the transaction is valid, otherwise false.
@@ -189,7 +189,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrHashMismatch
 	}
 
-	if !tx.Signature.Verify(&tx.Data.From, txDataHash.Bytes()) {
+	if !tx.Signature.Verify(tx.Data.From, txDataHash) {
 		return ErrSigInvalid
 	}
 
