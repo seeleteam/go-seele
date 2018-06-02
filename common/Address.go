@@ -62,15 +62,15 @@ func NewAddress(b []byte) (Address, error) {
 
 // PubKeyToAddress converts a ECC public key to an external address.
 func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) Address {
-	var addr Address
-
-	addr[0] = addressVersion1
-	addr[1] = addressTypeExternal
-
 	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 	hash := hashFunc(buf[1:]).Bytes()
-	copy(addr[2:22], hash[12:])
-	copy(addr[22:], hash[:10])
+
+	// Address format: version(1) + type(1) + pubKeyHash[12:] + pubKeyHash[:10]
+	var addr Address
+	addr[0] = addressVersion1
+	addr[1] = addressTypeExternal
+	copy(addr[2:22], hash[12:]) // public key info
+	copy(addr[22:], hash[:10])  // misc
 
 	return addr
 }
@@ -175,19 +175,13 @@ func (id Address) Shard() uint {
 
 // CreateContractAddress returns a contract address that in the same shard of this address.
 func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
-	var contractAddr Address
-
-	contractAddr[0] = addressVersion1
-	contractAddr[1] = addressTypeContract
-
 	hash := hashFunc([]interface{}{id, nonce}).Bytes()
-	copy(contractAddr[2:22], hash[12:])
 
 	targetShardNum := id.Shard()
 	var sum uint
 
-	// sum [2:22]
-	for _, b := range contractAddr[2:22] {
+	// sum [12:] of public key hash
+	for _, b := range hash[12:] {
 		sum += uint(b)
 	}
 
@@ -200,8 +194,13 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 		binary.BigEndian.PutUint16(encoded, uint16(ShardNumber+targetShardNum-shardNum))
 	}
 
-	copy(contractAddr[22:24], encoded)
-	copy(contractAddr[24:], hash[:8])
+	// Address format: version(1) + type(1) + pubKeyHash[12:] + shardMod(2) + pubKeyHash[:8]
+	var contractAddr Address
+	contractAddr[0] = addressVersion1
+	contractAddr[1] = addressTypeContract
+	copy(contractAddr[2:22], hash[12:]) // public key info
+	copy(contractAddr[22:24], encoded)  // shard mod
+	copy(contractAddr[24:], hash[:8])   // misc
 
 	return contractAddr
 }
