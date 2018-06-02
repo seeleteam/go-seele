@@ -130,12 +130,8 @@ func GetAddress(key *ecdsa.PublicKey) *common.Address {
 
 // GenerateRandomAddress generates and returns a random address.
 func GenerateRandomAddress() (*common.Address, error) {
-	privKey, err := GenerateKey()
-	if err != nil {
-		return nil, err
-	}
-
-	return GetAddress(&privKey.PublicKey), nil
+	addr, _, err := GenerateKeyPair()
+	return addr, err
 }
 
 // MustGenerateRandomAddress generates and returns a random address.
