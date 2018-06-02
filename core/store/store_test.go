@@ -87,16 +87,17 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 func newTestTx() *types.Transaction {
 	tx := &types.Transaction{
 		Data: &types.TransactionData{
-			From:    *crypto.MustGenerateRandomAddress(),
-			To:      crypto.MustGenerateRandomAddress(),
-			Amount:  big.NewInt(3),
-			Fee:     big.NewInt(0),
-			Payload: make([]byte, 0),
+			From:      *crypto.MustGenerateRandomAddress(),
+			To:        crypto.MustGenerateRandomAddress(),
+			Amount:    big.NewInt(3),
+			Fee:       big.NewInt(0),
+			Timestamp: big.NewInt(0),
+			Payload:   make([]byte, 0),
 		},
 		Signature: &crypto.Signature{[]byte("test sig")},
 	}
 
-	tx.Hash = crypto.MustHash(tx)
+	tx.Hash = crypto.MustHash(tx.Data)
 
 	return tx
 }
