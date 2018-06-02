@@ -120,40 +120,20 @@ func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	id, err := GetAddress(keypair)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return id, keypair, err
-}
-
-// GetAddress gets an address from the given private key
-func GetAddress(key *ecdsa.PrivateKey) (*common.Address, error) {
-	buff := FromECDSAPub(&key.PublicKey)
-	id, err := common.NewAddress(buff[1:])
-	if err != nil {
-		return nil, err
-	}
-
-	return &id, nil
-}
-
-// MustGetAddress gets an address from the given private key. in fact the error will not occur, so MustGetAddress will always work
-func MustGetAddress(key *ecdsa.PrivateKey) *common.Address {
-	addr, err := GetAddress(key)
-	if err != nil {
-		panic(err)
-	}
-
-	return addr
+	id := common.PubKeyToAddress(&keypair.PublicKey, MustHash)
+	return &id, keypair, err
 }
 
 // GenerateRandomAddress generates and returns a random address.
 func GenerateRandomAddress() (*common.Address, error) {
-	publicKey, _, error := GenerateKeyPair()
+	privKey, err := GenerateKey()
+	if err != nil {
+		return nil, err
+	}
 
-	return publicKey, error
+	addr := common.PubKeyToAddress(&privKey.PublicKey, MustHash)
+
+	return &addr, nil
 }
 
 // MustGenerateRandomAddress generates and returns a random address.
@@ -175,13 +155,8 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 	}
 
 	for {
-		address, err := GenerateRandomAddress()
-		if err != nil {
-			panic(err)
-		}
-
-		if common.GetShardNumber(*address) == shardNum {
-			return address
+		if addr := MustGenerateRandomAddress(); addr.Shard() == shardNum {
+			return addr
 		}
 	}
 }
@@ -191,8 +166,5 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 // address and nonce. Note, the new created contract address and the account
 // address are in the same shard.
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
-	addrHash := MustHash(addr)
-	nonceHash := MustHash(nonce)
-
-	return common.CreateContractAddress(addr, addrHash.Bytes(), nonceHash.Bytes())
+	return addr.CreateContractAddress(nonce, MustHash)
 }

@@ -60,14 +60,17 @@ func NewAddress(b []byte) (Address, error) {
 	return id, nil
 }
 
-// PubKeyToAddress converts a ECC public key to a address.
-func PubKeyToAddress(pubKey *ecdsa.PublicKey) Address {
-	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+// PubKeyToAddress converts a ECC public key to an external address.
+func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) Address {
+	var addr Address
 
-	addr, err := NewAddress(buf[1:])
-	if err != nil {
-		panic(err)
-	}
+	addr[0] = addressVersion1
+	addr[1] = addressTypeExternal
+
+	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+	hash := hashFunc(buf[1:]).Bytes()
+	copy(addr[2:22], hash[12:])
+	copy(addr[22:], hash[:10])
 
 	return addr
 }
@@ -151,17 +154,54 @@ func (id *Address) UnmarshalText(json []byte) error {
 
 // Shard returns the shard number of this address.
 func (id Address) Shard() uint {
+	if IsShardDisabled {
+		return 0
+	}
+
 	var sum uint
 
-	// sum [2, 21]
+	// sum [2:22]
 	for _, b := range id[2:22] {
 		sum += uint(b)
 	}
 
-	// sum [22, 23] for contract address
+	// sum [22:24] for contract address
 	if id[1] == addressTypeContract {
 		sum += uint(binary.BigEndian.Uint16(id[22:24]))
 	}
 
 	return (sum % ShardNumber) + 1
+}
+
+// CreateContractAddress returns a contract address that in the same shard of this address.
+func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
+	var contractAddr Address
+
+	contractAddr[0] = addressVersion1
+	contractAddr[1] = addressTypeContract
+
+	hash := hashFunc([]interface{}{id, nonce}).Bytes()
+	copy(contractAddr[2:22], hash[12:])
+
+	targetShardNum := id.Shard()
+	var sum uint
+
+	// sum [2:22]
+	for _, b := range id[2:22] {
+		sum += uint(b)
+	}
+
+	// sum [22:24] for shard mod
+	shardNum := (sum % ShardNumber) + 1
+	encoded := make([]byte, 2)
+	if shardNum <= targetShardNum {
+		binary.BigEndian.PutUint16(encoded, uint16(targetShardNum-shardNum))
+	} else {
+		binary.BigEndian.PutUint16(encoded, uint16(ShardNumber+targetShardNum-shardNum))
+	}
+
+	copy(contractAddr[22:24], encoded)
+	copy(contractAddr[24:], hash[:8])
+
+	return contractAddr
 }
