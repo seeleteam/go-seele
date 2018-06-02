@@ -86,7 +86,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 
-	addr := crypto.GetAddress(key)
+	addr := crypto.GetAddress(&key.PublicKey)
 
 	return &Key{
 		Address:    *addr,

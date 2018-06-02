@@ -120,13 +120,13 @@ func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	id := common.PubKeyToAddress(&keypair.PublicKey, MustHash)
-	return &id, keypair, err
+	id := GetAddress(&keypair.PublicKey)
+	return id, keypair, err
 }
 
-// GetAddress gets an address from the given private key
-func GetAddress(key *ecdsa.PrivateKey) *common.Address {
-	addr := common.PubKeyToAddress(&key.PublicKey, MustHash)
+// GetAddress gets an address from the given public key
+func GetAddress(key *ecdsa.PublicKey) *common.Address {
+	addr := common.PubKeyToAddress(key, MustHash)
 	return &addr
 }
 
@@ -137,9 +137,7 @@ func GenerateRandomAddress() (*common.Address, error) {
 		return nil, err
 	}
 
-	addr := common.PubKeyToAddress(&privKey.PublicKey, MustHash)
-
-	return &addr, nil
+	return GetAddress(&privKey.PublicKey), nil
 }
 
 // MustGenerateRandomAddress generates and returns a random address.
@@ -160,7 +158,7 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
 	}
 
-	for {
+	for i := 1; ; i++ {
 		if addr := MustGenerateRandomAddress(); addr.Shard() == shardNum {
 			return addr
 		}

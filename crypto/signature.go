@@ -52,7 +52,7 @@ func (s Signature) Verify(signer common.Address, hash common.Hash) bool {
 		return false // Signature was modified
 	}
 
-	if !common.PubKeyToAddress(pubKey, MustHash).Equal(signer) {
+	if !GetAddress(pubKey).Equal(signer) {
 		return false
 	}
 

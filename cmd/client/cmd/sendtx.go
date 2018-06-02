@@ -60,7 +60,7 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		from := crypto.GetAddress(key.PrivateKey)
+		from := crypto.GetAddress(&key.PrivateKey.PublicKey)
 
 		var nonce uint64
 		err = client.Call("seele.GetAccountNonce", &from, &nonce)

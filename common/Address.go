@@ -187,7 +187,7 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 	var sum uint
 
 	// sum [2:22]
-	for _, b := range id[2:22] {
+	for _, b := range contractAddr[2:22] {
 		sum += uint(b)
 	}
 
