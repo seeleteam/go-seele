@@ -124,6 +124,12 @@ func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 	return &id, keypair, err
 }
 
+// GetAddress gets an address from the given private key
+func GetAddress(key *ecdsa.PrivateKey) *common.Address {
+	addr := common.PubKeyToAddress(&key.PublicKey, MustHash)
+	return &addr
+}
+
 // GenerateRandomAddress generates and returns a random address.
 func GenerateRandomAddress() (*common.Address, error) {
 	privKey, err := GenerateKey()

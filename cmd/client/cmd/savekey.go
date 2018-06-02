@@ -43,7 +43,7 @@ var savekey = &cobra.Command{
 		}
 
 		key := keystore.Key{
-			Address:    *crypto.MustGetAddress(privateKey),
+			Address:    *crypto.GetAddress(privateKey),
 			PrivateKey: privateKey,
 		}
 

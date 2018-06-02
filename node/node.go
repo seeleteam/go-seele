@@ -104,7 +104,7 @@ func (n *Node) Start() error {
 	n.log.Info("local shard number is %d", common.LocalShardNumber)
 
 	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
-		coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
+		coinbaseShard := n.config.SeeleConfig.Coinbase.Shard()
 		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.ToHex())
 
 		if coinbaseShard != specificShard {
