@@ -51,10 +51,8 @@ func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 }
 
 // PubkeyToString returns the string of the given public key, with prefix 0x
-func PubkeyToString(pub *ecdsa.PublicKey) (pubStr string) {
-	buff := FromECDSAPub(pub)
-	pubStr = "0x" + hex.EncodeToString(buff[1:])
-	return
+func PubkeyToString(pub *ecdsa.PublicKey) string {
+	return GetAddress(pub).ToHex()
 }
 
 // FromECDSAPub marshals and returns the byte array of the specified ECDSA public key.

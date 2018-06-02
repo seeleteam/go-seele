@@ -38,7 +38,7 @@ type Address [addressLen]byte
 func NewAddress(b []byte) (Address, error) {
 	// Validate length
 	if len(b) != addressLen {
-		return EmptyAddress, fmt.Errorf("wrong length, want %d bytes", addressLen)
+		return EmptyAddress, fmt.Errorf("invalid address length %v, expected length is %v", len(b), addressLen)
 	}
 
 	// Validate address version
