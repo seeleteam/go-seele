@@ -77,14 +77,17 @@ func (id Address) Bytes() []byte {
 	return id[:]
 }
 
+// ToHex converts address to 0x prefixed HEX format.
 func (id Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
+// Equal checks if this address is the same with the specified address b.
 func (id Address) Equal(b Address) bool {
 	return bytes.Equal(id[:], b[:])
 }
 
+// HexToAddress converts the specified HEX string to address.
 func HexToAddress(id string) (Address, error) {
 	byte, err := hexutil.HexToBytes(id)
 	if err != nil {
@@ -99,6 +102,8 @@ func HexToAddress(id string) (Address, error) {
 	return nid, nil
 }
 
+// HexMustToAddres converts the specified HEX string to address.
+// Panics on any error.
 func HexMustToAddres(id string) Address {
 	a, err := HexToAddress(id)
 	if err != nil {
@@ -127,11 +132,13 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 // Big converts address to a big int.
 func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
 
+// MarshalText marshals the address to HEX string.
 func (id Address) MarshalText() ([]byte, error) {
 	str := id.ToHex()
 	return []byte(str), nil
 }
 
+// UnmarshalText unmarshals address from HEX string.
 func (id *Address) UnmarshalText(json []byte) error {
 	a, err := HexToAddress(string(json))
 	if err != nil {
@@ -142,7 +149,7 @@ func (id *Address) UnmarshalText(json []byte) error {
 	return nil
 }
 
-// Shard returns the shard number of address.
+// Shard returns the shard number of this address.
 func (id Address) Shard() uint {
 	var sum uint
 
