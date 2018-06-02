@@ -371,6 +371,10 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
 		return nil, err
 	}
+	 
+	if timestamp := minerRewardTx.Data.Timestamp; timestamp == nil || timestamp.Cmp(block.Header.CreateTimestamp) != 0 {
+	    return nil, types.ErrTimestampMismatch
+	}
 
 	return minerRewardTx, nil
 }

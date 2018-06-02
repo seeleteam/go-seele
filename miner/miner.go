@@ -257,7 +257,7 @@ func (miner *Miner) prepareNewBlock() error {
 	if err != nil {
 		return err
 	}
-	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txs, miner.log)
+	err = miner.current.applyTransactions(miner.seele, cpyStateDB, txs, miner.log)
 	if err != nil {
 		return err
 	}
