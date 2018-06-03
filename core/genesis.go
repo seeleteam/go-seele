@@ -149,7 +149,7 @@ func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 	}
 
 	for addr, amount := range info.Accounts {
-		if addrShardNum := common.GetShardNumber(addr); addrShardNum == info.ShardNumber {
+		if addr.Shard() == info.ShardNumber {
 			stateObj := statedb.GetOrNewStateObject(addr)
 			stateObj.SetNonce(0)
 			stateObj.SetAmount(amount)

@@ -29,11 +29,7 @@ var validatekeyCmd = &cobra.Command{
 			return
 		}
 
-		addr, err := crypto.GetAddress(key)
-		if err != nil {
-			fmt.Printf("getting the public address failed: %s\n", err.Error())
-			return
-		}
+		addr := crypto.GetAddress(&key.PublicKey)
 
 		fmt.Printf("public key: %s\n", addr.ToHex())
 	},

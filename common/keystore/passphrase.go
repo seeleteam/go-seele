@@ -62,9 +62,9 @@ func EncryptKey(key *Key, auth string) ([]byte, error) {
 	}
 
 	encryptedKey := encryptedKey{
-		Version:Version,
-		Address:key.Address.ToHex(),
-		Crypto:info,
+		Version: Version,
+		Address: key.Address.ToHex(),
+		Crypto:  info,
 	}
 
 	return json.MarshalIndent(encryptedKey, "", "\t")
@@ -86,10 +86,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 
-	addr, err := crypto.GetAddress(key)
-	if err != nil {
-		return nil, err
-	}
+	addr := crypto.GetAddress(&key.PublicKey)
 
 	return &Key{
 		Address:    *addr,

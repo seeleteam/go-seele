@@ -250,7 +250,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	tx := e.(*types.Transaction)
 
 	// find shardid by tx from address.
-	shardid := common.GetShardNumber(tx.Data.From)
+	shardid := tx.Data.From.Shard()
 	p.peerSet.ForEach(shardid, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
 			p.log.Warn("send transaction failed %s", err.Error())
@@ -399,7 +399,7 @@ handler:
 
 			p.log.Debug("received %d transactions", len(txs))
 			for _, tx := range txs {
-				shard := common.GetShardNumber(tx.Data.From)
+				shard := tx.Data.From.Shard()
 				if shard != common.LocalShardNumber {
 					continue
 				} else {
