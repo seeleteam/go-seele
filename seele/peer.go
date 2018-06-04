@@ -14,13 +14,15 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/seele/download"
 	set "gopkg.in/fatih/set.v0"
 )
 
 const (
-	DiscHandShakeErr = "disconnect because got handshake error" // DiscHandShakeErr peer handshake error
+	// DiscHandShakeErr peer handshake error
+	DiscHandShakeErr = "disconnect because got handshake error"
 
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
@@ -51,13 +53,15 @@ type peer struct {
 
 	knownTxs    *set.Set // Set of transaction hashes known by this peer
 	knownBlocks *set.Set // Set of block hashes known by this peer
+
+	log *log.SeeleLog
 }
 
 func idToStr(id common.Address) string {
 	return fmt.Sprintf("%x", id[:8])
 }
 
-func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
+func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog) *peer {
 	return &peer{
 		Peer:        p,
 		version:     version,
@@ -67,6 +71,7 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		rw:          rw,
+		log:         log,
 	}
 }
 
@@ -94,8 +99,10 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	if p.knownTxs.Has(txHash) {
 		return nil
 	}
+	buff := common.SerializePanic(txHash)
 
-	err := p2p.SendMessage(p.rw, transactionHashMsgCode, common.SerializePanic(txHash))
+	p.log.Debug("peer send [transactionHashMsgCode] with size %d byte", len(buff))
+	err := p2p.SendMessage(p.rw, transactionHashMsgCode, buff)
 	if err == nil {
 		p.markTransaction(txHash)
 	}
@@ -104,19 +111,24 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 }
 
 func (p *peer) sendTransactionRequest(txHash common.Hash) error {
-	return p2p.SendMessage(p.rw, transactionRequestMsgCode, common.SerializePanic(txHash))
+	buff := common.SerializePanic(txHash)
+
+	p.log.Debug("peer send [transactionRequestMsgCode] with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, transactionRequestMsgCode, buff)
 }
 
 func (p *peer) sendTransaction(tx *types.Transaction) error {
-	return p2p.SendMessage(p.rw, transactionsMsgCode, common.SerializePanic([]*types.Transaction{tx}))
+	return p.sendTransactions([]*types.Transaction{tx})
 }
 
 func (p *peer) SendBlockHash(blockHash common.Hash) error {
 	if p.knownBlocks.Has(blockHash) {
 		return nil
 	}
+	buff := common.SerializePanic(blockHash)
 
-	err := p2p.SendMessage(p.rw, blockHashMsgCode, common.SerializePanic(blockHash))
+	p.log.Debug("peer send [blockHashMsgCode] with size %d byte", len(buff))
+	err := p2p.SendMessage(p.rw, blockHashMsgCode, buff)
 	if err == nil {
 		p.knownBlocks.Add(blockHash)
 	}
@@ -125,15 +137,24 @@ func (p *peer) SendBlockHash(blockHash common.Hash) error {
 }
 
 func (p *peer) SendBlockRequest(blockHash common.Hash) error {
-	return p2p.SendMessage(p.rw, blockRequestMsgCode, common.SerializePanic(blockHash))
+	buff := common.SerializePanic(blockHash)
+
+	p.log.Debug("peer send [blockRequestMsgCode] with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, blockRequestMsgCode, buff)
 }
 
 func (p *peer) sendTransactions(txs []*types.Transaction) error {
-	return p2p.SendMessage(p.rw, transactionsMsgCode, common.SerializePanic(txs))
+	buff := common.SerializePanic(txs)
+
+	p.log.Debug("peer send [transactionsMsgCode] with length %d, size %d byte", len(txs), len(buff))
+	return p2p.SendMessage(p.rw, transactionsMsgCode, buff)
 }
 
 func (p *peer) SendBlock(block *types.Block) error {
-	return p2p.SendMessage(p.rw, blockMsgCode, common.SerializePanic(block))
+	buff := common.SerializePanic(block)
+
+	p.log.Debug("peer send [blockMsgCode] with height %d, size %d byte", block.Header.Height, len(buff))
+	return p2p.SendMessage(p.rw, blockMsgCode, buff)
 }
 
 // Head retrieves a copy of the current head hash and total difficulty.
@@ -163,11 +184,17 @@ func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amou
 		Amount:  uint64(amount),
 		Reverse: reverse,
 	}
-	return p2p.SendMessage(p.rw, downloader.GetBlockHeadersMsg, common.SerializePanic(query))
+
+	buff := common.SerializePanic(query)
+	p.log.Debug("peer send [downloader.GetBlockHeadersMsg] with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, downloader.GetBlockHeadersMsg, buff)
 }
 
 func (p *peer) sendBlockHeaders(headers []*types.BlockHeader) error {
-	return p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, common.SerializePanic(headers))
+	buff := common.SerializePanic(headers)
+
+	p.log.Debug("peer send [downloader.BlockHeadersMsg] with length %d size %d byte", len(headers), len(buff))
+	return p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, buff)
 }
 
 // RequestBlocksByHashOrNumber fetches a batch of blocks corresponding to the
@@ -178,19 +205,24 @@ func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amoun
 		Number: num,
 		Amount: uint64(amount),
 	}
-	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, common.SerializePanic(query))
-}
+	buff := common.SerializePanic(query)
 
-func (p *peer) sendPreBlocksMsg(numL []uint64) error {
-	return p2p.SendMessage(p.rw, downloader.BlocksPreMsg, common.SerializePanic(numL))
+	p.log.Debug("peer send [downloader.GetBlocksMsg] query with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, buff)
 }
 
 func (p *peer) sendBlocks(blocks []*types.Block) error {
-	return p2p.SendMessage(p.rw, downloader.BlocksMsg, common.SerializePanic(blocks))
+	buff := common.SerializePanic(blocks)
+
+	p.log.Debug("peer send [downloader.BlocksMsg] with length: %d, size:%d byte", len(blocks), len(buff))
+	return p2p.SendMessage(p.rw, downloader.BlocksMsg, buff)
 }
 
 func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
-	return p2p.SendMessage(p.rw, statusChainHeadMsgCode, common.SerializePanic(msg))
+	buff := common.SerializePanic(msg)
+
+	p.log.Debug("peer send [statusChainHeadMsgCode] with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, statusChainHeadMsgCode, buff)
 }
 
 // handShake exchange networkid td etc between two connected peers.

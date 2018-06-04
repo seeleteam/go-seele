@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 
@@ -75,6 +76,7 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	common.LogConfig.PrintLog = config.LogConfig.PrintLog
 	common.LogConfig.IsDebug = config.LogConfig.IsDebug
+	common.LogFileName = fmt.Sprintf("%s.%s", config.BasicConfig.DataDir, common.LogFileName)
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
 }
