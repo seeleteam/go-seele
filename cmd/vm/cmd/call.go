@@ -17,8 +17,13 @@ var (
 )
 
 func init() {
-	callCmd.Flags().StringVarP(&contractAddr, "contractAddr", "c", "", "the contract address")
-	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input")
+	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input(Required)")
+	callCmd.MarkFlagRequired("input")
+
+	callCmd.Flags().StringVarP(&contractAddr, "contractAddr", "c", "", "the contract address(Required)")
+	callCmd.MarkFlagRequired("contractAddr")
+
+	callCmd.Flags().StringVarP(&account, "account", "a", "", "invoking the address of calling the smart contract(Default is random and has 100 balance)")
 	rootCmd.AddCommand(callCmd)
 }
 
@@ -53,8 +58,23 @@ func callContract(contractAddr string, input string) {
 	}
 	defer dispose()
 
+	// Get the invoking address
+	var from common.Address
+	if account == "" {
+		from = *crypto.MustGenerateRandomAddress()
+		statedb.CreateAccount(from)
+		statedb.SetBalance(from, new(big.Int).SetUint64(100))
+		statedb.SetNonce(from, DefaultNonce)
+	} else {
+		from, err = common.HexToAddress(account)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	}
+
 	// Create a call message transaction
-	callContractTx, err := types.NewMessageTransaction(*crypto.MustGenerateRandomAddress(), contract, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
+	callContractTx, err := types.NewMessageTransaction(from, contract, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
 
 	receipt, err := processContract(statedb, bcStore, callContractTx)
 	if err != nil {
