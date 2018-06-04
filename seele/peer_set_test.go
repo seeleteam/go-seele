@@ -11,15 +11,17 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/crypto"
+	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
 func getTestPeer(shard uint) *peer {
+	log := log2.GetLogger("test", true)
 	addr := crypto.MustGenerateRandomAddress()
 	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{}, shard)
 	p2pPeer := p2p.NewPeer(nil, nil, nil, node)
-	peer := newPeer(1, p2pPeer, nil)
+	peer := newPeer(1, p2pPeer, nil, log)
 
 	return peer
 }

@@ -283,7 +283,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 
-	newPeer := newPeer(SeeleVersion, p2pPeer, rw)
+	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
 
 	block, _ := p.chain.CurrentBlock()
 	head := block.HeaderHash
