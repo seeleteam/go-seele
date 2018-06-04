@@ -8,9 +8,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/monitor"
@@ -40,7 +42,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// print some config infos
-		fmt.Printf("log folder: %s\n", log.LogFolder)
+		fmt.Printf("log file: %s\n", filepath.Join(log.LogFolder, common.LogFileName))
 		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
 
 		seeleNode, err := node.New(nCfg)
