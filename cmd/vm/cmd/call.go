@@ -40,20 +40,20 @@ func callContract(contractAddr string, input string) {
 	// Contract address
 	contract, err := common.HexToAddress(contractAddr)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Invalid contract address,", err.Error())
 		return
 	}
 
 	// Call method and input parameters
 	msg, err := hexutil.HexToBytes(input)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Invalid input message,", err.Error())
 		return
 	}
 
 	statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Failed to prepare the simulator environment,", err.Error())
 		return
 	}
 	defer dispose()
@@ -83,5 +83,7 @@ func callContract(contractAddr string, input string) {
 	}
 
 	// Print the result
-	fmt.Println("Contract call success, The result: ", receipt.Result)
+	fmt.Println()
+	fmt.Println("Succeed to call contract!")
+	fmt.Println("Result:", receipt.Result)
 }

@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	responseTimeout = 10 * time.Second
+	responseTimeout = 15 * time.Second
 
-	pingpongInterval  = 15 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 20 * time.Second // sleep between discovery, must big than response time out
+	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
 )
 
 type udp struct {
@@ -82,7 +82,7 @@ func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
 		self:      NewNodeWithAddr(id, addr, shard),
 		localAddr: addr,
 
-		db: NewDatabase(),
+		db: NewDatabase(log),
 
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
@@ -153,7 +153,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
-		//log.Debug("msg type: %d", code)
+		u.log.Debug("receive msg type: %s", codeToStr(code))
 		switch code {
 		case pingMsgType:
 			msg := &ping{}
@@ -314,7 +314,7 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					u.log.Info("time out to wait for msg with msg type %d", p.code)
+					u.log.Info("time out to wait for msg with msg type %s", codeToStr(p.code))
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}
@@ -419,12 +419,13 @@ func (u *udp) pingPongService() {
 	}
 }
 
-func (u *udp) StartServe() {
+func (u *udp) StartServe(nodeDir string) {
 	go u.readLoop()
 	go u.loopReply()
 	go u.discoveryWithTwoStags()
 	go u.pingPongService()
 	go u.sendLoop()
+	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
 }
 
 func (u *udp) addNode(n *Node) {

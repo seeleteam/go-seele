@@ -43,7 +43,7 @@ func createContract() {
 	// Binary contract code
 	bytecode, err := hexutil.HexToBytes(code)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Invalid code format,", err.Error())
 		return
 	}
 
@@ -55,7 +55,7 @@ func createContract() {
 
 	statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Failed to prepare the simulator environment,", err.Error())
 		return
 	}
 	defer dispose()
@@ -78,16 +78,18 @@ func createContract() {
 	// Create a contract
 	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(0), DefaultNonce, bytecode)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Failed to create contract tx,", err.Error())
 		return
 	}
 
 	receipt, err := processContract(statedb, bcStore, createContractTx)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Failed to create contract,", err.Error())
 		return
 	}
 
 	// Print the contract Address
-	fmt.Println("Contract creation is completed! The contract address: ", hexutil.BytesToHex(receipt.ContractAddress))
+	fmt.Println()
+	fmt.Println("Succeed to create contract!")
+	fmt.Println("Contract address:", hexutil.BytesToHex(receipt.ContractAddress))
 }

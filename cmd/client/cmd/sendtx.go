@@ -60,11 +60,7 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		from, err := crypto.GetAddress(key.PrivateKey)
-		if err != nil {
-			fmt.Printf("generating the sender address failed: %s\n", err.Error())
-			return
-		}
+		from := crypto.GetAddress(&key.PrivateKey.PublicKey)
 
 		var nonce uint64
 		err = client.Call("seele.GetAccountNonce", &from, &nonce)

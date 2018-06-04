@@ -8,14 +8,14 @@ package comm
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 )
 
-// generateKeyPairCmd represents the generateKeyPair command
+// GetGenerateKeyPairCmd represents the generateKeyPair command
 func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 	var shard *uint
 
@@ -42,7 +42,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 						fmt.Printf("generating the key pair failed: %s\n", err.Error())
 					}
 
-					if common.GetShardNumber(*publicKey) == *shard {
+					if publicKey.Shard() == *shard {
 						break
 					}
 				}

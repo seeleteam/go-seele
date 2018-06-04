@@ -24,10 +24,12 @@ var (
 
 	// LogConfig is the Configuration of log
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
+
+	LogFileName = "log.txt"
 )
 
 func init() {
-	tempFolder = filepath.Join(os.TempDir(), "SeeleTemp")
+	tempFolder = filepath.Join(os.TempDir(), "seeleTemp")
 
 	usr, err := user.Current()
 	if err != nil {

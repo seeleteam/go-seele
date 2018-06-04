@@ -247,7 +247,9 @@ func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch da
 	s.dirtyAccount = true
 
 	// Reset dirty storage flag
-	s.dirtyStorage = make(map[common.Hash]common.Hash)
+	if commitBatch != nil {
+		s.dirtyStorage = make(map[common.Hash]common.Hash)
+	}
 
 	return nil
 }

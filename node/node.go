@@ -104,7 +104,7 @@ func (n *Node) Start() error {
 	n.log.Info("local shard number is %d", common.LocalShardNumber)
 
 	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
-		coinbaseShard := common.GetShardNumber(n.config.SeeleConfig.Coinbase)
+		coinbaseShard := n.config.SeeleConfig.Coinbase.Shard()
 		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.ToHex())
 
 		if coinbaseShard != specificShard {
@@ -119,7 +119,7 @@ func (n *Node) Start() error {
 	}
 
 	p2pSever := p2p.NewServer(n.config.P2PConfig, protocols)
-	if err := p2pSever.Start(n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
+	if err := p2pSever.Start(n.config.BasicConfig.DataDir, n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
 		return ErrServiceStartFailed
 	}
 
