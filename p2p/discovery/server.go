@@ -17,8 +17,8 @@ func StartService(nodeDir string, myId common.Address, myAddr *net.UDPAddr, boot
 	if bootstrap != nil {
 		for _, bn := range bootstrap {
 			udp.addNode(bn)
-			udp.trustNodes = append(udp.trustNodes, bn)
 		}
+		udp.trustNodes = bootstrap
 	}
 
 	udp.StartServe(nodeDir)

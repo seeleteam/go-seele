@@ -20,15 +20,15 @@ import (
 const (
 	responseTimeout = 15 * time.Second
 
-	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
+	pingpongInterval      = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval     = 25 * time.Second // sleep between discovery, must big than response time out
 	addTrustNodesInterval = 30 * time.Second // sleep between add trustNodes, must big than response time out
 )
 
 type udp struct {
-	conn  *net.UDPConn
-	self  *Node
-	table *Table
+	conn       *net.UDPConn
+	self       *Node
+	table      *Table
 	trustNodes []*Node
 
 	db        *Database
@@ -402,7 +402,6 @@ func (u *udp) discoveryWithTwoStags() {
 	u.discovery(false)
 }
 
-
 func (u *udp) loopAddTrustNodes() {
 	for {
 		u.addTrustNodes()
@@ -416,7 +415,7 @@ func (u *udp) addTrustNodes() {
 		addSwitch := true
 
 		for _, v := range copyMap {
-			if u.trustNodes[i] == v {
+			if u.trustNodes[i].String() == v.String() {
 				addSwitch = false
 			}
 		}
