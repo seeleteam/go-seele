@@ -54,7 +54,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 // handleMinerRewardTx handles the miner reward transaction.
 func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
 	reward := pow.GetReward(task.header.Height)
-	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp)
+	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
 	if err != nil {
 		return nil, err
 	}
