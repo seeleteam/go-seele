@@ -21,7 +21,18 @@ type Signature struct {
 
 // MustSign signs the specified hash with private key and returns a signature.
 // Panic if failed to sign the hash.
-func MustSign(privKey *ecdsa.PrivateKey, hash common.Hash) *Signature {
+func MustSign(privKey *ecdsa.PrivateKey, hash []byte) *Signature {
+	sig, err := Sign(privKey, hash)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return sig
+}
+
+// Sign signs the specified bytes with private key and returns a signature.
+func Sign(privKey *ecdsa.PrivateKey, buff []byte) (*Signature, error) {
 	secKey := math.PaddedBigBytes(privKey.D, privKey.Params().BitSize/8)
 	defer func(bytes []byte) {
 		for i := range bytes {
@@ -29,25 +40,22 @@ func MustSign(privKey *ecdsa.PrivateKey, hash common.Hash) *Signature {
 		}
 	}(secKey)
 
-	sig, err := secp256k1.Sign(hash.Bytes(), secKey)
+	sig, err := secp256k1.Sign(buff, secKey)
 	if err != nil {
-		// Should never panic since the input data has correct length.
-		panic(err)
+		return nil, err
 	}
 
-	return &Signature{sig}
+	return &Signature{sig}, nil
 }
 
 // Verify verifies the signature against the specified hash.
 // Return true if the signature is valid, otherwise false.
-func (s Signature) Verify(signer common.Address, hash common.Hash) bool {
+func (s Signature) Verify(signer common.Address, hash []byte) bool {
 	if len(s.Sig) != 65 {
 		return false
 	}
 
-	msg := hash.Bytes()
-
-	pubKey, err := s.recoverPubKey(msg)
+	pubKey, err := s.recoverPubKey(hash)
 	if err != nil {
 		return false // Signature was modified
 	}
@@ -57,7 +65,7 @@ func (s Signature) Verify(signer common.Address, hash common.Hash) bool {
 	}
 
 	compressed := secp256k1.CompressPubkey(pubKey.X, pubKey.Y)
-	return secp256k1.VerifySignature(compressed, msg, s.Sig[:64])
+	return secp256k1.VerifySignature(compressed, hash, s.Sig[:64])
 }
 
 func (s Signature) recoverPubKey(msg []byte) (*ecdsa.PublicKey, error) {
