@@ -279,6 +279,7 @@ func rpcOutputTx(tx *types.Transaction) map[string]interface{} {
 		"accountNonce": tx.Data.AccountNonce,
 		"payload":      tx.Data.Payload,
 		"timestamp":    tx.Data.Timestamp,
+		"fee":          tx.Data.Fee,
 	}
 	return transaction
 }
