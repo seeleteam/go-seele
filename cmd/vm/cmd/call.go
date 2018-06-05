@@ -75,6 +75,10 @@ func callContract(contractAddr string, input string) {
 
 	// Create a call message transaction
 	callContractTx, err := types.NewMessageTransaction(from, contract, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
+	if err != nil {
+		fmt.Println("Failed to create message tx,", err.Error())
+		return
+	}
 
 	receipt, err := processContract(statedb, bcStore, callContractTx)
 	if err != nil {
