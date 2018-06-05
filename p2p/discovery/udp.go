@@ -20,14 +20,16 @@ import (
 const (
 	responseTimeout = 15 * time.Second
 
-	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
+	pingpongInterval      = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval     = 25 * time.Second // sleep between discovery, must big than response time out
+	addTrustNodesInterval = 30 * time.Second // sleep between add trustNodes, must big than response time out
 )
 
 type udp struct {
-	conn  *net.UDPConn
-	self  *Node
-	table *Table
+	conn       *net.UDPConn
+	self       *Node
+	table      *Table
+	trustNodes []*Node
 
 	db        *Database
 	localAddr *net.UDPAddr
@@ -400,6 +402,21 @@ func (u *udp) discoveryWithTwoStags() {
 	u.discovery(false)
 }
 
+func (u *udp) loopAddTrustNodes() {
+	for {
+		u.addTrustNodes()
+		time.Sleep(addTrustNodesInterval)
+	}
+}
+
+func (u *udp) addTrustNodes() {
+	for i := range u.trustNodes {
+		if _, ok := u.db.FindByNodeID(u.trustNodes[i].ID); !ok {
+			u.addNode(u.trustNodes[i])
+		}
+	}
+}
+
 func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.GetCopy()
@@ -426,6 +443,7 @@ func (u *udp) StartServe(nodeDir string) {
 	go u.pingPongService()
 	go u.sendLoop()
 	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
+	go u.loopAddTrustNodes()
 }
 
 func (u *udp) addNode(n *Node) {

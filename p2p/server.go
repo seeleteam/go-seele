@@ -18,11 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/crypto/ecies"
-	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
@@ -83,7 +80,7 @@ type Server struct {
 
 	quit chan struct{}
 
-	loopWG      sync.WaitGroup // loop, listenLoop
+	loopWG sync.WaitGroup // loop, listenLoop
 
 	peerSet *peerSet
 	log     *log.SeeleLog
@@ -131,17 +128,16 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.running = true
 	srv.log.Info("Starting P2P networking...")
 	// self node
-	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
-	address := common.HexMustToAddres(id)
+	address := crypto.GetAddress(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
 
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, shard)
+	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 	if err != nil {
 		return err
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
-	srv.kadDB = discovery.StartService(nodeDir, address, addr, srv.StaticNodes, shard)
+	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 
@@ -380,7 +376,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, 0, err
 		}
 	} else {
-		// server side. Recv handshake msg first
+		// server side. Receive handshake msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
@@ -426,23 +422,11 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	binary.BigEndian.PutUint64(extBuf[16:], nounceCnt)
 	binary.BigEndian.PutUint64(extBuf[24:], nounceSvr)
 
-	// 1. Sign with local privateKey first
-	priKeyLocal := math.PaddedBigBytes(srv.PrivateKey.D, 32)
-	sig, err := secp256k1.Sign(extBuf, priKeyLocal)
-	if err != nil {
-		return Message{}, err
-	}
-	// 2. Encrypt with peer publicKey
-	pubObj := crypto.ToECDSAPub(peerNodeID[0:])
-	remotePub := ecies.ImportECDSAPublic(pubObj)
-
-	encOrg := make([]byte, hsExtraDataLen+len(sig))
-	copy(encOrg, extBuf)
-	copy(encOrg[hsExtraDataLen:], sig)
-	enc, err := ecies.Encrypt(rand.Reader, remotePub, encOrg, nil, nil)
-	if err != nil {
-		return Message{}, err
-	}
+	// Sign with local privateKey first
+	signature := crypto.MustSign(srv.PrivateKey, extBuf)
+	enc := make([]byte, hsExtraDataLen+len(signature.Sig))
+	copy(enc, extBuf)
+	copy(enc[hsExtraDataLen:], signature.Sig)
 
 	// Format of wrapMsg payload, [handshake's rlp body, encoded extra data, length of encoded extra data]
 	size := uint32(len(hdmsgRLP) + len(enc) + 4)
@@ -457,7 +441,7 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
 	size := uint32(len(recvWrapMsg.Payload))
 	if size < hsExtraDataLen+4 {
-		err = errors.New("recved err msg")
+		err = errors.New("received msg with invalid length")
 		return
 	}
 	extraEncLen := binary.BigEndian.Uint32(recvWrapMsg.Payload[size-4:])
@@ -471,32 +455,24 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 		return
 	}
 
-	// Decrypt with local private key, make sure it is sended to local
-	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
-	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
-	if err != nil {
+	// verify signature
+	sig := crypto.Signature{
+		Sig: recvEnc[hsExtraDataLen:],
+	}
+
+	if !sig.Verify(recvMsg.NodeID, recvEnc[0:hsExtraDataLen]) {
+		err = errors.New("unPackWrapHSMsg: received public key not match")
 		return
 	}
 
-	// Verify peer public key, make sure it is sended from correct peer
-	recvPubkey, err := secp256k1.RecoverPubkey(encOrg[0:hsExtraDataLen], encOrg[hsExtraDataLen:])
-	if err != nil {
-		return
-	}
-
-	if !bytes.Equal(recvMsg.NodeID[0:], recvPubkey[1:]) {
-		err = errors.New("unPackWrapHSMsg: recvPubkey not match")
-		return
-	}
-
-	// Verify recvMsg's payload md5sum to prevent modification
+	// verify recvMsg's payload md5sum to prevent modification
 	md5Inst := md5.New()
 	if _, err = md5Inst.Write(recvWrapMsg.Payload[:recvHSMsgLen]); err != nil {
 		return
 	}
 
-	if !bytes.Equal(md5Inst.Sum(nil), encOrg[:16]) {
-		err = errors.New("unPackWrapHSMsg: recved md5sum not match!")
+	if !bytes.Equal(md5Inst.Sum(nil), recvEnc[:16]) {
+		err = errors.New("unPackWrapHSMsg: received md5sum not match")
 		return
 	}
 	srv.log.Info("unPackWrapHSMsg: verify OK!")
