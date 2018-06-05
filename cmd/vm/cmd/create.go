@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"path"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -20,7 +22,7 @@ var (
 )
 
 func init() {
-	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create(Required)")
+	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a text file that contains the binary contract code in the local directory(Required)")
 	setCmd.MarkFlagRequired("code")
 
 	defaultDir = filepath.Join(common.GetDefaultDataFolder(), "simulator")
@@ -40,7 +42,15 @@ var createCmd = &cobra.Command{
 }
 
 func createContract() {
-	// Binary contract code
+	// If the binary contract code is in a text file
+	if fileExt := path.Ext(code); fileExt == ".txt" {
+		b, err := ioutil.ReadFile(code)
+		if err != nil {
+			fmt.Print(err)
+		}
+		code = string(b)
+	}
+	// hex contract code to binary
 	bytecode, err := hexutil.HexToBytes(code)
 	if err != nil {
 		fmt.Println("Invalid code format,", err.Error())
