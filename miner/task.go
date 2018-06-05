@@ -13,7 +13,6 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
@@ -29,25 +28,18 @@ type Task struct {
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, blockHeight uint64,
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	rewardValue := pow.GetReward(blockHeight)
-	reward, err := types.NewTransaction(common.Address{}, task.coinbase, rewardValue, big.NewInt(0), 0)
+	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
 		return err
 	}
-	reward.Signature = &crypto.Signature{}
-	stateObj := statedb.GetOrNewStateObject(task.coinbase)
-	stateObj.AddAmount(rewardValue)
-	task.txs = append(task.txs, reward)
 
-	// add the receipt of the reward tx
-	task.receipts = append(task.receipts, types.MakeRewardReceipt(reward))
-
+    // choose transactions from the given txs
 	task.chooseTransactions(seele, statedb, txs, log)
 
-	log.Info("mining block height:%d, reward:%s, transaction number:%d", blockHeight, rewardValue, len(task.txs))
+	log.Info("mining block height:%d, reward:%s, transaction number:%d", task.header.Height, reward, len(task.txs))
 
 	root, err := statedb.Commit(nil)
 	if err != nil {
@@ -57,6 +49,25 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	task.header.StateHash = root
 
 	return nil
+}
+
+// handleMinerRewardTx handles the miner reward transaction.
+func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
+	reward := pow.GetReward(task.header.Height)
+	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
+	if err != nil {
+		return nil, err
+	}
+
+	stateObj := statedb.GetOrNewStateObject(task.coinbase)
+	stateObj.AddAmount(reward)
+	
+	task.txs = append(task.txs, rewardTx)
+
+	// add the receipt of the reward tx
+	task.receipts = append(task.receipts, types.MakeRewardReceipt(rewardTx))
+
+	return reward, nil
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
