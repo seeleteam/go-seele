@@ -23,7 +23,7 @@ func Test_addTrustNodes(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
-	addr, err := net.ResolveUDPAddr("udp", "192.168.122.132:9666")
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 	u := &udp{
 		trustNodes: []*Node{node1, node2},
 		table:      newTable(self.ID, addr, 1, log),
