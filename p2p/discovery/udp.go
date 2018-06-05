@@ -410,17 +410,8 @@ func (u *udp) loopAddTrustNodes() {
 }
 
 func (u *udp) addTrustNodes() {
-	copyMap := u.db.GetCopy()
 	for i := range u.trustNodes {
-		addSwitch := true
-
-		for _, v := range copyMap {
-			if u.trustNodes[i].ID == v.ID {
-				addSwitch = false
-				break
-			}
-		}
-		if addSwitch {
+		if _, ok := u.db.FindByNodeID(u.trustNodes[i].ID); !ok {
 			u.addNode(u.trustNodes[i])
 		}
 	}
