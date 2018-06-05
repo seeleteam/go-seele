@@ -24,7 +24,6 @@ type MonitorService struct {
 	name    string // name displayed on the moitor
 	node    string // node name
 	version string // version
-	shard   uint
 }
 
 // NewMonitorService returns a MonitorService instance
@@ -37,7 +36,6 @@ func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, c
 		rpcAddr:   conf.BasicConfig.RPCAddr,
 		node:      conf.BasicConfig.Name,
 		version:   conf.BasicConfig.Version,
-		shard:     conf.SeeleConfig.Coinbase.Shard(),
 	}, nil
 }
 
