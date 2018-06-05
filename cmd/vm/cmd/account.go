@@ -34,11 +34,11 @@ func init() {
 var newCmd = &cobra.Command{
 	Use:   "new",
 	Short: "create a new account",
-	Long:  `Create a new account with the balance(default is 0)`,
+	Long:  `Create a new account with the balance(Default is 0)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		statedb, _, dispose, err := preprocessContract()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
 		}
 		defer dispose()
@@ -63,18 +63,18 @@ var newCmd = &cobra.Command{
 var setCmd = &cobra.Command{
 	Use:   "set",
 	Short: "set the balance of the account",
-	Long:  `set the balance(default is 0) of the account`,
+	Long:  `Set the balance(Default is 0) of the account`,
 	Run: func(cmd *cobra.Command, args []string) {
 		statedb, _, dispose, err := preprocessContract()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
 		}
 		defer dispose()
 
 		addr, err := common.HexToAddress(account)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Invalid account address,", err.Error())
 			return
 		}
 
@@ -89,18 +89,18 @@ var setCmd = &cobra.Command{
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "get the balance of the account",
-	Long:  `get the balance of the account, if the account is non-existence, return 0`,
+	Long:  `Get the balance of the account, if the account is non-existence, return 0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		statedb, _, dispose, err := preprocessContract()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
 		}
 		defer dispose()
 
 		addr, err := common.HexToAddress(account)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Invalid account address,", err.Error())
 			return
 		}
 

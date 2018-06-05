@@ -70,7 +70,7 @@ func createContract() {
 	} else {
 		from, err = common.HexToAddress(account)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Invalid account address,", err.Error())
 			return
 		}
 	}

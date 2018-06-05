@@ -68,7 +68,7 @@ func callContract(contractAddr string, input string) {
 	} else {
 		from, err = common.HexToAddress(account)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Invalid account address,", err.Error())
 			return
 		}
 	}
@@ -78,7 +78,7 @@ func callContract(contractAddr string, input string) {
 
 	receipt, err := processContract(statedb, bcStore, callContractTx)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Failed to call contract,", err.Error())
 		return
 	}
 
