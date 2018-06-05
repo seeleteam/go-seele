@@ -126,3 +126,18 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 
 	return nil
 }
+
+// GetPendingTransactions returns all pending transactions
+func (api *PrivateTransactionPoolAPI) GetPendingTransactions(input interface{}, result *[]map[string]interface{}) error {
+	pandingTxs := api.s.TxPool().GetProcessableTransactions()
+	txCount := api.s.TxPool().GetProcessableTransactionsCount()
+
+	transactions := make([]map[string]interface{}, txCount)
+	for _, txs := range pandingTxs {
+		for _, tx := range txs {
+			transactions = append(transactions, rpcOutputTx(tx))
+		}
+	}
+	*result = transactions
+	return nil
+}
