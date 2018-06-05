@@ -415,8 +415,9 @@ func (u *udp) addTrustNodes() {
 		addSwitch := true
 
 		for _, v := range copyMap {
-			if u.trustNodes[i].String() == v.String() {
+			if u.trustNodes[i].ID == v.ID {
 				addSwitch = false
+				break
 			}
 		}
 		if addSwitch {
