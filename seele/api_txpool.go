@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core"
 )
 
 var (
@@ -129,7 +130,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 
 // GetPendingTransactions returns all pending transactions
 func (api *PrivateTransactionPoolAPI) GetPendingTransactions(input interface{}, result *[]map[string]interface{}) error {
-	pandingTxs := api.s.TxPool().GetProcessableTransactions()
+	pandingTxs := api.s.TxPool().GetTransactionsByStatus(core.PENDING | core.PROCESSING)
 	var transactions []map[string]interface{}
 	for _, txs := range pandingTxs {
 		for _, tx := range txs {
