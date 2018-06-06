@@ -36,7 +36,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 		return err
 	}
 
-    // choose transactions from the given txs
+	// choose transactions from the given txs
 	task.chooseTransactions(seele, statedb, txs, log)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", task.header.Height, reward, len(task.txs))
@@ -61,7 +61,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 
 	stateObj := statedb.GetOrNewStateObject(task.coinbase)
 	stateObj.AddAmount(reward)
-	
+
 	task.txs = append(task.txs, rewardTx)
 
 	// add the receipt of the reward tx
@@ -71,8 +71,11 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
+	log.Debug("choose transaction from %d transactions in tx pool", len(txs))
+
 	for i := 0; i < core.BlockTransactionNumberLimit-1; {
 		tx := popBestFeeTx(txs)
+
 		if tx == nil {
 			break
 		}
@@ -103,7 +106,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 // get best fee transaction and remove it in the map
 // return best transaction if txs is empty, it will return nil
 func popBestFeeTx(txs map[common.Address][]*types.Transaction) *types.Transaction {
-	bestFee := big.NewInt(0)
+	bestFee := big.NewInt(-1)
 	var bestTx *types.Transaction
 	for _, txSlice := range txs {
 		if len(txSlice) > 0 {

@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package comm
+package util
 
 import (
 	"crypto/ecdsa"
@@ -36,16 +36,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 					fmt.Printf("generating the key pair failed: %s\n", err.Error())
 				}
 			} else {
-				for {
-					publicKey, privateKey, err = crypto.GenerateKeyPair()
-					if err != nil {
-						fmt.Printf("generating the key pair failed: %s\n", err.Error())
-					}
-
-					if publicKey.Shard() == *shard {
-						break
-					}
-				}
+				publicKey, privateKey = crypto.MustGenerateShardKeyPair(*shard)
 			}
 
 			fmt.Printf("public key:  %s\n", publicKey.ToHex())

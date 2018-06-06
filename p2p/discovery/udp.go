@@ -337,7 +337,7 @@ func (u *udp) discovery(isFast bool) {
 
 		nodes := u.table.findNodeForRequest(crypto.HashBytes(id.Bytes()))
 
-		u.log.Debug("find node with id: %s", id.ToHex())
+		u.log.Debug("query node with id: %s", id.ToHex())
 		sendFindNodeRequest(u, nodes, *id)
 
 		if !isFast {
@@ -447,7 +447,7 @@ func (u *udp) StartServe(nodeDir string) {
 }
 
 func (u *udp) addNode(n *Node) {
-	if n == nil || n.ID == u.self.ID {
+	if n == nil || u.self.ID.Equal(n.ID) {
 		return
 	}
 

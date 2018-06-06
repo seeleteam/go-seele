@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	comm "github.com/seeleteam/go-seele/cmd/comm"
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -40,7 +40,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
 	rootCmd.PersistentFlags().StringVarP(&wsAddr, "wsaddr", "w", "ws://127.0.0.1:8080/ws", "websocket rpc address")
-	rootCmd.AddCommand(comm.GetGenerateKeyPairCmd("client"))
+	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("client"))
 }
 
 // initConfig reads in the config file and ENV variables if set.

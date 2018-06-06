@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
@@ -60,17 +60,6 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		from := crypto.GetAddress(&key.PrivateKey.PublicKey)
-
-		var nonce uint64
-		err = client.Call("seele.GetAccountNonce", &from, &nonce)
-		if err != nil {
-			fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
-			return
-		}
-
-		fmt.Printf("got the sender account nonce: %d\n", nonce)
-
 		amount, ok := big.NewInt(0).SetString(*parameter.amount, 10)
 		if !ok {
 			fmt.Println("invalid amount value")
@@ -83,22 +72,16 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		tx, err := types.NewTransaction(*from, toAddr, amount, fee, nonce)
+		var nonce uint64
+		fromAddr := crypto.GetAddress(&key.PrivateKey.PublicKey)
+		err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
 			return
 		}
-		tx.Sign(key.PrivateKey)
+		fmt.Printf("got the sender account %s nonce: %d\n", fromAddr.ToHex(), nonce)
 
-		var result bool
-		err = client.Call("seele.AddTx", &tx, &result)
-		if !result || err != nil {
-			fmt.Printf("adding the tx failed: %s\n", err.Error())
-			return
-		}
-
-		fmt.Println("txhash:", tx.Hash.ToHex())
-		fmt.Println("adding the tx succeeded.")
+		util.Sendtx(client, key.PrivateKey, toAddr, amount, fee, nonce)
 	},
 }
 

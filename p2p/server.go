@@ -39,9 +39,6 @@ const (
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
 
-	// peerSyncDuration the duration of syncing peer info with node discovery, must bigger than discovery.discoveryInterval
-	peerSyncDuration = 25 * time.Second
-
 	inboundConn  = 1
 	outboundConn = 2
 
@@ -82,8 +79,9 @@ type Server struct {
 
 	loopWG sync.WaitGroup // loop, listenLoop
 
-	peerSet *peerSet
-	log     *log.SeeleLog
+	peerSet  *peerSet
+	peerLock sync.Mutex // lock for peer set
+	log      *log.SeeleLog
 
 	// MaxPeers max number of peers that can be connected
 	MaxPeers int
@@ -157,15 +155,15 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	srv.log.Info("got discovery a new node event, node info:%s", node)
-	p := srv.peerSet.find(node.ID)
-	if p != nil {
+
+	if srv.checkPeerExist(node.ID) {
 		return
 	}
 
 	//TODO UDPPort==> TCPPort
 	addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
-	srv.log.Info("connecting to a new node... %s", addr.String())
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
+	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err != nil {
 		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
@@ -184,7 +182,18 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 	srv.deletePeer(node.ID)
 }
 
+func (srv *Server) checkPeerExist(id common.Address) bool {
+	srv.peerLock.Lock()
+	srv.peerLock.Unlock()
+
+	peer := srv.peerSet.find(id)
+	return peer != nil
+}
+
 func (srv *Server) addPeer(p *Peer) bool {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
 		return false
@@ -206,6 +215,9 @@ func (srv *Server) addPeer(p *Peer) bool {
 }
 
 func (srv *Server) deletePeer(id common.Address) {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
 	p := srv.peerSet.find(id)
 	if p != nil {
 		srv.peerSet.delete(p)
@@ -293,7 +305,7 @@ func (srv *Server) listenLoop() {
 			break
 		}
 		go func() {
-			srv.log.Info("Accept new connection from, %s", fd.RemoteAddr())
+			srv.log.Info("Accept new connection from, %s -> %s", fd.LocalAddr(), fd.RemoteAddr())
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
@@ -326,7 +338,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
-			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
+			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
 			return errors.New("not found nodeID in discovery database")
 		}

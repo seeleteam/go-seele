@@ -41,7 +41,7 @@ var (
 
 	// ErrPayloadOversized is returned when the payload size is larger than the MaxPayloadSize.
 	ErrPayloadOversized = errors.New("oversized payload")
-	
+
 	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
 	ErrTimestampMismatch = errors.New("timestamp mismatch")
 
@@ -148,20 +148,20 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 	if reward == nil {
 		return nil, ErrAmountNil
 	}
-	
+
 	if reward.Sign() < 0 {
-	    return nil, ErrAmountNegative
+		return nil, ErrAmountNegative
 	}
-	
+
 	rewardTxData := &TransactionData{
-	        From:      common.Address{},
-	        To:        &miner,
+		From:      common.Address{},
+		To:        &miner,
 		Amount:    new(big.Int).Set(reward),
 		Fee:       big.NewInt(0),
 		Timestamp: timestamp,
 		Payload:   make([]byte, 0),
 	}
-	
+
 	rewardTx := &Transaction{crypto.MustHash(rewardTxData), rewardTxData, &crypto.Signature{make([]byte, 0)}}
 
 	return rewardTx, nil
@@ -194,7 +194,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
-		return ErrBalanceNotEnough
+		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
