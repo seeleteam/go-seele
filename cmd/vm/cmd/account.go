@@ -11,6 +11,7 @@ import (
 
 var (
 	balance uint64
+	fan     = big.NewInt(100000000)
 )
 
 func init() {
@@ -43,15 +44,8 @@ var newCmd = &cobra.Command{
 		}
 		defer dispose()
 
-		// Generate a non-existent address
+		// Generate a random address
 		addr := *crypto.MustGenerateRandomAddress()
-		for {
-			if !statedb.Exist(addr) {
-				break
-			}
-			addr = *crypto.MustGenerateRandomAddress()
-		}
-
 		statedb.CreateAccount(addr)
 		statedb.SetBalance(addr, new(big.Int).SetUint64(balance))
 		statedb.SetNonce(addr, DefaultNonce)
@@ -78,11 +72,16 @@ var setCmd = &cobra.Command{
 			return
 		}
 
-		if balance >= 0 {
-			statedb.SetBalance(addr, new(big.Int).SetUint64(balance))
+		if !statedb.Exist(addr) {
+			fmt.Println("Input a non-existence account address ", account)
+			return
 		}
 
-		fmt.Println("Set the balance successful, the balance of the account is ", balance)
+		// Update the balance of the account
+		bigIntBalance := new(big.Int).SetUint64(balance)
+		statedb.SetBalance(addr, bigIntBalance)
+
+		fmt.Println("Set the balance successfully, the balance of the account is ", common.BigToDecimal(bigIntBalance.Mul(bigIntBalance, fan)))
 	},
 }
 
@@ -104,6 +103,6 @@ var getCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("The balance of the account is ", statedb.GetBalance(addr))
+		fmt.Println("The balance of the account is ", common.BigToDecimal(statedb.GetBalance(addr).Mul(statedb.GetBalance(addr), fan)))
 	},
 }
