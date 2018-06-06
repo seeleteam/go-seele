@@ -130,9 +130,9 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 
 // GetPendingTransactions returns all pending transactions
 func (api *PrivateTransactionPoolAPI) GetPendingTransactions(input interface{}, result *[]map[string]interface{}) error {
-	pandingTxs := api.s.TxPool().GetTransactionsByStatus(core.PENDING | core.PROCESSING)
+	pendingTxs := api.s.TxPool().GetTransactionsByStatus(core.PENDING | core.PROCESSING)
 	var transactions []map[string]interface{}
-	for _, txs := range pandingTxs {
+	for _, txs := range pendingTxs {
 		for _, tx := range txs {
 			transactions = append(transactions, rpcOutputTx(tx))
 		}
