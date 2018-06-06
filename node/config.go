@@ -35,7 +35,7 @@ type Config struct {
 	WSServerConfig rpc.WSServerConfig
 
 	// metrics config info
-	MetricsConfig metrics.Config `json:"metrics"`
+	MetricsConfig metrics.Config
 }
 
 // BasicConfig config for Node

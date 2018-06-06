@@ -39,7 +39,7 @@ type Config struct {
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 
 	// metrics config info
-	MetricsConfig metrics.Config `json:"metrics"`
+	MetricsConfig metrics.Config
 
 	// genesis config info
 	GenesisConfig core.GenesisInfo `json:"genesis"`
@@ -90,7 +90,7 @@ func CopyConfig(cmdConfig *Config) *node.Config {
 		WSServerConfig: cmdConfig.WSServerConfig,
 		P2PConfig:      cmdConfig.P2PConfig,
 		SeeleConfig:    node.SeeleConfig{},
-		MetricsConfig:  cmdConfig.MetricsConfig,
+		MetricsConfig:  *metrics.GetDefualtConfig(),
 	}
 	return config
 }

@@ -29,13 +29,6 @@
     "address": "127.0.0.1:8080",
     "pattern": "/ws"
   },
-  "metrics": {
-    "Addr": "127.0.0.1:8086",
-    "Duration": 10,
-    "Database": "influxdb",
-    "Username": "test",
-    "Password": "test123"
-  },
   "genesis": {
     "accounts":{
       "0x010171048615cfef6d03e10df133200a4266d3a8856795dd7e8873e300ecfbe4":100,
