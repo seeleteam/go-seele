@@ -17,11 +17,35 @@ import (
 
 // Config infos for influxdb
 type Config struct {
-	Addr     string        `json:"Addr"`
-	Database string        `json:"Database"`
-	Username string        `json:"Username"`
-	Password string        `json:"Password"`
-	Duration time.Duration `json:"Duration"`
+	Addr     string
+	Database string
+	Username string
+	Password string
+	Duration time.Duration
+}
+
+const (
+	// defualtAddr is defualt address
+	defualtAddr = "127.0.0.1:8086"
+	// defualtDuration is defualt duration
+	defualtDuration = 10
+	// defualtDatabase is defualt database
+	defualtDatabase = "influxdb"
+	// defualtUsername is the defualt user name
+	defualtUsername = "test"
+	// defualtPassword is the defualt password
+	defualtPassword = "test123"
+)
+
+// GetDefualtConfig get default config of metrics
+func GetDefualtConfig() *Config {
+	return &Config{
+		Addr:     defualtAddr,
+		Duration: defualtDuration,
+		Database: defualtDatabase,
+		Username: defualtUsername,
+		Password: defualtPassword,
+	}
 }
 
 // StartMetricsWithConfig start recording metrics with configure
