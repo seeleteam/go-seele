@@ -33,7 +33,7 @@ func Test_BytesToAddress(t *testing.T) {
 }
 
 func Test_JsonMarshal(t *testing.T) {
-	a := "0x0101603c48b4460a90af24f2d0c549b022f5a17a8f50a4a448d20ba579d01781"
+	a := "0xd0c549b022f5a17a8f50a4a448d20ba579d01781"
 	addr := HexMustToAddres(a)
 
 	buff, err := json.Marshal(addr)

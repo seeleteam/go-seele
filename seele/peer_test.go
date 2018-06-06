@@ -18,16 +18,16 @@ import (
 
 func Test_peer_Info(t *testing.T) {
 	// prepare some variables
-	myAddr := common.HexMustToAddres("0x0101d0b1a3297fea072284f86b9fd39a9f1273c46fba8951b62de5b95cd3dd84")
+	myAddr := common.HexMustToAddres("0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84")
 	node1 := discovery.NewNode(myAddr, nil, 0, 0)
 	log := log2.GetLogger("test", true)
 	p2pPeer := &p2p.Peer{
 		Node: node1,
 	}
 	var myHash common.Hash
-	copy(myHash[0:], myAddr[0:common.HashLength])
+	copy(myHash[0:20], myAddr[:])
 	bigInt := big.NewInt(100)
-	okStr := "{\"version\":1,\"difficulty\":100,\"head\":\"0101d0b1a3297fea072284f86b9fd39a9f1273c46fba8951b62de5b95cd3dd84\"}"
+	okStr := "{\"version\":1,\"difficulty\":100,\"head\":\"6b9fd39a9f1273c46fba8951b62de5b95cd3dd84000000000000000000000000\"}"
 
 	// Create peer for test
 	peer := newPeer(SeeleVersion, p2pPeer, nil, log)

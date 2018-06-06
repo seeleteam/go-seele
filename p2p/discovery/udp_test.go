@@ -10,15 +10,15 @@ import (
 )
 
 func Test_addTrustNodes(t *testing.T) {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.0.1:9000[1]"
+	id1 := "snode://c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	assert.Equal(t, err, nil)
 
-	id2 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7d7e05a44791492c9979ff588@127.0.0.1:9888[1]"
+	id2 := "snode://c3d04efa488d43d7d7e05a44791492c9979ff588@127.0.0.1:9888[1]"
 	node2, err := NewNodeFromString(id2)
 	assert.Equal(t, err, nil)
 
-	selfId := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7d7e05a44791492c9979ff566@127.0.0.1:9666[1]"
+	selfId := "snode://c3d04efa488d43d7d7e05a44791492c9979ff566@127.0.0.1:9666[1]"
 	self, err := NewNodeFromString(selfId)
 	assert.Equal(t, err, nil)
 
