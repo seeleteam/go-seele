@@ -11,7 +11,6 @@ import (
 
 var (
 	balance uint64
-	fan     = big.NewInt(100000000)
 )
 
 func init() {
@@ -81,7 +80,7 @@ var setCmd = &cobra.Command{
 		bigIntBalance := new(big.Int).SetUint64(balance)
 		statedb.SetBalance(addr, bigIntBalance)
 
-		fmt.Println("Set the balance successfully, the balance of the account is ", common.BigToDecimal(bigIntBalance.Mul(bigIntBalance, fan)))
+		fmt.Println("Set the balance successfully, the balance of the account is ", common.BigToDecimal(bigIntBalance.Mul(bigIntBalance, common.SeeleToFan)))
 	},
 }
 
@@ -103,6 +102,6 @@ var getCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("The balance of the account is ", common.BigToDecimal(statedb.GetBalance(addr).Mul(statedb.GetBalance(addr), fan)))
+		fmt.Println("The balance of the account is ", common.BigToDecimal(statedb.GetBalance(addr).Mul(statedb.GetBalance(addr), common.SeeleToFan)))
 	},
 }
