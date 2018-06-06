@@ -253,7 +253,7 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 	transactions := make([]interface{}, len(txs))
 	for i, tx := range txs {
 		if fullTx {
-			transactions[i] = rpcOutputTx(tx)
+			transactions[i] = PrintableOutputTx(tx)
 		} else {
 			transactions[i] = tx.Hash.ToHex()
 		}
@@ -269,8 +269,8 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 	return fields, nil
 }
 
-// rpcOutputTx converts the given tx to the RPC output
-func rpcOutputTx(tx *types.Transaction) map[string]interface{} {
+// PrintableOutputTx converts the given tx to the RPC output
+func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	transaction := map[string]interface{}{
 		"hash":         tx.Hash.ToHex(),
 		"from":         tx.Data.From.ToHex(),

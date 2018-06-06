@@ -132,7 +132,9 @@ func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 50)
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, ErrBalanceNotEnough)
+	if err == nil {
+		panic("expected error")
+	}
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {

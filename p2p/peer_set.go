@@ -6,15 +6,16 @@
 package p2p
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"sync"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 // peerSet is thread safe collection
 type peerSet struct {
 	peerMap      map[common.Address]*Peer
 	shardPeerMap map[uint]map[common.Address]*Peer
-	lock sync.RWMutex
+	lock         sync.RWMutex
 }
 
 func NewPeerSet() *peerSet {
@@ -24,9 +25,9 @@ func NewPeerSet() *peerSet {
 	}
 
 	return &peerSet{
-		peerMap: make(map[common.Address]*Peer),
-		shardPeerMap:peers,
-		lock:sync.RWMutex{},
+		peerMap:      make(map[common.Address]*Peer),
+		shardPeerMap: peers,
+		lock:         sync.RWMutex{},
 	}
 }
 
@@ -68,4 +69,3 @@ func (set *peerSet) foreach(call func(p *Peer)) {
 		call(p)
 	}
 }
-

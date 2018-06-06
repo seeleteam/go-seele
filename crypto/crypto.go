@@ -148,13 +148,23 @@ func MustGenerateRandomAddress() *common.Address {
 // MustGenerateShardAddress generates and returns a random address that match the specified shard number.
 // Panic on any error.
 func MustGenerateShardAddress(shardNum uint) *common.Address {
-	if shardNum == 0 || shardNum > common.ShardNumber {
+	addr, _ := MustGenerateShardKeyPair(shardNum)
+	return addr
+}
+
+func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
+	if shard == 0 || shard > common.ShardNumber {
 		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
 	}
 
 	for i := 1; ; i++ {
-		if addr := MustGenerateRandomAddress(); addr.Shard() == shardNum {
-			return addr
+		addr, privateKey, err := GenerateKeyPair()
+		if err != nil {
+			panic(err)
+		}
+
+		if addr.Shard() == shard {
+			return addr, privateKey
 		}
 	}
 }
