@@ -12,6 +12,10 @@ import (
 	"net"
 	"time"
 
+	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
@@ -466,4 +470,35 @@ func (u *udp) deleteNode(n *Node) {
 	u.table.deleteNode(n)
 	u.db.delete(sha)
 	u.log.Info("after delete node, total nodes:%d", u.db.size())
+}
+
+func (u *udp) loadNodes(nodeDir string) {
+	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
+
+	if !common.FileOrFolderExists(fileFullPath) {
+		u.log.Info("nodes info backup file isn't exists in the path:%d", fileFullPath)
+		return
+	}
+
+	data, err := ioutil.ReadFile(fileFullPath)
+	if err != nil {
+		u.log.Error("nodes info backup file analysis failed for:[%s]", err.Error())
+		return
+	}
+
+	var nodes []string
+	err = json.Unmarshal(data, &nodes)
+	if err != nil {
+		u.log.Error("nodes unmarshal failed for:[%s]", err.Error())
+		return
+	}
+
+	for i := range nodes {
+		n, err := NewNodeFromString(nodes[i])
+		if err != nil {
+			u.log.Error("new node from string failed for:[%s]", err.Error())
+			continue
+		}
+		u.addNode(n)
+	}
 }
