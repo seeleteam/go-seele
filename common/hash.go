@@ -34,9 +34,13 @@ func StringToHash(s string) Hash {
 	return BytesToHash([]byte(s))
 }
 
-// SetBytes sets the hash to the value of b. If b is greater than len(a) it will panic
+// SetBytes sets the hash to the value of b.
 func (a *Hash) SetBytes(b []byte) {
-	copy(a[:], b)
+	if len(b) > HashLength {
+		b = b[len(b)-HashLength:]
+	}
+
+	copy(a[HashLength-len(b):], b)
 }
 
 // Bytes returns its actual bits
