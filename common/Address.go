@@ -16,12 +16,18 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
+//////////////////////////////////////////////////////////////////////////////
+// Address format:
+// - External account: pubKeyHash[12:32] and set last 4 bits to addressTypeExternal(1)
+// - Contract account: AddrNonceHash[14:32] and set last 4 bits to addressTypeContract(2), the left 12 bits for shard (max shard is 4096).
+//////////////////////////////////////////////////////////////////////////////
+
 const (
 	addressLen = 20 // length in bytes
 
 	// address type in last 4 bits
 	addressTypeExternal = byte(1)
-	addressTypeContract = byte(2) // supported maximum shard number is 4096.
+	addressTypeContract = byte(2)
 )
 
 // EmptyAddress presents an empty address
@@ -49,9 +55,9 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	hash := hashFunc(buf[1:]).Bytes()
 
 	var addr Address
-	copy(addr[:], hash[12:])
+	copy(addr[:], hash[12:]) // use last 20 bytes of public key hash
 
-	// set address type
+	// set address type in the last 4 bits
 	addr[19] &= 0xF0
 	addr[19] |= addressTypeExternal
 
@@ -177,12 +183,12 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 		mod = ShardNumber + targetShardNum - shardNum
 	}
 	mod <<= 4
-	mod |= uint(addressTypeContract)
+	mod |= uint(addressTypeContract) // set address type in the last 4 bits
 	binary.BigEndian.PutUint16(encoded, uint16(mod))
 
 	var contractAddr Address
-	copy(contractAddr[:18], hash[14:])
-	copy(contractAddr[18:], encoded) // shard mod + address type
+	copy(contractAddr[:18], hash[14:]) // use last 18 bytes of hash (from address + nonce)
+	copy(contractAddr[18:], encoded)   // last 2 bytes for shard mod and address type
 
 	return contractAddr
 }
