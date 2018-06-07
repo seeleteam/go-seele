@@ -220,6 +220,23 @@ func (pool *TransactionPool) GetProcessableTransactionsCount() int {
 	return status
 }
 
+// GetTransactionsByStatus get transactions by given status
+func (pool *TransactionPool) GetTransactionsByStatus(status byte) map[common.Address][]*types.Transaction {
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
+
+	allAccountTxs := make(map[common.Address][]*types.Transaction)
+
+	for account, txs := range pool.accountToTxsMap {
+		processableTxs := txs.getTxsOrderByNonceAsc(status)
+		if len(processableTxs) != 0 {
+			allAccountTxs[account] = processableTxs
+		}
+	}
+
+	return allAccountTxs
+}
+
 // Stop terminates the transaction pool.
 func (pool *TransactionPool) Stop() {
 }

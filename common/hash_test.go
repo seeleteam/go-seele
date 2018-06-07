@@ -17,7 +17,7 @@ func Test_Hash(t *testing.T) {
 	hash := BytesToHash(bytes)
 
 	var exp Hash
-	exp[0] = 21
+	exp[HashLength-1] = 21
 
 	assert.Equal(t, exp, hash)
 }

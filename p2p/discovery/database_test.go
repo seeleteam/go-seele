@@ -40,6 +40,6 @@ func Test_SaveNodes(t *testing.T) {
 	cnode := make([]string, 2)
 	err = json.Unmarshal(data, &cnode)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, cnode[0], "snode://0000000000000000000000000000000000000000000000000000000000000000@:66[0]")
+	assert.Equal(t, cnode[0], "snode://0000000000000000000000000000000000000000@:66[0]")
 	assert.Equal(t, len(cnode), 2)
 }
