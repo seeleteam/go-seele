@@ -13,8 +13,6 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/miner"
-	"github.com/seeleteam/go-seele/p2p"
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -156,81 +154,6 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 	}
 
 	*result = response
-	return nil
-}
-
-// PrivateNetworkAPI provides an API to access network information.
-type PrivateNetworkAPI struct {
-	s *SeeleService
-}
-
-// NewPrivateNetworkAPI creates a new PrivateNetworkAPI object for rpc service.
-func NewPrivateNetworkAPI(s *SeeleService) *PrivateNetworkAPI {
-	return &PrivateNetworkAPI{s}
-}
-
-// GetPeersInfo returns all the information of peers at the protocol granularity.
-func (n *PrivateNetworkAPI) GetPeersInfo(input interface{}, result *[]p2p.PeerInfo) error {
-	*result = *n.s.p2pServer.PeersInfo()
-	return nil
-}
-
-// GetPeerCount returns the count of peers
-func (n *PrivateNetworkAPI) GetPeerCount(input interface{}, result *int) error {
-	*result = n.s.p2pServer.PeerCount()
-	return nil
-}
-
-// GetNetworkVersion returns the network version
-func (n *PrivateNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
-	*result = n.s.NetVersion()
-	return nil
-}
-
-// GetProtocolVersion returns the current seele protocol version this node supports
-func (n *PrivateNetworkAPI) GetProtocolVersion(input interface{}, result *uint) error {
-	*result = n.s.seeleProtocol.Protocol.Version
-	return nil
-}
-
-// PrivateMinerAPI provides an API to access miner information.
-type PrivateMinerAPI struct {
-	s *SeeleService
-}
-
-// NewPrivateMinerAPI creates a new PrivateMinerAPI object for miner rpc service.
-func NewPrivateMinerAPI(s *SeeleService) *PrivateMinerAPI {
-	return &PrivateMinerAPI{s}
-}
-
-// Start API is used to start the miner with the given number of threads.
-func (api *PrivateMinerAPI) Start(threads *int, result *string) error {
-	if threads == nil {
-		threads = new(int)
-	}
-	api.s.miner.SetThreads(*threads)
-
-	if api.s.miner.IsMining() {
-		return miner.ErrMinerIsRunning
-	}
-
-	return api.s.miner.Start()
-}
-
-// Stop API is used to stop the miner.
-func (api *PrivateMinerAPI) Stop(input *string, result *string) error {
-	if !api.s.miner.IsMining() {
-		return miner.ErrMinerIsStopped
-	}
-	api.s.miner.Stop()
-
-	return nil
-}
-
-// Hashrate returns the POW hashrate.
-func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
-	*hashrate = uint64(api.s.miner.Hashrate())
-
 	return nil
 }
 

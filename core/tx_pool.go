@@ -167,6 +167,9 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 
 // RemoveTransactions removes finalized and old transactions in hashToTxMap
 func (pool *TransactionPool) RemoveTransactions() {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 

@@ -6,6 +6,8 @@
 package seele
 
 import (
+	"math/big"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -70,5 +72,54 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
 	txPool := api.s.TxPool()
 	*result = uint64(txPool.GetProcessableTransactionsCount())
+	return nil
+}
+
+func (api *PrivateDebugAPI) GetTPS(input interface{}, result *uint64) error {
+	chain := api.s.BlockChain()
+	block, _ := chain.CurrentBlock()
+	if block.Header.Height < 2 {
+		*result = 0
+		return nil
+	}
+
+	firstBlock, err := chain.GetStore().GetBlockByHeight(1)
+	if err != nil {
+		return err
+	}
+
+	durationBig := big.NewInt(0)
+	durationBig.Sub(block.Header.CreateTimestamp, firstBlock.Header.CreateTimestamp)
+	mins10 := uint64(10 * 60)
+
+	var count = uint64(len(block.Transactions) - 1)
+	var duration uint64
+	if durationBig.Uint64() > mins10 {
+		duration = durationBig.Uint64()
+		for height := block.Header.Height - 1; height > 0; height-- {
+			current, err := chain.GetStore().GetBlockByHeight(height)
+			if err != nil {
+				return err
+			}
+
+			count += uint64(len(current.Transactions) - 1)
+		}
+	} else {
+		startBig := block.Header.CreateTimestamp.Uint64()
+		for height := block.Header.Height - 1; height > 0; height-- {
+			current, err := chain.GetStore().GetBlockByHeight(height)
+			if err != nil {
+				return err
+			}
+
+			count += uint64(len(current.Transactions) - 1)
+			duration = startBig - current.Header.CreateTimestamp.Uint64()
+			if duration > mins10 {
+				break
+			}
+		}
+	}
+
+	*result = count
 	return nil
 }
