@@ -22,12 +22,16 @@ import (
 // - Contract account: AddrNonceHash[14:32] and set last 4 bits to addressTypeContract(2), the left 12 bits for shard (max shard is 4096).
 //////////////////////////////////////////////////////////////////////////////
 
+// AddressType represents the address type
+type AddressType byte
+
 const (
 	addressLen = 20 // length in bytes
 
-	// address type in last 4 bits
-	addressTypeExternal = byte(1)
-	addressTypeContract = byte(2)
+	// AddressTypeExternal is the address type for external account.
+	AddressTypeExternal = AddressType(1)
+	// AddressTypeContract is the address type for contract account.
+	AddressTypeContract = AddressType(2)
 )
 
 // EmptyAddress presents an empty address
@@ -59,9 +63,14 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 
 	// set address type in the last 4 bits
 	addr[19] &= 0xF0
-	addr[19] |= addressTypeExternal
+	addr[19] |= byte(AddressTypeExternal)
 
 	return addr
+}
+
+// Type returns the address type
+func (id Address) Type() AddressType {
+	return AddressType(id[addressLen-1] & 0x0F)
 }
 
 // Bytes get the actual bytes
@@ -183,7 +192,7 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 		mod = ShardNumber + targetShardNum - shardNum
 	}
 	mod <<= 4
-	mod |= uint(addressTypeContract) // set address type in the last 4 bits
+	mod |= uint(AddressTypeContract) // set address type in the last 4 bits
 	binary.BigEndian.PutUint16(encoded, uint16(mod))
 
 	var contractAddr Address

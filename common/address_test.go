@@ -6,6 +6,10 @@
 package common
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"testing"
 
@@ -43,4 +47,21 @@ func Test_JsonMarshal(t *testing.T) {
 	err = json.Unmarshal(buff, &result)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result.Bytes(), addr.Bytes())
+}
+
+func Test_Address_Type(t *testing.T) {
+	hashFunc := func(input interface{}) Hash {
+		encoded := SerializePanic(input)
+		hash := sha256.Sum256(encoded)
+		return BytesToHash(hash[:])
+	}
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.Equal(t, err, nil)
+
+	addr := PubKeyToAddress(&privKey.PublicKey, hashFunc)
+	assert.Equal(t, addr.Type(), AddressTypeExternal)
+
+	contractAddr := addr.CreateContractAddress(38, hashFunc)
+	assert.Equal(t, contractAddr.Type(), AddressTypeContract)
 }
