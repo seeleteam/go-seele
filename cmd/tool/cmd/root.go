@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rpcAddr string
 var password = "123"
 
 // rootCmd represents the base command called without any subcommands
@@ -35,5 +34,4 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
 }
