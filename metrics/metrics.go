@@ -17,39 +17,36 @@ import (
 
 // Config infos for influxdb
 type Config struct {
-	Addr     string
-	Database string
-	Username string
-	Password string
-	Duration time.Duration
-}
-
-const (
-	// defualtAddr is defualt address
-	defualtAddr = "127.0.0.1:8086"
-	// defualtDuration is defualt duration
-	defualtDuration = 10
-	// defualtDatabase is defualt database
-	defualtDatabase = "influxdb"
-	// defualtUsername is the defualt user name
-	defualtUsername = "test"
-	// defualtPassword is the defualt password
-	defualtPassword = "test123"
-)
-
-// GetDefualtConfig get default config of metrics
-func GetDefualtConfig() *Config {
-	return &Config{
-		Addr:     defualtAddr,
-		Duration: defualtDuration,
-		Database: defualtDatabase,
-		Username: defualtUsername,
-		Password: defualtPassword,
-	}
+	Addr     string        `json:"Addr"`
+	Database string        `json:"Database"`
+	Username string        `json:"Username"`
+	Password string        `json:"Password"`
+	Duration time.Duration `json:"Duration"`
 }
 
 // StartMetricsWithConfig start recording metrics with configure
 func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
+	if conf.Addr == ""{
+		log.Error("Starting the metrics failed: the address of metrics is blank")
+		return
+	}
+	if  conf.Database == "" {
+		log.Error("Starting the metrics failed: the database of metrics is blank")
+		return
+	}
+	if conf.Duration == 0 {
+		log.Error("Starting the metrics failed: the duration of metrics is 0")
+		return
+	}
+	if conf.Username == "" {
+		log.Error("Starting the metrics failed: the username of metrics is blank")
+		return
+	}
+	if conf.Password == ""{
+		log.Error("Starting the metrics failed: the password of metrics is blank")
+		return
+	}
+
 	StartMetrics(
 		time.Second*conf.Duration,
 		conf.Addr,
