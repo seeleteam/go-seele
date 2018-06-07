@@ -9,11 +9,6 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// cmd config paths
-const (
-	DefaultPath = "../cmd/client/config/cmd.json"
-)
-
 // Request cmd request for cobra command
 type Request struct {
 	Use              string   // Use is the one-line usage message

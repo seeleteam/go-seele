@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"math/rand"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/cmd/util"
@@ -19,10 +20,13 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
 var keyFolder string
+var serveList string
+var clientList map[uint]*rpc.Client // shard -> client
 
 type balance struct {
 	address    *common.Address
@@ -38,60 +42,8 @@ var sendTxCmd = &cobra.Command{
 	Long: `For example:
 	tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := rpc.Dial("tcp", rpcAddr)
-		if err != nil {
-			fmt.Println("dial failed", err)
-			return
-		}
-		defer client.Close()
-
-		balanceList := make([]*balance, 0)
-
-		// init file list from key store folder
-		keyFiles := make([]string, 0)
-		files, err := ioutil.ReadDir(keyFolder)
-		if err != nil {
-			fmt.Println("read directory err ", err)
-		}
-
-		for _, f := range files {
-			if f.IsDir() {
-				continue
-			}
-
-			path := filepath.Join(keyFolder, f.Name())
-			keyFiles = append(keyFiles, path)
-
-			fmt.Println("find key file ", path)
-		}
-
-		// init balance and nonce
-		for _, f := range keyFiles {
-			key, err := keystore.GetKey(f, password)
-			if err != nil {
-				fmt.Println("get private key failed ", err)
-			}
-
-			addr := crypto.GetAddress(&key.PrivateKey.PublicKey)
-			amount, ok := getbalance(client, *addr)
-			if !ok {
-				continue
-			}
-
-			b := &balance{
-				address:    addr,
-				privateKey: key.PrivateKey,
-				amount:     amount,
-				shard:      addr.Shard(),
-			}
-
-			fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
-
-			if b.amount > 0 {
-				b.nonce = getNonce(client, *b.address)
-				balanceList = append(balanceList, b)
-			}
-		}
+		initClient()
+		balanceList := initAccount()
 
 		// send tx periodically
 		for {
@@ -100,7 +52,7 @@ var sendTxCmd = &cobra.Command{
 			b := balanceList[bIndex]
 
 			//update balance from current node
-			newAmount, ok := getbalance(client, *b.address)
+			newAmount, ok := getbalance(*b.address)
 			if ok {
 				b.amount = newAmount
 			}
@@ -123,6 +75,7 @@ var sendTxCmd = &cobra.Command{
 			value.Mul(value, common.SeeleToFan)
 			// update nonce
 			b.nonce++
+			client := getRandClient()
 			if util.Sendtx(client, b.privateKey, *addr, value, big.NewInt(0), b.nonce) {
 				// update balance by transaction amount
 				b.amount -= amount
@@ -145,7 +98,95 @@ var sendTxCmd = &cobra.Command{
 	},
 }
 
-func getbalance(client *rpc.Client, address common.Address) (int, bool) {
+func getRandClient() *rpc.Client {
+	if len(clientList) == 0 {
+		panic("no client found")
+	}
+
+	index := rand.Intn(len(clientList))
+
+	count := 0
+	for _, v := range clientList {
+		if count == index {
+			return v
+		}
+
+		count++
+	}
+
+	return nil
+}
+
+func initClient() {
+	addrs := strings.Split(serveList, ";")
+	clientList = make(map[uint]*rpc.Client, 0)
+
+	for _, addr := range addrs {
+		client, err := rpc.Dial("tcp", addr)
+		if err != nil {
+			panic(fmt.Sprintf("dial failed %s for server %s", err, addr))
+		}
+
+		shard := getShard(client)
+		clientList[shard] = client
+	}
+}
+
+func initAccount() []*balance {
+	balanceList := make([]*balance, 0)
+
+	// init file list from key store folder
+	keyFiles := make([]string, 0)
+	files, err := ioutil.ReadDir(keyFolder)
+	if err != nil {
+		fmt.Println("read directory err ", err)
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		path := filepath.Join(keyFolder, f.Name())
+		keyFiles = append(keyFiles, path)
+
+		fmt.Println("find key file ", path)
+	}
+
+	// init balance and nonce
+	for _, f := range keyFiles {
+		key, err := keystore.GetKey(f, password)
+		if err != nil {
+			fmt.Println("get private key failed ", err)
+		}
+
+		addr := crypto.GetAddress(&key.PrivateKey.PublicKey)
+		amount, ok := getbalance(*addr)
+		if !ok {
+			continue
+		}
+
+		b := &balance{
+			address:    addr,
+			privateKey: key.PrivateKey,
+			amount:     amount,
+			shard:      addr.Shard(),
+		}
+
+		fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
+
+		if b.amount > 0 {
+			b.nonce = getNonce(*b.address)
+			balanceList = append(balanceList, b)
+		}
+	}
+
+	return balanceList
+}
+
+func getbalance(address common.Address) (int, bool) {
+	client := getClient(address)
+
 	amount := big.NewInt(0)
 	err := client.Call("seele.GetBalance", &address, amount)
 	if err != nil {
@@ -156,21 +197,36 @@ func getbalance(client *rpc.Client, address common.Address) (int, bool) {
 	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
 }
 
-func getNonce(client *rpc.Client, address common.Address) uint64 {
-	var nonce uint64
-	err := client.Call("seele.GetAccountNonce", address, &nonce)
+func getClient(address common.Address) *rpc.Client {
+	shard := address.Shard()
+	client := clientList[shard]
+	if client == nil {
+		panic(fmt.Sprintf("not found client in shard %d", shard))
+	}
+
+	return client
+}
+
+func getNonce(address common.Address) uint64 {
+	client := getClient(address)
+
+	return util.GetNonce(client, address)
+}
+
+func getShard(client *rpc.Client) uint {
+	var info seele.MinerInfo
+	err := client.Call("seele.GetInfo", nil, &info)
 	if err != nil {
-		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+		fmt.Printf("getting the balance failed: %s\n", err.Error())
 		return 0
 	}
 
-	fmt.Printf("got the sender account %s nonce: %d\n", address.ToHex(), nonce)
-
-	return nonce
+	return info.Coinbase.Shard() // @TODO need refine this code, get shard info straight
 }
 
 func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "..\\client\\keyfile", "key file folder")
+	sendTxCmd.Flags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ;")
 }

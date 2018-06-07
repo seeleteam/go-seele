@@ -46,3 +46,16 @@ func Sendtx(client *rpc.Client, from *ecdsa.PrivateKey, to common.Address, amoun
 	fmt.Println(string(str))
 	return true
 }
+
+func GetNonce(client *rpc.Client, address common.Address) uint64 {
+	var nonce uint64
+	err := client.Call("seele.GetAccountNonce", address, &nonce)
+	if err != nil {
+		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+		return 0
+	}
+
+	fmt.Printf("got the sender account %s nonce: %d\n", address.ToHex(), nonce)
+
+	return nonce
+}

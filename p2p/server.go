@@ -161,7 +161,12 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	//TODO UDPPort==> TCPPort
-	addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
+	addr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
+	if err != nil {
+		srv.log.Error("resolve tpc address failed %s", err)
+		return
+	}
+
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err != nil {

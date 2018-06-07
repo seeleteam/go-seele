@@ -16,7 +16,7 @@
   },
   "log": {
     "isDebug": true,
-    "printLog": false
+    "printLog": true
   },
   "httpServer": {
     "address": "127.0.0.1:65029",
