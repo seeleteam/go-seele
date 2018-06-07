@@ -292,7 +292,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 	}
 
 	outMap := map[string]interface{}{
-		"result":    string(re.Result),
+		"result":    hexutil.BytesToHex(re.Result),
 		"poststate": re.PostState.ToHex(),
 		"txhash":    re.TxHash.ToHex(),
 		"contract":  contractAddr.ToHex(),
