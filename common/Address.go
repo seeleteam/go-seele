@@ -16,16 +16,22 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
+//////////////////////////////////////////////////////////////////////////////
+// Address format:
+// - External account: pubKeyHash[12:32] and set last 4 bits to addressTypeExternal(1)
+// - Contract account: AddrNonceHash[14:32] and set last 4 bits to addressTypeContract(2), the left 12 bits for shard (max shard is 4096).
+//////////////////////////////////////////////////////////////////////////////
+
+// AddressType represents the address type
+type AddressType byte
+
 const (
-	addressLen = 32 // length in bytes
+	addressLen = 20 // length in bytes
 
-	addressTypeExternal = byte(1)
-	addressTypeContract = byte(2)
-
-	// Address format: version(1) + type(1) + hash[12:] + misc(10)
-	// - external account misc: hash[:10]
-	// - contract account misc: shardMod(2) + hash[:8]
-	addressVersion1 = byte(1)
+	// AddressTypeExternal is the address type for external account.
+	AddressTypeExternal = AddressType(1)
+	// AddressTypeContract is the address type for contract account.
+	AddressTypeContract = AddressType(2)
 )
 
 // EmptyAddress presents an empty address
@@ -41,19 +47,6 @@ func NewAddress(b []byte) (Address, error) {
 		return EmptyAddress, fmt.Errorf("invalid address length %v, expected length is %v", len(b), addressLen)
 	}
 
-	// Validate address version
-	if b[0] != addressVersion1 {
-		return EmptyAddress, fmt.Errorf("invalid address version %v, expected version is %v", b[0], addressVersion1)
-	}
-
-	// Validate address type
-	switch b[1] {
-	case addressTypeExternal:
-	case addressTypeContract:
-	default:
-		return EmptyAddress, fmt.Errorf("invalid address type %v", b[1])
-	}
-
 	var id Address
 	copy(id[:], b)
 
@@ -65,14 +58,19 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 	hash := hashFunc(buf[1:]).Bytes()
 
-	// Address format: version(1) + type(1) + pubKeyHash[12:] + pubKeyHash[:10]
 	var addr Address
-	addr[0] = addressVersion1
-	addr[1] = addressTypeExternal
-	copy(addr[2:22], hash[12:]) // public key info
-	copy(addr[22:], hash[:10])  // misc
+	copy(addr[:], hash[12:]) // use last 20 bytes of public key hash
+
+	// set address type in the last 4 bits
+	addr[19] &= 0xF0
+	addr[19] |= byte(AddressTypeExternal)
 
 	return addr
+}
+
+// Type returns the address type
+func (id Address) Type() AddressType {
+	return AddressType(id[addressLen-1] & 0x0F)
 }
 
 // Bytes get the actual bytes
@@ -160,15 +158,14 @@ func (id Address) Shard() uint {
 
 	var sum uint
 
-	// sum [2:22]
-	for _, b := range id[2:22] {
+	// sum [0:18]
+	for _, b := range id[:18] {
 		sum += uint(b)
 	}
 
-	// sum [22:24] for contract address
-	if id[1] == addressTypeContract {
-		sum += uint(binary.BigEndian.Uint16(id[22:24]))
-	}
+	// sum [18:20] except address type
+	tail := uint(binary.BigEndian.Uint16(id[18:]))
+	sum += (tail >> 4)
 
 	return (sum % ShardNumber) + 1
 }
@@ -180,27 +177,27 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 	targetShardNum := id.Shard()
 	var sum uint
 
-	// sum [12:] of public key hash
-	for _, b := range hash[12:] {
+	// sum [14:] of public key hash
+	for _, b := range hash[14:] {
 		sum += uint(b)
 	}
 
-	// sum [22:24] for shard mod
+	// sum [18:20] for shard mod and contract address type
 	shardNum := (sum % ShardNumber) + 1
 	encoded := make([]byte, 2)
+	var mod uint
 	if shardNum <= targetShardNum {
-		binary.BigEndian.PutUint16(encoded, uint16(targetShardNum-shardNum))
+		mod = targetShardNum - shardNum
 	} else {
-		binary.BigEndian.PutUint16(encoded, uint16(ShardNumber+targetShardNum-shardNum))
+		mod = ShardNumber + targetShardNum - shardNum
 	}
+	mod <<= 4
+	mod |= uint(AddressTypeContract) // set address type in the last 4 bits
+	binary.BigEndian.PutUint16(encoded, uint16(mod))
 
-	// Address format: version(1) + type(1) + pubKeyHash[12:] + shardMod(2) + pubKeyHash[:8]
 	var contractAddr Address
-	contractAddr[0] = addressVersion1
-	contractAddr[1] = addressTypeContract
-	copy(contractAddr[2:22], hash[12:]) // public key info
-	copy(contractAddr[22:24], encoded)  // shard mod
-	copy(contractAddr[24:], hash[:8])   // misc
+	copy(contractAddr[:18], hash[14:]) // use last 18 bytes of hash (from address + nonce)
+	copy(contractAddr[18:], encoded)   // last 2 bytes for shard mod and address type
 
 	return contractAddr
 }

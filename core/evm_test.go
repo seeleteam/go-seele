@@ -111,7 +111,7 @@ func Test_SimpleStorage(t *testing.T) {
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.Result, []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5})
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
 
@@ -141,7 +141,7 @@ func Test_SimpleStorage(t *testing.T) {
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.Result, []byte{2, 154, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) // 666
+	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 154}) // 666
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
 }
