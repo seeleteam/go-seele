@@ -17,33 +17,17 @@ import (
 
 // Config infos for influxdb
 type Config struct {
-	Addr     string        `json:"Addr"`
-	Database string        `json:"Database"`
-	Username string        `json:"Username"`
-	Password string        `json:"Password"`
-	Duration time.Duration `json:"Duration"`
+	Addr     string        `json:"address"`
+	Database string        `json:"database"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	Duration time.Duration `json:"duration"`
 }
 
 // StartMetricsWithConfig start recording metrics with configure
 func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
-	if conf.Addr == ""{
-		log.Error("Starting the metrics failed: the address of metrics is blank")
-		return
-	}
-	if  conf.Database == "" {
-		log.Error("Starting the metrics failed: the database of metrics is blank")
-		return
-	}
-	if conf.Duration == 0 {
-		log.Error("Starting the metrics failed: the duration of metrics is 0")
-		return
-	}
-	if conf.Username == "" {
-		log.Error("Starting the metrics failed: the username of metrics is blank")
-		return
-	}
-	if conf.Password == ""{
-		log.Error("Starting the metrics failed: the password of metrics is blank")
+	if conf == nil {
+		log.Error("Starting the metrics failed: the config of metrics is null")
 		return
 	}
 

@@ -94,7 +94,7 @@ var startCmd = &cobra.Command{
 
 		if *metricsEnableFlag {
 			metrics.StartMetricsWithConfig(
-				&nCfg.MetricsConfig,
+				nCfg.MetricsConfig,
 				slog,
 				nCfg.BasicConfig.Name,
 				nCfg.BasicConfig.Version,

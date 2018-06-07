@@ -39,7 +39,7 @@ type Config struct {
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 
 	// metrics config info
-	MetricsConfig metrics.Config `json:"metrics"`
+	MetricsConfig *metrics.Config `json:"metrics"`
 
 	// genesis config info
 	GenesisConfig core.GenesisInfo `json:"genesis"`
