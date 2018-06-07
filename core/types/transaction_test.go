@@ -232,3 +232,28 @@ func Test_Transaction_InvalidFee(t *testing.T) {
 	assert.Equal(t, tx, (*Transaction)(nil))
 	assert.Equal(t, err, ErrFeeNegative)
 }
+
+func Test_Transaction_EmptyPayloadError(t *testing.T) {
+	from := *crypto.MustGenerateRandomAddress()
+
+	_, err := NewContractTransaction(from, big.NewInt(100), big.NewInt(2), 38, nil)
+	assert.Equal(t, err, ErrPayloadEmpty)
+
+	contractAddr := crypto.CreateAddress(from, 77)
+	_, err = NewMessageTransaction(from, contractAddr, big.NewInt(100), big.NewInt(2), 38, nil)
+	assert.Equal(t, err, ErrPayloadEmpty)
+}
+
+func Test_Transaction_Validate_EmptyPayloadError(t *testing.T) {
+	fromPrivKey, fromAddr := randomAccount(t)
+	toAddress := crypto.CreateAddress(fromAddr, 38)
+
+	tx, err := newTx(fromAddr, &toAddress, big.NewInt(100), big.NewInt(2), 38, []byte("payload"))
+	assert.Equal(t, err, nil)
+
+	tx.Data.Payload = nil
+	tx.Sign(fromPrivKey)
+
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
+	assert.Equal(t, tx.Validate(statedb), ErrPayloadEmpty)
+}

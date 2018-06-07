@@ -123,7 +123,7 @@ var sendTxCmd = &cobra.Command{
 			value.Mul(value, common.SeeleToFan)
 			// update nonce
 			b.nonce++
-			if util.Sendtx(client, b.privateKey, *addr, value, big.NewInt(0), b.nonce) {
+			if util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil) {
 				// update balance by transaction amount
 				b.amount -= amount
 				if b.amount == 0 {
