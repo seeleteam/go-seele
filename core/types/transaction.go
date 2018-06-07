@@ -113,12 +113,8 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 		return nil, ErrFeeNegative
 	}
 
-	if len(payload) > MaxPayloadSize {
-		return nil, ErrPayloadOversized
-	}
-
-	if (to == nil || to.Type() == common.AddressTypeContract) && len(payload) == 0 {
-		return nil, ErrPayloadEmpty
+	if err := validatePayload(to, payload); err != nil {
+		return nil, err
 	}
 
 	txData := &TransactionData{
@@ -138,6 +134,18 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 	}
 
 	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
+}
+
+func validatePayload(toAddr *common.Address, payload []byte) error {
+	if len(payload) > MaxPayloadSize {
+		return ErrPayloadOversized
+	}
+
+	if (toAddr == nil || toAddr.Type() == common.AddressTypeContract) && len(payload) == 0 {
+		return ErrPayloadEmpty
+	}
+
+	return nil
 }
 
 // NewContractTransaction returns a transaction to create a smart contract.
@@ -208,12 +216,8 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrNonceTooLow
 	}
 
-	if len(tx.Data.Payload) > MaxPayloadSize {
-		return ErrPayloadOversized
-	}
-
-	if (tx.Data.To == nil || tx.Data.To.Type() == common.AddressTypeContract) && len(tx.Data.Payload) == 0 {
-		return ErrPayloadEmpty
+	if err := validatePayload(tx.Data.To, tx.Data.Payload); err != nil {
+		return err
 	}
 
 	if tx.Signature == nil {

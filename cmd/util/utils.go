@@ -33,7 +33,7 @@ func Sendtx(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amou
 		case common.AddressTypeContract:
 			tx, err = types.NewMessageTransaction(*fromAddr, *to, amount, fee, nonce, payload)
 		default:
-			fmt.Println("unsupported address type", to.Type())
+			fmt.Println("unsupported address type:", to.Type())
 			return false
 		}
 	}
