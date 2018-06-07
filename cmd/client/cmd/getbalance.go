@@ -16,6 +16,7 @@ import (
 )
 
 var address *common.Address
+var accountStr string
 
 func getClientCmd(use, short, long string, handler func(client *rpc.Client)) *cobra.Command {
 	return &cobra.Command{
@@ -29,6 +30,17 @@ func getClientCmd(use, short, long string, handler func(client *rpc.Client)) *co
 				return
 			}
 			defer client.Close()
+
+			if accountStr == "" {
+				address = nil
+			} else {
+				result, err := common.HexToAddress(accountStr)
+				if err != nil {
+					panic(fmt.Sprintf("invalid account address: %s", err))
+				}
+
+				address = &result
+			}
 
 			handler(client)
 		},
@@ -68,18 +80,6 @@ func init() {
 	rootCmd.AddCommand(getbalanceCmd)
 	rootCmd.AddCommand(getnonceCmd)
 
-	var accountStr string
 	getbalanceCmd.Flags().StringVarP(&accountStr, "account", "t", "", "account address")
 	getnonceCmd.Flags().StringVarP(&accountStr, "account", "t", "", "account address")
-
-	if accountStr == "" {
-		address = nil
-	} else {
-		result, err := common.HexToAddress(accountStr)
-		if err != nil {
-			panic(fmt.Sprintf("invalid account address: %s", err))
-		}
-
-		address = &result
-	}
 }

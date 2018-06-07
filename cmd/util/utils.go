@@ -55,7 +55,7 @@ func GetNonce(client *rpc.Client, address common.Address) uint64 {
 		return 0
 	}
 
-	fmt.Printf("got the sender account %s nonce: %d\n", address.ToHex(), nonce)
+	fmt.Printf("got account: %s nonce: %d\n", address.ToHex(), nonce)
 
 	return nonce
 }
