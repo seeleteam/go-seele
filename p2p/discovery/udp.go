@@ -7,14 +7,13 @@ package discovery
 
 import (
 	"container/list"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	rand2 "math/rand"
 	"net"
-	"time"
-
-	"encoding/json"
-	"io/ioutil"
 	"path/filepath"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
