@@ -73,7 +73,7 @@ var sendTxCmd = &cobra.Command{
 			// update nonce
 			b.nonce++
 			client := getRandClient()
-			if util.Sendtx(client, b.privateKey, *addr, value, big.NewInt(0), b.nonce) {
+			if util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil) {
 				// update balance by transaction amount
 				b.amount -= amount
 				if b.amount == 0 {

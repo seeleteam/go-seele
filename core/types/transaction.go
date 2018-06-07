@@ -42,6 +42,9 @@ var (
 	// ErrPayloadOversized is returned when the payload size is larger than the MaxPayloadSize.
 	ErrPayloadOversized = errors.New("oversized payload")
 
+	// ErrPayloadEmpty is returned when create or call a contract without payload.
+	ErrPayloadEmpty = errors.New("empty payload")
+
 	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
 	ErrTimestampMismatch = errors.New("timestamp mismatch")
 
@@ -110,8 +113,8 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 		return nil, ErrFeeNegative
 	}
 
-	if len(payload) > MaxPayloadSize {
-		return nil, ErrPayloadOversized
+	if err := validatePayload(to, payload); err != nil {
+		return nil, err
 	}
 
 	txData := &TransactionData{
@@ -131,6 +134,18 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 	}
 
 	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
+}
+
+func validatePayload(toAddr *common.Address, payload []byte) error {
+	if len(payload) > MaxPayloadSize {
+		return ErrPayloadOversized
+	}
+
+	if (toAddr == nil || toAddr.Type() == common.AddressTypeContract) && len(payload) == 0 {
+		return ErrPayloadEmpty
+	}
+
+	return nil
 }
 
 // NewContractTransaction returns a transaction to create a smart contract.
@@ -201,8 +216,8 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrNonceTooLow
 	}
 
-	if len(tx.Data.Payload) > MaxPayloadSize {
-		return ErrPayloadOversized
+	if err := validatePayload(tx.Data.To, tx.Data.Payload); err != nil {
+		return err
 	}
 
 	if tx.Signature == nil {

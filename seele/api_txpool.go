@@ -12,7 +12,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
-	"github.com/seeleteam/go-seele/core/types"
 )
 
 var (
@@ -95,7 +94,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request 
 }
 
 // GetReceiptByTxHash get receipt by transaction hash
-func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash *string, result *types.Receipt) error {
+func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash *string, result *map[string]interface{}) error {
 	hashByte, err := hexutil.HexToBytes(*txHash)
 	if err != nil {
 		return err
@@ -107,7 +106,11 @@ func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash *string, result 
 	if err != nil {
 		return err
 	}
-	*result = *receipt
+	out, err := PrintableReceipt(receipt)
+	if err != nil {
+		return err
+	}
+	*result = out
 	return nil
 }
 
