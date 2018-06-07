@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -43,6 +42,9 @@ var (
 	// ErrPayloadOversized is returned when the payload size is larger than the MaxPayloadSize.
 	ErrPayloadOversized = errors.New("oversized payload")
 
+	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
+	ErrTimestampMismatch = errors.New("timestamp mismatch")
+
 	// ErrSigInvalid is returned when the transaction signature is invalid.
 	ErrSigInvalid = errors.New("signature is invalid")
 
@@ -62,7 +64,7 @@ type TransactionData struct {
 	Amount       *big.Int        // Amount is the amount to be transferred
 	AccountNonce uint64          // AccountNonce is the nonce of the sender account
 	Fee          *big.Int        // Transaction Fee
-	Timestamp    uint64          // Timestamp is unix nano time when the transaction is created
+	Timestamp    uint64          // Timestamp is used for the miner reward transaction, referring to the block timestamp
 	Payload      []byte          // Payload is the extra data of the transaction
 }
 
@@ -117,7 +119,6 @@ func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.In
 		To:           to,
 		Amount:       new(big.Int).Set(amount),
 		Fee:          new(big.Int).Set(fee),
-		Timestamp:    uint64(time.Now().UnixNano()),
 		AccountNonce: nonce,
 	}
 
@@ -140,6 +141,30 @@ func NewContractTransaction(from common.Address, amount *big.Int, fee *big.Int, 
 // NewMessageTransaction returns a transation with the specified message.
 func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
 	return newTx(from, &to, amount, fee, nonce, msg)
+}
+
+// NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
+func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint64) (*Transaction, error) {
+	if reward == nil {
+		return nil, ErrAmountNil
+	}
+
+	if reward.Sign() < 0 {
+		return nil, ErrAmountNegative
+	}
+
+	rewardTxData := &TransactionData{
+		From:      common.Address{},
+		To:        &miner,
+		Amount:    new(big.Int).Set(reward),
+		Fee:       big.NewInt(0),
+		Timestamp: timestamp,
+		Payload:   make([]byte, 0),
+	}
+
+	rewardTx := &Transaction{crypto.MustHash(rewardTxData), rewardTxData, &crypto.Signature{make([]byte, 0)}}
+
+	return rewardTx, nil
 }
 
 // Sign signs the transaction with the specified private key.
@@ -169,7 +194,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
-		return ErrBalanceNotEnough
+		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {

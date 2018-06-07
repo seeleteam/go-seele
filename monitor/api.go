@@ -41,6 +41,7 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 		OsVer:      runtime.GOARCH,
 		Client:     api.s.version,
 		History:    true,
+		Shard:      api.s.shard,
 	}
 
 	return nil

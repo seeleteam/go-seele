@@ -57,7 +57,7 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 	for adress, txs := range data {
 		trans := make([]map[string]interface{}, len(txs))
 		for i, tran := range txs {
-			trans[i] = rpcOutputTx(tran)
+			trans[i] = PrintableOutputTx(tran)
 		}
 		content[adress.ToHex()] = trans
 	}

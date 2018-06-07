@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 var (
@@ -66,7 +67,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(reques
 		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 
-	*result = rpcOutputTx(txs[request.Index])
+	*result = PrintableOutputTx(txs[request.Index])
 	return nil
 }
 
@@ -88,7 +89,24 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request 
 	if request.Index >= len(txs) {
 		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
-	*result = rpcOutputTx(txs[request.Index])
+	*result = PrintableOutputTx(txs[request.Index])
+	return nil
+}
+
+// GetReceiptByTxHash get receipt by transaction hash
+func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash *string, result *types.Receipt) error {
+	hashByte, err := hexutil.HexToBytes(*txHash)
+	if err != nil {
+		return err
+	}
+	hash := common.BytesToHash(hashByte)
+
+	store := api.s.chain.GetStore()
+	receipt, err := store.GetReceiptByTxHash(hash)
+	if err != nil {
+		return err
+	}
+	*result = *receipt
 	return nil
 }
 
@@ -104,7 +122,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 	// Try to get transaction in txpool
 	tx := api.s.TxPool().GetTransaction(hash)
 	if tx != nil {
-		*result = rpcOutputTx(tx)
+		*result = PrintableOutputTx(tx)
 		return nil
 	}
 
@@ -120,7 +138,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 		if err != nil {
 			return err
 		}
-		*result = rpcOutputTx(block.Transactions[txIndex.Index])
+		*result = PrintableOutputTx(block.Transactions[txIndex.Index])
 		return nil
 	}
 

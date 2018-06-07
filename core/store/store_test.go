@@ -96,7 +96,7 @@ func newTestTx() *types.Transaction {
 		Signature: &crypto.Signature{[]byte("test sig")},
 	}
 
-	tx.Hash = crypto.MustHash(tx)
+	tx.Hash = crypto.MustHash(tx.Data)
 
 	return tx
 }
