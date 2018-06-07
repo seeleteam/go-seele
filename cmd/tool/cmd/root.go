@@ -13,6 +13,7 @@ import (
 )
 
 var rpcAddr string
+var password = "123"
 
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{

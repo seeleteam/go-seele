@@ -67,7 +67,7 @@ var sendTxCmd = &cobra.Command{
 
 		// init balance and nonce
 		for _, f := range keyFiles {
-			key, err := keystore.GetKey(f, "123")
+			key, err := keystore.GetKey(f, password)
 			if err != nil {
 				fmt.Println("get private key failed ", err)
 			}
@@ -120,7 +120,7 @@ var sendTxCmd = &cobra.Command{
 			}
 
 			value := big.NewInt(int64(amount))
-			value.Mul(value, common.SeeleToCoin)
+			value.Mul(value, common.SeeleToFan)
 			// update nonce
 			b.nonce++
 			if util.Sendtx(client, b.privateKey, *addr, value, big.NewInt(0), b.nonce) {
@@ -153,7 +153,7 @@ func getbalance(client *rpc.Client, address common.Address) (int, bool) {
 		return 0, false
 	}
 
-	return int(amount.Div(amount, common.SeeleToCoin).Uint64()), true
+	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
 }
 
 func getNonce(client *rpc.Client, address common.Address) uint64 {
