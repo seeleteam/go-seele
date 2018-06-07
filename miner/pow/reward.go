@@ -6,8 +6,9 @@
 package pow
 
 import (
-	"github.com/seeleteam/go-seele/common"
 	"math/big"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 var (
@@ -19,8 +20,8 @@ var (
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
 	blockNumberPerEra uint64 = 525000 * 4
-	//SeeleToCoin base coin number
-	SeeleToCoin = common.SeeleToCoin
+	//SeeleToFan base coin number
+	SeeleToFan = common.SeeleToFan
 )
 
 func init() {
@@ -30,11 +31,11 @@ func init() {
 	rewardTableCoin = make([]*big.Int, len(rewardTable))
 	for i, r := range rewardTable {
 		seele := big.NewInt(r)
-		rewardTableCoin[i] = big.NewInt(0).Mul(seele, SeeleToCoin)
+		rewardTableCoin[i] = big.NewInt(0).Mul(seele, SeeleToFan)
 	}
 
 	reward := big.NewInt(tailReward)
-	tailRewardCoin = big.NewInt(0).Mul(reward, SeeleToCoin)
+	tailRewardCoin = big.NewInt(0).Mul(reward, SeeleToFan)
 }
 
 // GetReward get reward amount according to block height
