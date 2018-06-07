@@ -134,7 +134,7 @@ func (api *PrivateTransactionPoolAPI) GetPendingTransactions(input interface{}, 
 	var transactions []map[string]interface{}
 	for _, txs := range pendingTxs {
 		for _, tx := range txs {
-			transactions = append(transactions, rpcOutputTx(tx))
+			transactions = append(transactions, PrintableOutputTx(tx))
 		}
 	}
 	*result = transactions
