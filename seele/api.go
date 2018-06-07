@@ -284,6 +284,22 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	return transaction
 }
 
+// PrintableReceipt converts the given Receipt to the RPC output
+func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
+	contractAddr, err := common.NewAddress(re.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	outMap := map[string]interface{}{
+		"result":    hexutil.BytesToHex(re.Result),
+		"poststate": re.PostState.ToHex(),
+		"txhash":    re.TxHash.ToHex(),
+		"contract":  contractAddr.ToHex(),
+	}
+	return outMap, nil
+}
+
 // getBlock returns block by height,when height is -1 the chain head is returned
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
