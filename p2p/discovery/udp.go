@@ -481,7 +481,7 @@ func (u *udp) loadNodes(nodeDir string) {
 
 	data, err := ioutil.ReadFile(fileFullPath)
 	if err != nil {
-		u.log.Error("nodes info backup file analysis failed for:[%s]", err)
+		u.log.Error("read nodes info backup file failed for::[%s]", err)
 		return
 	}
 
