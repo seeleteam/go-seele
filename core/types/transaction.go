@@ -188,16 +188,9 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Signature = crypto.MustSign(privKey, tx.Hash.Bytes())
 }
 
-// Validate returns true if the transaction is valid, otherwise false.
+// Validate performs a complete check for the transaction of local shard and returns nil if valid otherwise an error.
 func (tx *Transaction) Validate(statedb stateDB) error {
-	if tx.Data == nil || tx.Data.Amount == nil {
-		return ErrAmountNil
-	}
-
-	if tx.Data.Amount.Sign() < 0 {
-		return ErrAmountNegative
-	}
-
+	// verify shard
 	if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
 		return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
 	}
@@ -208,12 +201,31 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		}
 	}
 
+	// verify without state
+	if err := tx.ValidateWithoutState(); err != nil {
+		return err
+	}
+
+	// verify state
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
 		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
 		return ErrNonceTooLow
+	}
+
+	return nil
+}
+
+// ValidateWithoutState performs a state independent check for the transaction and returns nil if valid otherwise an error.
+func (tx *Transaction) ValidateWithoutState() error {
+	if tx.Data == nil || tx.Data.Amount == nil {
+		return ErrAmountNil
+	}
+
+	if tx.Data.Amount.Sign() < 0 {
+		return ErrAmountNegative
 	}
 
 	if err := validatePayload(tx.Data.To, tx.Data.Payload); err != nil {
