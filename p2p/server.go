@@ -14,11 +14,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -95,9 +97,12 @@ type Server struct {
 	Protocols []Protocol
 
 	SelfNode *discovery.Node
+
+	genesis core.GenesisInfo
 }
 
-func NewServer(config Config, protocols []Protocol) *Server {
+// NewServer initialize a server
+func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *Server {
 	return &Server{
 		Config:          config,
 		running:         false,
@@ -107,6 +112,7 @@ func NewServer(config Config, protocols []Protocol) *Server {
 		peerSet:         NewPeerSet(),
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
+		genesis:         genesis,
 	}
 }
 
@@ -370,7 +376,9 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 	handshakeMsg := &ProtoHandShake{Caps: caps}
 	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
-
+	// handshakeMsg.genesis=srv.genesis
+	mlog := log.GetLogger("yanllearnn", false)
+	mlog.Info("我是节点:", reflect.ValueOf(srv.SelfNode.ID).String)
 	if flags == outboundConn {
 		// client side. Send msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
@@ -378,13 +386,13 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, 0, err
 		}
-
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, 0, err
 		}
 
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
+			mlog.Info("我是客户端2我报错了:", err)
 			return nil, 0, 0, err
 		}
 
@@ -392,7 +400,27 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, 0, err
 		}
+
+		// if recvMsg.genesis.Difficult !=srv.genesis.Difficult {
+		// 	return nil ,0,0,errors.New("nodes genesis is not same")
+		// }
+
+		// for key,val := range recvMsg.genesis.Accounts{
+		// 	v,ok:=srv.genesis.Accounts[key]
+		// 	mlog.Info("key/value:",key,"/",val)
+		// 	mlog.Info("value/ok:",v,"/",ok)
+		// 	if !ok{
+		// 		return nil ,0,0,errors.New("nodes genesis account is not same")
+		// 	}
+		// 	if v!=val{
+		// 		return nil ,0,0,errors.New("nodes genesis is not same")
+		// 	}
+
+		// }
+		mlog.Info("客户端成功")
+
 	} else {
+		mlog.Info("我是服务端")
 		// server side. Receive handshake msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
 		recvWrapMsg, err := peer.rw.ReadMsg()
@@ -405,6 +433,21 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, 0, err
 		}
 
+		// if recvMsg.genesis.Difficult !=srv.genesis.Difficult {
+		// 	return nil ,0,0,errors.New("nodes genesis is not same")
+		// }
+
+		// for key,val := range recvMsg.genesis.Accounts{
+		// 	v,ok:=srv.genesis.Accounts[key]
+		// 	if !ok{
+		// 		return nil ,0,0,errors.New("nodes genesis account is not same")
+		// 	}
+		// 	if v!=val{
+		// 		return nil ,0,0,errors.New("nodes genesis is not same")
+		// 	}
+
+		// }
+
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
 		if err != nil {
 			return nil, 0, 0, err
@@ -413,6 +456,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, 0, err
 		}
+		mlog.Info("服务端成功")
 	}
 	return
 }
@@ -422,6 +466,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64, nounceSvr uint64) (Message, error) {
 	// Serialize should handle big-endian
 	hdmsgRLP, err := common.Serialize(handshakeMsg)
+
 	if err != nil {
 		return Message{}, err
 	}
