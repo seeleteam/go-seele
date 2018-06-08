@@ -13,19 +13,19 @@ func newTestUdp() *udp {
 	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	if err != nil {
-		panic("new node1 from string faild")
+		panic(err)
 	}
 
 	id2 := "snode://0101f3c956d0a320b153a097c3d04efa488d6666@127.0.0.1:9888[1]"
 	node2, err := NewNodeFromString(id2)
 	if err != nil {
-		panic("new node2 from string faild")
+		panic(err)
 	}
 
 	selfId := "snode://0101f3c956d0a320b153a097c3d04efa48888888@127.0.0.1:9666[1]"
 	self, err := NewNodeFromString(selfId)
 	if err != nil {
-		panic("new node3 from string faild")
+		panic(err)
 	}
 
 	log := log.GetLogger("discovery", common.LogConfig.PrintLog)

@@ -481,21 +481,21 @@ func (u *udp) loadNodes(nodeDir string) {
 
 	data, err := ioutil.ReadFile(fileFullPath)
 	if err != nil {
-		u.log.Error("nodes info backup file analysis failed for:[%s]", err.Error())
+		u.log.Error("nodes info backup file analysis failed for:[%s]", err)
 		return
 	}
 
 	var nodes []string
 	err = json.Unmarshal(data, &nodes)
 	if err != nil {
-		u.log.Error("nodes unmarshal failed for:[%s]", err.Error())
+		u.log.Error("nodes unmarshal failed for:[%s]", err)
 		return
 	}
 
 	for i := range nodes {
 		n, err := NewNodeFromString(nodes[i])
 		if err != nil {
-			u.log.Error("new node from string failed for:[%s]", err.Error())
+			u.log.Error("new node from string failed for:[%s]", err)
 			continue
 		}
 		u.addNode(n)
