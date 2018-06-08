@@ -8,11 +8,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 )
 
 var password = "123"
+var serveList string
+var clientList map[uint]*rpc.Client // shard -> client
 
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
@@ -34,4 +38,20 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ;")
+}
+
+func initClient() {
+	addrs := strings.Split(serveList, ";")
+	clientList = make(map[uint]*rpc.Client, 0)
+
+	for _, addr := range addrs {
+		client, err := rpc.Dial("tcp", addr)
+		if err != nil {
+			panic(fmt.Sprintf("dial failed %s for server %s", err, addr))
+		}
+
+		shard := getShard(client)
+		clientList[shard] = client
+	}
 }

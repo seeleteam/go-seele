@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"math/rand"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/cmd/util"
@@ -25,8 +24,7 @@ import (
 )
 
 var keyFolder string
-var serveList string
-var clientList map[uint]*rpc.Client // shard -> client
+var timeInterval int64
 
 type balance struct {
 	address    *common.Address
@@ -93,7 +91,7 @@ var sendTxCmd = &cobra.Command{
 				fmt.Println()
 			}
 
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Microsecond * time.Duration(timeInterval))
 		}
 	},
 }
@@ -115,21 +113,6 @@ func getRandClient() *rpc.Client {
 	}
 
 	return nil
-}
-
-func initClient() {
-	addrs := strings.Split(serveList, ";")
-	clientList = make(map[uint]*rpc.Client, 0)
-
-	for _, addr := range addrs {
-		client, err := rpc.Dial("tcp", addr)
-		if err != nil {
-			panic(fmt.Sprintf("dial failed %s for server %s", err, addr))
-		}
-
-		shard := getShard(client)
-		clientList[shard] = client
-	}
 }
 
 func initAccount() []*balance {
@@ -228,5 +211,5 @@ func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "..\\client\\keyfile", "key file folder")
-	sendTxCmd.Flags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ;")
+	sendTxCmd.Flags().Int64VarP(&timeInterval, "interval", "", 50, "time interval in microsecond during send transaction")
 }
