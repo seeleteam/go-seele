@@ -6,6 +6,7 @@
 package monitor
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
@@ -37,7 +38,7 @@ func NewMonitorService(seeleService *seele.SeeleService, seeleNode *node.Node, c
 		rpcAddr:   conf.BasicConfig.RPCAddr,
 		node:      conf.BasicConfig.Name,
 		version:   conf.BasicConfig.Version,
-		shard:     conf.SeeleConfig.Coinbase.Shard(),
+		shard:     common.LocalShardNumber,
 	}, nil
 }
 

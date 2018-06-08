@@ -23,6 +23,7 @@ import (
 )
 
 var keyFolder string
+var timeInterval int64
 
 type balance struct {
 	address    *common.Address
@@ -89,7 +90,7 @@ var sendTxCmd = &cobra.Command{
 				fmt.Println()
 			}
 
-			time.Sleep(time.Microsecond * 10)
+			time.Sleep(time.Microsecond * time.Duration(timeInterval))
 		}
 	},
 }
@@ -213,4 +214,5 @@ func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "keystore", "key file folder")
+	sendTxCmd.Flags().Int64VarP(&timeInterval, "interval", "", 50, "time interval in microsecond during send transaction")
 }

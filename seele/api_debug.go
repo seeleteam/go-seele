@@ -75,6 +75,7 @@ func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) 
 	return nil
 }
 
+// GetTPS get tps info
 func (api *PrivateDebugAPI) GetTPS(input interface{}, result *string) error {
 	chain := api.s.BlockChain()
 	block, _ := chain.CurrentBlock()
