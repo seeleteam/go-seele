@@ -51,7 +51,7 @@ func (header *BlockHeader) Hash() common.Hash {
 // Block represents a block in the blockchain.
 type Block struct {
 	HeaderHash   common.Hash    // HeaderHash is the hash of the RLP encoded header bytes
-	Header       *BlockHeader   // Header is the block header
+	Header       *BlockHeader   // Header is the block header, a block header is about 165byte
 	Transactions []*Transaction // Transactions is the block payload
 }
 

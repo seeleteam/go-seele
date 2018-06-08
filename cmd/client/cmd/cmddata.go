@@ -5,7 +5,11 @@
 
 package cmd
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/seeleteam/go-seele/common/hexutil"
+)
 
 // NewCmdData load all cmd data for init
 func NewCmdData() []*Request {
@@ -91,6 +95,16 @@ func NewCmdData() []*Request {
 					Usage:        "height for the block",
 					Required:     true,
 				},
+			},
+			Handler: func(i interface{}) {
+				v := i.(string)
+				buff, err := hexutil.HexToBytes(v)
+				if err != nil {
+					fmt.Println("hex to byte failed ", err)
+					return
+				}
+
+				fmt.Printf("block size: %d byte", len(buff))
 			},
 		},
 		&Request{

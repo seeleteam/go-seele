@@ -21,21 +21,20 @@ var gettps = &cobra.Command{
 		initClient()
 
 		for {
-			sum := uint64(0)
+			//sum := uint64(0)
 			for _, client := range clientList {
-				var tps uint64
+				var tps string
 				err := client.Call("debug.GetTPS", nil, &tps)
 				if err != nil {
 					fmt.Println("get tps failed ", err)
+					return
 				}
 
 				shard := getShard(client)
-				sum += tps
-
-				fmt.Printf("shard %d tps %d\n", shard, tps)
+				fmt.Printf("shard %d tps %s\n", shard, tps)
 			}
 
-			fmt.Printf("sum tps is %d, real tps is %d\n", sum, sum/60)
+			//fmt.Printf("sum tps is %d, real tps is %d\n", sum, sum/60)
 			time.Sleep(10 * time.Second)
 		}
 	},

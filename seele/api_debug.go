@@ -6,7 +6,7 @@
 package seele
 
 import (
-	"math/big"
+	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
@@ -75,51 +75,36 @@ func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) 
 	return nil
 }
 
-func (api *PrivateDebugAPI) GetTPS(input interface{}, result *uint64) error {
+func (api *PrivateDebugAPI) GetTPS(input interface{}, result *string) error {
 	chain := api.s.BlockChain()
 	block, _ := chain.CurrentBlock()
-	if block.Header.Height < 2 {
-		*result = 0
-		return nil
-	}
-
-	firstBlock, err := chain.GetStore().GetBlockByHeight(1)
-	if err != nil {
-		return err
-	}
-
-	durationBig := big.NewInt(0)
-	durationBig.Sub(block.Header.CreateTimestamp, firstBlock.Header.CreateTimestamp)
-	timeInterval := uint64(60)
+	timeInterval := uint64(300)
 
 	var count = uint64(len(block.Transactions) - 1)
 	var duration uint64
-	if durationBig.Uint64() > timeInterval {
-		duration = durationBig.Uint64()
-		for height := block.Header.Height - 1; height > 0; height-- {
-			current, err := chain.GetStore().GetBlockByHeight(height)
-			if err != nil {
-				return err
-			}
-
-			count += uint64(len(current.Transactions) - 1)
+	var endHeight uint64
+	startTime := block.Header.CreateTimestamp.Uint64()
+	for height := block.Header.Height - 1; height > 0; height-- {
+		current, err := chain.GetStore().GetBlockByHeight(height)
+		if err != nil {
+			return err
 		}
-	} else {
-		startBig := block.Header.CreateTimestamp.Uint64()
-		for height := block.Header.Height - 1; height > 0; height-- {
-			current, err := chain.GetStore().GetBlockByHeight(height)
-			if err != nil {
-				return err
-			}
 
-			count += uint64(len(current.Transactions) - 1)
-			duration = startBig - current.Header.CreateTimestamp.Uint64()
-			if duration > timeInterval {
-				break
-			}
+		count += uint64(len(current.Transactions) - 1)
+		duration = startTime - current.Header.CreateTimestamp.Uint64()
+		endHeight = height
+
+		if duration > timeInterval {
+			break
 		}
 	}
 
-	*result = count
+	if duration > 0 {
+		*result = fmt.Sprintf("from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%d", endHeight, block.Header.Height,
+			block.Header.Height-endHeight, count, duration, count/duration)
+	} else {
+		*result = ""
+	}
+
 	return nil
 }
