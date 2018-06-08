@@ -7,9 +7,12 @@ package discovery
 
 import (
 	"container/list"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	rand2 "math/rand"
 	"net"
+	"path/filepath"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -466,4 +469,35 @@ func (u *udp) deleteNode(n *Node) {
 	u.table.deleteNode(n)
 	u.db.delete(sha)
 	u.log.Info("after delete node, total nodes:%d", u.db.size())
+}
+
+func (u *udp) loadNodes(nodeDir string) {
+	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
+
+	if !common.FileOrFolderExists(fileFullPath) {
+		u.log.Info("nodes info backup file isn't exists in the path:%d", fileFullPath)
+		return
+	}
+
+	data, err := ioutil.ReadFile(fileFullPath)
+	if err != nil {
+		u.log.Error("read nodes info backup file failed for:[%s]", err)
+		return
+	}
+
+	var nodes []string
+	err = json.Unmarshal(data, &nodes)
+	if err != nil {
+		u.log.Error("nodes unmarshal failed for:[%s]", err)
+		return
+	}
+
+	for i := range nodes {
+		n, err := NewNodeFromString(nodes[i])
+		if err != nil {
+			u.log.Error("new node from string failed for:[%s]", err)
+			continue
+		}
+		u.addNode(n)
+	}
 }
