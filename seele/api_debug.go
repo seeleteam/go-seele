@@ -6,8 +6,6 @@
 package seele
 
 import (
-	"fmt"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -75,8 +73,16 @@ func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) 
 	return nil
 }
 
+// TpsInfo tps detail info
+type TpsInfo struct {
+	StartHeight uint64
+	EndHeight   uint64
+	Count       uint64
+	Duration    uint64
+}
+
 // GetTPS get tps info
-func (api *PrivateDebugAPI) GetTPS(input interface{}, result *string) error {
+func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	chain := api.s.BlockChain()
 	block, _ := chain.CurrentBlock()
 	timeInterval := uint64(300)
@@ -100,11 +106,11 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *string) error {
 		}
 	}
 
-	if duration > 0 {
-		*result = fmt.Sprintf("from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%d", endHeight, block.Header.Height,
-			block.Header.Height-endHeight, count, duration, count/duration)
-	} else {
-		*result = ""
+	*result = TpsInfo{
+		StartHeight: endHeight,
+		EndHeight:   block.Header.Height,
+		Count:       count,
+		Duration:    duration,
 	}
 
 	return nil
