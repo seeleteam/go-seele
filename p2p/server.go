@@ -168,7 +168,6 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
-	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err != nil {
 		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
@@ -177,6 +176,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 
 		return
 	}
+	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
 		srv.log.Info("add new node. setupConn called err returns. err=%s", err)
