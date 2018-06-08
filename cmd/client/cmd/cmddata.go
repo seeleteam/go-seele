@@ -5,6 +5,8 @@
 
 package cmd
 
+import "fmt"
+
 // NewCmdData load all cmd data for init
 func NewCmdData() []*Request {
 	return []*Request{
@@ -19,8 +21,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for the block",
@@ -28,8 +30,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
@@ -48,8 +50,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for the block",
@@ -57,13 +59,18 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
 					Required:     false,
 				},
+			},
+			Handler: func(v interface{}) {
+				result := v.(map[string]interface{})
+				txs := result["transactions"].([]interface{})
+				fmt.Printf("transaction numbers: %d\n", len(txs))
 			},
 		},
 		&Request{
@@ -77,8 +84,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for the block",
@@ -106,8 +113,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for get block transaction count",
@@ -125,8 +132,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block transaction count",
@@ -144,8 +151,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for get block",
@@ -153,8 +160,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
+					FlagName:     "index",
+					ShortFlag:    "",
 					ParamType:    "*int",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
@@ -172,8 +179,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block",
@@ -181,8 +188,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
+					FlagName:     "index",
+					ShortFlag:    "",
 					ParamType:    "*int",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
@@ -241,8 +248,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "TxHash",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash of the transaction",

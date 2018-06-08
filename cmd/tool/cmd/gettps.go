@@ -35,7 +35,7 @@ var gettps = &cobra.Command{
 				fmt.Printf("shard %d tps %d\n", shard, tps)
 			}
 
-			fmt.Printf("sum tps is %d, real tps is %d\n", sum, sum/600)
+			fmt.Printf("sum tps is %d, real tps is %d\n", sum, sum/60)
 			time.Sleep(10 * time.Second)
 		}
 	},

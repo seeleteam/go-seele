@@ -90,7 +90,7 @@ var sendTxCmd = &cobra.Command{
 				fmt.Println()
 			}
 
-			time.Sleep(time.Microsecond * 50)
+			time.Sleep(time.Second)
 		}
 	},
 }

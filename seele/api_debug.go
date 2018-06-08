@@ -90,11 +90,11 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *uint64) error {
 
 	durationBig := big.NewInt(0)
 	durationBig.Sub(block.Header.CreateTimestamp, firstBlock.Header.CreateTimestamp)
-	mins10 := uint64(10 * 60)
+	timeInterval := uint64(60)
 
 	var count = uint64(len(block.Transactions) - 1)
 	var duration uint64
-	if durationBig.Uint64() > mins10 {
+	if durationBig.Uint64() > timeInterval {
 		duration = durationBig.Uint64()
 		for height := block.Header.Height - 1; height > 0; height-- {
 			current, err := chain.GetStore().GetBlockByHeight(height)
@@ -114,7 +114,7 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *uint64) error {
 
 			count += uint64(len(current.Transactions) - 1)
 			duration = startBig - current.Header.CreateTimestamp.Uint64()
-			if duration > mins10 {
+			if duration > timeInterval {
 				break
 			}
 		}
