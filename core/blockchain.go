@@ -25,7 +25,7 @@ var (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
-	// block transaction number limit, 1000 transaction is about 1.28MB
+	// block transaction number limit, 1000 transactions are about 1.28Mb
 	BlockTransactionNumberLimit = 1000
 )
 
