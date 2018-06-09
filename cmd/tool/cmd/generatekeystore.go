@@ -95,6 +95,6 @@ func init() {
 	generateKeystoreCmd.Flags().IntVarP(&num, "num", "n", 10, "number of generate key files")
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&folder, "folder", "f", "keystore", "key file folder")
-	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accouts.json", "output address map file path")
+	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
 	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ;")
 }
