@@ -7,7 +7,7 @@ package p2p
 
 import (
 	"time"
-	_"github.com/seeleteam/go-seele/core"
+
 	"github.com/seeleteam/go-seele/common"
 )
 
@@ -39,7 +39,7 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 type ProtoHandShake struct {
 	Caps   []Cap
 	NodeID common.Address
-	// genesis core.GenesisInfo
+	Params []byte
 }
 
 type MsgReader interface {

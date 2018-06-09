@@ -11,10 +11,10 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
-	"reflect"
 	"sort"
 	"sync"
 	"time"
@@ -374,11 +374,13 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 // doHandShake Communicate each other
 func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
 	handshakeMsg := &ProtoHandShake{Caps: caps}
+	params, err := json.Marshal(srv.genesis)
+	handshakeMsg.Params = params
+	if err != nil {
+		return nil, 0, 0, err
+	}
 	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
-	// handshakeMsg.genesis=srv.genesis
-	mlog := log.GetLogger("yanllearnn", false)
-	mlog.Info("我是节点:", reflect.ValueOf(srv.SelfNode.ID).String)
 	if flags == outboundConn {
 		// client side. Send msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
@@ -392,61 +394,52 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
-			mlog.Info("我是客户端2我报错了:", err)
 			return nil, 0, 0, err
 		}
-
 		recvMsg, _, nounceSvr, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, 0, err
 		}
-
-		// if recvMsg.genesis.Difficult !=srv.genesis.Difficult {
-		// 	return nil ,0,0,errors.New("nodes genesis is not same")
-		// }
-
-		// for key,val := range recvMsg.genesis.Accounts{
-		// 	v,ok:=srv.genesis.Accounts[key]
-		// 	mlog.Info("key/value:",key,"/",val)
-		// 	mlog.Info("value/ok:",v,"/",ok)
-		// 	if !ok{
-		// 		return nil ,0,0,errors.New("nodes genesis account is not same")
-		// 	}
-		// 	if v!=val{
-		// 		return nil ,0,0,errors.New("nodes genesis is not same")
-		// 	}
-
-		// }
-		mlog.Info("客户端成功")
+		var genesis core.GenesisInfo
+		err = json.Unmarshal(recvMsg.Params, &genesis)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		for key, val := range genesis.Accounts {
+			v, ok := srv.genesis.Accounts[key]
+			if !ok {
+				return nil, 0, 0, errors.New("doHandShake genesis is not equal")
+			}
+			if val.Text(10) != v.Text(10) {
+				return nil, 0, 0, errors.New("doHandShake genesis value is not equal")
+			}
+		}
 
 	} else {
-		mlog.Info("我是服务端")
 		// server side. Receive handshake msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
 			return nil, 0, 0, err
 		}
-
 		recvMsg, nounceCnt, _, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, 0, err
 		}
-
-		// if recvMsg.genesis.Difficult !=srv.genesis.Difficult {
-		// 	return nil ,0,0,errors.New("nodes genesis is not same")
-		// }
-
-		// for key,val := range recvMsg.genesis.Accounts{
-		// 	v,ok:=srv.genesis.Accounts[key]
-		// 	if !ok{
-		// 		return nil ,0,0,errors.New("nodes genesis account is not same")
-		// 	}
-		// 	if v!=val{
-		// 		return nil ,0,0,errors.New("nodes genesis is not same")
-		// 	}
-
-		// }
+		var genesis core.GenesisInfo
+		err = json.Unmarshal(recvMsg.Params, &genesis)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		for key, val := range genesis.Accounts {
+			v, ok := srv.genesis.Accounts[key]
+			if !ok {
+				return nil, 0, 0, errors.New("doHandShake genesis is not equal")
+			}
+			if val.Text(10) != v.Text(10) {
+				return nil, 0, 0, errors.New("doHandShake genesis value is not equal")
+			}
+		}
 
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
 		if err != nil {
@@ -456,7 +449,6 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, 0, err
 		}
-		mlog.Info("服务端成功")
 	}
 	return
 }
@@ -501,6 +493,7 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 
 // unPackWrapHSMsg verify recved msg, and recover the handshake msg
 func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+
 	size := uint32(len(recvWrapMsg.Payload))
 	if size < hsExtraDataLen+4 {
 		err = errors.New("received msg with invalid length")
@@ -516,7 +509,6 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 	if err = common.Deserialize(recvWrapMsg.Payload[:recvHSMsgLen], recvMsg); err != nil {
 		return
 	}
-
 	// verify signature
 	sig := crypto.Signature{
 		Sig: recvEnc[hsExtraDataLen:],
