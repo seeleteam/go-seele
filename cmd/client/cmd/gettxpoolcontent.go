@@ -6,12 +6,14 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
+	"encoding/json"
 )
+
+var print bool
 
 // gettxpoolcontentCmd represents the get tx pool content command
 var gettxpoolcontentCmd = &cobra.Command{
@@ -34,15 +36,25 @@ var gettxpoolcontentCmd = &cobra.Command{
 			return
 		}
 
-		jsonResult, err := json.MarshalIndent(&result, "", "\t")
-		if err != nil {
-			fmt.Println(err)
-			return
+		if print {
+			jsonResult, err := json.MarshalIndent(&result, "", "\t")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("tx pool content :\n", string(jsonResult))
 		}
-		fmt.Println("tx pool content :\n", string(jsonResult))
+
+		sum := 0
+		for _, value := range result {
+			sum += len(value)
+		}
+		fmt.Printf("tx pool total number: %d\n", sum)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(gettxpoolcontentCmd)
+
+	gettxpoolcontentCmd.Flags().BoolVarP(&print, "print", "p", false, "whether print out the tx pool content")
 }

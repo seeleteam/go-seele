@@ -23,7 +23,7 @@ import (
 )
 
 var keyFolder string
-var timeInterval int64
+var tps int
 
 type balance struct {
 	address    *common.Address
@@ -42,57 +42,80 @@ var sendTxCmd = &cobra.Command{
 		initClient()
 		balanceList := initAccount()
 
+		var confirmTime = 5 * time.Minute
+		count := 0
+		tpsStartTime := time.Now()
+		toConfirmBalanceList := make(map[time.Time][]*balance)
+		newBalanceList := make([]*balance, 0)
 		// send tx periodically
 		for {
-			rand.Seed(time.Now().UnixNano())
-			bIndex := rand.Intn(len(balanceList))
-			b := balanceList[bIndex]
+			nextBalanceList := make([]*balance, 0)
+			for _, b := range balanceList {
+				newBalance := send(b)
 
-			//update balance from current node
-			//newAmount, ok := getBalance(*b.address)
-			//if ok {
-			//	b.amount = newAmount
-			//}
-
-			if b.amount == 0 {
-				continue
-			}
-
-			amount := rand.Intn(b.amount) // for test, amount will always keep in int value.
-			addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
-			newBalance := &balance{
-				address:    addr,
-				privateKey: privateKey,
-				amount:     amount,
-				shard:      addr.Shard(),
-				nonce:      0,
-			}
-
-			value := big.NewInt(int64(amount))
-			value.Mul(value, common.SeeleToFan)
-			// update nonce
-			b.nonce++
-			client := getRandClient()
-			if util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil) {
-				// update balance by transaction amount
-				b.amount -= amount
-				if b.amount == 0 {
-					balanceList = append(balanceList[:bIndex], balanceList[bIndex+1:]...)
+				if b.amount > 0 {
+					nextBalanceList = append(nextBalanceList, b)
 				}
 
 				if newBalance.amount > 0 {
-					balanceList = append(balanceList, newBalance)
+					newBalanceList = append(newBalanceList, newBalance)
 				}
+				count++
 
-				fmt.Printf("%s balance changed from %d to %d\n", b.address.ToHex(), b.amount+amount, b.amount)
-				fmt.Printf("%s balance changed from %d to %d\n", newBalance.address.ToHex(), 0, newBalance.amount)
-				fmt.Printf("%s nonce is %d", b.address.ToHex(), b.nonce)
-				fmt.Println()
+				if count == tps {
+					fmt.Println("send txs ", count)
+					elapse := time.Now().Sub(tpsStartTime)
+					if elapse < time.Second {
+						time.Sleep(time.Second - elapse)
+					}
+
+					if len(newBalanceList) > 0 {
+						toConfirmBalanceList[time.Now()] = newBalanceList
+						newBalanceList = make([]*balance, 0)
+					}
+
+					count = 0
+					tpsStartTime = time.Now()
+				}
 			}
 
-			time.Sleep(time.Microsecond * time.Duration(timeInterval))
+			balanceList = nextBalanceList
+			for key, value := range toConfirmBalanceList {
+				duration := time.Now().Sub(key)
+				if duration > confirmTime {
+					fmt.Println("add confirmed balance ", len(value))
+					balanceList = append(balanceList, value...)
+					delete(toConfirmBalanceList, key)
+				}
+			}
 		}
 	},
+}
+
+func send(b *balance) *balance {
+	amount := rand.Intn(b.amount) // for test, amount will always keep in int value.
+	addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
+	newBalance := &balance{
+		address:    addr,
+		privateKey: privateKey,
+		amount:     amount,
+		shard:      addr.Shard(),
+		nonce:      0,
+	}
+
+	value := big.NewInt(int64(amount))
+	value.Mul(value, common.SeeleToFan)
+
+	// update nonce
+	b.nonce++
+	client := getRandClient()
+	_, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
+	if ok {
+		// update balance by transaction amount
+		b.amount -= amount
+	}
+
+	return newBalance
 }
 
 func getRandClient() *rpc.Client {
@@ -148,6 +171,11 @@ func initAccount() []*balance {
 		}
 
 		addr := crypto.GetAddress(&key.PublicKey)
+		// skip address that don't find the same shard client
+		if _, ok := clientList[addr.Shard()]; !ok {
+			continue
+		}
+
 		amount, ok := getBalance(*addr)
 		if !ok {
 			continue
@@ -214,5 +242,5 @@ func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "keystore", "key file folder")
-	sendTxCmd.Flags().Int64VarP(&timeInterval, "interval", "", 50, "time interval in microsecond during send transaction")
+	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 }
