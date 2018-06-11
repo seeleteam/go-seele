@@ -8,6 +8,7 @@ package cmd
 import (
 	"fmt"
 	"math/big"
+	"encoding/json"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -15,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
@@ -93,7 +95,18 @@ var sendtxCmd = &cobra.Command{
 			}
 		}
 
-		util.Sendtx(client, key.PrivateKey, &toAddr, amount, fee, nonce, payload)
+		tx, ok := util.Sendtx(client, key.PrivateKey, &toAddr, amount, fee, nonce, payload)
+		if ok {
+			fmt.Println("adding the tx succeeded.")
+			printTx := seele.PrintableOutputTx(tx)
+			str, err := json.MarshalIndent(printTx, "", "\t")
+			if err != nil {
+				fmt.Println("marshal transaction failed ", err)
+				return
+			}
+
+			fmt.Println(string(str))
+		}
 	},
 }
 
