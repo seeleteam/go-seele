@@ -214,17 +214,22 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 
 // PrintableReceipt converts the given Receipt to the RPC output
 func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
-	contractAddr, err := common.NewAddress(re.ContractAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	outMap := map[string]interface{}{
 		"result":    hexutil.BytesToHex(re.Result),
 		"poststate": re.PostState.ToHex(),
 		"txhash":    re.TxHash.ToHex(),
-		"contract":  contractAddr.ToHex(),
+		"contract":  "",
 	}
+
+	if len(re.ContractAddress) > 0 {
+		contractAddr, err := common.NewAddress(re.ContractAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		outMap["contract"] = contractAddr.ToHex()
+	}
+
 	return outMap, nil
 }
 
