@@ -92,5 +92,5 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&folder, "folder", "f", "keystore", "key file folder")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "out.txt", "output address map file path")
-	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "s", "1;2", "shard range, split by ;")
+	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ;")
 }
