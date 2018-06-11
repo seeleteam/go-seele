@@ -24,6 +24,7 @@ import (
 var seeleNodeConfigFile *string
 var miner *string
 var metricsEnableFlag *bool
+var accountsConfig string
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -35,7 +36,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, accountsConfig)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
@@ -117,4 +118,6 @@ func init() {
 	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
 
 	metricsEnableFlag = startCmd.Flags().BoolP("metrics", "t", false, "start metrics")
+
+	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 }

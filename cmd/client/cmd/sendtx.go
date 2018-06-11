@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
@@ -44,9 +46,10 @@ var sendtxCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var toAddr common.Address
+		var toAddr *common.Address
 		if len(*parameter.to) > 0 {
-			if toAddr, err = common.HexToAddress(*parameter.to); err != nil {
+			toAddr = new(common.Address)
+			if *toAddr, err = common.HexToAddress(*parameter.to); err != nil {
 				fmt.Printf("invalid receiver address: %s\n", err.Error())
 				return
 			}
@@ -93,7 +96,18 @@ var sendtxCmd = &cobra.Command{
 			}
 		}
 
-		util.Sendtx(client, key.PrivateKey, &toAddr, amount, fee, nonce, payload)
+		tx, ok := util.Sendtx(client, key.PrivateKey, toAddr, amount, fee, nonce, payload)
+		if ok {
+			fmt.Println("adding the tx succeeded.")
+			printTx := seele.PrintableOutputTx(tx)
+			str, err := json.MarshalIndent(printTx, "", "\t")
+			if err != nil {
+				fmt.Println("marshal transaction failed ", err)
+				return
+			}
+
+			fmt.Println(string(str))
+		}
 	},
 }
 

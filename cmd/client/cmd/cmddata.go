@@ -5,6 +5,12 @@
 
 package cmd
 
+import (
+	"fmt"
+
+	"github.com/seeleteam/go-seele/common/hexutil"
+)
+
 // NewCmdData load all cmd data for init
 func NewCmdData() []*Request {
 	return []*Request{
@@ -19,8 +25,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for the block",
@@ -28,8 +34,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
@@ -48,8 +54,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for the block",
@@ -57,13 +63,18 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
 					Required:     false,
 				},
+			},
+			Handler: func(v interface{}) {
+				result := v.(map[string]interface{})
+				txs := result["transactions"].([]interface{})
+				fmt.Printf("transaction numbers: %d\n", len(txs))
 			},
 		},
 		&Request{
@@ -77,13 +88,23 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for the block",
 					Required:     true,
 				},
+			},
+			Handler: func(i interface{}) {
+				v := i.(string)
+				buff, err := hexutil.HexToBytes(v)
+				if err != nil {
+					fmt.Println("hex to byte failed ", err)
+					return
+				}
+
+				fmt.Printf("block size: %d byte", len(buff))
 			},
 		},
 		&Request{
@@ -106,8 +127,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for get block transaction count",
@@ -125,8 +146,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block transaction count",
@@ -144,8 +165,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for get block",
@@ -153,8 +174,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
+					FlagName:     "index",
+					ShortFlag:    "",
 					ParamType:    "*int",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
@@ -172,8 +193,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block",
@@ -181,8 +202,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
+					FlagName:     "index",
+					ShortFlag:    "",
 					ParamType:    "*int",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
@@ -241,8 +262,28 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "TxHash",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash of the transaction",
+					Required:     true,
+				},
+			},
+		},
+		&Request{
+			Use:   "getreceiptbytxhash",
+			Short: "get receipt by tx hash",
+			Long: `For example:
+  			client.exe getreceiptbytxhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+			ParamReflectType: "string",
+			Method:           "txpool.GetReceiptByTxHash",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "TxHash",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash of the transaction",

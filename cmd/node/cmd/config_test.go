@@ -13,8 +13,9 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	currentProjectPath, err := os.Getwd()
 	assert.Equal(t, err, nil, "1")
 	configFilePath := filepath.Join(currentProjectPath, configFileName)
+	accountFilePath := filepath.Join(currentProjectPath, "/testConfig/accounts.json")
 
-	config, err := LoadConfigFromFile(configFilePath)
+	config, err := LoadConfigFromFile(configFilePath, accountFilePath)
 
 	assert.Equal(t, err, nil, "2")
 	assert.Equal(t, config.BasicConfig.Name, "seele node2", "3")
