@@ -134,6 +134,8 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 }
 
 // validate validates state independent fields in tx.
+// signNeeded indicates if the signature needs to be checked. The signature will 
+// be validated if true, ignored otherwise.
 func (tx Transaction) validate(signNeeded bool) error {
 	// validate amount
 	if tx.Data.Amount == nil {
@@ -164,7 +166,7 @@ func (tx Transaction) validate(signNeeded bool) error {
 
 	// validate signature
 	if signNeeded {
-	    if tx.Signature == nil {
+		if tx.Signature == nil {
 			return ErrSigMissing
 		}
 
@@ -173,7 +175,7 @@ func (tx Transaction) validate(signNeeded bool) error {
 			return ErrHashMismatch
 		}
 
-	    if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+		if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
 			return ErrSigInvalid
 		}
 	}
@@ -260,7 +262,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 // ValidateWithoutState wraps the internal validate method to provide an external 
 // interface, which performs a state independent check for the tx.
 func (tx *Transaction) ValidateWithoutState() error {
-	// call validate
+	// call validate directly
 	return tx.validate(true)
 }
 
