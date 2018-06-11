@@ -246,7 +246,7 @@ func Test_Transaction_Validate_EmptyPayloadError(t *testing.T) {
 	fromPrivKey, fromAddr := randomAccount(t)
 	toAddress := crypto.CreateAddress(fromAddr, 38)
 
-	tx, err := newTx(fromAddr, &toAddress, big.NewInt(100), big.NewInt(2), 38, []byte("payload"))
+	tx, err := newTx(fromAddr, toAddress, big.NewInt(100), big.NewInt(2), 38, []byte("payload"))
 	assert.Equal(t, err, nil)
 
 	tx.Data.Payload = nil
@@ -254,4 +254,47 @@ func Test_Transaction_Validate_EmptyPayloadError(t *testing.T) {
 
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	assert.Equal(t, tx.Validate(statedb), ErrPayloadEmpty)
+}
+
+func assertTxRlp(t *testing.T, tx *Transaction) {
+	encoded := common.SerializePanic(tx)
+
+	tx2 := &Transaction{}
+	assert.Equal(t, common.Deserialize(encoded, tx2), nil)
+	assert.Equal(t, tx, tx2)
+}
+
+func Test_Transaction_RlpTransferTx(t *testing.T) {
+	from := *crypto.MustGenerateRandomAddress()
+	to := *crypto.MustGenerateRandomAddress()
+	tx, err := NewTransaction(from, to, big.NewInt(3), big.NewInt(1), 38)
+	assert.Equal(t, err, nil)
+
+	assertTxRlp(t, tx)
+}
+
+func Test_Transaction_RlpContractTx(t *testing.T) {
+	from := *crypto.MustGenerateRandomAddress()
+	tx, err := NewContractTransaction(from, big.NewInt(3), big.NewInt(1), 38, []byte("test code"))
+	assert.Equal(t, err, nil)
+
+	assertTxRlp(t, tx)
+}
+
+func Test_Transaction_RlpMsgTx(t *testing.T) {
+	from := *crypto.MustGenerateRandomAddress()
+	to := *crypto.MustGenerateRandomAddress()
+	contractAddr := crypto.CreateAddress(to, 38)
+	tx, err := NewMessageTransaction(from, contractAddr, big.NewInt(3), big.NewInt(1), 38, []byte("test input message"))
+	assert.Equal(t, err, nil)
+
+	assertTxRlp(t, tx)
+}
+
+func Test_Transaction_RlpRewardTx(t *testing.T) {
+	miner := *crypto.MustGenerateRandomAddress()
+	tx, err := NewRewardTransaction(miner, big.NewInt(10), 666)
+	assert.Equal(t, err, nil)
+
+	assertTxRlp(t, tx)
 }

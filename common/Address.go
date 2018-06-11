@@ -88,6 +88,11 @@ func (id Address) Equal(b Address) bool {
 	return bytes.Equal(id[:], b[:])
 }
 
+// IsEmpty returns true if this address is empty. Otherwise, false.
+func (id Address) IsEmpty() bool {
+	return id.Equal(EmptyAddress)
+}
+
 // HexToAddress converts the specified HEX string to address.
 func HexToAddress(id string) (Address, error) {
 	byte, err := hexutil.HexToBytes(id)
