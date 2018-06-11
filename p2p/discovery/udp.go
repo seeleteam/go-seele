@@ -299,12 +299,14 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
-				if p.code == pongMsgType && p.code == r.code && p.from.GetUDPAddr().String() == r.fromAddr.String() {
-					callback(p, r, el, pendingList)
-					break
-				} else if p.from.ID == r.fromId && p.code == r.code {
-					callback(p, r, el, pendingList)
-					break
+				if p.code == r.code {
+					if p.code == pongMsgType && p.from.GetUDPAddr().String() == r.fromAddr.String() {
+						callback(p, r, el, pendingList)
+						break
+					} else if p.from.ID == r.fromId {
+						callback(p, r, el, pendingList)
+						break
+					}
 				}
 			}
 		case p := <-u.addPending:
