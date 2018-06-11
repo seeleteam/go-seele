@@ -119,7 +119,11 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 		txData.Payload = make([]byte, 0)
 	}
 
-	tx := &Transaction{Data: txData}
+	tx := &Transaction{
+		Data:      txData,
+		Signature: crypto.Signature{Sig: make([]byte, 0)},
+	}
+
 	if err := tx.validate(); err != nil {
 		return nil, err
 	}
@@ -191,8 +195,9 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 	}
 
 	rewardTx := &Transaction{
-		Hash: crypto.MustHash(rewardTxData),
-		Data: rewardTxData,
+		Hash:      crypto.MustHash(rewardTxData),
+		Data:      rewardTxData,
+		Signature: crypto.Signature{Sig: make([]byte, 0)},
 	}
 
 	return rewardTx, nil
