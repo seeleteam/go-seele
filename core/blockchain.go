@@ -25,8 +25,8 @@ var (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
-	// block transaction number limit
-	BlockTransactionNumberLimit = 500
+	// block transaction number limit, 1000 transactions are about 1.28Mb
+	BlockTransactionNumberLimit = 1000
 )
 
 var (
@@ -371,9 +371,9 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
 		return nil, err
 	}
-	
+
 	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {
-	    return nil, types.ErrTimestampMismatch
+		return nil, types.ErrTimestampMismatch
 	}
 
 	return minerRewardTx, nil

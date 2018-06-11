@@ -16,7 +16,6 @@ import (
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
@@ -50,10 +49,10 @@ var sendTxCmd = &cobra.Command{
 			b := balanceList[bIndex]
 
 			//update balance from current node
-			newAmount, ok := getbalance(*b.address)
-			if ok {
-				b.amount = newAmount
-			}
+			//newAmount, ok := getBalance(*b.address)
+			//if ok {
+			//	b.amount = newAmount
+			//}
 
 			if b.amount == 0 {
 				continue
@@ -138,20 +137,25 @@ func initAccount() []*balance {
 
 	// init balance and nonce
 	for _, f := range keyFiles {
-		key, err := keystore.GetKey(f, password)
+		hex, err := ioutil.ReadFile(f)
 		if err != nil {
-			fmt.Println("get private key failed ", err)
+			panic(fmt.Sprintf("read file %s error %s", f, err))
 		}
 
-		addr := crypto.GetAddress(&key.PrivateKey.PublicKey)
-		amount, ok := getbalance(*addr)
+		key, err := crypto.ToECDSA(hex)
+		if err != nil {
+			panic(fmt.Sprintf("load key failed %s", err))
+		}
+
+		addr := crypto.GetAddress(&key.PublicKey)
+		amount, ok := getBalance(*addr)
 		if !ok {
 			continue
 		}
 
 		b := &balance{
 			address:    addr,
-			privateKey: key.PrivateKey,
+			privateKey: key,
 			amount:     amount,
 			shard:      addr.Shard(),
 		}
@@ -167,14 +171,13 @@ func initAccount() []*balance {
 	return balanceList
 }
 
-func getbalance(address common.Address) (int, bool) {
+func getBalance(address common.Address) (int, bool) {
 	client := getClient(address)
 
 	amount := big.NewInt(0)
 	err := client.Call("seele.GetBalance", &address, amount)
 	if err != nil {
-		fmt.Printf("getting the balance failed: %s\n", err.Error())
-		return 0, false
+		panic(fmt.Sprintf("getting the balance failed: %s\n", err.Error()))
 	}
 
 	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
@@ -200,7 +203,7 @@ func getShard(client *rpc.Client) uint {
 	var info seele.MinerInfo
 	err := client.Call("seele.GetInfo", nil, &info)
 	if err != nil {
-		fmt.Printf("getting the balance failed: %s\n", err.Error())
+		panic(fmt.Sprintf("getting the balance failed: %s\n", err.Error()))
 		return 0
 	}
 
@@ -210,6 +213,6 @@ func getShard(client *rpc.Client) uint {
 func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
-	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "..\\client\\keyfile", "key file folder")
+	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "keystore", "key file folder")
 	sendTxCmd.Flags().Int64VarP(&timeInterval, "interval", "", 50, "time interval in microsecond during send transaction")
 }

@@ -13,6 +13,6 @@ type TransactionPoolConfig struct {
 // DefaultTxPoolConfig returns the default configuration of the transaction pool.
 func DefaultTxPoolConfig() *TransactionPoolConfig {
 	return &TransactionPoolConfig{
-		Capacity: 1024,
+		Capacity: 10000, // 1 simple transaction is about 152 byte size. So 1000 transactions is about 1.28MB. And 10000 transaction is about 12.8MB
 	}
 }

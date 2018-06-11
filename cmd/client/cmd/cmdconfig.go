@@ -11,20 +11,21 @@ import (
 
 // Request cmd request for cobra command
 type Request struct {
-	Use              string   // Use is the one-line usage message
-	Short            string   // Short is the short description shown in the 'help' output
-	Long             string   // Long is the long message shown in the 'help <this-command>' output
-	ParamReflectType string   // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
-	Method           string   // Method is the service method name
-	UseWebsocket     bool     // UseWebsocket is how to visit the rpc api, if true will use websocket,otherwise use rpc 2.0
-	Params           []*Param // Params is the param args for cmd input line
+	Use              string            // Use is the one-line usage message
+	Short            string            // Short is the short description shown in the 'help' output
+	Long             string            // Long is the long message shown in the 'help <this-command>' output
+	ParamReflectType string            // ParamReflectType is the type of param used to visit rpc api,basic types and non nested struct is supported
+	Method           string            // Method is the service method name
+	UseWebsocket     bool              // UseWebsocket is how to visit the rpc api, if true will use websocket,otherwise use rpc 2.0
+	Params           []*Param          // Params is the param args for cmd input line
+	Handler          func(interface{}) // handler of the rpc result value
 }
 
 // Param cmd request Params for cobra command
 type Param struct {
 	ReflectName  string      // ReflectName is the name of property in the param  which is used to visit rpc api
-	ParamName    string      // ParamName is the name of the argument which to store the value of the flag
-	ShortHand    string      // ShortHand is the short name of the argument which to store the value of the flag,when it is "", it means not use short.
+	FlagName     string      // FlagName is the name of the argument which to store the value of the flag
+	ShortFlag    string      // ShortFlag is the short name of the argument which to store the value of the flag,when it is "", it means not use short.
 	ParamType    string      // ParamType is the type of the flag
 	DefaultValue interface{} // DefaultValue is the default value of the flag when the flag is not input
 	Usage        string      // Usage is the description of the flag

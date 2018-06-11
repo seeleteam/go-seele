@@ -344,7 +344,7 @@ handler:
 			}
 		}
 
-		p.log.Info("got msg with type:%s", codeToStr(msg.Code))
+		p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
 		switch msg.Code {
 		case transactionHashMsgCode:
 			var txHash common.Hash
