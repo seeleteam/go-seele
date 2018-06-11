@@ -28,6 +28,7 @@ func Test_peer_Info(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer c.Close()
 
 	newPeer := NewPeer(&connection{fd: c}, nil, nil, node)
 	info := newPeer.Info()
