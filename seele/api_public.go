@@ -195,7 +195,7 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 // PrintableOutputTx converts the given tx to the RPC output
 func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	toAddr := ""
-	if tx.Data.To != nil {
+	if !tx.Data.To.IsEmpty() {
 		toAddr = tx.Data.To.ToHex()
 	}
 
