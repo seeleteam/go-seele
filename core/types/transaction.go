@@ -220,7 +220,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
 	}
-  
+
 	// validate state dependent fields
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
 		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
@@ -235,13 +235,37 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrSigMissing
 	}
 
-  if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
-		return ErrSigInvalid
-	}
-  
 	txDataHash := crypto.MustHash(tx.Data)
 	if !txDataHash.Equal(tx.Hash) {
 		return ErrHashMismatch
+	}
+
+	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+		return ErrSigInvalid
+	}
+
+	return nil
+}
+
+// ValidateWithoutState performs a state independent check for the transaction.
+func (tx *Transaction) ValidateWithoutState() error {
+	// validate state independent fields
+	if err := tx.validate(); err != nil {
+	    return err
+	}
+
+	// vaildate signature
+	if tx.Signature == nil {
+		return ErrSigMissing
+	}
+
+	txDataHash := crypto.MustHash(tx.Data)
+	if !txDataHash.Equal(tx.Hash) {
+		return ErrHashMismatch
+	}
+
+	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+		return ErrSigInvalid
 	}
 
 	return nil
