@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 	"gopkg.in/fatih/set.v0"
@@ -49,6 +48,11 @@ var generateKeystoreCmd = &cobra.Command{
 		results = make(map[common.Address]*big.Int)
 		bigValue := big.NewInt(0).SetUint64(value)
 
+		err := os.MkdirAll(folder, os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("create folder failed %s", err))
+		}
+
 		for i := 0; i < num; {
 			addr, privateKey, err := crypto.GenerateKeyPair()
 			if !shardSet.Has(addr.Shard()) {
@@ -61,14 +65,14 @@ var generateKeystoreCmd = &cobra.Command{
 
 			results[*addr] = bigValue
 
-			key := keystore.Key{
-				Address:    *addr,
-				PrivateKey: privateKey,
-			}
-
+			key := crypto.FromECDSA(privateKey)
 			fileName := fmt.Sprintf("shard%d-%s", addr.Shard(), addr.ToHex())
 			filePath := filepath.Join(folder, fileName)
-			keystore.StoreKey(filePath, password, &key)
+
+			err = ioutil.WriteFile(filePath, key, os.ModePerm)
+			if err != nil {
+				panic(fmt.Sprintf("write file failed %s", err))
+			}
 
 			i++
 		}
@@ -91,6 +95,6 @@ func init() {
 	generateKeystoreCmd.Flags().IntVarP(&num, "num", "n", 10, "number of generate key files")
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&folder, "folder", "f", "keystore", "key file folder")
-	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "out.txt", "output address map file path")
+	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
 	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ;")
 }

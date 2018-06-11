@@ -191,11 +191,13 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 // Validate performs a complete check for the transaction of local shard and returns nil if valid otherwise an error.
 func (tx *Transaction) Validate(statedb stateDB) error {
 	// verify shard
-	if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
-		return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+	if common.IsShardEnabled() {
+		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+		}
 	}
 
-	if tx.Data.To != nil {
+	if tx.Data.To != nil && common.IsShardEnabled() {
 		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}

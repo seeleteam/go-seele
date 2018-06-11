@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var password = "123"
 var serveList string
 var clientList map[uint]*rpc.Client // shard -> client
 

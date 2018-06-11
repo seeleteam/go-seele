@@ -67,8 +67,12 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 // AddTransaction adds a single transaction into the pool if it is valid and returns nil.
 // Otherwise, return the concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
-	statedb := pool.chain.CurrentState()
-	if err := tx.Validate(statedb); err != nil {
+	statedb, err := pool.chain.CurrentState().GetCopy()
+	if err != nil {
+		return err
+	}
+
+	if err = tx.Validate(statedb); err != nil {
 		return err
 	}
 

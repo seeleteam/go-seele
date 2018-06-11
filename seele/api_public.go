@@ -196,10 +196,15 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 
 // PrintableOutputTx converts the given tx to the RPC output
 func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
+	toAddr := ""
+	if tx.Data.To != nil {
+		toAddr = tx.Data.To.ToHex()
+	}
+
 	transaction := map[string]interface{}{
 		"hash":         tx.Hash.ToHex(),
 		"from":         tx.Data.From.ToHex(),
-		"to":           tx.Data.To.ToHex(),
+		"to":           toAddr,
 		"amount":       tx.Data.Amount,
 		"accountNonce": tx.Data.AccountNonce,
 		"payload":      tx.Data.Payload,

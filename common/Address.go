@@ -152,10 +152,6 @@ func (id *Address) UnmarshalText(json []byte) error {
 
 // Shard returns the shard number of this address.
 func (id Address) Shard() uint {
-	if IsShardDisabled {
-		return UndefinedShardNumber
-	}
-
 	var sum uint
 
 	// sum [0:18]

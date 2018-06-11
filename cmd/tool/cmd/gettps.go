@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
@@ -23,19 +24,22 @@ var gettps = &cobra.Command{
 		for {
 			sum := uint64(0)
 			for _, client := range clientList {
-				var tps uint64
+				var tps seele.TpsInfo
 				err := client.Call("debug.GetTPS", nil, &tps)
 				if err != nil {
 					fmt.Println("get tps failed ", err)
+					return
 				}
 
 				shard := getShard(client)
-				sum += tps
-
-				fmt.Printf("shard %d tps %d\n", shard, tps)
+				if tps.Duration > 0 {
+					fmt.Printf("shard %d: from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%d\n", shard, tps.StartHeight,
+						tps.EndHeight, tps.EndHeight-tps.StartHeight, tps.Count, tps.Duration, tps.Count/tps.Duration)
+					sum += tps.Count / tps.Duration
+				}
 			}
 
-			fmt.Printf("sum tps is %d, real tps is %d\n", sum, sum/600)
+			fmt.Printf("sum tps is %d\n", sum)
 			time.Sleep(10 * time.Second)
 		}
 	},

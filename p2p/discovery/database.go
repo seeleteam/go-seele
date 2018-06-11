@@ -83,7 +83,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 		db.log.Error("nodes info backup failed, for:[%s]", err.Error())
 		return
 	}
-	db.log.Info("nodes:%s info backup success\n", string(nodeByte))
+	db.log.Debug("nodes:%s info backup success\n", string(nodeByte))
 }
 
 func NewDatabase(log *log.SeeleLog) *Database {

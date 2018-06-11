@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var print bool
+
 // gettxpoolcontentCmd represents the get tx pool content command
 var gettxpoolcontentCmd = &cobra.Command{
 	Use:   "gettxpoolcontent",
@@ -34,15 +36,25 @@ var gettxpoolcontentCmd = &cobra.Command{
 			return
 		}
 
-		jsonResult, err := json.MarshalIndent(&result, "", "\t")
-		if err != nil {
-			fmt.Println(err)
-			return
+		if print {
+			jsonResult, err := json.MarshalIndent(&result, "", "\t")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("tx pool content :\n", string(jsonResult))
 		}
-		fmt.Println("tx pool content :\n", string(jsonResult))
+
+		sum := 0
+		for _, value := range result {
+			sum += len(value)
+		}
+		fmt.Printf("tx pool total number: %d\n", sum)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(gettxpoolcontentCmd)
+
+	gettxpoolcontentCmd.Flags().BoolVarP(&print, "print", "p", false, "whether print out the tx pool content")
 }
