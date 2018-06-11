@@ -271,5 +271,25 @@ func NewCmdData() []*Request {
 				},
 			},
 		},
+		&Request{
+			Use:   "getreceiptbytxhash",
+			Short: "get receipt by tx hash",
+			Long: `For example:
+  			client.exe getreceiptbytxhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+			ParamReflectType: "string",
+			Method:           "txpool.GetReceiptByTxHash",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "TxHash",
+					FlagName:     "hash",
+					ShortFlag:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash of the transaction",
+					Required:     true,
+				},
+			},
+		},
 	}
 }
