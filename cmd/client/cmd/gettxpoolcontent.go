@@ -6,11 +6,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
-	"encoding/json"
 )
 
 var print bool
