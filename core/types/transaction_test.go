@@ -177,7 +177,7 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 	from, privKey := crypto.MustGenerateShardKeyPair(1) // invalid shard
 	to := crypto.MustGenerateShardAddress(9)
 	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-    tx.Sign(privKey)
+	tx.Sign(privKey)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
@@ -192,7 +192,7 @@ func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
 	from, privKey := crypto.MustGenerateShardKeyPair(9)
 	to := crypto.MustGenerateShardAddress(1) // invalid shard
 	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-    tx.Sign(privKey)
+	tx.Sign(privKey)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
