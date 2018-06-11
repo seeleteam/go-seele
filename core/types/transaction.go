@@ -33,6 +33,9 @@ var (
 	// ErrFeeNegative is returned when the transaction fee is negative.
 	ErrFeeNegative = errors.New("failed to create tx, fee is negative")
 
+	// ErrFeeNil is returned when the transaction fee is nil.
+	ErrFeeNil = errors.New("failed to create tx, fee is nil")
+
 	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
 
@@ -93,55 +96,65 @@ type stateDB interface {
 // The transaction data hash is also calculated.
 // panic if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
-	tx, err := newTx(from, &to, amount, fee, nonce, nil)
-	if err != nil {
-		return nil, err
-	}
-	return tx, nil
+	return newTx(from, &to, amount, fee, nonce, nil)
 }
 
 func newTx(from common.Address, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
-	if amount == nil {
-		panic("Failed to create tx, amount is nil.")
-	}
-
-	if amount.Sign() < 0 {
-		panic("Failed to create tx, amount is negative.")
-	}
-
-	if fee.Sign() < 0 {
-		return nil, ErrFeeNegative
-	}
-
-	if err := validatePayload(to, payload); err != nil {
-		return nil, err
-	}
-
 	txData := &TransactionData{
 		From:         from,
 		To:           to,
-		Amount:       new(big.Int).Set(amount),
-		Fee:          new(big.Int).Set(fee),
 		AccountNonce: nonce,
+		Payload:      common.CopyBytes(payload),
 	}
 
-	if len(payload) > 0 {
-		cloned := make([]byte, len(payload))
-		copy(cloned, payload)
-		txData.Payload = cloned
-	} else {
+	if amount != nil {
+		txData.Amount = new(big.Int).Set(amount)
+	}
+
+	if fee != nil {
+		txData.Fee = new(big.Int).Set(fee)
+	}
+
+	if txData.Payload == nil {
 		txData.Payload = make([]byte, 0)
 	}
 
-	return &Transaction{crypto.MustHash(txData), txData, nil}, nil
+	tx := &Transaction{Data: txData}
+	if err := tx.validate(); err != nil {
+		return nil, err
+	}
+
+	tx.Hash = crypto.MustHash(txData)
+
+	return tx, nil
 }
 
-func validatePayload(toAddr *common.Address, payload []byte) error {
-	if len(payload) > MaxPayloadSize {
+// validate validates state independent fields in tx.
+func (tx Transaction) validate() error {
+	// validate amount
+	if tx.Data == nil || tx.Data.Amount == nil {
+		return ErrAmountNil
+	}
+
+	if tx.Data.Amount.Sign() < 0 {
+		return ErrAmountNegative
+	}
+
+	// validate fee
+	if tx.Data.Fee == nil {
+		return ErrFeeNil
+	}
+
+	if tx.Data.Fee.Sign() < 0 {
+		return ErrFeeNegative
+	}
+
+	// validate payload
+	if len(tx.Data.Payload) > MaxPayloadSize {
 		return ErrPayloadOversized
 	}
 
-	if (toAddr == nil || toAddr.Type() == common.AddressTypeContract) && len(payload) == 0 {
+	if (tx.Data.To == nil || tx.Data.To.Type() == common.AddressTypeContract) && len(tx.Data.Payload) == 0 {
 		return ErrPayloadEmpty
 	}
 
@@ -177,7 +190,7 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 		Payload:   make([]byte, 0),
 	}
 
-	rewardTx := &Transaction{crypto.MustHash(rewardTxData), rewardTxData, &crypto.Signature{make([]byte, 0)}}
+	rewardTx := &Transaction{crypto.MustHash(rewardTxData), rewardTxData, &crypto.Signature{Sig: make([]byte, 0)}}
 
 	return rewardTx, nil
 }
@@ -190,7 +203,12 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 
 // Validate performs a complete check for the transaction of local shard and returns nil if valid otherwise an error.
 func (tx *Transaction) Validate(statedb stateDB) error {
-	// verify shard
+	// validate state independent fields
+	if err := tx.validate(); err != nil {
+		return err
+	}
+
+	// validate shard of from/to address
 	if common.IsShardEnabled() {
 		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
@@ -202,13 +220,8 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
 	}
-
-	// verify without state
-	if err := tx.ValidateWithoutState(); err != nil {
-		return err
-	}
-
-	// verify state
+  
+	// validate state dependent fields
 	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
 		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
 	}
@@ -217,34 +230,18 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrNonceTooLow
 	}
 
-	return nil
-}
-
-// ValidateWithoutState performs a state independent check for the transaction and returns nil if valid otherwise an error.
-func (tx *Transaction) ValidateWithoutState() error {
-	if tx.Data == nil || tx.Data.Amount == nil {
-		return ErrAmountNil
-	}
-
-	if tx.Data.Amount.Sign() < 0 {
-		return ErrAmountNegative
-	}
-
-	if err := validatePayload(tx.Data.To, tx.Data.Payload); err != nil {
-		return err
-	}
-
+	// vaildate signature
 	if tx.Signature == nil {
 		return ErrSigMissing
 	}
 
+  if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+		return ErrSigInvalid
+	}
+  
 	txDataHash := crypto.MustHash(tx.Data)
 	if !txDataHash.Equal(tx.Hash) {
 		return ErrHashMismatch
-	}
-
-	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
-		return ErrSigInvalid
 	}
 
 	return nil
