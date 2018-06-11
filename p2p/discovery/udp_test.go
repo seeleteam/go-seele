@@ -40,25 +40,14 @@ func newTestUdp() *udp {
 	}
 }
 
-func Test_addTrustNodes(t *testing.T) {
-	u := newTestUdp()
-
-	u.addTrustNodes()
-	assert.Equal(t, len(u.db.m), 2)
-
-	u.addTrustNodes()
-	assert.Equal(t, len(u.db.m), 2)
-}
-
 func Test_loadNodes(t *testing.T) {
 	u := newTestUdp()
-	u.addTrustNodes()
+	u.addNode(u.trustNodes[0])
+	u.addNode(u.trustNodes[1])
 	u.db.SaveNodes(common.GetTempFolder())
-	for k, _ := range u.db.m {
-		u.db.delete(k)
-	}
+	u.trustNodes = nil
 
-	assert.Equal(t, len(u.db.m), 0)
+	assert.Equal(t, len(u.trustNodes), 0)
 	u.loadNodes(common.GetTempFolder())
-	assert.Equal(t, len(u.db.m), 2)
+	assert.Equal(t, len(u.trustNodes), 2)
 }

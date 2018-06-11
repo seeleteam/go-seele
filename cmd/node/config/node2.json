@@ -10,7 +10,7 @@
     "address": "0.0.0.0:39008",
     "privateKey": "0xac6932c2e429e7f36a6b93979e2c28e11036c78c965e866151c21750bd5506ca",
     "staticNodes": [
-      "snode://4c10f2cd2159bb432094e3be7e17904c2b4aeb21@127.0.0.1:39007[1]"
+      "127.0.0.1:39007"
     ],
     "networkID": 1
   },

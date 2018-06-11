@@ -299,16 +299,11 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
-				if p.from.ID == r.fromId && p.code == r.code {
-					if r.err {
-						p.errorCallBack()
-						pendingList.Remove(el)
-					} else {
-						if p.callback(r.data, r.fromAddr) {
-							pendingList.Remove(el)
-						}
-					}
-
+				if p.code == pongMsgType && p.code == r.code && p.from.GetUDPAddr().String() == r.fromAddr.String() {
+					callback(p, r, el, pendingList)
+					break
+				} else if p.from.ID == r.fromId && p.code == r.code {
+					callback(p, r, el, pendingList)
 					break
 				}
 			}
@@ -326,6 +321,17 @@ func (u *udp) loopReply() {
 			}
 
 			resetTimer()
+		}
+	}
+}
+
+func callback(p *pending, r *reply, el *list.Element, pendingList *list.List) {
+	if r.err {
+		p.errorCallBack()
+		pendingList.Remove(el)
+	} else {
+		if p.callback(r.data, r.fromAddr) {
+			pendingList.Remove(el)
 		}
 	}
 }
@@ -405,38 +411,35 @@ func (u *udp) discoveryWithTwoStags() {
 	u.discovery(false)
 }
 
-func (u *udp) loopAddTrustNodes() {
-	for {
-		u.addTrustNodes()
-		time.Sleep(addTrustNodesInterval)
-	}
-}
-
-func (u *udp) addTrustNodes() {
-	for i := range u.trustNodes {
-		if _, ok := u.db.FindByNodeID(u.trustNodes[i].ID); !ok {
-			u.addNode(u.trustNodes[i])
-		}
-	}
-}
-
 func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.GetCopy()
 
-		for _, value := range copyMap {
-			p := &ping{
-				Version:   discoveryProtocolVersion,
-				SelfID:    u.self.ID,
-				SelfShard: u.self.Shard,
-
-				to: value,
+		if len(copyMap) > 0 {
+			for _, value := range copyMap {
+				u.log.Debug("ping pong with id: %s, with address: %s", value.ID.ToHex(), value.IP)
+				u.pingPong(value)
 			}
-
-			p.send(u)
-			time.Sleep(pingpongInterval)
+		} else {
+			for i := range u.trustNodes {
+				u.log.Debug("ping pong with id: %s, with address: %s", u.trustNodes[i].ID.ToHex(), u.trustNodes[i].IP)
+				u.pingPong(u.trustNodes[i])
+			}
 		}
 	}
+}
+
+func (u *udp) pingPong(value *Node) {
+	p := &ping{
+		Version:   discoveryProtocolVersion,
+		SelfID:    u.self.ID,
+		SelfShard: u.self.Shard,
+
+		to: value,
+	}
+
+	p.send(u)
+	time.Sleep(pingpongInterval)
 }
 
 func (u *udp) StartServe(nodeDir string) {
@@ -446,7 +449,6 @@ func (u *udp) StartServe(nodeDir string) {
 	go u.pingPongService()
 	go u.sendLoop()
 	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
-	go u.loopAddTrustNodes()
 }
 
 func (u *udp) addNode(n *Node) {
@@ -493,11 +495,11 @@ func (u *udp) loadNodes(nodeDir string) {
 	}
 
 	for i := range nodes {
-		n, err := NewNodeFromString(nodes[i])
+		n, err := NewNodeFromIP(nodes[i])
 		if err != nil {
 			u.log.Error("new node from string failed for:[%s]", err)
 			continue
 		}
-		u.addNode(n)
+		u.trustNodes = append(u.trustNodes, n)
 	}
 }
