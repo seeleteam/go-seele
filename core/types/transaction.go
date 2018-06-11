@@ -198,11 +198,13 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrAmountNegative
 	}
 
-	if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
-		return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+	if common.IsShardEnabled() {
+		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+		}
 	}
 
-	if tx.Data.To != nil {
+	if tx.Data.To != nil && common.IsShardEnabled() {
 		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
