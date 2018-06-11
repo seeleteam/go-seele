@@ -17,8 +17,6 @@ import (
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
-	common.IsShardDisabled = true
-
 	privKey, keyErr := crypto.GenerateKey()
 	if keyErr != nil {
 		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
@@ -164,15 +162,11 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 }
 
 func prepareShardEnv(localShard uint) func() {
-	prevDisabled := common.IsShardDisabled
 	prevNum := common.LocalShardNumber
-
-	common.IsShardDisabled = false
 	common.LocalShardNumber = localShard
 
 	return func() {
 		common.LocalShardNumber = prevNum
-		common.IsShardDisabled = prevDisabled
 	}
 }
 

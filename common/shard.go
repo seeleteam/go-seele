@@ -12,6 +12,7 @@ const UndefinedShardNumber = uint(0)
 // Generally, it must be initialized during program startup.
 var LocalShardNumber uint
 
-// IsShardDisabled indicates if the shard is disabled.
-// THIS IS FOR UNIT TEST PURPOSE ONLY!!!
-var IsShardDisabled = false
+// IsShardEnabled returns true if the LocalShardNumber is set. Otherwise, false.
+func IsShardEnabled() bool {
+	return LocalShardNumber > UndefinedShardNumber && LocalShardNumber <= ShardNumber
+}

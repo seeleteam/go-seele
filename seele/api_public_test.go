@@ -18,7 +18,6 @@ import (
 )
 
 func getTmpConfig() *node.Config {
-	common.IsShardDisabled = true
 	acctAddr := crypto.MustGenerateRandomAddress()
 
 	return &node.Config{
