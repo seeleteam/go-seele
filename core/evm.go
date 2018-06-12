@@ -77,7 +77,7 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
-		statedb.SetNonce(tx.Data.From, statedb.GetNonce(tx.Data.From)+1)
+		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 		receipt.Result, _, err = evm.Call(caller, *tx.Data.To, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
 	}
 

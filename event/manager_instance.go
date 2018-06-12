@@ -21,5 +21,5 @@ var BlockMinedEventManager = NewEventManager()
 // TransactionInsertedEventManager represents the event that a new transaction is inserted into txpool
 var TransactionInsertedEventManager = NewEventManager()
 
-// BlockInsertedEventManager represents the event that a new block is inserted into the blockchain
-var BlockInsertedEventManager = NewEventManager()
+// ChainHeaderChangedEventMananger represents the event that chain header is changed
+var ChainHeaderChangedEventMananger = NewEventManager()

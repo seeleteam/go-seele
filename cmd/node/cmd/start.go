@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
+	miner2 "github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
@@ -53,7 +54,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", nCfg.LogConfig.PrintLog)
+		slog := log.GetLogger("seele", false)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}
@@ -87,7 +88,7 @@ var startCmd = &cobra.Command{
 
 		if strings.ToLower(*miner) == "start" {
 			err = seeleService.Miner().Start()
-			if err != nil {
+			if err != nil && err != miner2.ErrMinerIsRunning {
 				fmt.Println("Starting the miner failed: ", err.Error())
 				return
 			}

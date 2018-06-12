@@ -80,6 +80,14 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Blo
 	return block
 }
 
+func (block *Block) GetExcludeRewardTransactions() []*Transaction {
+	if block.Transactions == nil || len(block.Transactions) == 0 {
+		return block.Transactions
+	}
+
+	return block.Transactions[1:]
+}
+
 // FindTransaction returns the transaction of the specified hash if found. Otherwise, it returns nil.
 func (block *Block) FindTransaction(txHash common.Hash) *Transaction {
 	for _, tx := range block.Transactions {
