@@ -113,7 +113,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.log)
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
 
 	return s, nil
 }
