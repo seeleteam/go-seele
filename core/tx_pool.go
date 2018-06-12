@@ -77,6 +77,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 	}
 
 	event.ChainHeaderChangedEventMananger.AddAsyncListener(pool.chainHeaderChanged)
+	go pool.MonitorChainHeaderChange()
 
 	return pool, nil
 }
@@ -86,6 +87,10 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 // deleted invalid transaction
 func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 	newHeader := e.(common.Hash)
+	if newHeader.IsEmpty() {
+		return 
+	}
+
 	pool.chainHeaderChangeChannel <- newHeader
 }
 
