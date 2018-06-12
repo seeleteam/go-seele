@@ -408,32 +408,38 @@ func (u *udp) discoveryWithTwoStags() {
 func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.GetCopy()
-		tmp := make(map[string]*Node, 0)
+		loopPingPongNodes := make(map[string]*Node, 0)
 
+		// loopPingPongNodes add backup nodes, only ping pong once
 		if len(u.bootstrapNodes) > 0 {
 			for i := range u.bootstrapNodes {
-				tmp[u.bootstrapNodes[i].GetUDPAddr().String()] = u.bootstrapNodes[i]
+				loopPingPongNodes[u.bootstrapNodes[i].GetUDPAddr().String()] = u.bootstrapNodes[i]
 			}
 			u.bootstrapNodes = nil
 		}
+
+		// loopPingPongNodes add trust nodes, loop ping pong; if bootstrapNodes have the same key, will use the trust node to update it
 		if len(u.trustNodes) > 0 {
 			for i := range u.trustNodes {
-				tmp[u.trustNodes[i].GetUDPAddr().String()] = u.trustNodes[i]
-			}
-		}
-		if len(copyMap) > 0 {
-			for _, value := range copyMap {
-				tmp[value.GetUDPAddr().String()] = value
+				loopPingPongNodes[u.trustNodes[i].GetUDPAddr().String()] = u.trustNodes[i]
 			}
 		}
 
-		for _, n := range tmp {
-			u.pingPong(n)
+		// loopPingPongNodes add db nodes, loop ping pong; if bootstrapNodes or trustNodes have the same key, will use the db node to update it
+		if len(copyMap) > 0 {
+			for _, value := range copyMap {
+				loopPingPongNodes[value.GetUDPAddr().String()] = value
+			}
+		}
+
+		for _, n := range loopPingPongNodes {
+			u.ping(n)
+			time.Sleep(pingpongInterval)
 		}
 	}
 }
 
-func (u *udp) pingPong(value *Node) {
+func (u *udp) ping(value *Node) {
 	p := &ping{
 		Version:   discoveryProtocolVersion,
 		SelfID:    u.self.ID,
@@ -443,7 +449,6 @@ func (u *udp) pingPong(value *Node) {
 	}
 
 	p.send(u)
-	time.Sleep(pingpongInterval)
 }
 
 func (u *udp) StartServe(nodeDir string) {
