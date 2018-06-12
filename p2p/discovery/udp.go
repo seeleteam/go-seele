@@ -504,7 +504,7 @@ func (u *udp) loadNodes(nodeDir string) {
 	}
 
 	for i := range nodes {
-		n, err := NewNodeFromIP(nodes[i])
+		n, err := NewNodeFromString(nodes[i])
 		if err != nil {
 			u.log.Error("new node from string failed for:[%s]", err)
 			continue

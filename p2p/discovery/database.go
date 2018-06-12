@@ -61,7 +61,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 	nodeStr := make([]string, len(db.m))
 	i := 0
 	for _, v := range db.m {
-		nodeStr[i] = v.GetUDPAddr().String()
+		nodeStr[i] = v.String()
 		i++
 	}
 
