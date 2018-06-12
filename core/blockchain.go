@@ -397,12 +397,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 			return nil, err
 		}
 
-		balance := statedb.GetBalance(tx.Data.From)
-		nonce := statedb.GetNonce(tx.Data.From)
 		receipt, err := bc.ApplyTransaction(tx, i+1, *minerRewardTx.Data.To, statedb, blockHeader)
-		bc.log.Debug("apply account %s, balance transform %s -> %s, amount %s, nonce transaform %s -> %s",
-			tx.Data.From.ToHex(), balance, statedb.GetBalance(tx.Data.From), tx.Data.Amount, nonce, statedb.GetNonce(tx.Data.From))
-
 		if err != nil {
 			return nil, err
 		}

@@ -54,7 +54,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", false)
+		slog := log.GetLogger("seele", common.LogConfig.PrintLog)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}

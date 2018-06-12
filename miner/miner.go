@@ -65,7 +65,7 @@ type Miner struct {
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
@@ -74,7 +74,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		wg:                   sync.WaitGroup{},
 		stopChan:             make(chan struct{}, 1),
 		recv:                 make(chan *Result, 1),
-		log:                  log,
+		log:                  log.GetLogger("miner", common.LogConfig.PrintLog),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		threads:              1,

@@ -89,12 +89,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			continue
 		}
 
-		balance := statedb.GetBalance(tx.Data.From)
-		nonce := statedb.GetNonce(tx.Data.From)
 		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
-		log.Debug("miner apply account %s, balance transform %s -> %s, amount %s, nonce transaform %s -> %s",
-			tx.Data.From.ToHex(), balance, statedb.GetBalance(tx.Data.From), tx.Data.Amount, nonce, statedb.GetNonce(tx.Data.From))
-
 		if err != nil {
 			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
 			log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
