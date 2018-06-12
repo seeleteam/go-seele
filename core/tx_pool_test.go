@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log"
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
@@ -60,6 +61,20 @@ func (chain mockBlockchain) GetStore() store.BlockchainStore {
 	return chain.GetStore()
 }
 
+func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
+	chain := newMockBlockchain()
+	pool := &TransactionPool{
+		config:          *config,
+		chain:           chain,
+		hashToTxMap:     make(map[common.Hash]*pooledTx),
+		accountToTxsMap: make(map[common.Address]*txCollection),
+		lastHeader:      common.EmptyHash,
+		log:             log.GetLogger("test", true),
+	}
+
+	return pool, chain
+}
+
 func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint64) {
 	stateObj := chain.statedb.GetOrNewStateObject(addr)
 	stateObj.SetAmount(new(big.Int).SetUint64(balance))
@@ -67,8 +82,7 @@ func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint6
 }
 
 func Test_TransactionPool_Add_ValidTx(t *testing.T) {
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -79,8 +93,7 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 }
 
 func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -94,8 +107,7 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 }
 
 func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -109,8 +121,7 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	config := DefaultTxPoolConfig()
 	config.Capacity = 1
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*config, chain)
+	pool, chain := newTestPool(config)
 
 	poolTx1 := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx1.Data.From, 20, 100)
@@ -125,8 +136,7 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 }
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -156,8 +166,7 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 }
 
 func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*DefaultTxPoolConfig(), chain)
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	account1, txs1 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{9, 5, 7})
 	chain.addAccount(account1, 10, 5)
 	account2, txs2 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{7, 9, 5})
@@ -182,10 +191,7 @@ func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 }
 
 func Test_TransactionPool_Remove(t *testing.T) {
-	config := DefaultTxPoolConfig()
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*config, chain)
-
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -199,10 +205,7 @@ func Test_TransactionPool_Remove(t *testing.T) {
 }
 
 func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
-	config := DefaultTxPoolConfig()
-	chain := newMockBlockchain()
-	pool := NewTransactionPool(*config, chain)
-
+	pool, chain := newTestPool(DefaultTxPoolConfig())
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -214,4 +217,31 @@ func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
 	pool.UpdateTransactionStatus(poolTx.Hash, PROCESSING)
 	assert.Equal(t, pool.hashToTxMap[poolTx.Hash].txStatus, PROCESSING)
 	assert.Equal(t, pool.accountToTxsMap[poolTx.Data.From].nonceToTxMap[100].txStatus, PROCESSING)
+}
+
+func Test_GetRejectTransacton(t *testing.T) {
+	log := log.GetLogger("test", true)
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	bc.WriteBlock(b1)
+
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 2, 0)
+	bc.WriteBlock(b2)
+
+	reinject := getReinjectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
+
+	assert.Equal(t, len(reinject), 2)
+	txs := make(map[common.Hash]*types.Transaction)
+	for _, tx := range reinject {
+		txs[tx.Hash] = tx
+	}
+
+	_, ok := txs[b2.Transactions[1].Hash]
+	assert.Equal(t, ok, true, "1")
+
+	_, ok = txs[b2.Transactions[2].Hash]
+	assert.Equal(t, ok, true, "2")
 }

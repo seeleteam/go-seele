@@ -22,7 +22,7 @@ var gettps = &cobra.Command{
 		initClient()
 
 		for {
-			sum := uint64(0)
+			sum := float64(0)
 			for _, client := range clientList {
 				var tps seele.TpsInfo
 				err := client.Call("debug.GetTPS", nil, &tps)
@@ -33,13 +33,14 @@ var gettps = &cobra.Command{
 
 				shard := getShard(client)
 				if tps.Duration > 0 {
-					fmt.Printf("shard %d: from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%d\n", shard, tps.StartHeight,
-						tps.EndHeight, tps.EndHeight-tps.StartHeight, tps.Count, tps.Duration, tps.Count/tps.Duration)
-					sum += tps.Count / tps.Duration
+					t := float64(tps.Count) / float64(tps.Duration)
+					fmt.Printf("shard %d: from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%.2f\n", shard, tps.StartHeight,
+						tps.EndHeight, tps.EndHeight-tps.StartHeight, tps.Count, tps.Duration, t)
+					sum += t
 				}
 			}
 
-			fmt.Printf("sum tps is %d\n", sum)
+			fmt.Printf("sum tps is %.2f\n", sum)
 			time.Sleep(10 * time.Second)
 		}
 	},

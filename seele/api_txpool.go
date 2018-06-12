@@ -126,7 +126,9 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 	// Try to get transaction in txpool
 	tx := api.s.TxPool().GetTransaction(hash)
 	if tx != nil {
-		*result = PrintableOutputTx(tx)
+		output := PrintableOutputTx(tx)
+		output["status"] = "pool"
+		*result = output
 		return nil
 	}
 
@@ -142,7 +144,9 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 		if err != nil {
 			return err
 		}
-		*result = PrintableOutputTx(block.Transactions[txIndex.Index])
+		output := PrintableOutputTx(block.Transactions[txIndex.Index])
+		output["status"] = "block"
+		*result = output
 		return nil
 	}
 

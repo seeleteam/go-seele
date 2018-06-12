@@ -31,6 +31,7 @@ type balance struct {
 	amount     int
 	shard      uint
 	nonce      uint64
+	tx         *common.Hash
 }
 
 var sendTxCmd = &cobra.Command{
@@ -76,6 +77,10 @@ var sendTxCmd = &cobra.Command{
 
 					count = 0
 					tpsStartTime = time.Now()
+
+					for _, value := range toConfirmBalanceList {
+						checkTxExist(value)
+					}
 				}
 			}
 
@@ -83,13 +88,36 @@ var sendTxCmd = &cobra.Command{
 			for key, value := range toConfirmBalanceList {
 				duration := time.Now().Sub(key)
 				if duration > confirmTime {
-					fmt.Println("add confirmed balance ", len(value))
+					fmt.Printf("add confirmed balance %d\n", len(value))
+					for _, v := range value {
+						fmt.Printf("account %s, balance %d\n", v.address.ToHex(), v.amount)
+					}
 					balanceList = append(balanceList, value...)
 					delete(toConfirmBalanceList, key)
 				}
 			}
 		}
 	},
+}
+
+func checkTxExist(balances []*balance) {
+	for _, b := range balances {
+		if b.tx == nil {
+			continue
+		}
+
+		client := getClient(*b.address)
+		var result map[string]interface{}
+		addrStr := b.tx.ToHex()
+		err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
+		if err != nil {
+			fmt.Println("get tx failed ", err, " tx hash ", b.tx.ToHex())
+			continue
+		} else {
+			//fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.ToHex(), result["from"],
+			//	result["accountNonce"], result["status"], result["amount"])
+		}
+	}
 }
 
 func send(b *balance) *balance {
@@ -109,10 +137,11 @@ func send(b *balance) *balance {
 	// update nonce
 	b.nonce++
 	client := getRandClient()
-	_, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
+	tx, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
 	if ok {
 		// update balance by transaction amount
 		b.amount -= amount
+		newBalance.tx = &tx.Hash
 	}
 
 	return newBalance
