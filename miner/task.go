@@ -85,14 +85,14 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		err := tx.Validate(statedb)
 		if err != nil {
 			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
-			log.Error("validating tx failed, for %s", err.Error())
+			log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
 			continue
 		}
 
 		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
 		if err != nil {
 			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
-			log.Error("apply tx failed, %s", err.Error())
+			log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
 			continue
 		}
 

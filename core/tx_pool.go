@@ -7,6 +7,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -14,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 )
 
 var (
@@ -31,6 +33,8 @@ const (
 	ALL        byte = PENDING | PROCESSING | ERROR
 )
 
+const chainHeaderChangeBuffSize = 100
+
 type blockchain interface {
 	CurrentState() *state.Statedb
 	GetStore() store.BlockchainStore
@@ -45,34 +49,180 @@ type pooledTx struct {
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain.
 type TransactionPool struct {
-	mutex           sync.RWMutex
-	config          TransactionPoolConfig
-	chain           blockchain
-	hashToTxMap     map[common.Hash]*pooledTx
-	accountToTxsMap map[common.Address]*txCollection // Account address to tx collection mapping.
+	mutex                    sync.RWMutex
+	config                   TransactionPoolConfig
+	chain                    blockchain
+	hashToTxMap              map[common.Hash]*pooledTx
+	accountToTxsMap          map[common.Address]*txCollection // Account address to tx collection mapping.
+	lastHeader               common.Hash
+	chainHeaderChangeChannel chan common.Hash
+	log                      *log.SeeleLog
 }
 
 // NewTransactionPool creates and returns a transaction pool.
-func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
+func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*TransactionPool, error) {
+	header, err := chain.GetStore().GetHeadBlockHash()
+	if err != nil {
+		return nil, fmt.Errorf("get chain header failed, %s", err)
+	}
+
 	pool := &TransactionPool{
 		config:          config,
 		chain:           chain,
 		hashToTxMap:     make(map[common.Hash]*pooledTx),
 		accountToTxsMap: make(map[common.Address]*txCollection),
+		lastHeader:      header,
+		log:             log.GetLogger("txpool", common.LogConfig.PrintLog),
+		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 
-	return pool
+	event.ChainHeaderChangedEventMananger.AddAsyncListener(pool.chainHeaderChanged)
+	go pool.MonitorChainHeaderChange()
+
+	return pool, nil
+}
+
+// chainHeaderChanged handle chain header changed event.
+// add forked transaction back
+// deleted invalid transaction
+func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
+	newHeader := e.(common.Hash)
+	if newHeader.IsEmpty() {
+		return 
+	}
+
+	pool.chainHeaderChangeChannel <- newHeader
+}
+
+// MonitorChainHeaderChange monitor and handle chain header event
+func (pool *TransactionPool) MonitorChainHeaderChange() {
+	for {
+		select {
+		case newHeader := <-pool.chainHeaderChangeChannel:
+			if pool.lastHeader.IsEmpty() {
+				pool.lastHeader = newHeader
+				return
+			}
+
+			reinject := getReinjectTransaction(pool.chain.GetStore(), newHeader, pool.lastHeader, pool.log)
+			pool.addTransactions(reinject)
+
+			pool.lastHeader = newHeader
+			pool.RemoveTransactions()
+		}
+	}
+}
+
+func getReinjectTransaction(chainStore store.BlockchainStore, newHeader, lastHeader common.Hash, log *log.SeeleLog) []*types.Transaction {
+	newBlock, err := chainStore.GetBlock(newHeader)
+	if err != nil {
+		log.Error("got block failed, %s", err)
+		return nil
+	}
+
+	if newBlock.Header.PreviousBlockHash != lastHeader {
+		lastBlock, err := chainStore.GetBlock(lastHeader)
+		if err != nil {
+			log.Error("got block failed, %s", err)
+			return nil
+		}
+
+		log.Debug("handle chain header forked, last height %d, new height %d", lastBlock.Header.Height, newBlock.Header.Height)
+		// add committed txs back in current branch.
+		toDeleted := make(map[common.Hash]*types.Transaction)
+		toAdded := make(map[common.Hash]*types.Transaction)
+		for newBlock.Header.Height > lastBlock.Header.Height {
+			for _, t := range newBlock.GetExcludeRewardTransactions() {
+				toDeleted[t.Hash] = t
+			}
+
+			if newBlock, err = chainStore.GetBlock(newBlock.Header.PreviousBlockHash); err != nil {
+				log.Error("got block failed, %s", err)
+				return nil
+			}
+		}
+
+		for lastBlock.Header.Height > newBlock.Header.Height {
+			for _, t := range lastBlock.GetExcludeRewardTransactions() {
+				toAdded[t.Hash] = t
+			}
+
+			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
+				log.Error("got block failed, %s", err)
+				return nil
+			}
+		}
+
+		for lastBlock.HeaderHash != newBlock.HeaderHash {
+			for _, t := range lastBlock.GetExcludeRewardTransactions() {
+				toAdded[t.Hash] = t
+			}
+
+			for _, t := range newBlock.GetExcludeRewardTransactions() {
+				toDeleted[t.Hash] = t
+			}
+
+			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
+				log.Error("got block failed, %s", err)
+				return nil
+			}
+
+			if newBlock, err = chainStore.GetBlock(newBlock.Header.PreviousBlockHash); err != nil {
+				log.Error("got block failed, %s", err)
+				return nil
+			}
+		}
+
+		reinject := make([]*types.Transaction, 0)
+		for key, t := range toAdded {
+			if _, ok := toDeleted[key]; !ok {
+				reinject = append(reinject, t)
+			}
+		}
+
+		log.Debug("to added tx length %d, to deleted tx length %d, to reinject tx length %d",
+			len(toAdded), len(toDeleted), len(reinject))
+		return reinject
+	}
+
+	return nil
+}
+
+func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
+	if len(txs) == 0 {
+		return
+	}
+
+	statedb, err := pool.chain.CurrentState().GetCopy()
+	if err != nil {
+		pool.log.Warn("get stated db failed, %s", err)
+		return
+	}
+
+	for _, tx := range txs {
+		if err := pool.addTransactionWithStateInfo(tx, statedb); err != nil {
+			pool.log.Warn("add transaction failed, %s", err)
+		}
+	}
 }
 
 // AddTransaction adds a single transaction into the pool if it is valid and returns nil.
 // Otherwise, return the concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
+	if tx == nil {
+		return nil
+	}
+
 	statedb, err := pool.chain.CurrentState().GetCopy()
 	if err != nil {
 		return err
 	}
 
-	if err = tx.Validate(statedb); err != nil {
+	return pool.addTransactionWithStateInfo(tx, statedb)
+}
+
+func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, statedb *state.Statedb) error {
+	if err := tx.Validate(statedb); err != nil {
 		return err
 	}
 
@@ -158,6 +308,8 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 		return
 	}
 
+	pool.log.Debug("remove tx hash %s, status %d", txHash.ToHex(), tx.txStatus)
+
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
 		collection.remove(tx.Data.AccountNonce)
@@ -181,16 +333,10 @@ func (pool *TransactionPool) RemoveTransactions() {
 		nonce := state.GetNonce(poolTx.Data.From)
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce+1 < nonce || poolTx.txStatus&ERROR != 0 {
-			delete(pool.hashToTxMap, txHash)
-
-			collection := pool.accountToTxsMap[poolTx.Data.From]
-			if collection != nil {
-				collection.remove(poolTx.Data.AccountNonce)
-				if collection.count(ALL) == 0 {
-					delete(pool.accountToTxsMap, poolTx.Data.From)
-				}
-			}
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
+			pool.log.Debug("remove because of tx already exist %t, nonce too low %t, got error %t, tx nonce %d, target nonce %d",
+				txIndex != nil, poolTx.Data.AccountNonce < nonce, poolTx.txStatus&ERROR != 0, poolTx.Data.AccountNonce, nonce)
+			pool.removeTransaction(txHash)
 		}
 	}
 }

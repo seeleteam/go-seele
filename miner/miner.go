@@ -7,6 +7,7 @@ package miner
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -64,7 +65,7 @@ type Miner struct {
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
@@ -73,7 +74,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 		wg:                   sync.WaitGroup{},
 		stopChan:             make(chan struct{}, 1),
 		recv:                 make(chan *Result, 1),
-		log:                  log,
+		log:                  log.GetLogger("miner", common.LogConfig.PrintLog),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		threads:              1,
@@ -193,20 +194,23 @@ out:
 	for {
 		select {
 		case result := <-miner.recv:
-			if result == nil || result.task != miner.current {
-				continue
-			}
+			for {
+				if result == nil || result.task != miner.current {
+					break
+				}
 
-			miner.log.Info("found a new mined block, block height:%d", result.block.Header.Height)
-			ret := miner.saveBlock(result)
-			if ret != nil {
-				miner.log.Error("saving the block failed, for %s", ret.Error())
-				continue
-			}
+				miner.log.Info("found a new mined block, block height:%d", result.block.Header.Height)
+				ret := miner.saveBlock(result)
+				if ret != nil {
+					miner.log.Error("saving the block failed, for %s", ret.Error())
+					break
+				}
 
-			miner.log.Info("saving block succeeded and notify p2p")
-			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
-			atomic.StoreInt32(&miner.mining, 0)
+				miner.log.Info("saving block succeeded and notify p2p")
+				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
+				atomic.StoreInt32(&miner.mining, 0)
+				break
+			}
 
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
@@ -255,16 +259,16 @@ func (miner *Miner) prepareNewBlock() error {
 
 	cpyStateDB, err := stateDB.GetCopy()
 	if err != nil {
-		return err
+		return fmt.Errorf("copy state db failed %s", err)
 	}
+
 	err = miner.current.applyTransactions(miner.seele, cpyStateDB, txs, miner.log)
 	if err != nil {
-		return err
+		return fmt.Errorf("apply transaction failed %s", err)
 	}
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
 	miner.commitTask(miner.current)
-	miner.seele.TxPool().RemoveTransactions()
 
 	return nil
 }

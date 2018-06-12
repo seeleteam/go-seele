@@ -18,6 +18,8 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
@@ -100,11 +102,11 @@ type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
 	engine         consensusEngine
-	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves *BlockLeaves
+	log         *log.SeeleLog
 }
 
 // NewBlockchain returns an initialized block chain with the given store and account state DB.
@@ -116,11 +118,6 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 
 	var err error
-	bc.headerChain, err = NewHeaderChain(bcStore)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
@@ -157,6 +154,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	blockIndex := NewBlockIndex(currentState, currentBlock, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
+	bc.log = log.GetLogger("blockchain", common.LogConfig.PrintLog)
 
 	return bc, nil
 }
@@ -249,19 +247,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
-
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
-	bc.blockLeaves.Add(blockIndex)
-	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
-	bc.headerChain.WriteHeader(currentBlock.Header)
-
-	// If the new block has larger TD, the canonical chain will be changed.
-	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
-	if isHead {
-		if err = bc.updateHashByHeight(block); err != nil {
-			return err
-		}
-	}
 
 	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
 		return err
@@ -277,7 +263,22 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
+	if isHead {
+		if err = bc.updateHashByHeight(block); err != nil {
+			return err
+		}
+	}
+
+	// update block header after meta info updated
+	bc.blockLeaves.Add(blockIndex)
+	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
+
 	committed = true
+	if isHead {
+		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
+	}
 
 	return nil
 }
