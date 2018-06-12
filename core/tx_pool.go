@@ -82,26 +82,33 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 // deleted invalid transaction
 func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 	newHeader := e.(common.Hash)
-	if pool.lastHeader == common.EmptyHash {
+	if pool.lastHeader.IsEmpty() {
 		pool.lastHeader = newHeader
 		return
 	}
 
-	chainStore := pool.chain.GetStore()
+	reinject := getRejectTransaction(pool.chain.GetStore(), newHeader, pool.lastHeader, pool.log)
+	pool.addTransactions(reinject)
+
+	pool.lastHeader = newHeader
+	pool.RemoveTransactions()
+}
+
+func getRejectTransaction(chainStore store.BlockchainStore, newHeader, lastHeader common.Hash, log *log.SeeleLog) []*types.Transaction {
 	newBlock, err := chainStore.GetBlock(newHeader)
 	if err != nil {
-		pool.log.Warn("got block failed, %s", err)
-		return
+		log.Error("got block failed, %s", err)
+		return nil
 	}
 
-	if newBlock.Header.PreviousBlockHash != pool.lastHeader {
-		lastBlock, err := chainStore.GetBlock(pool.lastHeader)
+	if newBlock.Header.PreviousBlockHash != lastHeader {
+		lastBlock, err := chainStore.GetBlock(lastHeader)
 		if err != nil {
-			pool.log.Warn("got block failed, %s", err)
-			return
+			log.Error("got block failed, %s", err)
+			return nil
 		}
 
-		pool.log.Debug("handle chain header forked, last height %d, new height %d", lastBlock.Header.Height, newBlock.Header.Height)
+		log.Debug("handle chain header forked, last height %d, new height %d", lastBlock.Header.Height, newBlock.Header.Height)
 		toDeleted := make(map[common.Hash]*types.Transaction)
 		toAdded := make(map[common.Hash]*types.Transaction)
 		for newBlock.Header.Height > lastBlock.Header.Height {
@@ -110,8 +117,8 @@ func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 			}
 
 			if newBlock, err = chainStore.GetBlock(newBlock.Header.PreviousBlockHash); err != nil {
-				pool.log.Warn("got block failed, %s", err)
-				return
+				log.Error("got block failed, %s", err)
+				return nil
 			}
 		}
 
@@ -121,12 +128,12 @@ func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 			}
 
 			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
-				pool.log.Warn("got block failed, %s", err)
-				return
+				log.Error("got block failed, %s", err)
+				return nil
 			}
 		}
 
-		for lastBlock.HeaderHash == newBlock.HeaderHash {
+		for lastBlock.HeaderHash != newBlock.HeaderHash {
 			for _, t := range lastBlock.GetExcludeRewardTransactions() {
 				toAdded[t.Hash] = t
 			}
@@ -136,16 +143,17 @@ func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 			}
 
 			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
-				pool.log.Warn("got block failed, %s", err)
-				return
+				log.Error("got block failed, %s", err)
+				return nil
 			}
 
 			if newBlock, err = chainStore.GetBlock(newBlock.Header.PreviousBlockHash); err != nil {
-				pool.log.Warn("got block failed, %s", err)
-				return
+				log.Error("got block failed, %s", err)
+				return nil
 			}
 		}
 
+		// add committed txs back in current branch.
 		reinject := make([]*types.Transaction, 0)
 		for key, t := range toAdded {
 			if _, ok := toDeleted[key]; !ok {
@@ -153,13 +161,12 @@ func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 			}
 		}
 
-		pool.log.Debug("to added tx length %d, to deleted tx length %d, to reinject tx length %d",
+		log.Debug("to added tx length %d, to deleted tx length %d, to reinject tx length %d",
 			len(toAdded), len(toDeleted), len(reinject))
-		pool.addTransactions(reinject)
+		return reinject
 	}
 
-	pool.lastHeader = newHeader
-	pool.RemoveTransactions()
+	return nil
 }
 
 func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
@@ -183,6 +190,10 @@ func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
 // AddTransaction adds a single transaction into the pool if it is valid and returns nil.
 // Otherwise, return the concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
+	if tx == nil {
+		return nil
+	}
+
 	statedb, err := pool.chain.CurrentState().GetCopy()
 	if err != nil {
 		return err

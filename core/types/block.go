@@ -81,7 +81,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Blo
 }
 
 func (block *Block) GetExcludeRewardTransactions() []*Transaction {
-	if block.Transactions == nil || len(block.Transactions) == 0 {
+	if len(block.Transactions) == 0 {
 		return block.Transactions
 	}
 

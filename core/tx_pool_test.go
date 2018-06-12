@@ -218,3 +218,30 @@ func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
 	assert.Equal(t, pool.hashToTxMap[poolTx.Hash].txStatus, PROCESSING)
 	assert.Equal(t, pool.accountToTxsMap[poolTx.Data.From].nonceToTxMap[100].txStatus, PROCESSING)
 }
+
+func Test_GetRejectTransacton(t *testing.T) {
+	log := log.GetLogger("test", true)
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	bc.WriteBlock(b1)
+
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 2, 0)
+	bc.WriteBlock(b2)
+
+	reinject := getRejectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
+
+	assert.Equal(t, len(reinject), 2)
+	txs := make(map[common.Hash]*types.Transaction)
+	for _, tx := range reinject {
+		txs[tx.Hash] = tx
+	}
+
+	_, ok := txs[b2.Transactions[1].Hash]
+	assert.Equal(t, ok, true, "1")
+
+	_, ok = txs[b2.Transactions[2].Hash]
+	assert.Equal(t, ok, true, "2")
+}
