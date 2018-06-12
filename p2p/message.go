@@ -37,8 +37,10 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 // ProtoHandShake handshake message for two peer to exchage base information
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {
-	Caps   []Cap
-	NodeID common.Address
+	Caps      []Cap
+	NodeID    common.Address
+	Params    []byte
+	NetworkID uint64
 }
 
 type MsgReader interface {

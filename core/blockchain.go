@@ -354,7 +354,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	}
 
 	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
+	if minerRewardTx.Data.To.IsEmpty() {
 		return nil, ErrBlockInvalidToAddress
 	}
 
@@ -383,7 +383,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
+	stateObj := statedb.GetOrNewStateObject(minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
 	receipts := make([]*types.Receipt, len(txs)+1)
@@ -397,7 +397,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 			return nil, err
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, i+1, *minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, i+1, minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
 			return nil, err
 		}
