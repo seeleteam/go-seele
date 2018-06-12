@@ -52,6 +52,16 @@ func NewNodeWithAddr(id common.Address, addr *net.UDPAddr, shard uint) *Node {
 	return NewNode(id, addr.IP, addr.Port, shard)
 }
 
+func NewNodeFromIP(id string) (*Node, error) {
+	addr, err := net.ResolveUDPAddr("udp", id)
+	if err != nil {
+		return nil, err
+	}
+
+	node := NewNodeWithAddr(common.Address{}, addr, 0)
+	return node, nil
+}
+
 func NewNodeFromString(id string) (*Node, error) {
 	if !strings.HasPrefix(id, nodeHeader) {
 		return nil, errNodeHeaderInvalid
@@ -128,7 +138,7 @@ func (n *Node) String() string {
 }
 
 func (node *Node) UnmarshalText(json []byte) error {
-	n, err := NewNodeFromString(string(json))
+	n, err := NewNodeFromIP(string(json))
 	if err != nil {
 		return err
 	}
