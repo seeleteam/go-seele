@@ -89,5 +89,22 @@ func callContract(contractAddr string, input string) {
 	// Print the result
 	fmt.Println()
 	fmt.Println("Succeed to call contract!")
-	fmt.Println("Result:", receipt.Result)
+
+	if len(receipt.Result) > 0 {
+		fmt.Println("Result:", receipt.Result)
+	}
+
+	for i, log := range receipt.Logs {
+		fmt.Printf("Log[%v]:\n", i)
+		fmt.Println("\taddress:", log.Address.ToHex())
+		if len(log.Topics) == 1 {
+			fmt.Println("\ttopics:", log.Topics[0].ToHex())
+		} else {
+			fmt.Println("\ttopics:", log.Topics)
+		}
+		dataLen := len(log.Data) / 32
+		for i := 0; i < dataLen; i++ {
+			fmt.Printf("\tdata[%v]: %v\n", i, log.Data[i*32:i*32+32])
+		}
+	}
 }
