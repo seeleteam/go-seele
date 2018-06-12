@@ -231,7 +231,7 @@ func Test_GetRejectTransacton(t *testing.T) {
 	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 2, 0)
 	bc.WriteBlock(b2)
 
-	reinject := getRejectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
+	reinject := getReinjectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
 
 	assert.Equal(t, len(reinject), 2)
 	txs := make(map[common.Hash]*types.Transaction)
