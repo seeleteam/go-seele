@@ -45,9 +45,8 @@ func Test_loadNodes(t *testing.T) {
 	u.addNode(u.trustNodes[0])
 	u.addNode(u.trustNodes[1])
 	u.db.SaveNodes(common.GetTempFolder())
-	u.trustNodes = nil
 
-	assert.Equal(t, len(u.trustNodes), 0)
+	assert.Equal(t, len(u.bootstrapNodes), 0)
 	u.loadNodes(common.GetTempFolder())
-	assert.Equal(t, len(u.trustNodes), 2)
+	assert.Equal(t, len(u.bootstrapNodes), 2)
 }

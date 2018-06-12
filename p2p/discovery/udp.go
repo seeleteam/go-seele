@@ -29,10 +29,11 @@ const (
 )
 
 type udp struct {
-	conn       *net.UDPConn
-	self       *Node
-	table      *Table
-	trustNodes []*Node
+	conn           *net.UDPConn
+	self           *Node
+	table          *Table
+	trustNodes     []*Node
+	bootstrapNodes []*Node
 
 	db        *Database
 	localAddr *net.UDPAddr
@@ -299,14 +300,16 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
-				if p.code == r.code {
-					if p.code == pongMsgType && p.from.GetUDPAddr().String() == r.fromAddr.String() {
-						callback(p, r, el, pendingList)
-						break
-					} else if p.from.ID == r.fromId {
-						callback(p, r, el, pendingList)
-						break
+				if p.code == r.code && p.from.GetUDPAddr().String() == r.fromAddr.String() {
+					if r.err {
+						p.errorCallBack()
+						pendingList.Remove(el)
+					} else {
+						if p.callback(r.data, r.fromAddr) {
+							pendingList.Remove(el)
+						}
 					}
+					break
 				}
 			}
 		case p := <-u.addPending:
@@ -323,17 +326,6 @@ func (u *udp) loopReply() {
 			}
 
 			resetTimer()
-		}
-	}
-}
-
-func callback(p *pending, r *reply, el *list.Element, pendingList *list.List) {
-	if r.err {
-		p.errorCallBack()
-		pendingList.Remove(el)
-	} else {
-		if p.callback(r.data, r.fromAddr) {
-			pendingList.Remove(el)
 		}
 	}
 }
@@ -416,17 +408,27 @@ func (u *udp) discoveryWithTwoStags() {
 func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.GetCopy()
+		tmp := make(map[string]*Node, 0)
 
+		if len(u.bootstrapNodes) > 0 {
+			for i := range u.bootstrapNodes {
+				tmp[u.bootstrapNodes[i].GetUDPAddr().String()] = u.bootstrapNodes[i]
+			}
+			u.bootstrapNodes = nil
+		}
+		if len(u.trustNodes) > 0 {
+			for i := range u.trustNodes {
+				tmp[u.trustNodes[i].GetUDPAddr().String()] = u.trustNodes[i]
+			}
+		}
 		if len(copyMap) > 0 {
 			for _, value := range copyMap {
-				u.log.Debug("ping pong with id: %s, with address: %s", value.ID.ToHex(), value.IP)
-				u.pingPong(value)
+				tmp[value.GetUDPAddr().String()] = value
 			}
-		} else {
-			for i := range u.trustNodes {
-				u.log.Debug("ping pong with id: %s, with address: %s", u.trustNodes[i].ID.ToHex(), u.trustNodes[i].IP)
-				u.pingPong(u.trustNodes[i])
-			}
+		}
+
+		for _, n := range tmp {
+			u.pingPong(n)
 		}
 	}
 }
@@ -502,6 +504,6 @@ func (u *udp) loadNodes(nodeDir string) {
 			u.log.Error("new node from string failed for:[%s]", err)
 			continue
 		}
-		u.trustNodes = append(u.trustNodes, n)
+		u.bootstrapNodes = append(u.bootstrapNodes, n)
 	}
 }
