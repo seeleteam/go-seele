@@ -25,8 +25,7 @@ func init() {
 	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input(Required)")
 	callCmd.MarkFlagRequired("input")
 
-	callCmd.Flags().StringVarP(&contractHexAddr, "contractAddr", "c", "", "the contract address(Required)")
-	callCmd.MarkFlagRequired("contractAddr")
+	callCmd.Flags().StringVarP(&contractHexAddr, "contractAddr", "c", "", "the contract address")
 
 	callCmd.Flags().StringVarP(&account, "account", "a", "", "invoking the address of calling the smart contract(Default is random and has 100 balance)")
 	rootCmd.AddCommand(callCmd)
