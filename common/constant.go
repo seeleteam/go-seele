@@ -13,7 +13,8 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 )
 
-const ShardNumber = 20
+//ShardCount represents the total number of shards.
+const ShardCount = 20
 
 var (
 	// tempFolder used to store temp file, such as log files

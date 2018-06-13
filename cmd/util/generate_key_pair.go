@@ -27,8 +27,8 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 			var publicKey *common.Address
 			var privateKey *ecdsa.PrivateKey
 			var err error
-			if *shard > common.ShardNumber {
-				fmt.Printf("not supported shard number, shard number should be [0, %d]\n", common.ShardNumber)
+			if *shard > common.ShardCount {
+				fmt.Printf("not supported shard number, shard number should be [0, %d]\n", common.ShardCount)
 				return
 			} else if *shard == 0 {
 				publicKey, privateKey, err = crypto.GenerateKeyPair()

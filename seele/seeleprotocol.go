@@ -456,8 +456,11 @@ handler:
 			}
 
 			p.log.Debug("got block msg height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
-			// @todo need to make sure WriteBlock handle block fork
-			p.chain.WriteBlock(&block)
+
+			if block.GetShardNumber() == common.LocalShardNumber {
+				// @todo need to make sure WriteBlock handle block fork
+				p.chain.WriteBlock(&block)
+			}
 
 		case downloader.GetBlockHeadersMsg:
 			var query blockHeadersQuery

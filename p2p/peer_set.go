@@ -20,7 +20,7 @@ type peerSet struct {
 
 func NewPeerSet() *peerSet {
 	peers := make(map[uint]map[common.Address]*Peer)
-	for i := 1; i < common.ShardNumber+1; i++ {
+	for i := 1; i < common.ShardCount+1; i++ {
 		peers[uint(i)] = make(map[common.Address]*Peer)
 	}
 
