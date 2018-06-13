@@ -6,16 +6,17 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 	"gopkg.in/fatih/set.v0"
@@ -23,7 +24,7 @@ import (
 
 var num int
 var value uint64
-var folder string
+var keyFile string
 var output string
 var shardRange string
 
@@ -48,11 +49,7 @@ var generateKeystoreCmd = &cobra.Command{
 		results = make(map[common.Address]*big.Int)
 		bigValue := big.NewInt(0).SetUint64(value)
 
-		err := os.MkdirAll(folder, os.ModePerm)
-		if err != nil {
-			panic(fmt.Sprintf("create folder failed %s", err))
-		}
-
+		var keyList bytes.Buffer
 		for i := 0; i < num; {
 			addr, privateKey, err := crypto.GenerateKeyPair()
 			if !shardSet.Has(addr.Shard()) {
@@ -66,15 +63,15 @@ var generateKeystoreCmd = &cobra.Command{
 			results[*addr] = bigValue
 
 			key := crypto.FromECDSA(privateKey)
-			fileName := fmt.Sprintf("shard%d-%s", addr.Shard(), addr.ToHex())
-			filePath := filepath.Join(folder, fileName)
-
-			err = ioutil.WriteFile(filePath, key, os.ModePerm)
-			if err != nil {
-				panic(fmt.Sprintf("write file failed %s", err))
-			}
+			keyList.WriteString(hexutil.BytesToHex(key))
+			keyList.WriteString("\n")
 
 			i++
+		}
+
+		err := ioutil.WriteFile(keyFile, keyList.Bytes(), os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("write key file failed %s", err))
 		}
 
 		str, err := json.MarshalIndent(results, "", "\t")
@@ -94,7 +91,7 @@ func init() {
 
 	generateKeystoreCmd.Flags().IntVarP(&num, "num", "n", 10, "number of generate key files")
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
-	generateKeystoreCmd.Flags().StringVarP(&folder, "folder", "f", "keystore", "key file folder")
+	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
 	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ;")
 }
