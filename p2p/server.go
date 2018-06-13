@@ -45,8 +45,7 @@ const (
 	outboundConn = 2
 
 	// In transfering handshake msg, length of extra data
-	hsExtraDataLen = 32
-	extraDataLen   = 24
+	extraDataLen = 24
 )
 
 //P2PConfig is the Configuration of p2p
