@@ -91,7 +91,9 @@ func callContract(contractAddr string, input string) {
 	fmt.Println("Succeed to call contract!")
 
 	if len(receipt.Result) > 0 {
-		fmt.Println("Result:", receipt.Result)
+		fmt.Println("Result (raw):", receipt.Result)
+		fmt.Println("Result (hex):", hexutil.BytesToHex(receipt.Result))
+		fmt.Println("Result (big):", new(big.Int).SetBytes(receipt.Result))
 	}
 
 	for i, log := range receipt.Logs {
