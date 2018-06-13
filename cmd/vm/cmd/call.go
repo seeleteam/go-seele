@@ -17,15 +17,15 @@ import (
 )
 
 var (
-	contractAddr string
-	input        string
+	contractHexAddr string
+	input           string
 )
 
 func init() {
 	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input(Required)")
 	callCmd.MarkFlagRequired("input")
 
-	callCmd.Flags().StringVarP(&contractAddr, "contractAddr", "c", "", "the contract address(Required)")
+	callCmd.Flags().StringVarP(&contractHexAddr, "contractAddr", "c", "", "the contract address(Required)")
 	callCmd.MarkFlagRequired("contractAddr")
 
 	callCmd.Flags().StringVarP(&account, "account", "a", "", "invoking the address of calling the smart contract(Default is random and has 100 balance)")
@@ -37,26 +37,12 @@ var callCmd = &cobra.Command{
 	Short: "call a contract",
 	Long:  `All contract could callable. This is Seele contract simulator's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		callContract(contractAddr, input)
+		callContract(contractHexAddr, input)
 	},
 }
 
-func callContract(contractAddr string, input string) {
-	// Contract address
-	contract, err := common.HexToAddress(contractAddr)
-	if err != nil {
-		fmt.Println("Invalid contract address,", err.Error())
-		return
-	}
-
-	// Call method and input parameters
-	msg, err := hexutil.HexToBytes(input)
-	if err != nil {
-		fmt.Println("Invalid input message,", err.Error())
-		return
-	}
-
-	statedb, bcStore, dispose, err := preprocessContract()
+func callContract(contractHexAddr string, input string) {
+	db, statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
 		fmt.Println("Failed to prepare the simulator environment,", err.Error())
 		return
@@ -78,8 +64,27 @@ func callContract(contractAddr string, input string) {
 		}
 	}
 
+	// Contract address
+	var contractAddr common.Address
+	if len(contractHexAddr) > 0 {
+		if contractAddr, err = common.HexToAddress(contractHexAddr); err != nil {
+			fmt.Println("Invalid contract address,", err.Error())
+			return
+		}
+	} else if contractAddr = getGlobalContractAddress(db); contractAddr.IsEmpty() {
+		fmt.Println("Contract address not specified.")
+		return
+	}
+
+	// Call method and input parameters
+	msg, err := hexutil.HexToBytes(input)
+	if err != nil {
+		fmt.Println("Invalid input message,", err.Error())
+		return
+	}
+
 	// Create a call message transaction
-	callContractTx, err := types.NewMessageTransaction(from, contract, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
+	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
 	if err != nil {
 		fmt.Println("Failed to create message tx,", err.Error())
 		return

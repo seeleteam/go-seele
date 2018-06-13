@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/seeleteam/go-seele/database"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
@@ -23,16 +25,30 @@ import (
 
 // const
 const (
-	DefaultNonce     uint64 = 1
-	KeyStateRootHash        = "STATEROOTHASH"
+	DefaultNonce             = uint64(1)
+	KeyStateRootHash         = "STATE_ROOT_HASH"
+	keyGlobalContractAddress = "GLOBAL_CONTRACT_ADDRESS"
 )
 
+func getGlobalContractAddress(db database.Database) common.Address {
+	hexAddr, err := db.GetString(keyGlobalContractAddress)
+	if err != nil {
+		return common.EmptyAddress
+	}
+
+	return common.HexMustToAddres(hexAddr)
+}
+
+func setGlobalContractAddress(db database.Database, hexAddr string) {
+	db.PutString(keyGlobalContractAddress, hexAddr)
+}
+
 // preprocessContract creates the contract tx dependent state DB, blockchain store
-func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error) {
+func preprocessContract() (database.Database, *state.Statedb, store.BlockchainStore, func(), error) {
 	db, err := leveldb.NewLevelDB(dir)
 	if err != nil {
 		os.RemoveAll(dir)
-		return nil, nil, func() {}, err
+		return nil, nil, nil, func() {}, err
 	}
 
 	hash := common.EmptyHash
@@ -43,7 +59,7 @@ func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error)
 		h, err := common.HexToHash(str)
 		if err != nil {
 			db.Close()
-			return nil, nil, func() {}, err
+			return nil, nil, nil, func() {}, err
 		}
 		hash = h
 	}
@@ -51,10 +67,10 @@ func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error)
 	statedb, err := state.NewStatedb(hash, db)
 	if err != nil {
 		db.Close()
-		return nil, nil, func() {}, err
+		return nil, nil, nil, func() {}, err
 	}
 
-	return statedb, store.NewBlockchainDatabase(db), func() {
+	return db, statedb, store.NewBlockchainDatabase(db), func() {
 		batch := db.NewBatch()
 		hash, err := statedb.Commit(batch)
 		if err != nil {

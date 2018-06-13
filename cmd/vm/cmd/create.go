@@ -68,7 +68,7 @@ func createContract() {
 		return
 	}
 
-	statedb, bcStore, dispose, err := preprocessContract()
+	db, statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
 		fmt.Println("Failed to prepare the simulator environment,", err.Error())
 		return
@@ -107,4 +107,6 @@ func createContract() {
 	fmt.Println()
 	fmt.Println("Succeed to create contract!")
 	fmt.Println("Contract address:", hexutil.BytesToHex(receipt.ContractAddress))
+
+	setGlobalContractAddress(db, hexutil.BytesToHex(receipt.ContractAddress))
 }
