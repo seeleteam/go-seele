@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"math/rand"
-	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/cmd/util"
@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var keyFolder string
 var tps int
 
 type balance struct {
@@ -169,32 +168,20 @@ func getRandClient() *rpc.Client {
 func initAccount() []*balance {
 	balanceList := make([]*balance, 0)
 
-	// init file list from key store folder
-	keyFiles := make([]string, 0)
-	files, err := ioutil.ReadDir(keyFolder)
+	keys, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		fmt.Println("read directory err ", err)
+		panic(fmt.Sprintf("read key file failed %s", err))
 	}
 
-	for _, f := range files {
-		if f.IsDir() {
+	keyList := strings.Split(string(keys), "\n")
+
+	// init balance and nonce
+	for _, hex := range keyList {
+		if hex == "" {
 			continue
 		}
 
-		path := filepath.Join(keyFolder, f.Name())
-		keyFiles = append(keyFiles, path)
-
-		fmt.Println("find key file ", path)
-	}
-
-	// init balance and nonce
-	for _, f := range keyFiles {
-		hex, err := ioutil.ReadFile(f)
-		if err != nil {
-			panic(fmt.Sprintf("read file %s error %s", f, err))
-		}
-
-		key, err := crypto.ToECDSA(hex)
+		key, err := crypto.LoadECDSAFromString(hex)
 		if err != nil {
 			panic(fmt.Sprintf("load key failed %s", err))
 		}
@@ -270,6 +257,6 @@ func getShard(client *rpc.Client) uint {
 func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
-	sendTxCmd.Flags().StringVarP(&keyFolder, "keyfolder", "f", "keystore", "key file folder")
+	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 }
