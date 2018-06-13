@@ -29,6 +29,8 @@ const (
 	keyGlobalContractAddress = "GLOBAL_CONTRACT_ADDRESS"
 )
 
+var prefixFuncHash = []byte("FH-")
+
 func getGlobalContractAddress(db database.Database) common.Address {
 	hexAddr, err := db.GetString(keyGlobalContractAddress)
 	if err != nil {
@@ -39,14 +41,55 @@ func getGlobalContractAddress(db database.Database) common.Address {
 }
 
 func setGlobalContractAddress(db database.Database, hexAddr string) {
-	db.PutString(keyGlobalContractAddress, hexAddr)
+	if err := db.PutString(keyGlobalContractAddress, hexAddr); err != nil {
+		panic(err)
+	}
+}
+
+func setContractCompilationOutput(db database.Database, contractAddress []byte, output *solCompileOutput) {
+	key := append(prefixFuncHash, contractAddress...)
+
+	value := []string{}
+	for k, v := range output.FunctionHashMap {
+		value = append(value, k, v)
+	}
+
+	if err := db.Put(key, common.SerializePanic(value)); err != nil {
+		panic(err)
+	}
+}
+
+func getContractCompilationOutput(db database.Database, contractAddress []byte) *solCompileOutput {
+	key := append(prefixFuncHash, contractAddress...)
+
+	value, err := db.Get(key)
+	if err != nil {
+		return nil
+	}
+
+	var kvs []string
+	if err := common.Deserialize(value, &kvs); err != nil {
+		panic(err)
+	}
+
+	output := solCompileOutput{
+		FunctionHashMap: make(map[string]string),
+	}
+
+	for i, len := 0, len(kvs)/2; i < len; i++ {
+		key := kvs[2*i]
+		value := kvs[2*i+1]
+		output.FunctionHashMap[key] = value
+	}
+
+	return &output
 }
 
 // preprocessContract creates the contract tx dependent state DB, blockchain store
 func preprocessContract() (database.Database, *state.Statedb, store.BlockchainStore, func(), error) {
-	db, err := leveldb.NewLevelDB(dir)
+	db, err := leveldb.NewLevelDB(defaultDir)
 	if err != nil {
-		os.RemoveAll(dir)
+		os.RemoveAll(defaultDir)
 		return nil, nil, nil, func() {}, err
 	}
 

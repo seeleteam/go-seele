@@ -21,11 +21,11 @@ var dbCmd = &cobra.Command{
 	Short: "init or clean db",
 	Long:  "create a new db or clean the data of existing db for simulator",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := os.RemoveAll(dir); err != nil {
+		if err := os.RemoveAll(defaultDir); err != nil {
 			fmt.Println("Failed to init db:", err.Error())
 			return
 		}
 
-		fmt.Println("Succeed to init db:", dir)
+		fmt.Println("Succeed to init db:", defaultDir)
 	},
 }
