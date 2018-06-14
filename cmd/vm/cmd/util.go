@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -49,12 +50,7 @@ func setGlobalContractAddress(db database.Database, hexAddr string) {
 func setContractCompilationOutput(db database.Database, contractAddress []byte, output *solCompileOutput) {
 	key := append(prefixFuncHash, contractAddress...)
 
-	value := []string{}
-	for k, v := range output.FunctionHashMap {
-		value = append(value, k, v)
-	}
-
-	if err := db.Put(key, common.SerializePanic(value)); err != nil {
+	if err := db.Put(key, common.SerializePanic(output)); err != nil {
 		panic(err)
 	}
 }
@@ -67,19 +63,9 @@ func getContractCompilationOutput(db database.Database, contractAddress []byte) 
 		return nil
 	}
 
-	var kvs []string
-	if err := common.Deserialize(value, &kvs); err != nil {
+	output := solCompileOutput{}
+	if err = common.Deserialize(value, &output); err != nil {
 		panic(err)
-	}
-
-	output := solCompileOutput{
-		FunctionHashMap: make(map[string]string),
-	}
-
-	for i, len := 0, len(kvs)/2; i < len; i++ {
-		key := kvs[2*i]
-		value := kvs[2*i+1]
-		output.FunctionHashMap[key] = value
 	}
 
 	return &output
@@ -101,6 +87,14 @@ func getFromAddress(statedb *state.Statedb) common.Address {
 	}
 
 	return from
+}
+
+func ensurePrefix(str, prefix string) string {
+	if strings.HasPrefix(str, prefix) {
+		return str
+	}
+
+	return prefix + str
 }
 
 // preprocessContract creates the contract tx dependent state DB, blockchain store
