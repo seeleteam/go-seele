@@ -375,7 +375,9 @@ handler:
 					break handler
 				}
 			} else {
-				p.log.Debug("already have this tx %s", txHash.ToHex())
+				if common.PrintExplosionLog {
+					p.log.Debug("already have this tx %s", txHash.ToHex())
+				}
 			}
 
 		case transactionRequestMsgCode:
