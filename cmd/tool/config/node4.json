@@ -1,0 +1,45 @@
+{
+  "basic":{
+    "name": "seele node4",
+    "version": "1.0",
+    "dataDir": "node4",
+    "address": "0.0.0.0:55026",
+    "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81"
+  },
+  "p2p": {
+    "address": "0.0.0.0:39006",
+    "privateKey": "0xa0cbd83aa6141014bf1ddd4b7da1ca5e3951ae6b0a4ec5811537adacb5b46417",
+    "staticNodes": [
+      "127.0.0.1:39007"
+    ],
+    "networkID": 1
+  },
+  "log": {
+    "isDebug": true,
+    "printLog": false
+  },
+  "httpServer": {
+    "address": "127.0.0.1:65026",
+    "crosssorgins": [
+      "*"
+    ],
+    "whiteHost": [
+      "*"
+    ]
+  },
+  "wsserver": {
+    "address": "127.0.0.1:8083",
+    "pattern": "/ws"
+  },
+  "metrics": {
+    "address": "127.0.0.1:8086",
+    "duration": 10,
+    "database": "influxdb",
+    "username": "test",
+    "password": "test123"
+  },
+  "genesis": {
+    "difficult":8000000,
+    "shard":1
+  }
+}

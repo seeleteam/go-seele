@@ -234,6 +234,8 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce, PENDING)
 	if existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
+			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
+				tx.Hash.ToHex(), existTx.Hash.ToHex())
 			pool.removeTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
@@ -297,8 +299,6 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 	if tx == nil {
 		return
 	}
-
-	pool.log.Debug("remove tx hash %s, status %d", txHash.ToHex(), tx.txStatus)
 
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
