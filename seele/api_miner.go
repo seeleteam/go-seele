@@ -59,8 +59,8 @@ func (api *PrivateMinerAPI) SetThreads(threads *int, result *string) error {
 }
 
 // SetCoinbase API is used to set the coinbase.
-func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr string, result *string) error {
-	coinbase, err := common.HexToAddress(coinbaseStr)
+func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *string) error {
+	coinbase, err := common.HexToAddress(*coinbaseStr)
 	if err != nil {
 		return err
 	}

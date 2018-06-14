@@ -54,8 +54,8 @@ var minerCmd = &cobra.Command{
 			var hashrate uint64
 			client.Call("miner.Hashrate", &input, &hashrate)
 			fmt.Printf("miner hashrate is: %d\n", hashrate)
-		} else if threadsNum != nil {
-			if *threadsNum <= 0 {
+		} else if *threadsNum != 0 {
+			if *threadsNum < 0 {
 				fmt.Printf("miner threads number greater than zero: %d\n", *threadsNum)
 				return
 			}
