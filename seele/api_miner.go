@@ -8,6 +8,7 @@ package seele
 import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/miner"
+	"errors"
 )
 
 // PrivateMinerAPI provides an API to access miner information.
@@ -53,8 +54,12 @@ func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 
 // SetThreads  API is used to set the number of threads.
 func (api *PrivateMinerAPI) SetThreads(threads *int, result *string) error {
+	if *threads <= 0 {
+		return errors.New("threads should be greater than zero.")
+	}
 	api.s.miner.SetThreads(*threads)
 
+	*result = "succeed to set miner thread number"
 	return nil
 }
 
@@ -66,5 +71,6 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *string) err
 	}
 	api.s.miner.SetCoinbase(coinbase)
 
+	*result = "miner set coinbase succeed"
 	return nil
 }

@@ -16,7 +16,6 @@ var threadsNum *int
 var start bool
 var stop bool
 var gethashrate bool
-var coinbase *string
 
 // getbalanceCmd represents the getbalance command
 var minerCmd = &cobra.Command{
@@ -54,20 +53,6 @@ var minerCmd = &cobra.Command{
 			var hashrate uint64
 			client.Call("miner.Hashrate", &input, &hashrate)
 			fmt.Printf("miner hashrate is: %d\n", hashrate)
-		} else if *threadsNum != 0 {
-			if *threadsNum < 0 {
-				fmt.Printf("miner threads number greater than zero: %d\n", *threadsNum)
-				return
-			}
-			client.Call("miner.setThreads", &threadsNum, &result)
-			fmt.Printf("miner set threads succeed")
-		} else if *coinbase != "" {
-			err = client.Call("miner.SetCoinbase", &coinbase, &result)
-			if err != nil {
-				fmt.Printf("miner set coinbase failed: %s\n", err.Error())
-				return
-			}
-			fmt.Printf("miner set coinbase succeed")
 		} else {
 			fmt.Println("command param is not defined.")
 		}
@@ -78,7 +63,6 @@ func init() {
 	rootCmd.AddCommand(minerCmd)
 
 	threadsNum = minerCmd.Flags().IntP("threads", "t", 0, "threads num of the miner")
-	coinbase = minerCmd.Flags().StringP("coinbase", "c", "", "coinbase of the miner")
 
 	minerCmd.Flags().BoolVar(&start, "start", false, "start miner")
 	minerCmd.Flags().BoolVar(&stop, "stop", false, "stop miner")
