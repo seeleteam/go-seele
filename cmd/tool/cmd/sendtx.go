@@ -107,7 +107,6 @@ func loopSend() {
 func loopCheck() {
 	defer wg.Done()
 	toPackedBalanceList := make([]*balance, 0)
-	packedLock := sync.Mutex{}
 	toConfirmBalanceList := make(map[time.Time][]*balance)
 
 	var confirmTime = 2 * time.Minute
@@ -116,13 +115,12 @@ func loopCheck() {
 	for {
 		select {
 		case b := <-txCh:
-			packedLock.Lock()
 			toPackedBalanceList = append(toPackedBalanceList, b)
-			packedLock.Unlock()
 		case <- checkPack.C:
-			go updateBalanceStatus(toPackedBalanceList)
+			copyPacked := make([]*balance, len(toPackedBalanceList))
+			copy(copyPacked, toPackedBalanceList)
+			go updateBalanceStatus(copyPacked)
 
-			packedLock.Lock()
 			nextPackedList := make([]*balance, 0)
 			includeList := make([]*balance, 0)
 			for _, b := range toPackedBalanceList {
@@ -136,8 +134,6 @@ func loopCheck() {
 			fmt.Printf("to packed balance: %d, new: %d\n", len(toPackedBalanceList), len(nextPackedList))
 			toConfirmBalanceList[time.Now()] = includeList
 			toPackedBalanceList = nextPackedList
-
-			packedLock.Unlock()
 		case <- confirm.C:
 			for key, value := range toConfirmBalanceList {
 				duration := time.Now().Sub(key)
