@@ -90,7 +90,10 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				fmt.Println(err)
 				return
 			}
-			fmt.Println("output :\n", string(jsonOutput))
+
+			if len(string(jsonOutput)) > 2 {
+				fmt.Println("output :\n", string(jsonOutput))
+			}
 
 			if request.Handler != nil {
 				request.Handler(output)
