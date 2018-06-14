@@ -174,9 +174,10 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 	dispose := prepareShardEnv(9)
 	defer dispose()
 
-	from := crypto.MustGenerateShardAddress(1) // invalid shard
+	from, privKey := crypto.MustGenerateShardKeyPair(1) // invalid shard
 	to := crypto.MustGenerateShardAddress(9)
 	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+	tx.Sign(privKey)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
@@ -188,9 +189,10 @@ func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
 	dispose := prepareShardEnv(9)
 	defer dispose()
 
-	from := crypto.MustGenerateShardAddress(9)
+	from, privKey := crypto.MustGenerateShardKeyPair(9)
 	to := crypto.MustGenerateShardAddress(1) // invalid shard
 	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
+	tx.Sign(privKey)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 
@@ -203,11 +205,13 @@ func Test_Transaction_Validate_InvalidContractShard(t *testing.T) {
 	defer dispose()
 
 	// From address in one shard, but contract address in another shard.
-	from := crypto.MustGenerateShardAddress(9)
+	from, privKey := crypto.MustGenerateShardKeyPair(9)
 	to := crypto.MustGenerateShardAddress(15)
 	contractAddr := crypto.CreateAddress(*to, 38)
+	
 	tx, err := NewMessageTransaction(*from, contractAddr, big.NewInt(20), big.NewInt(10), 5, []byte("contract message"))
 	assert.Equal(t, err, error(nil))
+	tx.Sign(privKey)
 
 	statedb := newTestStateDB(tx.Data.From, 5, 100)
 

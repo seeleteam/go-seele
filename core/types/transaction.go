@@ -124,7 +124,7 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 		Signature: crypto.Signature{Sig: make([]byte, 0)},
 	}
 
-	if err := tx.validate(); err != nil {
+	if err := tx.validate(false); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +134,9 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 }
 
 // validate validates state independent fields in tx.
-func (tx Transaction) validate() error {
+// signNeeded indicates if the signature needs to be checked. The signature will 
+// be validated if true, ignored otherwise.
+func (tx Transaction) validate(signNeeded bool) error {
 	// validate amount
 	if tx.Data.Amount == nil {
 		return ErrAmountNil
@@ -160,6 +162,22 @@ func (tx Transaction) validate() error {
 
 	if (tx.Data.To.IsEmpty() || tx.Data.To.Type() == common.AddressTypeContract) && len(tx.Data.Payload) == 0 {
 		return ErrPayloadEmpty
+	}
+
+	// validate signature
+	if signNeeded {
+		if tx.Signature == nil {
+			return ErrSigMissing
+		}
+
+		txDataHash := crypto.MustHash(tx.Data)
+		if !txDataHash.Equal(tx.Hash) {
+			return ErrHashMismatch
+		}
+
+		if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+			return ErrSigInvalid
+		}
 	}
 
 	return nil
@@ -209,10 +227,10 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Signature = *crypto.MustSign(privKey, tx.Hash.Bytes())
 }
 
-// Validate returns true if the transaction is valid, otherwise false.
+// Validate performs a complete check for the transaction of local shard and returns nil if valid otherwise an error.
 func (tx *Transaction) Validate(statedb stateDB) error {
 	// validate state independent fields
-	if err := tx.validate(); err != nil {
+	if err := tx.validate(true); err != nil {
 		return err
 	}
 
@@ -238,21 +256,14 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 		return ErrNonceTooLow
 	}
 
-	// vaildate signature
-	if len(tx.Signature.Sig) == 0 {
-		return ErrSigMissing
-	}
-
-	txDataHash := crypto.MustHash(tx.Data)
-	if !txDataHash.Equal(tx.Hash) {
-		return ErrHashMismatch
-	}
-
-	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
-		return ErrSigInvalid
-	}
-
 	return nil
+}
+
+// ValidateWithoutState wraps the internal validate method to provide an external 
+// interface, which performs a state independent check for the tx.
+func (tx *Transaction) ValidateWithoutState() error {
+	// call validate
+	return tx.validate(true)
 }
 
 // CalculateHash calculates and returns the transaction hash.
