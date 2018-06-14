@@ -262,7 +262,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 // ValidateWithoutState wraps the internal validate method to provide an external 
 // interface, which performs a state independent check for the tx.
 func (tx *Transaction) ValidateWithoutState() error {
-	// call validate directly
+	// call validate
 	return tx.validate(true)
 }
 
