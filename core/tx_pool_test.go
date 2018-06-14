@@ -53,8 +53,8 @@ func newMockBlockchain() *mockBlockchain {
 	return &mockBlockchain{statedb}
 }
 
-func (chain mockBlockchain) CurrentState() *state.Statedb {
-	return chain.statedb
+func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
+	return chain.statedb, nil
 }
 
 func (chain mockBlockchain) GetStore() store.BlockchainStore {

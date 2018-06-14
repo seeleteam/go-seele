@@ -15,6 +15,9 @@ import (
 
 const ShardNumber = 20
 
+// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
+const PrintExplosionLog = false
+
 var (
 	// tempFolder used to store temp file, such as log files
 	tempFolder string

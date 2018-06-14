@@ -23,9 +23,8 @@ import (
 const (
 	responseTimeout = 15 * time.Second
 
-	pingpongInterval      = 20 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval     = 25 * time.Second // sleep between discovery, must big than response time out
-	addTrustNodesInterval = 30 * time.Second // sleep between add trustNodes, must big than response time out
+	pingpongInterval  = 20 * time.Second // sleep between ping pong, must big than response time out
+	discoveryInterval = 25 * time.Second // sleep between discovery, must big than response time out
 )
 
 type udp struct {
@@ -486,7 +485,7 @@ func (u *udp) loadNodes(nodeDir string) {
 	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
 
 	if !common.FileOrFolderExists(fileFullPath) {
-		u.log.Info("nodes info backup file isn't exists in the path:%d", fileFullPath)
+		u.log.Debug("nodes info backup file isn't exists in the path:%s", fileFullPath)
 		return
 	}
 
@@ -511,4 +510,6 @@ func (u *udp) loadNodes(nodeDir string) {
 		}
 		u.bootstrapNodes = append(u.bootstrapNodes, n)
 	}
+
+	u.log.Debug("load %d nodes from back file", len(u.bootstrapNodes))
 }

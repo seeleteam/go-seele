@@ -30,7 +30,7 @@ type Database struct {
 
 const (
 	// NodesBackupInterval is the nodes info of backup interval time
-	NodesBackupInterval = time.Hour
+	NodesBackupInterval = time.Minute * 20
 
 	// NodesBackupFileName is the nodes info of backup file name
 	NodesBackupFileName = "nodes.json"
@@ -83,6 +83,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 		db.log.Error("nodes info backup failed, for:[%s]", err.Error())
 		return
 	}
+
 	db.log.Debug("nodes:%s info backup success\n", string(nodeByte))
 }
 

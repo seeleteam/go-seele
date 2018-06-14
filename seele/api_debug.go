@@ -6,6 +6,8 @@
 package seele
 
 import (
+	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -84,8 +86,11 @@ type TpsInfo struct {
 // GetTPS get tps info
 func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	chain := api.s.BlockChain()
-	block, _ := chain.CurrentBlock()
+	block := chain.CurrentBlock()
 	timeInterval := uint64(300)
+	if block.Header.Height == 0 {
+		return nil
+	}
 
 	var count = uint64(len(block.Transactions) - 1)
 	var duration uint64
@@ -94,7 +99,7 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	for height := block.Header.Height - 1; height > 0; height-- {
 		current, err := chain.GetStore().GetBlockByHeight(height)
 		if err != nil {
-			return err
+			return fmt.Errorf("get block failed, error:%s, block height:%d", err, height)
 		}
 
 		count += uint64(len(current.Transactions) - 1)
