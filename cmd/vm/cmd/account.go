@@ -1,3 +1,8 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package cmd
 
 import (
@@ -36,7 +41,7 @@ var newCmd = &cobra.Command{
 	Short: "create a new account",
 	Long:  `Create a new account with the balance(Default is 0)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		statedb, _, dispose, err := preprocessContract()
+		_, statedb, _, dispose, err := preprocessContract()
 		if err != nil {
 			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
@@ -58,7 +63,7 @@ var setCmd = &cobra.Command{
 	Short: "set the balance of the account",
 	Long:  `Set the balance(Default is 0) of the account`,
 	Run: func(cmd *cobra.Command, args []string) {
-		statedb, _, dispose, err := preprocessContract()
+		_, statedb, _, dispose, err := preprocessContract()
 		if err != nil {
 			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
@@ -89,7 +94,7 @@ var getCmd = &cobra.Command{
 	Short: "get the balance of the account",
 	Long:  `Get the balance of the account, if the account is non-existence, return 0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		statedb, _, dispose, err := preprocessContract()
+		_, statedb, _, dispose, err := preprocessContract()
 		if err != nil {
 			fmt.Println("Failed to prepare the simulator environment,", err.Error())
 			return
