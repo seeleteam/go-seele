@@ -97,7 +97,10 @@ func compileSol() (*solCompileOutput, func(), error) {
 		case ".signatures":
 			buildSolCompileFuncHash(string(content), output)
 		case ".bin":
-			output.HexByteCodes = "0x" + string(content)
+			output.HexByteCodes = string(content)
+			if !strings.HasPrefix(output.HexByteCodes, "0x") {
+				output.HexByteCodes = "0x" + output.HexByteCodes
+			}
 		}
 
 		return nil
