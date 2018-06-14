@@ -19,14 +19,13 @@ import (
 var (
 	contractHexAddr string
 	input           string
+	methodName      string
 )
 
 func init() {
-	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input(Required)")
-	callCmd.MarkFlagRequired("input")
-
+	callCmd.Flags().StringVarP(&input, "input", "i", "", "call function input")
+	callCmd.Flags().StringVarP(&methodName, "method", "m", "", "call function method name")
 	callCmd.Flags().StringVarP(&contractHexAddr, "contractAddr", "c", "", "the contract address")
-
 	callCmd.Flags().StringVarP(&account, "account", "a", "", "invoking the address of calling the smart contract(Default is random and has 100 balance)")
 	rootCmd.AddCommand(callCmd)
 }
@@ -36,11 +35,11 @@ var callCmd = &cobra.Command{
 	Short: "call a contract",
 	Long:  `All contract could callable. This is Seele contract simulator's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		callContract(contractHexAddr, input)
+		callContract(contractHexAddr)
 	},
 }
 
-func callContract(contractHexAddr string, input string) {
+func callContract(contractHexAddr string) {
 	db, statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
 		fmt.Println("Failed to prepare the simulator environment,", err.Error())
@@ -57,6 +56,12 @@ func callContract(contractHexAddr string, input string) {
 	// Contract address
 	contractAddr := getContractAddress(db)
 	if contractAddr.IsEmpty() {
+		return
+	}
+
+	// Input message to call contract
+	input := getContractInputMsg(db, contractAddr.Bytes())
+	if len(input) == 0 {
 		return
 	}
 
@@ -122,4 +127,28 @@ func getContractAddress(db database.Database) common.Address {
 	}
 
 	return addr
+}
+
+func getContractInputMsg(db database.Database, contractAddr []byte) string {
+	if len(input) > 0 {
+		return input
+	}
+
+	if len(methodName) == 0 {
+		fmt.Println("Input or method not specified.")
+		return ""
+	}
+
+	output := getContractCompilationOutput(db, contractAddr)
+	if output == nil {
+		fmt.Println("Cannot find the contract info in DB.")
+		return ""
+	}
+
+	method := output.getMethodByName(methodName)
+	if method == nil {
+		return ""
+	}
+
+	return method.createInput()
 }

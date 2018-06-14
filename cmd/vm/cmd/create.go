@@ -7,12 +7,8 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -27,11 +23,6 @@ var (
 
 	defaultDir = filepath.Join(common.GetDefaultDataFolder(), "simulator")
 )
-
-type solCompileOutput struct {
-	HexByteCodes    string
-	FunctionHashMap map[string]string
-}
 
 func init() {
 	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a text file that contains the binary contract code in the local directory(Required)")
@@ -49,126 +40,23 @@ var createCmd = &cobra.Command{
 	},
 }
 
-func compileSol() (*solCompileOutput, func(), error) {
-	if len(solFile) == 0 {
-		return nil, func() {}, nil
-	}
-
-	if !common.FileOrFolderExists(solFile) {
-		return nil, nil, fmt.Errorf("cannot find the specified solidity file %v", solFile)
-	}
-
-	// output to temp dir
-	tempDir, err := ioutil.TempDir("", "SolCompile-")
-	if err != nil {
-		return nil, nil, err
-	}
-	deleteTempDir := true
-	defer func() {
-		if deleteTempDir {
-			os.RemoveAll(tempDir)
-		}
-	}()
-
-	// run solidity compilation command
-	cmdArgs := fmt.Sprintf("--bin --hashes -o %v %v", tempDir, solFile)
-	cmd := exec.Command("solc.exe", strings.Split(cmdArgs, " ")...)
-	if err = cmd.Run(); err != nil {
-		return nil, nil, err
-	}
-
-	// walk through the temp dir to construct compilation outputs
-	output := new(solCompileOutput)
-	walkFunc := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		content, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		switch filepath.Ext(path) {
-		case ".signatures":
-			buildSolCompileFuncHash(string(content), output)
-		case ".bin":
-			output.HexByteCodes = string(content)
-			if !strings.HasPrefix(output.HexByteCodes, "0x") {
-				output.HexByteCodes = "0x" + output.HexByteCodes
-			}
-		}
-
-		return nil
-	}
-
-	if err = filepath.Walk(tempDir, walkFunc); err != nil {
-		return nil, nil, err
-	}
-
-	deleteTempDir = false
-
-	return output, func() {
-		os.RemoveAll(tempDir)
-	}, nil
-}
-
-func buildSolCompileFuncHash(content string, output *solCompileOutput) {
-	output.FunctionHashMap = make(map[string]string)
-	shortNames := make(map[string]int)
-
-	for _, line := range strings.Split(content, "\n") {
-		if line = strings.Trim(line, "\r"); len(line) == 0 {
-			continue
-		}
-
-		if !strings.HasPrefix(line, "0x") {
-			line = "0x" + line
-		}
-
-		// add mapping: funcFullName <-> hash
-		hash := line[:10]
-		funcFullName := string(line[12:])
-		output.FunctionHashMap[funcFullName] = hash
-
-		// add mapping: funcShortName <-> hash
-		if idx := strings.IndexByte(funcFullName, '('); idx >= 0 {
-			name := string(funcFullName[:idx])
-			shortNames[name] = shortNames[name] + 1
-			output.FunctionHashMap[name] = hash
-		} else {
-			panic("did not find the left bracket for the function name: " + line)
-		}
-	}
-
-	// remove mapping for overloaded functions, in which case
-	// user must specify the function full name to call a contract.
-	for k, v := range shortNames {
-		if v > 1 {
-			delete(output.FunctionHashMap, k)
-		}
-	}
-}
-
 func createContract() {
 	if len(solFile) == 0 && len(code) == 0 {
 		fmt.Println("Code or solidity file not specified.")
 		return
 	}
 
-	compileOutput, dispose, err := compileSol()
-	if err != nil {
-		fmt.Println("Failed to compile,", err.Error())
-		return
-	}
-	defer dispose()
+	// compile solidity file if specified.
+	var compileOutput *solCompileOutput
+	if len(solFile) > 0 {
+		output, dispose := compile(solFile)
+		if output == nil {
+			return
+		}
 
-	if compileOutput != nil {
-		code = compileOutput.HexByteCodes
+		compileOutput = output
+		code = output.HexByteCodes
+		defer dispose()
 	}
 
 	bytecode, err := hexutil.HexToBytes(code)
