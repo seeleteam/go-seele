@@ -85,6 +85,24 @@ func getContractCompilationOutput(db database.Database, contractAddress []byte) 
 	return &output
 }
 
+func getFromAddress(statedb *state.Statedb) common.Address {
+	if len(account) == 0 {
+		from := *crypto.MustGenerateRandomAddress()
+		statedb.CreateAccount(from)
+		statedb.SetBalance(from, new(big.Int).SetUint64(100))
+		statedb.SetNonce(from, DefaultNonce)
+		return from
+	}
+
+	from, err := common.HexToAddress(account)
+	if err != nil {
+		fmt.Println("Invalid account address,", err.Error())
+		return common.EmptyAddress
+	}
+
+	return from
+}
+
 // preprocessContract creates the contract tx dependent state DB, blockchain store
 func preprocessContract() (database.Database, *state.Statedb, store.BlockchainStore, func(), error) {
 	db, err := leveldb.NewLevelDB(defaultDir)

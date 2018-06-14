@@ -17,7 +17,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 )
 
@@ -124,9 +123,13 @@ func buildSolCompileFuncHash(content string, output *solCompileOutput) {
 			continue
 		}
 
+		if !strings.HasPrefix(line, "0x") {
+			line = "0x" + line
+		}
+
 		// add mapping: funcFullName <-> hash
-		hash := "0x" + line[:8]
-		funcFullName := string(line[10:])
+		hash := line[:10]
+		funcFullName := string(line[12:])
 		output.FunctionHashMap[funcFullName] = hash
 
 		// add mapping: funcShortName <-> hash
@@ -179,18 +182,9 @@ func createContract() {
 	defer dispose()
 
 	// Get an account to create the contract
-	var from common.Address
-	if account == "" {
-		from = *crypto.MustGenerateRandomAddress()
-		statedb.CreateAccount(from)
-		statedb.SetBalance(from, new(big.Int).SetUint64(100))
-		statedb.SetNonce(from, DefaultNonce)
-	} else {
-		from, err = common.HexToAddress(account)
-		if err != nil {
-			fmt.Println("Invalid account address,", err.Error())
-			return
-		}
+	from := getFromAddress(statedb)
+	if from.IsEmpty() {
+		return
 	}
 
 	// Create a contract
@@ -211,6 +205,7 @@ func createContract() {
 	fmt.Println("Succeed to create contract!")
 	fmt.Println("Contract address:", hexutil.BytesToHex(receipt.ContractAddress))
 
+	// Save contract info
 	setGlobalContractAddress(db, hexutil.BytesToHex(receipt.ContractAddress))
 
 	if compileOutput != nil {
