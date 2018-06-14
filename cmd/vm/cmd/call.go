@@ -12,7 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/spf13/cobra"
 )
 
@@ -49,29 +49,14 @@ func callContract(contractHexAddr string, input string) {
 	defer dispose()
 
 	// Get the invoking address
-	var from common.Address
-	if account == "" {
-		from = *crypto.MustGenerateRandomAddress()
-		statedb.CreateAccount(from)
-		statedb.SetBalance(from, new(big.Int).SetUint64(100))
-		statedb.SetNonce(from, DefaultNonce)
-	} else {
-		from, err = common.HexToAddress(account)
-		if err != nil {
-			fmt.Println("Invalid account address,", err.Error())
-			return
-		}
+	from := getFromAddress(statedb)
+	if from.IsEmpty() {
+		return
 	}
 
 	// Contract address
-	var contractAddr common.Address
-	if len(contractHexAddr) > 0 {
-		if contractAddr, err = common.HexToAddress(contractHexAddr); err != nil {
-			fmt.Println("Invalid contract address,", err.Error())
-			return
-		}
-	} else if contractAddr = getGlobalContractAddress(db); contractAddr.IsEmpty() {
-		fmt.Println("Contract address not specified.")
+	contractAddr := getContractAddress(db)
+	if contractAddr.IsEmpty() {
 		return
 	}
 
@@ -118,4 +103,23 @@ func callContract(contractHexAddr string, input string) {
 			fmt.Printf("\tdata[%v]: %v\n", i, log.Data[i*32:i*32+32])
 		}
 	}
+}
+
+func getContractAddress(db database.Database) common.Address {
+	if len(contractHexAddr) == 0 {
+		addr := getGlobalContractAddress(db)
+		if addr.IsEmpty() {
+			fmt.Println("Contract address not specified.")
+		}
+
+		return addr
+	}
+
+	addr, err := common.HexToAddress(contractHexAddr)
+	if err != nil {
+		fmt.Println("Invalid contract address,", err.Error())
+		return common.EmptyAddress
+	}
+
+	return addr
 }
