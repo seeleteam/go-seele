@@ -52,7 +52,7 @@ var createCmd = &cobra.Command{
 
 func compileSol() (*solCompileOutput, func(), error) {
 	if len(solFile) == 0 {
-		return nil, nil, nil
+		return nil, func() {}, nil
 	}
 
 	if !common.FileOrFolderExists(solFile) {
