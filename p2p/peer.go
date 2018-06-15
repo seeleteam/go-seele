@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	pingInterval         = 15 * time.Second                 // ping interval for peer tcp connection. Should be 15
-	discServerQuit       = "disconnect because server quit" // p2p.server need quit, all peers should quit as it can
+	pingInterval   = 15 * time.Second                 // ping interval for peer tcp connection. Should be 15
+	discServerQuit = "disconnect because server quit" // p2p.server need quit, all peers should quit as it can
 )
 
 // Peer represents a connected remote node.
@@ -280,6 +280,7 @@ type PeerInfo struct {
 		RemoteAddress string `json:"remoteAddress"` // Remote endpoint of the TCP data connection
 	} `json:"network"`
 	Protocols map[string]interface{} `json:"protocols"` // Sub-protocol specific metadata fields
+	Shard     uint                   `json:"shard"`     // shard id of the node
 }
 
 // Info returns data of the peer but not contain id and name.
@@ -305,6 +306,7 @@ func (p *Peer) Info() *PeerInfo {
 		ID:        p.Node.ID.ToHex(),
 		Caps:      caps,
 		Protocols: protocols,
+		Shard:     p.getShardNumber(),
 	}
 	info.Network.LocalAddress = p.LocalAddr().String()
 	info.Network.RemoteAddress = p.RemoteAddr().String()

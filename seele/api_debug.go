@@ -6,6 +6,8 @@
 package seele
 
 import (
+	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -70,5 +72,51 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
 	txPool := api.s.TxPool()
 	*result = uint64(txPool.GetProcessableTransactionsCount())
+	return nil
+}
+
+// TpsInfo tps detail info
+type TpsInfo struct {
+	StartHeight uint64
+	EndHeight   uint64
+	Count       uint64
+	Duration    uint64
+}
+
+// GetTPS get tps info
+func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
+	chain := api.s.BlockChain()
+	block := chain.CurrentBlock()
+	timeInterval := uint64(300)
+	if block.Header.Height == 0 {
+		return nil
+	}
+
+	var count = uint64(len(block.Transactions) - 1)
+	var duration uint64
+	var endHeight uint64
+	startTime := block.Header.CreateTimestamp.Uint64()
+	for height := block.Header.Height - 1; height > 0; height-- {
+		current, err := chain.GetStore().GetBlockByHeight(height)
+		if err != nil {
+			return fmt.Errorf("get block failed, error:%s, block height:%d", err, height)
+		}
+
+		count += uint64(len(current.Transactions) - 1)
+		duration = startTime - current.Header.CreateTimestamp.Uint64()
+		endHeight = height
+
+		if duration > timeInterval {
+			break
+		}
+	}
+
+	*result = TpsInfo{
+		StartHeight: endHeight,
+		EndHeight:   block.Header.Height,
+		Count:       count,
+		Duration:    duration,
+	}
+
 	return nil
 }

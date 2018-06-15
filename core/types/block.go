@@ -51,7 +51,7 @@ func (header *BlockHeader) Hash() common.Hash {
 // Block represents a block in the blockchain.
 type Block struct {
 	HeaderHash   common.Hash    // HeaderHash is the hash of the RLP encoded header bytes
-	Header       *BlockHeader   // Header is the block header
+	Header       *BlockHeader   // Header is the block header, a block header is about 165byte
 	Transactions []*Transaction // Transactions is the block payload
 }
 
@@ -78,6 +78,14 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Blo
 	block.HeaderHash = block.Header.Hash()
 
 	return block
+}
+
+func (block *Block) GetExcludeRewardTransactions() []*Transaction {
+	if len(block.Transactions) == 0 {
+		return block.Transactions
+	}
+
+	return block.Transactions[1:]
 }
 
 // FindTransaction returns the transaction of the specified hash if found. Otherwise, it returns nil.

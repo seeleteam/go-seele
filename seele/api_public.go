@@ -6,15 +6,15 @@
 package seele
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/miner"
-	"github.com/seeleteam/go-seele/p2p"
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -60,7 +60,7 @@ type GetTxByBlockHashAndIndexRequest struct {
 
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
-	block, _ := api.s.chain.CurrentBlock()
+	block := api.s.chain.CurrentBlock()
 
 	*info = MinerInfo{
 		Coinbase:           api.s.miner.GetCoinbase(),
@@ -77,7 +77,11 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 		*account = api.s.Miner().GetCoinbase()
 	}
 
-	state := api.s.chain.CurrentState()
+	state, err := api.s.chain.GetCurrentState()
+	if err != nil {
+		return err
+	}
+
 	balance := state.GetBalance(*account)
 	result.Set(balance)
 	return nil
@@ -88,7 +92,9 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
 	shard := tx.Data.From.Shard()
 	var err error
 	if shard != common.LocalShardNumber {
-		api.s.seeleProtocol.SendDifferentShardTx(tx, shard)
+		if err = tx.ValidateWithoutState(true); err == nil {
+			api.s.seeleProtocol.SendDifferentShardTx(tx, shard)
+		}
 	} else {
 		err = api.s.txPool.AddTransaction(tx)
 	}
@@ -104,7 +110,11 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
 
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint64) error {
-	state := api.s.chain.CurrentState()
+	state, err := api.s.chain.GetCurrentState()
+	if err != nil {
+		return err
+	}
+
 	*nonce = state.GetNonce(*account)
 
 	return nil
@@ -112,7 +122,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint6
 
 // GetBlockHeight get the block height of the chain head
 func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) error {
-	block, _ := api.s.chain.CurrentBlock()
+	block := api.s.chain.CurrentBlock()
 	*height = block.Header.Height
 
 	return nil
@@ -159,81 +169,6 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 	return nil
 }
 
-// PrivateNetworkAPI provides an API to access network information.
-type PrivateNetworkAPI struct {
-	s *SeeleService
-}
-
-// NewPrivateNetworkAPI creates a new PrivateNetworkAPI object for rpc service.
-func NewPrivateNetworkAPI(s *SeeleService) *PrivateNetworkAPI {
-	return &PrivateNetworkAPI{s}
-}
-
-// GetPeersInfo returns all the information of peers at the protocol granularity.
-func (n *PrivateNetworkAPI) GetPeersInfo(input interface{}, result *[]p2p.PeerInfo) error {
-	*result = *n.s.p2pServer.PeersInfo()
-	return nil
-}
-
-// GetPeerCount returns the count of peers
-func (n *PrivateNetworkAPI) GetPeerCount(input interface{}, result *int) error {
-	*result = n.s.p2pServer.PeerCount()
-	return nil
-}
-
-// GetNetworkVersion returns the network version
-func (n *PrivateNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
-	*result = n.s.NetVersion()
-	return nil
-}
-
-// GetProtocolVersion returns the current seele protocol version this node supports
-func (n *PrivateNetworkAPI) GetProtocolVersion(input interface{}, result *uint) error {
-	*result = n.s.seeleProtocol.Protocol.Version
-	return nil
-}
-
-// PrivateMinerAPI provides an API to access miner information.
-type PrivateMinerAPI struct {
-	s *SeeleService
-}
-
-// NewPrivateMinerAPI creates a new PrivateMinerAPI object for miner rpc service.
-func NewPrivateMinerAPI(s *SeeleService) *PrivateMinerAPI {
-	return &PrivateMinerAPI{s}
-}
-
-// Start API is used to start the miner with the given number of threads.
-func (api *PrivateMinerAPI) Start(threads *int, result *string) error {
-	if threads == nil {
-		threads = new(int)
-	}
-	api.s.miner.SetThreads(*threads)
-
-	if api.s.miner.IsMining() {
-		return miner.ErrMinerIsRunning
-	}
-
-	return api.s.miner.Start()
-}
-
-// Stop API is used to stop the miner.
-func (api *PrivateMinerAPI) Stop(input *string, result *string) error {
-	if !api.s.miner.IsMining() {
-		return miner.ErrMinerIsStopped
-	}
-	api.s.miner.Stop()
-
-	return nil
-}
-
-// Hashrate returns the POW hashrate.
-func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
-	*hashrate = uint64(api.s.miner.Hashrate())
-
-	return nil
-}
-
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx
 func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (map[string]interface{}, error) {
 	head := b.Header
@@ -271,10 +206,15 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 
 // PrintableOutputTx converts the given tx to the RPC output
 func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
+	toAddr := ""
+	if !tx.Data.To.IsEmpty() {
+		toAddr = tx.Data.To.ToHex()
+	}
+
 	transaction := map[string]interface{}{
 		"hash":         tx.Hash.ToHex(),
 		"from":         tx.Data.From.ToHex(),
-		"to":           tx.Data.To.ToHex(),
+		"to":           toAddr,
 		"amount":       tx.Data.Amount,
 		"accountNonce": tx.Data.AccountNonce,
 		"payload":      tx.Data.Payload,
@@ -284,11 +224,83 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	return transaction
 }
 
+// PrintableReceipt converts the given Receipt to the RPC output
+func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
+	outMap := map[string]interface{}{
+		"result":    hexutil.BytesToHex(re.Result),
+		"poststate": re.PostState.ToHex(),
+		"txhash":    re.TxHash.ToHex(),
+		"contract":  "",
+	}
+
+	if len(re.ContractAddress) > 0 {
+		contractAddr, err := common.NewAddress(re.ContractAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		outMap["contract"] = contractAddr.ToHex()
+	}
+
+	if len(re.Logs) > 0 {
+		var logOuts []map[string]interface{}
+
+		for _, log := range re.Logs {
+			logOut, err := printableLog(log)
+			if err != nil {
+				return nil, err
+			}
+
+			logOuts = append(logOuts, logOut)
+		}
+
+		outMap["logs"] = logOuts
+	}
+
+	return outMap, nil
+}
+
+func printableLog(log *types.Log) (map[string]interface{}, error) {
+	if (len(log.Data) % 32) > 0 {
+		return nil, fmt.Errorf("invalid log data length %v", len(log.Data))
+	}
+
+	outMap := map[string]interface{}{
+		"address": log.Address.ToHex(),
+	}
+
+	// data
+	dataLen := len(log.Data) / 32
+	if dataLen > 0 {
+		var data []string
+		for i := 0; i < dataLen; i++ {
+			data = append(data, hexutil.BytesToHex(log.Data[i*32:(i+1)*32]))
+		}
+		outMap["data"] = data
+	}
+
+	// topics
+	switch len(log.Topics) {
+	case 0:
+		// do not print empty topic
+	case 1:
+		outMap["topic"] = log.Topics[0].ToHex()
+	default:
+		var topics []string
+		for _, t := range log.Topics {
+			topics = append(topics, t.ToHex())
+		}
+		outMap["topics"] = fmt.Sprintf("[%v]", strings.Join(topics, ", "))
+	}
+
+	return outMap, nil
+}
+
 // getBlock returns block by height,when height is -1 the chain head is returned
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height == -1 {
-		block, _ = chain.CurrentBlock()
+		block = chain.CurrentBlock()
 	} else {
 		var err error
 		block, err = chain.GetStore().GetBlockByHeight(uint64(height))

@@ -17,15 +17,20 @@ import (
 
 // Config infos for influxdb
 type Config struct {
-	Addr     string        `json:"Addr"`
-	Database string        `json:"Database"`
-	Username string        `json:"Username"`
-	Password string        `json:"Password"`
-	Duration time.Duration `json:"Duration"`
+	Addr     string        `json:"address"`
+	Database string        `json:"database"`
+	Username string        `json:"username"`
+	Password string        `json:"password"`
+	Duration time.Duration `json:"duration"`
 }
 
 // StartMetricsWithConfig start recording metrics with configure
 func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
+	if conf == nil {
+		log.Error("Starting the metrics failed: the config of metrics is null")
+		return
+	}
+
 	StartMetrics(
 		time.Second*conf.Duration,
 		conf.Addr,
@@ -66,6 +71,7 @@ func StartMetrics(
 			"networkid": fmt.Sprint(networkID),
 			"version":   version,
 			"coinbase":  coinBase.ToHex(),
+			"shardid":   fmt.Sprint(common.LocalShardNumber),
 		},
 		log,
 	)

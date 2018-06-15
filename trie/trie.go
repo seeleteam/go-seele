@@ -34,7 +34,12 @@ type Trie struct {
 // ShallowCopy returns a new trie with the same root.
 func (t *Trie) ShallowCopy() (*Trie, error) {
 	rootHash := t.Hash()
-	return NewTrie(rootHash, t.dbprefix, t.db)
+	t, err := NewTrie(rootHash, t.dbprefix, t.db)
+	if err != nil {
+		return t, fmt.Errorf("request hash: %s, error: %s", rootHash.ToHex(), err)
+	}
+
+	return t, nil
 }
 
 // NewTrie new a trie tree
@@ -529,8 +534,8 @@ func keybytesToHex(str []byte) []byte {
 	l := len(str)*2 + 1
 	var nibbles = make([]byte, l)
 	for i, b := range str {
-		nibbles[i*2] = b / byte(numBranchChildren - 1)   // now is b / 16
-		nibbles[i*2+1] = b % byte(numBranchChildren - 1) // now is b% 16
+		nibbles[i*2] = b / byte(numBranchChildren-1)   // now is b / 16
+		nibbles[i*2+1] = b % byte(numBranchChildren-1) // now is b% 16
 	}
 	nibbles[l-1] = byte(numBranchChildren - 1) // term key is 16
 	return nibbles

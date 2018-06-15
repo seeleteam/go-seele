@@ -18,6 +18,8 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
@@ -25,8 +27,9 @@ var (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
-	// block transaction number limit
-	BlockTransactionNumberLimit = 500
+	// block transaction number limit, 1000 simple transactions are about 152kb
+	// If for block size as 100KB, it could contains about 5k transactions
+	BlockTransactionNumberLimit = 5000
 )
 
 var (
@@ -99,11 +102,11 @@ type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
 	engine         consensusEngine
-	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves *BlockLeaves
+	log         *log.SeeleLog
 }
 
 // NewBlockchain returns an initialized block chain with the given store and account state DB.
@@ -115,11 +118,6 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 
 	var err error
-	bc.headerChain, err = NewHeaderChain(bcStore)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
@@ -156,27 +154,35 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	blockIndex := NewBlockIndex(currentState, currentBlock, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
+	bc.log = log.GetLogger("blockchain", common.LogConfig.PrintLog)
 
 	return bc, nil
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
-func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
+func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
 	index := bc.blockLeaves.GetBestBlockIndex()
 	if index == nil {
-		return nil, nil
+		return nil
 	}
 
-	return index.currentBlock, index.state
+	return index.currentBlock
 }
 
-// CurrentState returns the state DB of the current block.
-func (bc *Blockchain) CurrentState() *state.Statedb {
-	_, state := bc.CurrentBlock()
-	return state
+// GetCurrentState returns the state DB of the current block.
+func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
+	block := bc.CurrentBlock()
+	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+}
+
+// GetCurrentInfo return the current block and current state info
+func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
+	block := bc.CurrentBlock()
+	statedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	return block, statedb, err
 }
 
 // WriteBlock writes the specified block to the blockchain store.
@@ -248,19 +254,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
-
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
-	bc.blockLeaves.Add(blockIndex)
-	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
-	bc.headerChain.WriteHeader(currentBlock.Header)
-
-	// If the new block has larger TD, the canonical chain will be changed.
-	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
-	if isHead {
-		if err = bc.updateHashByHeight(block); err != nil {
-			return err
-		}
-	}
 
 	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
 		return err
@@ -276,7 +270,22 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
+	if isHead {
+		if err = bc.updateHashByHeight(block); err != nil {
+			return err
+		}
+	}
+
+	// update block header after meta info updated
+	bc.blockLeaves.Add(blockIndex)
+	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
+
 	committed = true
+	if isHead {
+		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
+	}
 
 	return nil
 }
@@ -352,7 +361,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	}
 
 	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
+	if minerRewardTx.Data.To.IsEmpty() {
 		return nil, ErrBlockInvalidToAddress
 	}
 
@@ -371,9 +380,9 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
 		return nil, err
 	}
-	
+
 	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {
-	    return nil, types.ErrTimestampMismatch
+		return nil, types.ErrTimestampMismatch
 	}
 
 	return minerRewardTx, nil
@@ -381,7 +390,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
+	stateObj := statedb.GetOrNewStateObject(minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
 	receipts := make([]*types.Receipt, len(txs)+1)
@@ -395,7 +404,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 			return nil, err
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, i+1, *minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, i+1, minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
 			return nil, err
 		}

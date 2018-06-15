@@ -10,7 +10,8 @@
     "address": "0.0.0.0:39008",
     "privateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
     "staticNodes": [
-      "snode://57eac5663a4c74ba25619bb902651602a4491be4@127.0.0.1:39007[0]"
+      "127.0.0.1:39007",
+      "127.0.0.1:39008"
     ],
     "networkID": 1
   },
@@ -28,10 +29,6 @@
     ]
   },
   "genesis": {
-    "accounts": {
-      "0xb20e271c8560d39b02dfb7efe9610ff51fa4affc":100,
-      "0x7759da7498ba7f0b9081f501a3a4c37c492eb493":200
-    },
     "difficult":22,
     "shard":12
   }

@@ -33,8 +33,6 @@ var testGenesisAccounts = []*testAccount{
 }
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
-	common.IsShardDisabled = true
-
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -51,8 +49,6 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
-	common.IsShardDisabled = true
-
 	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
 		accounts[account.addr] = account.data.Amount
@@ -88,8 +84,6 @@ func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transa
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	common.IsShardDisabled = true
-
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.data.Amount, uint64(1))
 
@@ -188,7 +182,7 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(newBlock), error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	storedBlock, err := bc.bcStore.GetBlock(newBlock.HeaderHash)
@@ -210,7 +204,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	err := bc.WriteBlock(newBlock)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
@@ -227,14 +221,14 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 
 	block2 := newTestBlock(bc, block1.HeaderHash, 2, 3, 3)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ = bc.CurrentBlock()
+	currentBlock = bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block2)
 }
 
@@ -248,7 +242,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 	assert.Equal(t, bc.blockLeaves.Count(), 1)
 
@@ -326,11 +320,6 @@ func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHa
 }
 
 func Test_Blockchain_Shard(t *testing.T) {
-	common.IsShardDisabled = false
-	defer func() {
-		common.IsShardDisabled = true
-	}()
-
 	db, dispose := newTestDatabase()
 	defer dispose()
 

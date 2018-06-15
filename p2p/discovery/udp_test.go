@@ -9,22 +9,28 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
-func Test_addTrustNodes(t *testing.T) {
-	id1 := "snode://c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.0.1:9000[1]"
+func newTestUdp() *udp {
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	id2 := "snode://c3d04efa488d43d7d7e05a44791492c9979ff588@127.0.0.1:9888[1]"
+	id2 := "snode://0101f3c956d0a320b153a097c3d04efa488d6666@127.0.0.1:9888[1]"
 	node2, err := NewNodeFromString(id2)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	selfId := "snode://c3d04efa488d43d7d7e05a44791492c9979ff566@127.0.0.1:9666[1]"
+	selfId := "snode://0101f3c956d0a320b153a097c3d04efa48888888@127.0.0.1:9666[1]"
 	self, err := NewNodeFromString(selfId)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		panic(err)
+	}
 
 	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
-	u := &udp{
+	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
+	return &udp{
 		trustNodes: []*Node{node1, node2},
 		table:      newTable(self.ID, addr, 1, log),
 		self:       NewNodeWithAddr(self.ID, addr, 1),
@@ -32,10 +38,15 @@ func Test_addTrustNodes(t *testing.T) {
 		db:  NewDatabase(log),
 		log: log,
 	}
+}
 
-	u.addTrustNodes()
-	assert.Equal(t, len(u.db.m), 2)
+func Test_loadNodes(t *testing.T) {
+	u := newTestUdp()
+	u.addNode(u.trustNodes[0])
+	u.addNode(u.trustNodes[1])
+	u.db.SaveNodes(common.GetTempFolder())
 
-	u.addTrustNodes()
-	assert.Equal(t, len(u.db.m), 2)
+	assert.Equal(t, len(u.bootstrapNodes), 0)
+	u.loadNodes(common.GetTempFolder())
+	assert.Equal(t, len(u.bootstrapNodes), 2)
 }

@@ -1,33 +1,32 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"path"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
 )
 
 var (
-	dir        string
-	account    string
-	code       string
-	defaultDir string
+	code    string
+	solFile string
+	account string
+
+	defaultDir = filepath.Join(common.GetDefaultDataFolder(), "simulator")
 )
 
 func init() {
 	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a text file that contains the binary contract code in the local directory(Required)")
-	setCmd.MarkFlagRequired("code")
-
-	defaultDir = filepath.Join(common.GetDefaultDataFolder(), "simulator")
-	createCmd.Flags().StringVarP(&dir, "directory", "d", defaultDir, "test directory(Default is $HOME/.seele/simulator)")
-
+	createCmd.Flags().StringVarP(&solFile, "file", "f", "", "solidity file path")
 	createCmd.Flags().StringVarP(&account, "account", "a", "", "the account address(Default is random and has 100 balance)")
 	rootCmd.AddCommand(createCmd)
 }
@@ -35,35 +34,38 @@ func init() {
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create a contract",
-	Long:  `All contract simulators can create contracts. This is Seele contract simulator's`,
+	Long:  "Create a contract with specified bytecodes or compiled bytecodes from specified solidity file.",
 	Run: func(cmd *cobra.Command, args []string) {
 		createContract()
 	},
 }
 
 func createContract() {
-	// If the binary contract code is in a text file
-	if fileExt := path.Ext(code); fileExt == ".txt" {
-		b, err := ioutil.ReadFile(code)
-		if err != nil {
-			fmt.Print(err)
-		}
-		code = string(b)
+	if len(solFile) == 0 && len(code) == 0 {
+		fmt.Println("Code or solidity file not specified.")
+		return
 	}
-	// hex contract code to binary
+
+	// compile solidity file if specified.
+	var compileOutput *solCompileOutput
+	if len(solFile) > 0 {
+		output, dispose := compile(solFile)
+		if output == nil {
+			return
+		}
+
+		compileOutput = output
+		code = output.HexByteCodes
+		defer dispose()
+	}
+
 	bytecode, err := hexutil.HexToBytes(code)
 	if err != nil {
 		fmt.Println("Invalid code format,", err.Error())
 		return
 	}
 
-	// Get a directory to save the contract
-	if dir != defaultDir {
-		fmt.Println("Now the directory flag is unused")
-		return
-	}
-
-	statedb, bcStore, dispose, err := preprocessContract()
+	db, statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
 		fmt.Println("Failed to prepare the simulator environment,", err.Error())
 		return
@@ -71,18 +73,9 @@ func createContract() {
 	defer dispose()
 
 	// Get an account to create the contract
-	var from common.Address
-	if account == "" {
-		from = *crypto.MustGenerateRandomAddress()
-		statedb.CreateAccount(from)
-		statedb.SetBalance(from, new(big.Int).SetUint64(100))
-		statedb.SetNonce(from, DefaultNonce)
-	} else {
-		from, err = common.HexToAddress(account)
-		if err != nil {
-			fmt.Println("Invalid account address,", err.Error())
-			return
-		}
+	from := getFromAddress(statedb)
+	if from.IsEmpty() {
+		return
 	}
 
 	// Create a contract
@@ -102,4 +95,11 @@ func createContract() {
 	fmt.Println()
 	fmt.Println("Succeed to create contract!")
 	fmt.Println("Contract address:", hexutil.BytesToHex(receipt.ContractAddress))
+
+	// Save contract info
+	setGlobalContractAddress(db, hexutil.BytesToHex(receipt.ContractAddress))
+
+	if compileOutput != nil {
+		setContractCompilationOutput(db, receipt.ContractAddress, compileOutput)
+	}
 }

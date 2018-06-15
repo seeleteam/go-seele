@@ -145,8 +145,11 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		return
 	}
 
-	sp.log.Info("sp.synchronise called.")
-	block, _ := sp.chain.CurrentBlock()
+	if common.PrintExplosionLog {
+		sp.log.Debug("sp.synchronise called.")
+	}
+
+	block := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
@@ -174,7 +177,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
-	block, _ := sp.chain.CurrentBlock()
+	block := sp.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
@@ -246,7 +249,10 @@ loopOut:
 }
 
 func (p *SeeleProtocol) handleNewTx(e event.Event) {
-	p.log.Debug("find new tx")
+	if common.PrintExplosionLog {
+		p.log.Debug("find new tx")
+	}
+
 	tx := e.(*types.Transaction)
 
 	// find shardid by tx from address.
@@ -285,7 +291,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
 
-	block, _ := p.chain.CurrentBlock()
+	block := p.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
@@ -344,7 +350,10 @@ handler:
 			}
 		}
 
-		p.log.Info("got msg with type:%s", codeToStr(msg.Code))
+		if common.PrintExplosionLog {
+			p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
+		}
+
 		switch msg.Code {
 		case transactionHashMsgCode:
 			var txHash common.Hash
@@ -354,7 +363,9 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got tx hash %s", txHash.ToHex())
+			if common.PrintExplosionLog {
+				p.log.Debug("got tx hash %s", txHash.ToHex())
+			}
 
 			if !peer.knownTxs.Has(txHash) {
 				peer.knownTxs.Add(txHash) //update peer known transaction
@@ -375,7 +386,9 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got tx request %s", txHash.ToHex())
+			if common.PrintExplosionLog {
+				p.log.Debug("got tx request %s", txHash.ToHex())
+			}
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
@@ -397,7 +410,10 @@ handler:
 				break
 			}
 
-			p.log.Debug("received %d transactions", len(txs))
+			if common.PrintExplosionLog {
+				p.log.Debug("received %d transactions", len(txs))
+			}
+
 			for _, tx := range txs {
 				shard := tx.Data.From.Shard()
 				if shard != common.LocalShardNumber {
@@ -489,7 +505,7 @@ handler:
 
 				hash, err := p.chain.GetStore().GetBlockHash(curNum)
 				if err != nil {
-					p.log.Error("get error when get block hash by height. err: %s, height:%s", err, curNum)
+					p.log.Error("get error when get block hash by height. err: %s, height:%d", err, curNum)
 					break
 				}
 

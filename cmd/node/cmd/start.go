@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
+	miner2 "github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
@@ -24,6 +25,7 @@ import (
 var seeleNodeConfigFile *string
 var miner *string
 var metricsEnableFlag *bool
+var accountsConfig string
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -35,7 +37,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile)
+		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, accountsConfig)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
@@ -52,7 +54,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Create seele service and register the service
-		slog := log.GetLogger("seele", nCfg.LogConfig.PrintLog)
+		slog := log.GetLogger("seele", common.LogConfig.PrintLog)
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}
@@ -86,7 +88,7 @@ var startCmd = &cobra.Command{
 
 		if strings.ToLower(*miner) == "start" {
 			err = seeleService.Miner().Start()
-			if err != nil {
+			if err != nil && err != miner2.ErrMinerIsRunning {
 				fmt.Println("Starting the miner failed: ", err.Error())
 				return
 			}
@@ -94,7 +96,7 @@ var startCmd = &cobra.Command{
 
 		if *metricsEnableFlag {
 			metrics.StartMetricsWithConfig(
-				&nCfg.MetricsConfig,
+				nCfg.MetricsConfig,
 				slog,
 				nCfg.BasicConfig.Name,
 				nCfg.BasicConfig.Version,
@@ -117,4 +119,6 @@ func init() {
 	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
 
 	metricsEnableFlag = startCmd.Flags().BoolP("metrics", "t", false, "start metrics")
+
+	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 }

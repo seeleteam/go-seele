@@ -88,6 +88,11 @@ func (id Address) Equal(b Address) bool {
 	return bytes.Equal(id[:], b[:])
 }
 
+// IsEmpty returns true if this address is empty. Otherwise, false.
+func (id Address) IsEmpty() bool {
+	return id.Equal(EmptyAddress)
+}
+
 // HexToAddress converts the specified HEX string to address.
 func HexToAddress(id string) (Address, error) {
 	byte, err := hexutil.HexToBytes(id)
@@ -152,10 +157,6 @@ func (id *Address) UnmarshalText(json []byte) error {
 
 // Shard returns the shard number of this address.
 func (id Address) Shard() uint {
-	if IsShardDisabled {
-		return UndefinedShardNumber
-	}
-
 	var sum uint
 
 	// sum [0:18]
