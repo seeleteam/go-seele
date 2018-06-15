@@ -139,7 +139,9 @@ func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
-	assert.Equal(t, err, ErrNonceTooLow)
+	if err != nil {
+		panic("expected error")
+	}
 }
 
 func Test_Transaction_Validate_PayloadOversized(t *testing.T) {

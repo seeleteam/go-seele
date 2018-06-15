@@ -25,7 +25,12 @@ import (
 
 var tps int
 var debug bool
-var onlytps bool
+
+// send tx mode
+// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
+// mode 2: send tx with amount 1 and don't care about new balances
+// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
+var mode int
 
 var balanceList []*balance
 var balanceListLock sync.Mutex
@@ -50,24 +55,96 @@ var sendTxCmd = &cobra.Command{
 		initClient()
 		balanceList = initAccount()
 
-		wg.Add(1)
-		go loopSend()
+		fmt.Println("use mode ", mode)
 
-		if !onlytps {
+		if mode == 3 {
 			wg.Add(1)
-			go loopCheck()
+			loopSendMode3()
+		} else {
+			wg.Add(1)
+			go loopSendMode1_2()
+		}
+
+		if mode == 1 {
+			wg.Add(1)
+			go loopCheckMode1()
 		}
 
 		wg.Wait()
 	},
 }
 
+var tpsStartTime time.Time
+var tpsCount = 0
+
+func loopSendMode3() {
+	defer wg.Done()
+
+	balances := newBalanceMode3()
+	nextBalances := newBalanceMode3()
+	splitNum := len(balanceList) / 3
+
+	copy(nextBalances[0], balanceList[0:splitNum])
+	fmt.Println("balance 1 length ", len(nextBalances[0]))
+
+	copy(nextBalances[1], balanceList[splitNum:2*splitNum])
+	fmt.Println("balance 1 length ", len(nextBalances[1]))
+
+	copy(nextBalances[2], balanceList[2*splitNum:])
+	fmt.Println("balance 2 length ", len(nextBalances[2]))
+
+
+	tpsStartTime = time.Now()
+	// send tx periodically
+	for {
+		SendMode3(balances[0], nextBalances[0])
+		SendMode3(balances[1], nextBalances[1])
+		SendMode3(balances[2], nextBalances[2])
+	}
+}
+
+func newBalanceMode3() [][]*balance {
+	balances := make([][]*balance, 3)
+	splitNum := len(balanceList) / 3
+
+	balances[0] = make([]*balance, splitNum)
+	balances[1] = make([]*balance, splitNum)
+	balances[2] = make([]*balance, len(balanceList) - 2*splitNum)
+
+	return balances
+}
+
+func SendMode3(current []*balance, next []*balance) {
+	copy(current, next)
+	for i, b := range current {
+		newBalance := send(b)
+		if debug {
+			fmt.Printf("send tx %s, account %s, nonce %d\n", newBalance.tx.ToHex(), b.address.ToHex(), b.nonce - 1)
+		}
+
+		next[i] = newBalance
+
+		tpsCount++
+		if tpsCount == tps {
+			fmt.Println("send txs ", tpsCount)
+			elapse := time.Now().Sub(tpsStartTime)
+			if elapse < time.Second {
+				time.Sleep(time.Second - elapse)
+			}
+
+			tpsCount = 0
+			tpsStartTime = time.Now()
+		}
+	}
+}
+
 var txCh = make(chan *balance, 100000)
 
-func loopSend() {
+func loopSendMode1_2() {
 	defer wg.Done()
+
 	count := 0
-	tpsStartTime := time.Now()
+	tpsStartTime = time.Now()
 
 	// send tx periodically
 	for {
@@ -108,7 +185,7 @@ func loopSend() {
 	}
 }
 
-func loopCheck() {
+func loopCheckMode1() {
 	defer wg.Done()
 	toPackedBalanceList := make([]*balance, 0)
 	toConfirmBalanceList := make(map[time.Time][]*balance)
@@ -159,6 +236,11 @@ func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) 
 			} else if result["status"] == "pool" {
 				pending = append(pending, b)
 			}
+
+			if debug {
+				fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.ToHex(), result["from"],
+					result["accountNonce"], result["status"], result["amount"])
+			}
 		}
 	}
 
@@ -180,8 +262,10 @@ func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 
 func send(b *balance) *balance {
 	var amount = 1
-	if !onlytps {
+	if mode == 1 {
 		amount = rand.Intn(b.amount) // for test, amount will always keep in int value.
+	} else if mode == 3 {
+		amount = b.amount
 	}
 
 	addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
@@ -324,6 +408,5 @@ func init() {
 	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
-	sendTxCmd.Flags().BoolVarP(&onlytps, "onlytps", "", false, "only tps will stop balance update "+
-		"and transfer only 1 Seele at a time. This is used for large tps test.")
+	sendTxCmd.Flags().IntVarP(&mode, "mode", "m", 1, "send tx mode")
 }
