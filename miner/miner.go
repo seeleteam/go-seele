@@ -96,6 +96,11 @@ func (miner *Miner) SetThreads(threads int) {
 	miner.threads = threads
 }
 
+// SetCoinbase set the coinbase.
+func (miner *Miner) SetCoinbase(coinbase common.Address) {
+	miner.coinbase = coinbase
+}
+
 // Start is used to start the miner
 func (miner *Miner) Start() error {
 	if atomic.LoadInt32(&miner.mining) == 1 {

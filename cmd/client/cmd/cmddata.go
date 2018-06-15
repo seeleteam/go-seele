@@ -291,5 +291,47 @@ func NewCmdData() []*Request {
 				},
 			},
 		},
+		&Request{
+			Use:   "setminerthreads",
+			Short: "set miner threads",
+			Long: `For example:
+  			client.exe setminerthreads -t 2`,
+			ParamReflectType: "int",
+			Method:           "miner.SetThreads",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "thread",
+					FlagName:     "thread",
+					ShortFlag:    "t",
+					ParamType:    "*int",
+					DefaultValue: 0,
+					Usage:        "threads of the miner",
+					Required:     true,
+				},
+			},
+			Handler: func(interface{}) { fmt.Println("succeed to set miner thread number") },
+		},
+		&Request{
+			Use:   "setcoinbase",
+			Short: "set coinbase",
+			Long: `For example:
+  			client.exe setcoinbase -c "0x4c10f2cd2159bb432094e3be7e17904c2b4aeb21"`,
+			ParamReflectType: "string",
+			Method:           "miner.SetCoinbase",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "coinbaseStr",
+					FlagName:     "coinbase",
+					ShortFlag:    "c",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "coinbase of the miner",
+					Required:     true,
+				},
+			},
+			Handler: func(interface{}) { fmt.Println("miner set coinbase succeed") },
+		},
 	}
 }

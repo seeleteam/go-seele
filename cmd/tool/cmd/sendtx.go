@@ -38,7 +38,7 @@ type balance struct {
 	shard      uint
 	nonce      uint64
 	tx         *common.Hash
-	packed bool
+	packed     bool
 }
 
 var sendTxCmd = &cobra.Command{
@@ -120,14 +120,14 @@ func loopCheck() {
 		select {
 		case b := <-txCh:
 			toPackedBalanceList = append(toPackedBalanceList, b)
-		case <- checkPack.C:
+		case <-checkPack.C:
 			included, pending := getIncludedAndPendingBalance(toPackedBalanceList)
 			toPackedBalanceList = pending
 
 			fmt.Printf("to packed balance: %d, new: %d\n", len(toPackedBalanceList), len(pending))
 			toConfirmBalanceList[time.Now()] = included
 			toPackedBalanceList = pending
-		case <- confirm.C:
+		case <-confirm.C:
 			for key, value := range toConfirmBalanceList {
 				duration := time.Now().Sub(key)
 				if duration > confirmTime {
@@ -178,6 +178,40 @@ func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 	return result
 }
 
+func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) {
+	include := make([]*balance, 0)
+	pending := make([]*balance, 0)
+	for _, b := range balances {
+		if b.tx == nil {
+			continue
+		}
+
+		result := getTx(*b.address, *b.tx)
+		if len(result) > 0 {
+			if result["status"] == "block" {
+				include = append(include, b)
+			} else if result["status"] == "pool" {
+				pending = append(pending, b)
+			}
+		}
+	}
+
+	return include, pending
+}
+
+func getTx(address common.Address, hash common.Hash) map[string]interface{} {
+	client := getClient(address)
+	var result map[string]interface{}
+	addrStr := hash.ToHex()
+	err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
+	if err != nil {
+		fmt.Println("get tx failed ", err, " tx hash ", hash.ToHex())
+		return result
+	}
+
+	return result
+}
+
 func send(b *balance) *balance {
 	var amount = 1
 	if !onlytps {
@@ -191,7 +225,7 @@ func send(b *balance) *balance {
 		amount:     amount,
 		shard:      addr.Shard(),
 		nonce:      0,
-		packed: false,
+		packed:     false,
 	}
 
 	value := big.NewInt(int64(amount))
@@ -265,7 +299,7 @@ func initAccount() []*balance {
 			privateKey: key,
 			amount:     amount,
 			shard:      addr.Shard(),
-			packed: false,
+			packed:     false,
 		}
 
 		fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
@@ -324,6 +358,6 @@ func init() {
 	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
-	sendTxCmd.Flags().BoolVarP(&onlytps, "onlytps", "", false, "only tps will stop balance update " +
+	sendTxCmd.Flags().BoolVarP(&onlytps, "onlytps", "", false, "only tps will stop balance update "+
 		"and transfer only 1 Seele at a time. This is used for large tps test.")
 }
