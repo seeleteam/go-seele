@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/cmd/util"
@@ -23,6 +24,12 @@ import (
 )
 
 var tps int
+var debug bool
+var onlytps bool
+
+var balanceList []*balance
+var balanceListLock sync.Mutex
+var wg = sync.WaitGroup{}
 
 type balance struct {
 	address    *common.Address
@@ -31,6 +38,7 @@ type balance struct {
 	shard      uint
 	nonce      uint64
 	tx         *common.Hash
+	packed     bool
 }
 
 var sendTxCmd = &cobra.Command{
@@ -40,78 +48,98 @@ var sendTxCmd = &cobra.Command{
 	tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
-		balanceList := initAccount()
+		balanceList = initAccount()
 
-		var confirmTime = 3 * time.Minute
-		count := 0
-		tpsStartTime := time.Now()
-		toConfirmBalanceList := make(map[time.Time][]*balance)
-		newBalanceList := make([]*balance, 0)
-		// send tx periodically
-		for {
-			nextBalanceList := make([]*balance, 0)
-			for _, b := range balanceList {
-				newBalance := send(b)
+		wg.Add(1)
+		go loopSend()
 
-				if b.amount > 0 {
-					nextBalanceList = append(nextBalanceList, b)
-				}
-
-				if newBalance.amount > 0 {
-					newBalanceList = append(newBalanceList, newBalance)
-				}
-				count++
-
-				if count == tps {
-					fmt.Println("send txs ", count)
-					elapse := time.Now().Sub(tpsStartTime)
-					if elapse < time.Second {
-						time.Sleep(time.Second - elapse)
-					}
-
-					if len(newBalanceList) > 0 {
-						toConfirmBalanceList[time.Now()] = newBalanceList
-						newBalanceList = make([]*balance, 0)
-					}
-
-					count = 0
-					tpsStartTime = time.Now()
-
-					for _, value := range toConfirmBalanceList {
-						checkTxExist(value)
-					}
-				}
-			}
-
-			balanceList = nextBalanceList
-			for key, value := range toConfirmBalanceList {
-				duration := time.Now().Sub(key)
-				if duration > confirmTime {
-					included, pending := getIncludedAndPendingBalance(value)
-					balanceList = append(balanceList, included...)
-					if len(pending) == 0 {
-						delete(toConfirmBalanceList, key)
-					} else {
-						toConfirmBalanceList[key] = pending
-					}
-
-					fmt.Printf("add confirmed balance %d, pending %d\n", len(included), len(pending))
-				}
-			}
+		if !onlytps {
+			wg.Add(1)
+			go loopCheck()
 		}
+
+		wg.Wait()
 	},
 }
 
-func checkTxExist(balances []*balance) {
-	for _, b := range balances {
-		if b.tx == nil {
-			continue
+var txCh = make(chan *balance, 100000)
+
+func loopSend() {
+	defer wg.Done()
+	count := 0
+	tpsStartTime := time.Now()
+
+	// send tx periodically
+	for {
+		balanceListLock.Lock()
+		copyBalances := make([]*balance, len(balanceList))
+		copy(copyBalances, balanceList)
+		fmt.Printf("balance total length %d\n", len(balanceList))
+		balanceListLock.Unlock()
+
+		for _, b := range copyBalances {
+			newBalance := send(b)
+			if newBalance.amount > 0 {
+				txCh <- newBalance
+			}
+
+			count++
+			if count == tps {
+				fmt.Println("send txs ", count)
+				elapse := time.Now().Sub(tpsStartTime)
+				if elapse < time.Second {
+					time.Sleep(time.Second - elapse)
+				}
+
+				count = 0
+				tpsStartTime = time.Now()
+			}
 		}
 
-		result := getTx(*b.address, *b.tx)
-		if len(result) > 0 {
-			//fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.ToHex(), result["from"],
-			//	result["accountNonce"], result["status"], result["amount"])
+		balanceListLock.Lock()
+		nextBalanceList := make([]*balance, 0)
+		for _, b := range balanceList {
+			if b.amount > 0 {
+				nextBalanceList = append(nextBalanceList, b)
+			}
+		}
+		balanceList = nextBalanceList
+		balanceListLock.Unlock()
+	}
+}
+
+func loopCheck() {
+	defer wg.Done()
+	toPackedBalanceList := make([]*balance, 0)
+	toConfirmBalanceList := make(map[time.Time][]*balance)
+
+	var confirmTime = 2 * time.Minute
+	checkPack := time.NewTicker(30 * time.Second)
+	confirm := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case b := <-txCh:
+			toPackedBalanceList = append(toPackedBalanceList, b)
+		case <-checkPack.C:
+			included, pending := getIncludedAndPendingBalance(toPackedBalanceList)
+			toPackedBalanceList = pending
+
+			fmt.Printf("to packed balance: %d, new: %d\n", len(toPackedBalanceList), len(pending))
+			toConfirmBalanceList[time.Now()] = included
+			toPackedBalanceList = pending
+		case <-confirm.C:
+			for key, value := range toConfirmBalanceList {
+				duration := time.Now().Sub(key)
+				if duration > confirmTime {
+
+					balanceListLock.Lock()
+					balanceList = append(balanceList, value...)
+					fmt.Printf("add confirmed balance %d, new: %d\n", len(value), len(balanceList))
+					balanceListLock.Unlock()
+
+					delete(toConfirmBalanceList, key)
+				}
+			}
 		}
 	}
 }
@@ -151,7 +179,11 @@ func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 }
 
 func send(b *balance) *balance {
-	amount := rand.Intn(b.amount) // for test, amount will always keep in int value.
+	var amount = 1
+	if !onlytps {
+		amount = rand.Intn(b.amount) // for test, amount will always keep in int value.
+	}
+
 	addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
 	newBalance := &balance{
 		address:    addr,
@@ -159,17 +191,17 @@ func send(b *balance) *balance {
 		amount:     amount,
 		shard:      addr.Shard(),
 		nonce:      0,
+		packed:     false,
 	}
 
 	value := big.NewInt(int64(amount))
 	value.Mul(value, common.SeeleToFan)
 
-	// update nonce
-	b.nonce++
 	client := getRandClient()
 	tx, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
 	if ok {
-		// update balance by transaction amount
+		// update balance by transaction amount and update nonce
+		b.nonce++
 		b.amount -= amount
 		newBalance.tx = &tx.Hash
 	}
@@ -233,6 +265,7 @@ func initAccount() []*balance {
 			privateKey: key,
 			amount:     amount,
 			shard:      addr.Shard(),
+			packed:     false,
 		}
 
 		fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
@@ -290,4 +323,7 @@ func init() {
 
 	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
+	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
+	sendTxCmd.Flags().BoolVarP(&onlytps, "onlytps", "", false, "only tps will stop balance update "+
+		"and transfer only 1 Seele at a time. This is used for large tps test.")
 }
