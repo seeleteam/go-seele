@@ -178,40 +178,6 @@ func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 	return result
 }
 
-func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) {
-	include := make([]*balance, 0)
-	pending := make([]*balance, 0)
-	for _, b := range balances {
-		if b.tx == nil {
-			continue
-		}
-
-		result := getTx(*b.address, *b.tx)
-		if len(result) > 0 {
-			if result["status"] == "block" {
-				include = append(include, b)
-			} else if result["status"] == "pool" {
-				pending = append(pending, b)
-			}
-		}
-	}
-
-	return include, pending
-}
-
-func getTx(address common.Address, hash common.Hash) map[string]interface{} {
-	client := getClient(address)
-	var result map[string]interface{}
-	addrStr := hash.ToHex()
-	err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
-	if err != nil {
-		fmt.Println("get tx failed ", err, " tx hash ", hash.ToHex())
-		return result
-	}
-
-	return result
-}
-
 func send(b *balance) *balance {
 	var amount = 1
 	if !onlytps {
