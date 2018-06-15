@@ -93,7 +93,6 @@ func loopSendMode3() {
 	copy(nextBalances[2], balanceList[2*splitNum:])
 	fmt.Println("balance 2 length ", len(nextBalances[2]))
 
-
 	tpsStartTime = time.Now()
 	// send tx periodically
 	for {
@@ -109,7 +108,7 @@ func newBalanceMode3() [][]*balance {
 
 	balances[0] = make([]*balance, splitNum)
 	balances[1] = make([]*balance, splitNum)
-	balances[2] = make([]*balance, len(balanceList) - 2*splitNum)
+	balances[2] = make([]*balance, len(balanceList)-2*splitNum)
 
 	return balances
 }
@@ -119,7 +118,7 @@ func SendMode3(current []*balance, next []*balance) {
 	for i, b := range current {
 		newBalance := send(b)
 		if debug {
-			fmt.Printf("send tx %s, account %s, nonce %d\n", newBalance.tx.ToHex(), b.address.ToHex(), b.nonce - 1)
+			fmt.Printf("send tx %s, account %s, nonce %d\n", newBalance.tx.ToHex(), b.address.ToHex(), b.nonce-1)
 		}
 
 		next[i] = newBalance
