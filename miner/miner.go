@@ -183,7 +183,10 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 
 // newTxCallback handles the new tx event
 func (miner *Miner) newTxCallback(e event.Event) {
-	miner.log.Debug("got the new tx event")
+	if common.PrintExplosionLog {
+		miner.log.Debug("got the new tx event")
+	}
+
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil {
@@ -204,7 +207,7 @@ out:
 					break
 				}
 
-				miner.log.Info("found a new mined block, block height:%d", result.block.Header.Height)
+				miner.log.Info("found a new mined block, block height:%d, hash:%s", result.block.Header.Height, result.block.HeaderHash.ToHex())
 				ret := miner.saveBlock(result)
 				if ret != nil {
 					miner.log.Error("saving the block failed, for %s", ret.Error())
@@ -213,10 +216,10 @@ out:
 
 				miner.log.Info("saving block succeeded and notify p2p")
 				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
-				atomic.StoreInt32(&miner.mining, 0)
 				break
 			}
 
+			atomic.StoreInt32(&miner.mining, 0)
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
@@ -230,7 +233,10 @@ func (miner *Miner) prepareNewBlock() error {
 	miner.log.Debug("starting mining the new block")
 
 	timestamp := time.Now().Unix()
-	parent, stateDB := miner.seele.BlockChain().CurrentBlock()
+	parent, stateDB, err := miner.seele.BlockChain().GetCurrentInfo()
+	if err != nil {
+		return fmt.Errorf("get current info failed, %s", err)
+	}
 
 	if parent.Header.CreateTimestamp.Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
 		timestamp = parent.Header.CreateTimestamp.Int64() + 1
@@ -261,13 +267,7 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	txs := miner.seele.TxPool().GetProcessableTransactions()
-
-	cpyStateDB, err := stateDB.GetCopy()
-	if err != nil {
-		return fmt.Errorf("copy state db failed %s", err)
-	}
-
-	err = miner.current.applyTransactions(miner.seele, cpyStateDB, txs, miner.log)
+	err = miner.current.applyTransactions(miner.seele, stateDB, txs, miner.log)
 	if err != nil {
 		return fmt.Errorf("apply transaction failed %s", err)
 	}

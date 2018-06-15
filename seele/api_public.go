@@ -60,7 +60,7 @@ type GetTxByBlockHashAndIndexRequest struct {
 
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
-	block, _ := api.s.chain.CurrentBlock()
+	block := api.s.chain.CurrentBlock()
 
 	*info = MinerInfo{
 		Coinbase:           api.s.miner.GetCoinbase(),
@@ -77,7 +77,11 @@ func (api *PublicSeeleAPI) GetBalance(account *common.Address, result *big.Int) 
 		*account = api.s.Miner().GetCoinbase()
 	}
 
-	state := api.s.chain.CurrentState()
+	state, err := api.s.chain.GetCurrentState()
+	if err != nil {
+		return err
+	}
+
 	balance := state.GetBalance(*account)
 	result.Set(balance)
 	return nil
@@ -104,7 +108,11 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction, result *bool) error {
 
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint64) error {
-	state := api.s.chain.CurrentState()
+	state, err := api.s.chain.GetCurrentState()
+	if err != nil {
+		return err
+	}
+
 	*nonce = state.GetNonce(*account)
 
 	return nil
@@ -112,7 +120,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account *common.Address, nonce *uint6
 
 // GetBlockHeight get the block height of the chain head
 func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) error {
-	block, _ := api.s.chain.CurrentBlock()
+	block := api.s.chain.CurrentBlock()
 	*height = block.Header.Height
 
 	return nil
@@ -290,7 +298,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height == -1 {
-		block, _ = chain.CurrentBlock()
+		block = chain.CurrentBlock()
 	} else {
 		var err error
 		block, err = chain.GetStore().GetBlockByHeight(uint64(height))

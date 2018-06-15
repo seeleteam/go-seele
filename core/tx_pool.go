@@ -36,7 +36,7 @@ const (
 const chainHeaderChangeBuffSize = 100
 
 type blockchain interface {
-	CurrentState() *state.Statedb
+	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 }
 
@@ -88,7 +88,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 	newHeader := e.(common.Hash)
 	if newHeader.IsEmpty() {
-		return 
+		return
 	}
 
 	pool.chainHeaderChangeChannel <- newHeader
@@ -189,18 +189,8 @@ func getReinjectTransaction(chainStore store.BlockchainStore, newHeader, lastHea
 }
 
 func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
-	if len(txs) == 0 {
-		return
-	}
-
-	statedb, err := pool.chain.CurrentState().GetCopy()
-	if err != nil {
-		pool.log.Warn("get stated db failed, %s", err)
-		return
-	}
-
 	for _, tx := range txs {
-		if err := pool.addTransactionWithStateInfo(tx, statedb); err != nil {
+		if err := pool.AddTransaction(tx); err != nil {
 			pool.log.Warn("add transaction failed, %s", err)
 		}
 	}
@@ -213,9 +203,9 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
-	statedb, err := pool.chain.CurrentState().GetCopy()
+	statedb, err := pool.chain.GetCurrentState()
 	if err != nil {
-		return err
+		return fmt.Errorf("get current state db failed, error %s", err)
 	}
 
 	return pool.addTransactionWithStateInfo(tx, statedb)
@@ -326,10 +316,14 @@ func (pool *TransactionPool) RemoveTransactions() {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
+	state, err := pool.chain.GetCurrentState()
+	if err != nil {
+		pool.log.Warn("get current state failed %s", err)
+		return
+	}
+
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
-
-		state := pool.chain.CurrentState()
 		nonce := state.GetNonce(poolTx.Data.From)
 
 		// Transactions have been processed or are too old need to delete
