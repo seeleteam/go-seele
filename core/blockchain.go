@@ -160,22 +160,29 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
-func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
+func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
 	index := bc.blockLeaves.GetBestBlockIndex()
 	if index == nil {
-		return nil, nil
+		return nil
 	}
 
-	return index.currentBlock, index.state
+	return index.currentBlock
 }
 
-// CurrentState returns the state DB of the current block.
-func (bc *Blockchain) CurrentState() *state.Statedb {
-	_, state := bc.CurrentBlock()
-	return state
+// GetCurrentState returns the state DB of the current block.
+func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
+	block := bc.CurrentBlock()
+	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+}
+
+// GetCurrentInfo return the current block and current state info
+func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
+	block := bc.CurrentBlock()
+	statedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	return block, statedb, err
 }
 
 // WriteBlock writes the specified block to the blockchain store.

@@ -42,7 +42,7 @@ var sendTxCmd = &cobra.Command{
 		initClient()
 		balanceList := initAccount()
 
-		var confirmTime = 5 * time.Minute
+		var confirmTime = 3 * time.Minute
 		count := 0
 		tpsStartTime := time.Now()
 		toConfirmBalanceList := make(map[time.Time][]*balance)
@@ -87,12 +87,15 @@ var sendTxCmd = &cobra.Command{
 			for key, value := range toConfirmBalanceList {
 				duration := time.Now().Sub(key)
 				if duration > confirmTime {
-					fmt.Printf("add confirmed balance %d\n", len(value))
-					for _, v := range value {
-						fmt.Printf("account %s, balance %d\n", v.address.ToHex(), v.amount)
+					included, pending := getIncludedAndPendingBalance(value)
+					balanceList = append(balanceList, included...)
+					if len(pending) == 0 {
+						delete(toConfirmBalanceList, key)
+					} else {
+						toConfirmBalanceList[key] = pending
 					}
-					balanceList = append(balanceList, value...)
-					delete(toConfirmBalanceList, key)
+
+					fmt.Printf("add confirmed balance %d, pending %d\n", len(included), len(pending))
 				}
 			}
 		}
@@ -105,18 +108,46 @@ func checkTxExist(balances []*balance) {
 			continue
 		}
 
-		client := getClient(*b.address)
-		var result map[string]interface{}
-		addrStr := b.tx.ToHex()
-		err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
-		if err != nil {
-			fmt.Println("get tx failed ", err, " tx hash ", b.tx.ToHex())
-			continue
-		} else {
+		result := getTx(*b.address, *b.tx)
+		if len(result) > 0 {
 			//fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.ToHex(), result["from"],
 			//	result["accountNonce"], result["status"], result["amount"])
 		}
 	}
+}
+
+func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) {
+	include := make([]*balance, 0)
+	pending := make([]*balance, 0)
+	for _, b := range balances {
+		if b.tx == nil {
+			continue
+		}
+
+		result := getTx(*b.address, *b.tx)
+		if len(result) > 0 {
+			if result["status"] == "block" {
+				include = append(include, b)
+			} else if result["status"] == "pool" {
+				pending = append(pending, b)
+			}
+		}
+	}
+
+	return include, pending
+}
+
+func getTx(address common.Address, hash common.Hash) map[string]interface{} {
+	client := getClient(address)
+	var result map[string]interface{}
+	addrStr := hash.ToHex()
+	err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
+	if err != nil {
+		fmt.Println("get tx failed ", err, " tx hash ", hash.ToHex())
+		return result
+	}
+
+	return result
 }
 
 func send(b *balance) *balance {
