@@ -124,7 +124,7 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 		Signature: crypto.Signature{Sig: make([]byte, 0)},
 	}
 
-	if err := tx.validate(); err != nil {
+	if err := tx.ValidateWithoutState(false); err != nil {
 		return nil, err
 	}
 
@@ -133,8 +133,8 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 	return tx, nil
 }
 
-// validate validates state independent fields in tx.
-func (tx Transaction) validate() error {
+// ValidateWithoutState validates state independent fields in tx.
+func (tx Transaction) ValidateWithoutState(signNeeded bool) error {
 	// validate amount
 	if tx.Data.Amount == nil {
 		return ErrAmountNil
@@ -160,6 +160,24 @@ func (tx Transaction) validate() error {
 
 	if (tx.Data.To.IsEmpty() || tx.Data.To.Type() == common.AddressTypeContract) && len(tx.Data.Payload) == 0 {
 		return ErrPayloadEmpty
+	}
+
+	if !signNeeded {
+		return nil
+	}
+
+	// vaildate signature
+	if len(tx.Signature.Sig) == 0 {
+		return ErrSigMissing
+	}
+
+	txDataHash := crypto.MustHash(tx.Data)
+	if !txDataHash.Equal(tx.Hash) {
+		return ErrHashMismatch
+	}
+
+	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
+		return ErrSigInvalid
 	}
 
 	return nil
@@ -209,10 +227,10 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Signature = *crypto.MustSign(privKey, tx.Hash.Bytes())
 }
 
-// Validate returns true if the transaction is valid, otherwise false.
+// Validate validates all fields in tx.
 func (tx *Transaction) Validate(statedb stateDB) error {
 	// validate state independent fields
-	if err := tx.validate(); err != nil {
+	if err := tx.ValidateWithoutState(true); err != nil {
 		return err
 	}
 
@@ -236,20 +254,6 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
 		return ErrNonceTooLow
-	}
-
-	// vaildate signature
-	if len(tx.Signature.Sig) == 0 {
-		return ErrSigMissing
-	}
-
-	txDataHash := crypto.MustHash(tx.Data)
-	if !txDataHash.Equal(tx.Hash) {
-		return ErrHashMismatch
-	}
-
-	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
-		return ErrSigInvalid
 	}
 
 	return nil
