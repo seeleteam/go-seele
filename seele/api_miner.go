@@ -54,7 +54,7 @@ func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
 }
 
 // SetThreads  API is used to set the number of threads.
-func (api *PrivateMinerAPI) SetThreads(threads *int, result *string) error {
+func (api *PrivateMinerAPI) SetThreads(threads *int, result *interface{}) error {
 	if *threads < 0 {
 		return errors.New("threads should be greater than zero.")
 	}
@@ -64,7 +64,7 @@ func (api *PrivateMinerAPI) SetThreads(threads *int, result *string) error {
 }
 
 // SetCoinbase API is used to set the coinbase.
-func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *string) error {
+func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}) error {
 	coinbase, err := common.HexToAddress(*coinbaseStr)
 	if err != nil {
 		return err

@@ -296,7 +296,7 @@ func NewCmdData() []*Request {
 			Short: "set miner threads",
 			Long: `For example:
   			client.exe setminerthreads -t 2`,
-			ParamReflectType: "int",
+			ParamReflectType: "nil",
 			Method:           "miner.SetThreads",
 			UseWebsocket:     false,
 			Params: []*Param{
@@ -317,7 +317,7 @@ func NewCmdData() []*Request {
 			Short: "set coinbase",
 			Long: `For example:
   			client.exe setcoinbase -c "0x4c10f2cd2159bb432094e3be7e17904c2b4aeb21"`,
-			ParamReflectType: "string",
+			ParamReflectType: "nil",
 			Method:           "miner.SetCoinbase",
 			UseWebsocket:     false,
 			Params: []*Param{

@@ -85,13 +85,13 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				return
 			}
 
-			jsonOutput, err := json.MarshalIndent(output, "", "\t")
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			if output != nil {
+				jsonOutput, err := json.MarshalIndent(output, "", "\t")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
 
-			if len(string(jsonOutput)) > 2 {
 				fmt.Println("output :\n", string(jsonOutput))
 			}
 
