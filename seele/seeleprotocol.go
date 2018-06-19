@@ -432,13 +432,13 @@ handler:
 			}
 
 			for _, tx := range txs {
+				peer.knownTxs.Add(tx.Hash, nil)
 				shard := tx.Data.From.Shard()
 				if shard != common.LocalShardNumber {
 					p.SendDifferentShardTx(tx, shard)
 					continue
 				} else {
 					p.txPool.AddTransaction(tx)
-					peer.knownTxs.Add(tx.Hash, nil)
 				}
 			}
 
@@ -490,7 +490,7 @@ handler:
 			}
 
 			p.log.Debug("got block msg height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
-			// @todo need to make sure WriteBlock handle block fork
+			peer.knownBlocks.Add(block.HeaderHash, nil)
 			p.chain.WriteBlock(&block)
 
 		case downloader.GetBlockHeadersMsg:
