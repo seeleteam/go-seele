@@ -21,7 +21,10 @@ func getTestPeer(shard uint) *peer {
 	addr := crypto.MustGenerateRandomAddress()
 	node := discovery.NewNodeWithAddr(*addr, &net.UDPAddr{}, shard)
 	p2pPeer := p2p.NewPeer(nil, nil, nil, node)
-	peer := newPeer(1, p2pPeer, nil, log)
+	peer, err := newPeer(1, p2pPeer, nil, log)
+	if err != nil {
+		panic(err)
+	}
 
 	return peer
 }

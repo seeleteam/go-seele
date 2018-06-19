@@ -12,12 +12,12 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/seele/download"
-	set "gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -51,8 +51,8 @@ type peer struct {
 
 	rw p2p.MsgReadWriter // the read write method for this peer
 
-	knownTxs    *set.Set // Set of transaction hashes known by this peer
-	knownBlocks *set.Set // Set of block hashes known by this peer
+	knownTxs    *lru.Cache // Set of transaction hashes known by this peer
+	knownBlocks *lru.Cache // Set of block hashes known by this peer
 
 	log *log.SeeleLog
 }
@@ -61,18 +61,28 @@ func idToStr(id common.Address) string {
 	return fmt.Sprintf("%x", id[:8])
 }
 
-func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog) *peer {
+func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog) (*peer, error) {
+	knownTxsCache, err := lru.New(maxKnownTxs)
+	if err != nil {
+		return nil, err
+	}
+
+	knownBlockCache, err := lru.New(maxKnownBlocks)
+	if err != nil {
+		return nil, err
+	}
+
 	return &peer{
 		Peer:        p,
 		version:     version,
 		td:          big.NewInt(0),
 		peerID:      p.Node.ID,
 		peerStrID:   idToStr(p.Node.ID),
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
+		knownTxs:    knownTxsCache,
+		knownBlocks: knownBlockCache,
 		rw:          rw,
 		log:         log,
-	}
+	}, nil
 }
 
 // Info gathers and returns a collection of metadata known about a peer.
@@ -86,17 +96,8 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
-// markTransaction marks hash in knownTxs set
-func (p *peer) markTransaction(hash common.Hash) {
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
-	}
-	p.knownTxs.Add(hash)
-}
-
 func (p *peer) sendTransactionHash(txHash common.Hash) error {
-	if p.knownTxs.Has(txHash) {
+	if p.knownTxs.Contains(txHash) {
 		return nil
 	}
 	buff := common.SerializePanic(txHash)
@@ -106,7 +107,7 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	}
 	err := p2p.SendMessage(p.rw, transactionHashMsgCode, buff)
 	if err == nil {
-		p.markTransaction(txHash)
+		p.knownTxs.Add(txHash, nil)
 	}
 
 	return err
@@ -126,7 +127,7 @@ func (p *peer) sendTransaction(tx *types.Transaction) error {
 }
 
 func (p *peer) SendBlockHash(blockHash common.Hash) error {
-	if p.knownBlocks.Has(blockHash) {
+	if p.knownBlocks.Contains(blockHash) {
 		return nil
 	}
 	buff := common.SerializePanic(blockHash)
@@ -134,7 +135,7 @@ func (p *peer) SendBlockHash(blockHash common.Hash) error {
 	p.log.Debug("peer send [blockHashMsgCode] with size %d byte", len(buff))
 	err := p2p.SendMessage(p.rw, blockHashMsgCode, buff)
 	if err == nil {
-		p.knownBlocks.Add(blockHash)
+		p.knownBlocks.Add(blockHash, nil)
 	}
 
 	return err
