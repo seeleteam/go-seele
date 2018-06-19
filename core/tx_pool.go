@@ -234,6 +234,8 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce, PENDING)
 	if existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
+			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
+				tx.Hash.ToHex(), existTx.Hash.ToHex())
 			pool.removeTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
@@ -298,8 +300,6 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 		return
 	}
 
-	pool.log.Debug("remove tx hash %s, status %d", txHash.ToHex(), tx.txStatus)
-
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
 		collection.remove(tx.Data.AccountNonce)
@@ -328,8 +328,10 @@ func (pool *TransactionPool) RemoveTransactions() {
 
 		// Transactions have been processed or are too old need to delete
 		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
-			pool.log.Debug("remove because of tx already exist %t, nonce too low %t, got error %t, tx nonce %d, target nonce %d",
-				txIndex != nil, poolTx.Data.AccountNonce < nonce, poolTx.txStatus&ERROR != 0, poolTx.Data.AccountNonce, nonce)
+			if txIndex == nil {
+				pool.log.Debug("remove because nonce too low %t, got error %t, tx nonce %d, target nonce %d",
+					poolTx.Data.AccountNonce < nonce, poolTx.txStatus&ERROR != 0, poolTx.Data.AccountNonce, nonce)
+			}
 			pool.removeTransaction(txHash)
 		}
 	}
