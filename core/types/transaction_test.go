@@ -139,7 +139,7 @@ func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 	tx := newTestTx(t, 100, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
-	if err != nil {
+	if err == nil {
 		panic("expected error")
 	}
 }
