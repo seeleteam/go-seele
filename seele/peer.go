@@ -61,15 +61,15 @@ func idToStr(id common.Address) string {
 	return fmt.Sprintf("%x", id[:8])
 }
 
-func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog) (*peer, error) {
+func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog) *peer {
 	knownTxsCache, err := lru.New(maxKnownTxs)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	knownBlockCache, err := lru.New(maxKnownBlocks)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	return &peer{
@@ -82,7 +82,7 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog)
 		knownBlocks: knownBlockCache,
 		rw:          rw,
 		log:         log,
-	}, nil
+	}
 }
 
 // Info gathers and returns a collection of metadata known about a peer.

@@ -289,11 +289,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 
-	newPeer, err := newPeer(SeeleVersion, p2pPeer, rw, p.log)
-	if err != nil {
-		p.log.Error("new peer failed, %s", err)
-		return
-	}
+	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
 
 	block := p.chain.CurrentBlock()
 	head := block.HeaderHash
