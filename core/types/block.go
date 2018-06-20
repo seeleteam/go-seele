@@ -98,3 +98,12 @@ func (block *Block) FindTransaction(txHash common.Hash) *Transaction {
 
 	return nil
 }
+
+// GetShardNumber returns the shard number of the block, which means the shard number of the creator.
+func (block *Block) GetShardNumber() uint {
+	if block.Header == nil {
+		return common.UndefinedShardNumber
+	}
+
+	return block.Header.Creator.Shard()
+}

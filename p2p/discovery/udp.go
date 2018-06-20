@@ -356,7 +356,7 @@ func (u *udp) discovery() {
 		sendFindNodeRequest(u, nodes, *id)
 
 		concurrentCount := 0
-		for i := 1; i < common.ShardNumber+1; i++ {
+		for i := 1; i < common.ShardCount+1; i++ {
 			shardBucket := u.table.shardBuckets[i]
 			size := shardBucket.size()
 			if size < bucketSize {
