@@ -173,6 +173,19 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockInvalidHeight)
 }
 
+func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock.Header.ExtraData = []byte("test extra data")
+	newBlock.HeaderHash = newBlock.Header.Hash()
+
+	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty)
+}
+
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	db, dispose := newTestDatabase()
 	defer dispose()
