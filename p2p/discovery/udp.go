@@ -461,8 +461,6 @@ func (u *udp) addNode(n *Node, notifyConnect bool) {
 	u.table.addNode(n)
 	u.db.add(n, notifyConnect)
 
-	u.timeoutNodesCount.Set(n.ID.ToHex(), 0)
-
 	newCount := u.db.size()
 	if count != newCount {
 		u.log.Info("add node %s, total nodes:%d", n, newCount)

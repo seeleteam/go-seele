@@ -124,6 +124,7 @@ func generateBuff(code msgType, encoding []byte) []byte {
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
 	t.addNode(node, false)
+	t.timeoutNodesCount.Set(m.SelfID.ToHex(), 0)
 
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
@@ -151,6 +152,7 @@ func (m *ping) send(t *udp) {
 			r := resp.(*pong)
 			n := NewNodeWithAddr(r.SelfID, addr, r.SelfShard)
 			t.addNode(n, true)
+			t.timeoutNodesCount.Set(n.ID.ToHex(), 0)
 
 			t.log.Debug("received [pongMsg] from: %s", n)
 
