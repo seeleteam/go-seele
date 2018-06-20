@@ -187,7 +187,8 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s in json rpc successful", api.Namespace)
+
+		n.log.Info("registered service namespace: %s in json rpc successful", api.Namespace)
 	}
 
 	var (
@@ -200,7 +201,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		return err
 	}
 
-	n.log.Debug("Listerner address %s", listerner.Addr().String())
+	n.log.Info("json rpc listen address %s", listerner.Addr())
 	go func() {
 		for {
 			conn, err := listerner.Accept()
@@ -224,7 +225,8 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s in http rpc successful", api.Namespace)
+
+		n.log.Info("registered service namespace: %s in http rpc successful", api.Namespace)
 	}
 
 	var (
@@ -237,6 +239,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 		return err
 	}
 
+	n.log.Info("http listen address %s", listerner.Addr())
 	go http.Serve(listerner, httpHandler)
 
 	return nil

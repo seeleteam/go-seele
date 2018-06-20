@@ -125,7 +125,7 @@ func SendMode3(current []*balance, next []*balance) {
 
 		tpsCount++
 		if tpsCount == tps {
-			fmt.Println("send txs ", tpsCount)
+			fmt.Printf("send txs %d, [%d]\n", tpsCount, i)
 			elapse := time.Now().Sub(tpsStartTime)
 			if elapse < time.Second {
 				time.Sleep(time.Second - elapse)

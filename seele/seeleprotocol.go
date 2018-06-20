@@ -108,7 +108,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 }
 
 func (sp *SeeleProtocol) Start() {
-	sp.log.Info("SeeleProtocol.Start called!")
+	sp.log.Debug("SeeleProtocol.Start called!")
 	go sp.syncer()
 }
 
@@ -259,14 +259,13 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	p.peerSet.ForEach(shardId, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
-			p.log.Warn("send transaction failed %s", err)
+			p.log.Warn("send transaction to %s failed %s", peer.Node.GetUDPAddr(), err)
 		}
 		return true
 	})
 }
 
 func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
-	p.log.Debug("find new mined block")
 	block := e.(*types.Block)
 
 	p.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
@@ -277,8 +276,8 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		return true
 	})
 
-	p.log.Debug("handleNewMinedBlock broadcast chainhead changed")
-	p.log.Debug("new block: %d %s <- %s ", block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
+	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
+		block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
 
 	p.broadcastChainHead()
 }
@@ -303,7 +302,8 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		newPeer.Disconnect(DiscHandShakeErr)
 		return
 	}
-	p.log.Info("newPeer.HandShake ok")
+
+	p.log.Info("add peer %s -> %s to SeeleProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
 	p.peerSet.Add(newPeer)
 	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 	go p.syncTransactions(newPeer)

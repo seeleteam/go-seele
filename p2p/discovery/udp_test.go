@@ -42,8 +42,8 @@ func newTestUdp() *udp {
 
 func Test_loadNodes(t *testing.T) {
 	u := newTestUdp()
-	u.addNode(u.trustNodes[0])
-	u.addNode(u.trustNodes[1])
+	u.addNode(u.trustNodes[0], false)
+	u.addNode(u.trustNodes[1], false)
 	u.db.SaveNodes(common.GetTempFolder())
 
 	assert.Equal(t, len(u.bootstrapNodes), 0)
