@@ -85,12 +85,15 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				return
 			}
 
-			jsonOutput, err := json.MarshalIndent(output, "", "\t")
-			if err != nil {
-				fmt.Println(err)
-				return
+			if output != nil {
+				jsonOutput, err := json.MarshalIndent(output, "", "\t")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+
+				fmt.Println("output :\n", string(jsonOutput))
 			}
-			fmt.Println("output :\n", string(jsonOutput))
 
 			if request.Handler != nil {
 				request.Handler(output)

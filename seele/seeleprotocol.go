@@ -145,8 +145,11 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		return
 	}
 
-	sp.log.Info("sp.synchronise called.")
-	block, _ := sp.chain.CurrentBlock()
+	if common.PrintExplosionLog {
+		sp.log.Debug("sp.synchronise called.")
+	}
+
+	block := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
@@ -174,7 +177,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
-	block, _ := sp.chain.CurrentBlock()
+	block := sp.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
@@ -246,14 +249,17 @@ loopOut:
 }
 
 func (p *SeeleProtocol) handleNewTx(e event.Event) {
-	p.log.Debug("find new tx")
+	if common.PrintExplosionLog {
+		p.log.Debug("find new tx")
+	}
+
 	tx := e.(*types.Transaction)
 
-	// find shardid by tx from address.
-	shardid := tx.Data.From.Shard()
-	p.peerSet.ForEach(shardid, func(peer *peer) bool {
+	// find shardId by tx from address.
+	shardId := tx.Data.From.Shard()
+	p.peerSet.ForEach(shardId, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
-			p.log.Warn("send transaction failed %s", err.Error())
+			p.log.Warn("send transaction failed %s", err)
 		}
 		return true
 	})
@@ -285,7 +291,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
 
-	block, _ := p.chain.CurrentBlock()
+	block := p.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
@@ -318,14 +324,25 @@ func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
 }
 
 func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
-	p.peerSet.ForEach(shard, func(peer *peer) bool {
-		err := peer.sendTransaction(tx)
-		if err != nil {
-			p.log.Warn("send transaction to peer %s failed, tx hash %s", peer.Node, tx.Hash)
+	sendTxFun := func(peer *peer) bool {
+		if !peer.knownTxs.Contains(tx.Hash) {
+			err := peer.sendTransaction(tx)
+			if err != nil {
+				p.log.Warn("send transaction to peer %s failed, tx hash %s", peer.Node, tx.Hash)
+				return true
+			}
+
+			peer.knownTxs.Add(tx.Hash, nil)
 		}
 
 		return true
-	})
+	}
+
+	if p.peerSet.getPeerCountByShard(shard) > 0 {
+		p.peerSet.ForEach(shard, sendTxFun)
+	} else {
+		p.peerSet.ForEachAll(sendTxFun)
+	}
 }
 
 func (p *SeeleProtocol) handleMsg(peer *peer) {
@@ -344,7 +361,10 @@ handler:
 			}
 		}
 
-		p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
+		if common.PrintExplosionLog {
+			p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
+		}
+
 		switch msg.Code {
 		case transactionHashMsgCode:
 			var txHash common.Hash
@@ -354,17 +374,21 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got tx hash %s", txHash.ToHex())
+			if common.PrintExplosionLog {
+				p.log.Debug("got tx hash %s", txHash.ToHex())
+			}
 
-			if !peer.knownTxs.Has(txHash) {
-				peer.knownTxs.Add(txHash) //update peer known transaction
+			if !peer.knownTxs.Contains(txHash) {
+				peer.knownTxs.Add(txHash, nil) //update peer known transaction
 				err := peer.sendTransactionRequest(txHash)
 				if err != nil {
 					p.log.Warn("send transaction request msg failed %s", err.Error())
 					break handler
 				}
 			} else {
-				p.log.Debug("already have this tx %s", txHash.ToHex())
+				if common.PrintExplosionLog {
+					p.log.Debug("already have this tx %s", txHash.ToHex())
+				}
 			}
 
 		case transactionRequestMsgCode:
@@ -375,7 +399,9 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got tx request %s", txHash.ToHex())
+			if common.PrintExplosionLog {
+				p.log.Debug("got tx request %s", txHash.ToHex())
+			}
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
@@ -397,14 +423,18 @@ handler:
 				break
 			}
 
-			p.log.Debug("received %d transactions", len(txs))
+			if common.PrintExplosionLog {
+				p.log.Debug("received %d transactions", len(txs))
+			}
+
 			for _, tx := range txs {
+				peer.knownTxs.Add(tx.Hash, nil)
 				shard := tx.Data.From.Shard()
 				if shard != common.LocalShardNumber {
+					p.SendDifferentShardTx(tx, shard)
 					continue
 				} else {
 					p.txPool.AddTransaction(tx)
-					peer.markTransaction(tx.Hash)
 				}
 			}
 
@@ -418,8 +448,8 @@ handler:
 
 			p.log.Debug("got block hash msg %s", blockHash.ToHex())
 
-			if !peer.knownBlocks.Has(blockHash) {
-				peer.knownBlocks.Add(blockHash)
+			if !peer.knownBlocks.Contains(blockHash) {
+				peer.knownBlocks.Add(blockHash, nil)
 				err := peer.SendBlockRequest(blockHash)
 				if err != nil {
 					p.log.Warn("send block request msg failed %s", err.Error())
@@ -456,7 +486,7 @@ handler:
 			}
 
 			p.log.Debug("got block msg height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
-
+      peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
 				p.chain.WriteBlock(&block)
@@ -492,7 +522,7 @@ handler:
 
 				hash, err := p.chain.GetStore().GetBlockHash(curNum)
 				if err != nil {
-					p.log.Error("get error when get block hash by height. err: %s, height:%s", err, curNum)
+					p.log.Error("get error when get block hash by height. err: %s, height:%d", err, curNum)
 					break
 				}
 

@@ -182,7 +182,7 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(newBlock), error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	storedBlock, err := bc.bcStore.GetBlock(newBlock.HeaderHash)
@@ -204,7 +204,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	err := bc.WriteBlock(newBlock)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
@@ -221,14 +221,14 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 
 	block2 := newTestBlock(bc, block1.HeaderHash, 2, 3, 3)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ = bc.CurrentBlock()
+	currentBlock = bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block2)
 }
 
@@ -242,7 +242,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 	assert.Equal(t, bc.blockLeaves.Count(), 1)
 

@@ -36,7 +36,7 @@ const (
 const chainHeaderChangeBuffSize = 100
 
 type blockchain interface {
-	CurrentState() *state.Statedb
+	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 }
 
@@ -88,7 +88,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
 	newHeader := e.(common.Hash)
 	if newHeader.IsEmpty() {
-		return 
+		return
 	}
 
 	pool.chainHeaderChangeChannel <- newHeader
@@ -189,18 +189,8 @@ func getReinjectTransaction(chainStore store.BlockchainStore, newHeader, lastHea
 }
 
 func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
-	if len(txs) == 0 {
-		return
-	}
-
-	statedb, err := pool.chain.CurrentState().GetCopy()
-	if err != nil {
-		pool.log.Warn("get stated db failed, %s", err)
-		return
-	}
-
 	for _, tx := range txs {
-		if err := pool.addTransactionWithStateInfo(tx, statedb); err != nil {
+		if err := pool.AddTransaction(tx); err != nil {
 			pool.log.Warn("add transaction failed, %s", err)
 		}
 	}
@@ -213,9 +203,9 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
-	statedb, err := pool.chain.CurrentState().GetCopy()
+	statedb, err := pool.chain.GetCurrentState()
 	if err != nil {
-		return err
+		return fmt.Errorf("get current state db failed, error %s", err)
 	}
 
 	return pool.addTransactionWithStateInfo(tx, statedb)
@@ -244,6 +234,8 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce, PENDING)
 	if existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
+			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
+				tx.Hash.ToHex(), existTx.Hash.ToHex())
 			pool.removeTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
@@ -308,8 +300,6 @@ func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
 		return
 	}
 
-	pool.log.Debug("remove tx hash %s, status %d", txHash.ToHex(), tx.txStatus)
-
 	collection := pool.accountToTxsMap[tx.Data.From]
 	if collection != nil {
 		collection.remove(tx.Data.AccountNonce)
@@ -326,16 +316,26 @@ func (pool *TransactionPool) RemoveTransactions() {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
+	state, err := pool.chain.GetCurrentState()
+	if err != nil {
+		pool.log.Warn("get current state failed %s", err)
+		return
+	}
+
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
-
-		state := pool.chain.CurrentState()
 		nonce := state.GetNonce(poolTx.Data.From)
 
 		// Transactions have been processed or are too old need to delete
 		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
-			pool.log.Debug("remove because of tx already exist %t, nonce too low %t, got error %t, tx nonce %d, target nonce %d",
-				txIndex != nil, poolTx.Data.AccountNonce < nonce, poolTx.txStatus&ERROR != 0, poolTx.Data.AccountNonce, nonce)
+			if txIndex == nil {
+				if poolTx.Data.AccountNonce < nonce {
+					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
+						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
+				} else {
+					pool.log.Debug("remove tx %s because got error")
+				}
+			}
 			pool.removeTransaction(txHash)
 		}
 	}

@@ -92,6 +92,17 @@ func (p *peerSet) ForEach(shard uint, handle func(*peer) bool) {
 	}
 }
 
+func (p *peerSet) ForEachAll(handle func(*peer) bool) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	for _, v := range p.peerMap {
+		if !handle(v) {
+			break
+		}
+	}
+}
+
 func (p *peerSet) getPeerByShard(shard uint) []*peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -104,4 +115,11 @@ func (p *peerSet) getPeerByShard(shard uint) []*peer {
 	}
 
 	return value
+}
+
+func (p *peerSet) getPeerCountByShard(shard uint) int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return len(p.shardPeers[shard])
 }

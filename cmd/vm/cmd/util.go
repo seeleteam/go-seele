@@ -1,9 +1,15 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package cmd
 
 import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -13,21 +19,90 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 // const
 const (
-	DefaultNonce     uint64 = 1
-	KeyStateRootHash        = "STATEROOTHASH"
+	DefaultNonce             = uint64(1)
+	KeyStateRootHash         = "STATE_ROOT_HASH"
+	keyGlobalContractAddress = "GLOBAL_CONTRACT_ADDRESS"
 )
 
-// preprocessContract creates the contract tx dependent state DB, blockchain store
-func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error) {
-	db, err := leveldb.NewLevelDB(dir)
+var prefixFuncHash = []byte("FH-")
+
+func getGlobalContractAddress(db database.Database) common.Address {
+	hexAddr, err := db.GetString(keyGlobalContractAddress)
 	if err != nil {
-		os.RemoveAll(dir)
-		return nil, nil, func() {}, err
+		return common.EmptyAddress
+	}
+
+	return common.HexMustToAddres(hexAddr)
+}
+
+func setGlobalContractAddress(db database.Database, hexAddr string) {
+	if err := db.PutString(keyGlobalContractAddress, hexAddr); err != nil {
+		panic(err)
+	}
+}
+
+func setContractCompilationOutput(db database.Database, contractAddress []byte, output *solCompileOutput) {
+	key := append(prefixFuncHash, contractAddress...)
+
+	if err := db.Put(key, common.SerializePanic(output)); err != nil {
+		panic(err)
+	}
+}
+
+func getContractCompilationOutput(db database.Database, contractAddress []byte) *solCompileOutput {
+	key := append(prefixFuncHash, contractAddress...)
+
+	value, err := db.Get(key)
+	if err != nil {
+		return nil
+	}
+
+	output := solCompileOutput{}
+	if err = common.Deserialize(value, &output); err != nil {
+		panic(err)
+	}
+
+	return &output
+}
+
+func getFromAddress(statedb *state.Statedb) common.Address {
+	if len(account) == 0 {
+		from := *crypto.MustGenerateRandomAddress()
+		statedb.CreateAccount(from)
+		statedb.SetBalance(from, new(big.Int).SetUint64(100))
+		statedb.SetNonce(from, DefaultNonce)
+		return from
+	}
+
+	from, err := common.HexToAddress(account)
+	if err != nil {
+		fmt.Println("Invalid account address,", err.Error())
+		return common.EmptyAddress
+	}
+
+	return from
+}
+
+func ensurePrefix(str, prefix string) string {
+	if strings.HasPrefix(str, prefix) {
+		return str
+	}
+
+	return prefix + str
+}
+
+// preprocessContract creates the contract tx dependent state DB, blockchain store
+func preprocessContract() (database.Database, *state.Statedb, store.BlockchainStore, func(), error) {
+	db, err := leveldb.NewLevelDB(defaultDir)
+	if err != nil {
+		os.RemoveAll(defaultDir)
+		return nil, nil, nil, func() {}, err
 	}
 
 	hash := common.EmptyHash
@@ -38,7 +113,7 @@ func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error)
 		h, err := common.HexToHash(str)
 		if err != nil {
 			db.Close()
-			return nil, nil, func() {}, err
+			return nil, nil, nil, func() {}, err
 		}
 		hash = h
 	}
@@ -46,10 +121,10 @@ func preprocessContract() (*state.Statedb, store.BlockchainStore, func(), error)
 	statedb, err := state.NewStatedb(hash, db)
 	if err != nil {
 		db.Close()
-		return nil, nil, func() {}, err
+		return nil, nil, nil, func() {}, err
 	}
 
-	return statedb, store.NewBlockchainDatabase(db), func() {
+	return db, statedb, store.NewBlockchainDatabase(db), func() {
 		batch := db.NewBatch()
 		hash, err := statedb.Commit(batch)
 		if err != nil {
