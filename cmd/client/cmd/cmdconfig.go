@@ -84,6 +84,8 @@ func ParsePointInterface(i interface{}) interface{} {
 		return *i.(*int)
 	case *uint64:
 		return *i.(*uint64)
+	case *uint:
+		return *i.(*uint)
 	default:
 		return i
 	}
