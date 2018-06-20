@@ -153,8 +153,8 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 }
 
 func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
-	if shard == 0 || shard > common.ShardNumber {
-		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
+	if shard == 0 || shard > common.ShardCount {
+		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardCount))
 	}
 
 	for i := 1; ; i++ {

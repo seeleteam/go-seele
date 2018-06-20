@@ -346,7 +346,7 @@ func (u *udp) discovery(isFast bool) {
 			time.Sleep(discoveryInterval)
 		}
 
-		for i := 1; i < common.ShardNumber+1; i++ {
+		for i := 1; i < common.ShardCount+1; i++ {
 			shardBucket := u.table.shardBuckets[i]
 			size := shardBucket.size()
 			if size < bucketSize {
@@ -377,7 +377,7 @@ func (u *udp) discovery(isFast bool) {
 
 		if isFast {
 			enough := true
-			for i := 1; i < common.ShardNumber+1; i++ {
+			for i := 1; i < common.ShardCount+1; i++ {
 				if uint(i) == u.self.Shard {
 					continue
 				}

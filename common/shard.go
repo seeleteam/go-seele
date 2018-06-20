@@ -14,5 +14,5 @@ var LocalShardNumber uint
 
 // IsShardEnabled returns true if the LocalShardNumber is set. Otherwise, false.
 func IsShardEnabled() bool {
-	return LocalShardNumber > UndefinedShardNumber && LocalShardNumber <= ShardNumber
+	return LocalShardNumber > UndefinedShardNumber && LocalShardNumber <= ShardCount
 }

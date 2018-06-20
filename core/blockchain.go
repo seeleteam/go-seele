@@ -8,6 +8,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -291,6 +292,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 }
 
 func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
+	if common.IsShardEnabled() {
+		if shard := block.GetShardNumber(); shard != common.LocalShardNumber {
+			return fmt.Errorf("invalid shard number. block shard number is [%v], but local shard number is [%v]", shard, common.LocalShardNumber)
+		}
+	}
+
 	if len(block.Transactions) > BlockTransactionNumberLimit {
 		return ErrBlockTooManyTxs
 	}
