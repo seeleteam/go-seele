@@ -258,6 +258,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 func (u *udp) readLoop() {
 	for {
+		// 1472 is udp max transfer size for once
 		data := make([]byte, 1472)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
@@ -465,7 +466,7 @@ func (u *udp) addNode(n *Node, notifyConnect bool) {
 	if count != newCount {
 		u.log.Info("add node %s, total nodes:%d", n, newCount)
 	} else {
-		u.log.Debug("got add node event, but this not already exist. total nodes didn't change:%d", newCount)
+		u.log.Debug("got add node event, but it is already exist. total nodes didn't change:%d", newCount)
 	}
 }
 
