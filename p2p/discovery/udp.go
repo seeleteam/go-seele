@@ -428,8 +428,6 @@ func (u *udp) pingPongService() {
 
 		time.Sleep(pingpongInterval)
 	}
-
-	u.log.Debug("exit ping pong service")
 }
 
 func (u *udp) ping(value *Node) {
