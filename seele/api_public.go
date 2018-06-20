@@ -49,13 +49,13 @@ type GetBlockByHashRequest struct {
 // GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
 type GetTxByBlockHeightAndIndexRequest struct {
 	Height int64
-	Index  int
+	Index  uint
 }
 
 // GetTxByBlockHashAndIndexRequest request param for GetTransactionByBlockHashAndIndex api
 type GetTxByBlockHashAndIndexRequest struct {
 	HashHex string
-	Index   int
+	Index   uint
 }
 
 // GetInfo gets the account address that mining rewards will be send to.
