@@ -333,5 +333,14 @@ func NewCmdData() []*Request {
 			},
 			Handler: func(interface{}) { fmt.Println("miner set coinbase succeed") },
 		},
+		&Request{
+			Use:              "getdownloadstatus",
+			Short:            "get the download status of block synchronization",
+			Long:             "Get the download status of block synchronization",
+			ParamReflectType: "nil",
+			Method:           "download.GetStatus",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+		},
 	}
 }
