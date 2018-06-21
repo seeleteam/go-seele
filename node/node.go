@@ -93,11 +93,11 @@ func (n *Node) Start() error {
 	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
 	if specificShard == 0 {
 		// select a shard randomly
-		specificShard = uint(rand.Intn(common.ShardNumber) + 1)
+		specificShard = uint(rand.Intn(common.ShardCount) + 1)
 	}
 
-	if specificShard > common.ShardNumber {
-		return fmt.Errorf("unsupported shard number, it must in range [0, %d]", common.ShardNumber)
+	if specificShard > common.ShardCount {
+		return fmt.Errorf("unsupported shard number, it must be in range [0, %d]", common.ShardCount)
 	}
 
 	common.LocalShardNumber = specificShard
@@ -108,7 +108,7 @@ func (n *Node) Start() error {
 		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.ToHex())
 
 		if coinbaseShard != specificShard {
-			return fmt.Errorf("coinbase is not matched with specific shard number, "+
+			return fmt.Errorf("coinbase does not match with specific shard number, "+
 				"coinbase shard:%d, specific shard number:%d", coinbaseShard, specificShard)
 		}
 	}
@@ -187,7 +187,8 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s in json rpc successful", api.Namespace)
+
+		n.log.Info("registered service namespace: %s in json rpc successful", api.Namespace)
 	}
 
 	var (
@@ -200,7 +201,7 @@ func (n *Node) startJSONRPC(apis []rpc.API) error {
 		return err
 	}
 
-	n.log.Debug("Listerner address %s", listerner.Addr().String())
+	n.log.Info("json rpc listen address %s", listerner.Addr())
 	go func() {
 		for {
 			conn, err := listerner.Accept()
@@ -224,7 +225,8 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
 			return err
 		}
-		n.log.Debug("registered service namespace: %s in http rpc successful", api.Namespace)
+
+		n.log.Info("registered service namespace: %s in http rpc successful", api.Namespace)
 	}
 
 	var (
@@ -237,6 +239,7 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 		return err
 	}
 
+	n.log.Info("http listen address %s", listerner.Addr())
 	go http.Serve(listerner, httpHandler)
 
 	return nil

@@ -176,7 +176,7 @@ func NewCmdData() []*Request {
 					ReflectName:  "Index",
 					FlagName:     "index",
 					ShortFlag:    "",
-					ParamType:    "*int",
+					ParamType:    "*uint",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
 					Required:     false,
@@ -204,7 +204,7 @@ func NewCmdData() []*Request {
 					ReflectName:  "Index",
 					FlagName:     "index",
 					ShortFlag:    "",
-					ParamType:    "*int",
+					ParamType:    "*uint",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
 					Required:     false,
@@ -253,7 +253,7 @@ func NewCmdData() []*Request {
 		},
 		&Request{
 			Use:   "gettransactionbyhash",
-			Short: "get transaction count by hash",
+			Short: "get transaction info by hash",
 			Long: `For example:
   			client.exe gettransactionbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
 			ParamReflectType: "string",
@@ -296,12 +296,12 @@ func NewCmdData() []*Request {
 			Short: "set miner threads",
 			Long: `For example:
   			client.exe setminerthreads -t 2`,
-			ParamReflectType: "nil",
+			ParamReflectType: "int",
 			Method:           "miner.SetThreads",
 			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
-					ReflectName:  "thread",
+					ReflectName:  "Thread",
 					FlagName:     "thread",
 					ShortFlag:    "t",
 					ParamType:    "*int",
@@ -317,12 +317,12 @@ func NewCmdData() []*Request {
 			Short: "set coinbase",
 			Long: `For example:
   			client.exe setcoinbase -c "0x4c10f2cd2159bb432094e3be7e17904c2b4aeb21"`,
-			ParamReflectType: "nil",
+			ParamReflectType: "string",
 			Method:           "miner.SetCoinbase",
 			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
-					ReflectName:  "coinbaseStr",
+					ReflectName:  "CoinbaseStr",
 					FlagName:     "coinbase",
 					ShortFlag:    "c",
 					ParamType:    "*string",
@@ -332,6 +332,15 @@ func NewCmdData() []*Request {
 				},
 			},
 			Handler: func(interface{}) { fmt.Println("miner set coinbase succeed") },
+		},
+		&Request{
+			Use:              "getdownloadstatus",
+			Short:            "get the download status of block synchronization",
+			Long:             "Get the download status of block synchronization",
+			ParamReflectType: "nil",
+			Method:           "download.GetStatus",
+			UseWebsocket:     false,
+			Params:           []*Param{},
 		},
 	}
 }

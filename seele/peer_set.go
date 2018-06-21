@@ -14,7 +14,7 @@ import (
 
 type peerSet struct {
 	peerMap    map[common.Address]*peer
-	shardPeers [1 + common.ShardNumber]map[common.Address]*peer
+	shardPeers [1 + common.ShardCount]map[common.Address]*peer
 	lock       sync.RWMutex
 }
 
@@ -24,7 +24,7 @@ func newPeerSet() *peerSet {
 		lock:    sync.RWMutex{},
 	}
 
-	for i := 0; i < 1+common.ShardNumber; i++ {
+	for i := 0; i < 1+common.ShardCount; i++ {
 		ps.shardPeers[i] = make(map[common.Address]*peer)
 	}
 
@@ -92,6 +92,17 @@ func (p *peerSet) ForEach(shard uint, handle func(*peer) bool) {
 	}
 }
 
+func (p *peerSet) ForEachAll(handle func(*peer) bool) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	for _, v := range p.peerMap {
+		if !handle(v) {
+			break
+		}
+	}
+}
+
 func (p *peerSet) getPeerByShard(shard uint) []*peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -104,4 +115,11 @@ func (p *peerSet) getPeerByShard(shard uint) []*peer {
 	}
 
 	return value
+}
+
+func (p *peerSet) getPeerCountByShard(shard uint) int {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	return len(p.shardPeers[shard])
 }

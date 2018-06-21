@@ -39,9 +39,6 @@ var (
 	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
 
-	// ErrNonceTooLow is returned when the transaction nonce is lower than the account nonce.
-	ErrNonceTooLow = errors.New("nonce too low")
-
 	// ErrPayloadOversized is returned when the payload size is larger than the MaxPayloadSize.
 	ErrPayloadOversized = errors.New("oversized payload")
 
@@ -253,7 +250,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
-		return ErrNonceTooLow
+		return fmt.Errorf("nonce is too low, acount %s, tx nonce %d, state db nonce:%d", tx.Data.From.ToHex(), tx.Data.AccountNonce, accountNonce)
 	}
 
 	return nil

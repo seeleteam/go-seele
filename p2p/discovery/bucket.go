@@ -44,7 +44,7 @@ func (b *bucket) addNode(node *Node) {
 		b.lock.Lock()
 		defer b.lock.Unlock()
 
-		b.log.Info("add node: %s", node)
+		b.log.Debug("add node: %s to bucket", node)
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
 		} else {

@@ -329,8 +329,12 @@ func (pool *TransactionPool) RemoveTransactions() {
 		// Transactions have been processed or are too old need to delete
 		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
 			if txIndex == nil {
-				pool.log.Debug("remove because nonce too low %t, got error %t, tx nonce %d, target nonce %d",
-					poolTx.Data.AccountNonce < nonce, poolTx.txStatus&ERROR != 0, poolTx.Data.AccountNonce, nonce)
+				if poolTx.Data.AccountNonce < nonce {
+					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
+						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
+				} else {
+					pool.log.Debug("remove tx %s because got error")
+				}
 			}
 			pool.removeTransaction(txHash)
 		}

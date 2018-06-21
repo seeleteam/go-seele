@@ -168,7 +168,7 @@ func (id Address) Shard() uint {
 	tail := uint(binary.BigEndian.Uint16(id[18:]))
 	sum += (tail >> 4)
 
-	return (sum % ShardNumber) + 1
+	return (sum % ShardCount) + 1
 }
 
 // CreateContractAddress returns a contract address that in the same shard of this address.
@@ -184,13 +184,13 @@ func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{})
 	}
 
 	// sum [18:20] for shard mod and contract address type
-	shardNum := (sum % ShardNumber) + 1
+	shardNum := (sum % ShardCount) + 1
 	encoded := make([]byte, 2)
 	var mod uint
 	if shardNum <= targetShardNum {
 		mod = targetShardNum - shardNum
 	} else {
-		mod = ShardNumber + targetShardNum - shardNum
+		mod = ShardCount + targetShardNum - shardNum
 	}
 	mod <<= 4
 	mod |= uint(AddressTypeContract) // set address type in the last 4 bits

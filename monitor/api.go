@@ -8,6 +8,8 @@ package monitor
 import (
 	"errors"
 	"runtime"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 // error infos
@@ -41,7 +43,7 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 		OsVer:      runtime.GOARCH,
 		Client:     api.s.version,
 		History:    true,
-		Shard:      api.s.shard,
+		Shard:      common.LocalShardNumber,
 	}
 
 	return nil

@@ -8,6 +8,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -23,7 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
-var (
+const (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
@@ -33,6 +34,9 @@ var (
 )
 
 var (
+	// ErrBlockHeaderNil is returned when the block header is nil.
+	ErrBlockHeaderNil = errors.New("block header is nil")
+
 	// ErrBlockHashMismatch is returned when the block hash does not match the header hash.
 	ErrBlockHashMismatch = errors.New("block header hash mismatch")
 
@@ -82,7 +86,8 @@ var (
 	// ErrBlockTooManyTxs is returned when block have too many txs
 	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
-	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
+	// ErrBlockExtraDataNotEmpty is returned when the block extra data is not empty.
+	ErrBlockExtraDataNotEmpty = errors.New("block extra data is not empty")
 )
 
 type consensusEngine interface {
@@ -187,6 +192,10 @@ func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 
 // WriteBlock writes the specified block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	if err := bc.validateBlock(block); err != nil {
+		return err
+	}
+
 	// Do not write the block if already exists.
 	exist, err := bc.bcStore.HasBlock(block.HeaderHash)
 	if err != nil {
@@ -206,7 +215,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	// Ensure the specified block is valid to insert.
-	if err = bc.validateBlock(block, preBlock); err != nil {
+	if err = bc.validateBlockInChain(block, preBlock); err != nil {
 		return err
 	}
 
@@ -290,30 +299,23 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	return nil
 }
 
-func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
-	if len(block.Transactions) > BlockTransactionNumberLimit {
-		return ErrBlockTooManyTxs
+// validateBlock validates all blockhain independent fields in the block.
+func (bc *Blockchain) validateBlock(block *types.Block) error {
+	if block == nil || block.Header == nil {
+		return ErrBlockHeaderNil
 	}
 
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
 
-	txsHash := types.MerkleRootHash(block.Transactions)
-	if !txsHash.Equal(block.Header.TxHash) {
-		return ErrBlockTxsHashMismatch
+	if len(block.Transactions) > BlockTransactionNumberLimit {
+		return ErrBlockTooManyTxs
 	}
 
-	if block.Header.Height != preBlock.Header.Height+1 {
-		return ErrBlockInvalidHeight
-	}
-
+	// Validate timestamp
 	if block.Header.CreateTimestamp == nil {
 		return ErrBlockCreateTimeNull
-	}
-
-	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
-		return ErrBlockCreateTimeOld
 	}
 
 	future := new(big.Int).SetInt64(time.Now().Unix() + futureBlockLimit)
@@ -321,12 +323,43 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockCreateTimeInFuture
 	}
 
+	// Now, the extra data in block header should be empty except the genesis block.
+	if len(block.Header.ExtraData) > 0 {
+		return ErrBlockExtraDataNotEmpty
+	}
+
+	// Validate miner shard
+	if common.IsShardEnabled() {
+		if shard := block.GetShardNumber(); shard != common.LocalShardNumber {
+			return fmt.Errorf("invalid shard number. block shard number is [%v], but local shard number is [%v]", shard, common.LocalShardNumber)
+		}
+	}
+
+	// Validate tx merkle root hash
+	txsHash := types.MerkleRootHash(block.Transactions)
+	if !txsHash.Equal(block.Header.TxHash) {
+		return ErrBlockTxsHashMismatch
+	}
+
+	return bc.engine.ValidateHeader(block.Header)
+}
+
+// validateBlockInChain validates the specified block against with the previous block.
+func (bc *Blockchain) validateBlockInChain(block, preBlock *types.Block) error {
+	if block.Header.Height != preBlock.Header.Height+1 {
+		return ErrBlockInvalidHeight
+	}
+
+	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
+	}
+
 	difficult := pow.GetDifficult(block.Header.CreateTimestamp.Uint64(), preBlock.Header)
 	if difficult == nil || difficult.Cmp(block.Header.Difficulty) != 0 {
 		return ErrBlockDifficultInvalid
 	}
 
-	return bc.engine.ValidateHeader(block.Header)
+	return nil
 }
 
 // GetStore returns the blockchain store instance.

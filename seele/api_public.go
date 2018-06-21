@@ -49,13 +49,13 @@ type GetBlockByHashRequest struct {
 // GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
 type GetTxByBlockHeightAndIndexRequest struct {
 	Height int64
-	Index  int
+	Index  uint
 }
 
 // GetTxByBlockHashAndIndexRequest request param for GetTransactionByBlockHashAndIndex api
 type GetTxByBlockHashAndIndexRequest struct {
 	HashHex string
-	Index   int
+	Index   uint
 }
 
 // GetInfo gets the account address that mining rewards will be send to.
@@ -230,7 +230,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 		"result":    hexutil.BytesToHex(re.Result),
 		"poststate": re.PostState.ToHex(),
 		"txhash":    re.TxHash.ToHex(),
-		"contract":  "",
+		"contract":  "0x",
 	}
 
 	if len(re.ContractAddress) > 0 {
@@ -299,7 +299,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 // getBlock returns block by height,when height is -1 the chain head is returned
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
-	if height == -1 {
+	if height < 0 {
 		block = chain.CurrentBlock()
 	} else {
 		var err error
