@@ -66,7 +66,6 @@ func (api *PrivateMinerAPI) SetThreads(threads *int, result *interface{}) error 
 // GetThreads  API is used to get the number of threads.
 func (api *PrivateMinerAPI) GetThreads(threads *int, result *interface{}) error {
 	*result = api.s.miner.GetThreads()
-
 	return nil
 }
 

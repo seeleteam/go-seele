@@ -353,7 +353,7 @@ func NewCmdData() []*Request {
 			Params:           []*Param{},
 			Handler: func(out interface{}) {
 				if out == nil {
-					fmt.Println("miner get the miner threads number failed")
+					fmt.Println("Failed to get the miner thread number.")
 				}
 			},
 		},
@@ -368,7 +368,7 @@ func NewCmdData() []*Request {
 			Params:           []*Param{},
 			Handler: func(out interface{}) {
 				if out == nil {
-					fmt.Println("miner get coinbase failed")
+					fmt.Println("Failed to get the coinbase.")
 				}
 			},
 		},
