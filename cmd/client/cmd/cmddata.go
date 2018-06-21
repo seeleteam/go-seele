@@ -342,5 +342,35 @@ func NewCmdData() []*Request {
 			UseWebsocket:     false,
 			Params:           []*Param{},
 		},
+		&Request{
+			Use:   "getminerthreads",
+			Short: "get miner threads",
+			Long: `For example:
+  			client.exe getminerthreads`,
+			ParamReflectType: "nil",
+			Method:           "miner.GetThreads",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+			Handler: func(out interface{}) {
+				if out == nil {
+					fmt.Println("miner get the miner threads number failed")
+				}
+			},
+		},
+		&Request{
+			Use:   "getcoinbase",
+			Short: "get coinbase",
+			Long: `For example:
+  			client.exe getcoinbase`,
+			ParamReflectType: "nil",
+			Method:           "miner.GetCoinbase",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+			Handler: func(out interface{}) {
+				if out == nil {
+					fmt.Println("miner get coinbase failed")
+				}
+			},
+		},
 	}
 }
