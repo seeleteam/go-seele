@@ -123,7 +123,7 @@ func (miner *Miner) Start() error {
 		return nil
 	}
 
-	miner.stopChan = make(chan struct{}, 1)
+	miner.stopChan = make(chan struct{})
 
 	if atomic.CompareAndSwapInt32(&miner.isFirstBlockPrepared, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
@@ -150,6 +150,7 @@ func (miner *Miner) Stop() {
 
 	atomic.StoreInt32(&miner.stopped, 1)
 
+	// notify all threads to terminate
 	if miner.stopChan != nil {
 		close(miner.stopChan)
 		miner.stopChan = nil
@@ -159,6 +160,19 @@ func (miner *Miner) Stop() {
 	miner.wg.Wait()
 
 	miner.log.Info("Miner is stopped.")
+}
+
+// Close closes the miner.
+func (miner *Miner) Close() {
+	if miner.stopChan != nil {
+		close(miner.stopChan)
+		miner.stopChan = nil
+	}
+
+	if miner.recv != nil {
+		close(miner.recv)
+		miner.recv = nil
+	}
 }
 
 // IsMining returns true if the miner is started, otherwise false
