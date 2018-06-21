@@ -7,6 +7,7 @@ package discovery
 
 import (
 	"net"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -122,8 +123,8 @@ func generateBuff(code msgType, encoding []byte) []byte {
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
-	t.log.Debug("received [pingMsg] from: %s", node)
-	t.addNode(node)
+	t.addNode(node, false)
+	t.timeoutNodesCount.Set(m.SelfID.ToHex(), 0)
 
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
@@ -135,6 +136,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 		SelfShard: t.self.Shard,
 	}
 
+	t.log.Debug("received [pingMsg] and send [pongMsg] to: %s", node)
 	t.sendMsg(pongMsgType, resp, node.ID, node.GetUDPAddr())
 }
 
@@ -149,9 +151,10 @@ func (m *ping) send(t *udp) {
 		callback: func(resp interface{}, addr *net.UDPAddr) (done bool) {
 			r := resp.(*pong)
 			n := NewNodeWithAddr(r.SelfID, addr, r.SelfShard)
-			t.table.updateNode(n)
+			t.addNode(n, true)
+			t.timeoutNodesCount.Set(n.ID.ToHex(), 0)
 
-			t.log.Debug("received [pongMsg] from: %s", r.SelfID.ToHex())
+			t.log.Debug("received [pongMsg] from: %s", n)
 
 			return true
 		},
@@ -212,7 +215,7 @@ func (m *findNode) send(t *udp) {
 				}
 
 				node := n.ToNode()
-				t.addNode(node)
+				t.addNode(node, false)
 			}
 
 			// if not found, will find the node that is more closer than last one
@@ -237,6 +240,7 @@ func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
 		return
 	}
 
+	concurrentCount := 0
 	for _, n := range nodes {
 		f := &findNode{
 			SelfID:  u.self.ID,
@@ -245,7 +249,15 @@ func sendFindNodeRequest(u *udp, nodes []*Node, target common.Address) {
 		}
 
 		f.send(u)
+
+		concurrentCount++
+		if concurrentCount == discoveryConcurrentNumber {
+			time.Sleep(discoveryInterval)
+			concurrentCount = 0
+		}
 	}
+
+	time.Sleep(discoveryInterval)
 }
 
 func sendFindShardNodeRequest(u *udp, shard uint, to *Node) {
@@ -271,7 +283,7 @@ func (m *findShardNode) send(t *udp) {
 			t.log.Debug("got response [shardNodeMsg] with nodes number %d in shard %d from:%s",
 				len(r.Nodes), r.RequestShard, addr)
 			for _, node := range r.Nodes {
-				t.addNode(node.ToNode())
+				t.addNode(node.ToNode(), false)
 			}
 
 			return true

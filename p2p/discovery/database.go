@@ -94,13 +94,12 @@ func NewDatabase(log *log.SeeleLog) *Database {
 	}
 }
 
-func (db *Database) add(value *Node) {
+func (db *Database) add(value *Node, notify bool) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	sha := value.getSha()
-	// always notify add node event
-	if db.addNodeHook != nil {
+	if notify && db.addNodeHook != nil {
 		go db.addNodeHook(value)
 	}
 

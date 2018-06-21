@@ -130,7 +130,7 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	}
 
 	srv.running = true
-	srv.log.Info("Starting P2P networking...")
+	srv.log.Debug("Starting P2P networking...")
 	// self node
 	address := crypto.GetAddress(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
@@ -160,8 +160,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
-	srv.log.Info("got discovery a new node event, node info:%s", node)
-
+	srv.log.Debug("got discovery a new node event, node info:%s", node)
 	if srv.checkPeerExist(node.ID) {
 		return
 	}
@@ -185,7 +184,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Info("add new node. setupConn called err returns. err=%s", err)
+		srv.log.Info("add new node failed. err=%s", err)
 	}
 }
 
@@ -210,14 +209,15 @@ func (srv *Server) addPeer(p *Peer) bool {
 		return false
 	}
 
-	srv.log.Info("server addPeer, len(peers)=%d", srv.PeerCount())
 	peer := srv.peerSet.find(p.Node.ID)
 	if peer != nil {
-		srv.log.Debug("peer is already exist, skip")
+		srv.log.Debug("peer is already exist %s -> %s, skip %s -> %s", peer.LocalAddr(), peer.RemoteAddr(),
+			p.LocalAddr(), p.RemoteAddr())
 		return false
 	}
 
 	srv.peerSet.add(p)
+	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
 	p.notifyProtocolsAddPeer()
 
 	metricsAddPeerMeter.Mark(1)
@@ -238,7 +238,7 @@ func (srv *Server) deletePeer(id common.Address) {
 		metricsDeletePeerMeter.Mark(1)
 		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
 	} else {
-		srv.log.Info("server.run delPeerChan recved. peer not match")
+		srv.log.Info("server.run delPeerChan received. peer not match")
 	}
 }
 
@@ -316,7 +316,7 @@ func (srv *Server) listenLoop() {
 			break
 		}
 		go func() {
-			srv.log.Info("Accept new connection from, %s -> %s", fd.LocalAddr(), fd.RemoteAddr())
+			srv.log.Info("Accept new connection from, %s -> %s", fd.RemoteAddr(), fd.LocalAddr())
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
@@ -336,14 +336,16 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.cap())
 	}
-	recvMsg, nounceCnt, err := srv.doHandShake(caps, peer, flags, dialDest)
+
+	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
 		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
 
-	peerCaps, peerNodeID := recvMsg.Caps, recvMsg.NodeID
+	srv.log.Debug("handshake succeed. %s -> %s", fd.LocalAddr(), fd.RemoteAddr())
+	peerNodeID := recvMsg.NodeID
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
@@ -356,13 +358,15 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		peer.Node = peerNode
 	}
 
-	srv.log.Debug("p2p.setupConn conn handshaked. nounceCnt=%d peerCaps=%s", nounceCnt, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
 		if srv.addPeer(peer) {
 			peer.run()
 			srv.deletePeer(peer.Node.ID)
+		} else {
+			peer.close()
 		}
+
 		srv.loopWG.Done()
 	}()
 
@@ -518,12 +522,12 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 
 // unPackWrapHSMsg verify recved msg, and recover the handshake msg
 func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
-
 	size := uint32(len(recvWrapMsg.Payload))
 	if size < extraDataLen+4 {
 		err = errors.New("received msg with invalid length")
 		return
 	}
+
 	extraEncLen := binary.BigEndian.Uint32(recvWrapMsg.Payload[size-4:])
 	recvHSMsgLen := size - extraEncLen - 4
 	nounceCnt = binary.BigEndian.Uint64(recvWrapMsg.Payload[recvHSMsgLen+16:])
@@ -552,7 +556,8 @@ func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake
 		err = errors.New("unPackWrapHSMsg: received md5sum not match")
 		return
 	}
-	srv.log.Info("unPackWrapHSMsg: verify OK!")
+
+	srv.log.Debug("unPackWrapHSMsg: verify OK!")
 	return
 }
 
