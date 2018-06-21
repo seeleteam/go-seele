@@ -14,6 +14,8 @@ import (
 var (
 	//SeeleToFan base feifan coin number
 	SeeleToFan = big.NewInt(100000000)
+	// MaxGasLimit evm limited maximum gas
+	MaxGasLimit = uint64(10000000)
 )
 
 //BigToDecimal simply changes big int to decimal which will miss additional 0 in the last
