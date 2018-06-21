@@ -22,9 +22,6 @@ import (
 )
 
 const (
-	udpReadMsgTimeout  = 60 * time.Second
-	udpWriteMsgTimeout = 5 * time.Second
-
 	responseTimeout = 20 * time.Second
 
 	pingpongConcurrentNumber = 5
@@ -129,7 +126,6 @@ func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *n
 }
 
 func (u *udp) sendConnMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
-	conn.SetWriteDeadline(time.Now().Add(udpWriteMsgTimeout))
 	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
 		u.log.Warn("discovery send msg to %s failed:%s", to, err)
@@ -264,8 +260,6 @@ func (u *udp) readLoop() {
 	for {
 		// 1472 is udp max transfer size for once
 		data := make([]byte, 1472)
-
-		u.conn.SetReadDeadline(time.Now().Add(udpReadMsgTimeout))
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
 			u.log.Warn("discovery read from udp failed. %s", err)
