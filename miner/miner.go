@@ -100,6 +100,12 @@ func (miner *Miner) SetThreads(threads int) {
 	miner.threads = threads
 }
 
+// GetThreads gets the number of mining threads.
+func (miner *Miner) GetThreads() int {
+
+	return miner.threads
+}
+
 // SetCoinbase set the coinbase.
 func (miner *Miner) SetCoinbase(coinbase common.Address) {
 	miner.coinbase = coinbase

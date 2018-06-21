@@ -63,6 +63,12 @@ func (api *PrivateMinerAPI) SetThreads(threads *int, result *interface{}) error 
 	return nil
 }
 
+// GetThreads  API is used to get the number of threads.
+func (api *PrivateMinerAPI) GetThreads(threads *int, result *interface{}) error {
+	*result = api.s.miner.GetThreads()
+	return nil
+}
+
 // SetCoinbase API is used to set the coinbase.
 func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}) error {
 	coinbase, err := common.HexToAddress(*coinbaseStr)
@@ -70,6 +76,13 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}
 		return err
 	}
 	api.s.miner.SetCoinbase(coinbase)
+
+	return nil
+}
+
+// GetCoinbase API is used to get the coinbase.
+func (api *PrivateMinerAPI) GetCoinbase(input interface{}, result *interface{}) error {
+	*result = api.s.miner.GetCoinbase()
 
 	return nil
 }
