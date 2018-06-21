@@ -14,6 +14,7 @@ import (
 
 var threadsNum *int
 var start bool
+var status bool
 var stop bool
 var gethashrate bool
 
@@ -22,9 +23,10 @@ var minerCmd = &cobra.Command{
 	Use:   "miner",
 	Short: "miner actions",
 	Long: `For example:
-	 client.exe miner --start [-t <miner threads num>]
-	 client.exe miner --stop
-	 client.exe miner --gethashrate`,
+	client.exe miner --start [-t <miner threads num>]
+	client.exe miner --status
+	client.exe miner --stop
+	client.exe miner --gethashrate`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -42,6 +44,13 @@ var minerCmd = &cobra.Command{
 				return
 			}
 			fmt.Println("miner start succeed")
+		} else if status {
+			err = client.Call("miner.Status", &input, &result)
+			if err != nil {
+				fmt.Printf("failed to get miner status: %s\n", err.Error())
+				return
+			}
+			fmt.Printf("miner status is: %s\n", result)
 		} else if stop {
 			err = client.Call("miner.Stop", &input, &result)
 			if err != nil {
@@ -65,6 +74,7 @@ func init() {
 	threadsNum = minerCmd.Flags().IntP("threads", "t", 0, "threads num of the miner")
 
 	minerCmd.Flags().BoolVar(&start, "start", false, "start miner")
+	minerCmd.Flags().BoolVar(&status, "status", false, "view miner status")
 	minerCmd.Flags().BoolVar(&stop, "stop", false, "stop miner")
 	minerCmd.Flags().BoolVar(&gethashrate, "gethashrate", false, "get hashrate of the miner")
 }

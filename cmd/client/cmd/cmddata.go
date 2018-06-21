@@ -252,10 +252,10 @@ func NewCmdData() []*Request {
 			Params:           []*Param{},
 		},
 		&Request{
-			Use:   "gettransactionbyhash",
+			Use:   "gettxbyhash",
 			Short: "get transaction info by hash",
 			Long: `For example:
-  			client.exe gettransactionbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+  			client.exe gettxbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
 			ParamReflectType: "string",
 			Method:           "txpool.GetTransactionByHash",
 			UseWebsocket:     false,
