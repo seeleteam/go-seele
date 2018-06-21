@@ -121,19 +121,19 @@ func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *n
 		toAddr: toAddr,
 		code:   t,
 	}
+
 	u.writer <- s
 }
 
 func (u *udp) sendConnMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
-	//log.Debug("buff length:", len(buff))
 	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
-		u.log.Error("discovery send msg to %s failed:%s", to, err)
+		u.log.Warn("discovery send msg to %s failed:%s", to, err)
 		return false
 	}
 
 	if n != len(buff) {
-		u.log.Error("discovery send msg failed to %s, expected length: %d, actual length: %d", to, len(buff), n)
+		u.log.Warn("discovery send msg failed to %s, expected length: %d, actual length: %d", to, len(buff), n)
 		return false
 	}
 
@@ -262,7 +262,8 @@ func (u *udp) readLoop() {
 		data := make([]byte, 1472)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
-			u.log.Error("discovery read from udp failed. %s", err)
+			u.log.Warn("discovery read from udp failed. %s", err)
+			continue
 		}
 
 		data = data[:n]
@@ -291,17 +292,12 @@ func (u *udp) loopReply() {
 			}
 		}
 
-		// if there is no pending request, stop timer
-		if pendingList.Len() == 0 {
-			timeout.Stop()
-		} else {
-			timeout.Reset(minTime)
-		}
+		timeout.Reset(minTime)
 	}
 
-	for {
-		resetTimer()
+	resetTimer()
 
+	for {
 		select {
 		case r := <-u.gotReply:
 			for el := pendingList.Front(); el != nil; el = el.Next() {
@@ -474,6 +470,10 @@ func (u *udp) deleteNode(n *Node) {
 	selfSha := u.self.getSha()
 	sha := n.getSha()
 	if sha == selfSha {
+		return
+	}
+
+	if _, ok := u.db.FindByNodeID(n.ID); !ok {
 		return
 	}
 

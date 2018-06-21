@@ -206,22 +206,11 @@ func (m *findNode) send(t *udp) {
 				return true
 			}
 
-			found := false
 			for _, n := range r.Nodes {
 				t.log.Debug("received node: %s", n.SelfID.ToHex())
 
-				if n.SelfID == m.QueryID {
-					found = true
-				}
-
 				node := n.ToNode()
 				t.addNode(node, false)
-			}
-
-			// if not found, will find the node that is more closer than last one
-			if !found {
-				nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
-				sendFindNodeRequest(t, nodes, m.QueryID)
 			}
 
 			return true
