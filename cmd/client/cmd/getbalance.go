@@ -36,7 +36,8 @@ func getClientCmd(use, short, long string, handler func(client *rpc.Client)) *co
 			} else {
 				result, err := common.HexToAddress(accountStr)
 				if err != nil {
-					panic(fmt.Sprintf("invalid account address: %s", err))
+					fmt.Printf("invalid account address:%s, %s\n", accountStr, err.Error())
+					return
 				}
 
 				address = &result

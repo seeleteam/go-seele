@@ -230,7 +230,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 		"result":    hexutil.BytesToHex(re.Result),
 		"poststate": re.PostState.ToHex(),
 		"txhash":    re.TxHash.ToHex(),
-		"contract":  "",
+		"contract":  "nil",
 	}
 
 	if len(re.ContractAddress) > 0 {
