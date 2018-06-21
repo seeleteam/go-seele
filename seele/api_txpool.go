@@ -63,7 +63,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(reques
 	}
 
 	txs := block.Transactions
-	if request.Index >= len(txs) {
+	if request.Index >= uint(len(txs)) {
 		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 
@@ -86,7 +86,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request 
 	}
 
 	txs := block.Transactions
-	if request.Index >= len(txs) {
+	if request.Index >= uint(len(txs)) {
 		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 	*result = PrintableOutputTx(txs[request.Index])
