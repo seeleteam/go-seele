@@ -185,8 +185,9 @@ func (p *peer) SetHead(hash common.Hash, td *big.Int) {
 
 // RequestHeadersByHashOrNumber fetches a batch of blocks' headers corresponding to the
 // specified header query, based on the hash of an origin block.
-func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amount int, reverse bool) error {
+func (p *peer) RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error {
 	query := &blockHeadersQuery{
+		Magic:   magic,
 		Hash:    origin,
 		Number:  num,
 		Amount:  uint64(amount),
@@ -194,21 +195,26 @@ func (p *peer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amou
 	}
 
 	buff := common.SerializePanic(query)
-	p.log.Debug("peer send [downloader.GetBlockHeadersMsg] with size %d byte", len(buff))
+	p.log.Debug("peer send [downloader.GetBlockHeadersMsg] with size %d byte peerid:%s", len(buff), p.peerStrID)
 	return p2p.SendMessage(p.rw, downloader.GetBlockHeadersMsg, buff)
 }
 
-func (p *peer) sendBlockHeaders(headers []*types.BlockHeader) error {
-	buff := common.SerializePanic(headers)
+func (p *peer) sendBlockHeaders(magic uint32, headers []*types.BlockHeader) error {
+	sendMsg := &downloader.BlockHeadersMsgBody{
+		Magic:   magic,
+		Headers: headers,
+	}
+	buff := common.SerializePanic(sendMsg)
 
-	p.log.Debug("peer send [downloader.BlockHeadersMsg] with length %d size %d byte", len(headers), len(buff))
+	p.log.Debug("peer send [downloader.BlockHeadersMsg] with length %d size %d byte peerid:%s", len(headers), len(buff), p.peerStrID)
 	return p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, buff)
 }
 
 // RequestBlocksByHashOrNumber fetches a batch of blocks corresponding to the
 // specified header query, based on the hash of an origin block.
-func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error {
+func (p *peer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error {
 	query := &blocksQuery{
+		Magic:  magic,
 		Hash:   origin,
 		Number: num,
 		Amount: uint64(amount),
@@ -219,10 +225,14 @@ func (p *peer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amoun
 	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, buff)
 }
 
-func (p *peer) sendBlocks(blocks []*types.Block) error {
-	buff := common.SerializePanic(blocks)
+func (p *peer) sendBlocks(magic uint32, blocks []*types.Block) error {
+	sendMsg := &downloader.BlocksMsgBody{
+		Magic:  magic,
+		Blocks: blocks,
+	}
+	buff := common.SerializePanic(sendMsg)
 
-	p.log.Debug("peer send [downloader.BlocksMsg] with length: %d, size:%d byte", len(blocks), len(buff))
+	p.log.Debug("peer send [downloader.BlocksMsg] with length: %d, size:%d byte peerid:%s", len(blocks), len(buff), p.peerStrID)
 	return p2p.SendMessage(p.rw, downloader.BlocksMsg, buff)
 }
 
