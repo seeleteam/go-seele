@@ -163,7 +163,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 			d.log.Info("download end with failed, err %s", err)
 			event.BlockDownloaderEventManager.Fire(event.DownloaderFailedEvent)
 		} else {
-			d.log.Info("download end success")
+			d.log.Debug("download end success")
 			event.BlockDownloaderEventManager.Fire(event.DownloaderDoneEvent)
 		}
 	}()
@@ -200,7 +200,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	d.lock.Unlock()
 	tm.close()
 	d.tm = nil
-	d.log.Info("downloader.doSynchronise quit!")
+	d.log.Debug("downloader.doSynchronise quit!")
 
 	if tm.isDone() {
 		return nil

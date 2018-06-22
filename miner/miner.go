@@ -200,10 +200,13 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
-		miner.log.Info("got download end event, start miner")
-		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 		atomic.StoreInt32(&miner.canStart, 1)
-		miner.Start()
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
+
+		if atomic.LoadInt32(&miner.stopped) == 0 {
+			miner.log.Info("got download end event, start miner")
+			miner.Start()
+		}
 	}
 }
 
