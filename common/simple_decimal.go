@@ -16,6 +16,9 @@ var (
 	SeeleToFan = big.NewInt(100000000)
 )
 
+// MAXTXGAS evm limited the maximum gas of transaction
+const MAXTXGAS = uint64(10000000)
+
 //BigToDecimal simply changes big int to decimal which will miss additional 0 in the last
 func BigToDecimal(amount *big.Int) string {
 	base := SeeleToFan
