@@ -46,7 +46,7 @@ func loadRecoveryPoint() (*recoveryPoint, error) {
 
 	if err = common.Deserialize(bytes, &rp); err != nil {
 		rpLog.Error("Failed to deserialize encoded bytes to recovery point info, %v", err.Error())
-		return &rp, err
+		rp.serialize()
 	}
 
 	return &rp, nil
