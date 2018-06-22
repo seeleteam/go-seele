@@ -150,11 +150,11 @@ func (miner *Miner) Start() error {
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
+	// set stopped to 1 to prevent restart
+	atomic.StoreInt32(&miner.stopped, 1)
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
-
-	atomic.StoreInt32(&miner.stopped, 1)
 
 	// notify all threads to terminate
 	if miner.stopChan != nil {
