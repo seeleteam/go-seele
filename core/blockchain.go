@@ -139,7 +139,7 @@ func NewBlockchainRecoverable(bcStore store.BlockchainStore, accountStateDB data
 		return nil, err
 	}
 
-	if err = bc.rp.recover(bc); err != nil {
+	if err = bc.rp.recover(bcStore); err != nil {
 		bc.log.Error("Failed to recover blockchain, info = %+v, error = %v", *bc.rp, err.Error())
 		return nil, err
 	}
@@ -323,12 +323,12 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	// If the new block has larger TD, the canonical chain will be changed.
 	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
 	if isHead {
-		if err = bc.deleteLargerHeightBlocks(block.Header.Height+1, false); err != nil {
+		if err = deleteLargerHeightBlocks(bc.bcStore, block.Header.Height+1, bc.rp); err != nil {
 			bc.log.Error("Failed to delete larger height blocks when HEAD changed, larger height = %v, error = %v", block.Header.Height+1, err.Error())
 			return err
 		}
 
-		if err = bc.overwriteStaleBlocks(block.Header.PreviousBlockHash, false); err != nil {
+		if err = overwriteStaleBlocks(bc.bcStore, block.Header.PreviousBlockHash, bc.rp); err != nil {
 			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
 			return err
 		}
@@ -507,22 +507,18 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 }
 
 // deleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.
-func (bc *Blockchain) deleteLargerHeightBlocks(largerHeight uint64, recoverMode bool) error {
-	// In recover mode, the block hash may be deleted before program crash.
-	if recoverMode {
-		if _, err := bc.bcStore.DeleteBlockHash(largerHeight); err != nil {
-			return err
-		}
-
-		largerHeight++
+func deleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64, rp *recoveryPoint) error {
+	// When recover the blockchain, the larger height block hash may be already deleted before program crash.
+	if _, err := bcStore.DeleteBlockHash(largerHeight); err != nil {
+		return err
 	}
 
-	for i := largerHeight; ; i++ {
-		if !recoverMode {
-			bc.rp.onDeleteLargerHeightBlocks(i)
+	for i := largerHeight + 1; ; i++ {
+		if rp != nil {
+			rp.onDeleteLargerHeightBlocks(i)
 		}
 
-		deleted, err := bc.bcStore.DeleteBlockHash(i)
+		deleted, err := bcStore.DeleteBlockHash(i)
 		if err != nil {
 			return err
 		}
@@ -532,29 +528,29 @@ func (bc *Blockchain) deleteLargerHeightBlocks(largerHeight uint64, recoverMode 
 		}
 	}
 
-	if !recoverMode {
-		bc.rp.onDeleteLargerHeightBlocks(0)
+	if rp != nil {
+		rp.onDeleteLargerHeightBlocks(0)
 	}
 
 	return nil
 }
 
 // overwriteStaleBlocks overwrites the stale canonical height-to-hash mappings.
-func (bc *Blockchain) overwriteStaleBlocks(staleHash common.Hash, recoverMode bool) error {
+func overwriteStaleBlocks(bcStore store.BlockchainStore, staleHash common.Hash, rp *recoveryPoint) error {
 	var overwritten bool
 	var err error
 
-	// In recover mode, the block hash my be overwritten before program crash.
-	if recoverMode {
-		_, staleHash, _ = bc.overwriteStaleBlockHash(staleHash)
+	// When recover the blockchain, the stale block hash my be already overwritten before program crash.
+	if _, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
+		return err
 	}
 
 	for !staleHash.Equal(common.EmptyHash) {
-		if !recoverMode {
-			bc.rp.onOverwriteStaleBlocks(staleHash)
+		if rp != nil {
+			rp.onOverwriteStaleBlocks(staleHash)
 		}
 
-		if overwritten, staleHash, err = bc.overwriteStaleBlockHash(staleHash); err != nil {
+		if overwritten, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
 			return err
 		}
 
@@ -563,20 +559,20 @@ func (bc *Blockchain) overwriteStaleBlocks(staleHash common.Hash, recoverMode bo
 		}
 	}
 
-	if !recoverMode {
-		bc.rp.onOverwriteStaleBlocks(common.EmptyHash)
+	if rp != nil {
+		rp.onOverwriteStaleBlocks(common.EmptyHash)
 	}
 
 	return nil
 }
 
-func (bc *Blockchain) overwriteStaleBlockHash(hash common.Hash) (overwritten bool, preBlockHash common.Hash, err error) {
-	header, err := bc.bcStore.GetBlockHeader(hash)
+func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) (overwritten bool, preBlockHash common.Hash, err error) {
+	header, err := bcStore.GetBlockHeader(hash)
 	if err != nil {
 		return false, common.EmptyHash, err
 	}
 
-	canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
+	canonicalHash, err := bcStore.GetBlockHash(header.Height)
 	if err != nil {
 		return false, common.EmptyHash, err
 	}
@@ -585,7 +581,7 @@ func (bc *Blockchain) overwriteStaleBlockHash(hash common.Hash) (overwritten boo
 		return false, header.PreviousBlockHash, nil
 	}
 
-	if err = bc.bcStore.PutBlockHash(header.Height, hash); err != nil {
+	if err = bcStore.PutBlockHash(header.Height, hash); err != nil {
 		return false, common.EmptyHash, err
 	}
 
