@@ -37,11 +37,11 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ;")
+	rootCmd.PersistentFlags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ,")
 }
 
 func initClient() {
-	addrs := strings.Split(serveList, ";")
+	addrs := strings.Split(serveList, ",")
 	clientList = make(map[uint]*rpc.Client, 0)
 
 	for _, addr := range addrs {
