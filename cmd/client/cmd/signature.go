@@ -27,7 +27,12 @@ var signCmd = &cobra.Command{
 	Long: `sign the data with your private key
   For example:
     client.exe sign -d datafile -k privatekey
-    client.exe sign -a 127.0.0.1:55027 -d datafile -k privatekey`,
+    client.exe sign -a 127.0.0.1:55027 -d datafile -k privatekey
+	the datafile is like:
+	{	"From": "0x02235268262b72978c20eec2be8244b61dd5a0f1",
+		"To": "0x2a87b6504cd00af95a83b9887112016a2a991cf1",
+		"Amount": 10, "Fee": 1
+	}`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -88,7 +93,7 @@ var signCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(signCmd)
 
-	data = signCmd.Flags().StringP("data", "d", "", "the transaction data file path that needs to be signed")
+	data = signCmd.Flags().StringP("data", "d", "", "the transaction data file path, it's a json file, have four variabl; From: account of payment, To: account to be credited, Amount: transfer amount, Fee: tip")
 	signCmd.MarkFlagRequired("data")
 
 	privateKey = signCmd.Flags().StringP("key", "k", "", "private key")
