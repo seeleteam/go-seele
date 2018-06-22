@@ -88,7 +88,7 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}
 		return err
 	}
 	if coinbase.Shard() != common.LocalShardNumber{
-		return fmt.Errorf("invalid shard number. block shard number is [%v], but local shard number is [%v]", coinbase.Shard(), common.LocalShardNumber)
+		return fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v].", coinbase.Shard(), common.LocalShardNumber)
 	}
 	api.s.miner.SetCoinbase(coinbase)
 
