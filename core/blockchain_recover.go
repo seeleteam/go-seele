@@ -53,8 +53,6 @@ func loadRecoveryPoint(file string) (*recoveryPoint, error) {
 }
 
 func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
-	rpLog.Info("Try to recover blockchain, recovery point info is %+v", rp)
-
 	saved := true
 
 	// recover the previous HEAD block hash.
