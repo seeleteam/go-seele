@@ -28,6 +28,9 @@ const (
 
 	// AccountStateDir account state info directory based on config.DataRoot
 	AccountStateDir = "/db/accountState"
+
+	// BlockChainRecoveryPointFile is used to store the recovery point info of blockchain.
+	BlockChainRecoveryPointFile = "recoveryPoint.bin"
 )
 
 // statusData the structure for peers to exchange status

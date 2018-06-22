@@ -8,7 +8,6 @@ package core
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
@@ -16,10 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
-var (
-	recoveryPointFile = filepath.Join(common.GetDefaultDataFolder(), "recoveryPoint.bin")
-	rpLog             = log.GetLogger("recoveryPoint", common.LogConfig.PrintLog)
-)
+var rpLog = log.GetLogger("recoveryPoint", common.LogConfig.PrintLog)
 
 // recoveryPoint is used for blockchain recovery in case of program crashed when write a block.
 type recoveryPoint struct {
@@ -29,23 +25,27 @@ type recoveryPoint struct {
 	PreviousHeadBlockHash      common.Hash // current HEAD block hash when write a block.
 	LargerHeight               uint64      // Record the larger height block that to be removed from canonical chain.
 	StaleHash                  common.Hash // Record the stale block hash for overwrite in canonical chain.
+
+	file string
 }
 
-func loadRecoveryPoint() (*recoveryPoint, error) {
-	var rp recoveryPoint
+func loadRecoveryPoint(file string) (*recoveryPoint, error) {
+	rp := recoveryPoint{
+		file: file,
+	}
 
-	if !common.FileOrFolderExists(recoveryPointFile) {
+	if len(file) == 0 || !common.FileOrFolderExists(file) {
 		return &rp, nil
 	}
 
-	bytes, err := ioutil.ReadFile(recoveryPointFile)
+	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		rpLog.Error("Failed to read bytes from recovery point file, %v", err.Error())
 		return &rp, err
 	}
 
 	if err = common.Deserialize(bytes, &rp); err != nil {
-		rpLog.Error("Failed to deserialize encoded bytes to recovery point info, %v", err.Error())
+		rpLog.Warn("Failed to deserialize encoded bytes to recovery point info, %v", err.Error())
 		rp.serialize()
 	}
 
@@ -121,10 +121,14 @@ func (rp *recoveryPoint) recover(bc *Blockchain) error {
 }
 
 func (rp *recoveryPoint) serialize() {
+	if len(rp.file) == 0 {
+		return
+	}
+
 	encoded := common.SerializePanic(rp)
 
-	if err := ioutil.WriteFile(recoveryPointFile, encoded, os.ModePerm); err != nil {
-		rpLog.Error("Failed to serialize recovery point info to file, file = %v, error = %v", recoveryPointFile, err.Error())
+	if err := ioutil.WriteFile(rp.file, encoded, os.ModePerm); err != nil {
+		rpLog.Warn("Failed to serialize recovery point info to file, file = %v, error = %v", rp.file, err.Error())
 	}
 }
 

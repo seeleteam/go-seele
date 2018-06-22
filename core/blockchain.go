@@ -118,6 +118,11 @@ type Blockchain struct {
 
 // NewBlockchain returns an initialized block chain with the given store and account state DB.
 func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
+	return NewBlockchainRecoverable(bcStore, accountStateDB, "")
+}
+
+// NewBlockchainRecoverable returns an initialized block chain with the given store and account state DB.
+func NewBlockchainRecoverable(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
@@ -128,7 +133,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	var err error
 
 	// recover from program crash
-	bc.rp, err = loadRecoveryPoint()
+	bc.rp, err = loadRecoveryPoint(recoveryPointFile)
 	if err != nil {
 		bc.log.Error("Failed to load recovery point info from file, %v", err.Error())
 		return nil, err
