@@ -38,11 +38,10 @@ func (api *PrivateMinerAPI) Start(threads *int, result *string) error {
 
 // Status API is used to view the miner's status.
 func (api *PrivateMinerAPI) Status(input *string, result *string) error {
-	*result = "Unknown"
 	if api.s.miner.IsMining() {
-		*result = miner.ErrMinerIsRunning.Error()
+		*result = "Running"
 	} else {
-		*result = miner.ErrMinerIsStopped.Error()
+		*result = "Stopped"
 	}
 
 	return nil
