@@ -86,12 +86,18 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		if strings.ToLower(*miner) == "start" {
+		minerInfo := strings.ToLower(*miner)
+		if minerInfo == "start" {
 			err = seeleService.Miner().Start()
 			if err != nil && err != miner2.ErrMinerIsRunning {
-				fmt.Println("Starting the miner failed: ", err.Error())
+				fmt.Println("Starting the miner failed: ", err)
 				return
 			}
+		} else if minerInfo == "stop" {
+			seeleService.Miner().Stop()
+		} else {
+			fmt.Println("invalid miner command, must be start or stop")
+			return
 		}
 
 		if *metricsEnableFlag {
