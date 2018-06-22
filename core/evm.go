@@ -69,15 +69,15 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
 
-	// Currently, use 10000000 gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
+	// Currently, use common.MAXTXLIMIT gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
 		var createdContractAddr common.Address
-		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, common.MaxGasLimit, tx.Data.Amount); err == nil {
+		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, common.MAXTXLIMIT, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
-		receipt.Result, _, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, common.MaxGasLimit, tx.Data.Amount)
+		receipt.Result, _, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, common.MAXTXLIMIT, tx.Data.Amount)
 	}
 
 	if err != nil {
