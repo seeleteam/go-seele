@@ -9,10 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
@@ -20,16 +18,16 @@ import (
 )
 
 var data *string
-var fileFullName *string
+var privateKey *string
 
-// signatureCmd represents the signature command
-var signatureCmd = &cobra.Command{
-	Use:   "signature",
+// signCmd represents the sign command
+var signCmd = &cobra.Command{
+	Use:   "sign",
 	Short: "sign the data with your private key",
 	Long: `sign the data with your private key
   For example:
-    client.exe signature -d datafile -f keyfile
-    client.exe signature -a 127.0.0.1:55027 -d datafile -f keyfile`,
+    client.exe sign -d datafile -k privatekey
+    client.exe sign -a 127.0.0.1:55027 -d datafile -k privatekey`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -51,19 +49,13 @@ var signatureCmd = &cobra.Command{
 			return
 		}
 
-		pass, err := common.GetPassword()
+		key, err := crypto.LoadECDSAFromString(*privateKey)
 		if err != nil {
-			fmt.Printf("get password failed %s\n", err.Error())
+			fmt.Sprintf("load key failed %s", err)
 			return
 		}
 
-		key, err := keystore.GetKey(*fileFullName, pass)
-		if err != nil {
-			fmt.Printf("invalid sender key file. it should be a private key: %s\n", err.Error())
-			return
-		}
-
-		fromAddr := crypto.GetAddress(&key.PrivateKey.PublicKey)
+		fromAddr := crypto.GetAddress(&key.PublicKey)
 		if txd.From == common.EmptyAddress {
 			txd.From = *fromAddr
 		}
@@ -81,27 +73,24 @@ var signatureCmd = &cobra.Command{
 
 		var tx = types.Transaction{}
 		tx.Data = txd
-		tx.Sign(key.PrivateKey)
+		tx.Sign(key)
 
-		databytes, err := json.MarshalIndent(tx, "", "")
+		databytes, err := json.MarshalIndent(tx, "\t", "")
 		if err != nil {
 			fmt.Printf("json marshl failed: %s\n", err.Error())
 			return
 		}
-		err = ioutil.WriteFile(*data, databytes, os.ModeAppend)
-		if err != nil {
-			fmt.Printf("write data file failed: %s\n", err.Error())
-			return
-		}
+
+		fmt.Printf("out: %v\n", string(databytes))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(signatureCmd)
+	rootCmd.AddCommand(signCmd)
 
-	data = signatureCmd.Flags().StringP("data", "d", "", "the transaction data file path that needs to be signed")
-	signatureCmd.MarkFlagRequired("data")
+	data = signCmd.Flags().StringP("data", "d", "", "the transaction data file path that needs to be signed")
+	signCmd.MarkFlagRequired("data")
 
-	fileFullName = signatureCmd.Flags().StringP("from", "f", "", "key file path of the sender")
-	signatureCmd.MarkFlagRequired("from")
+	privateKey = signCmd.Flags().StringP("key", "k", "", "private key")
+	signCmd.MarkFlagRequired("key")
 }
