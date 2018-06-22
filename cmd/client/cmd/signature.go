@@ -28,7 +28,7 @@ var signCmd = &cobra.Command{
   For example:
     client.exe sign -d datafile -k privatekey
     client.exe sign -a 127.0.0.1:55027 -d datafile -k privatekey
-	the datafile is like:
+	the datafile like:
 	{	"From": "0x02235268262b72978c20eec2be8244b61dd5a0f1",
 		"To": "0x2a87b6504cd00af95a83b9887112016a2a991cf1",
 		"Amount": 10, "Fee": 1
@@ -93,7 +93,7 @@ var signCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(signCmd)
 
-	data = signCmd.Flags().StringP("data", "d", "", "the transaction data file path, it's a json file, have four variabl; From: account of payment, To: account to be credited, Amount: transfer amount, Fee: tip")
+	data = signCmd.Flags().StringP("data", "d", "", "the transaction data file path, it's a json file, have four variable; From: account of payment, To: account to be credited, Amount: transfer amount, Fee: tip")
 	signCmd.MarkFlagRequired("data")
 
 	privateKey = signCmd.Flags().StringP("key", "k", "", "private key")
