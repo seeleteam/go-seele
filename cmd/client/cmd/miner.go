@@ -60,7 +60,11 @@ var minerCmd = &cobra.Command{
 			fmt.Println("miner stop succeed")
 		} else if gethashrate {
 			var hashrate uint64
-			client.Call("miner.Hashrate", &input, &hashrate)
+			err = client.Call("miner.Hashrate", &input, &hashrate)
+			if err != nil {
+				fmt.Printf("failed to get miner's hashrate: %s\n", err.Error())
+				return
+			}
 			fmt.Printf("miner hashrate is: %d\n", hashrate)
 		} else {
 			fmt.Println("command param is not defined.")

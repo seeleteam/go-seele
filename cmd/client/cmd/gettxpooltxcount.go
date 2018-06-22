@@ -28,10 +28,11 @@ var gettxpooltxcountCmd = &cobra.Command{
 
 		var count uint64
 		err = client.Call("debug.GetTxPoolTxCount", nil, &count)
-
 		if err != nil {
 			fmt.Printf("get tx pool status failed %s\n", err.Error())
+			return
 		}
+
 		fmt.Printf("tx pool count : %d\n", count)
 	},
 }
