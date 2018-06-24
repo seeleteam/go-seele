@@ -100,7 +100,7 @@ type consensusEngine interface {
 	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
 }
 
-// Blockchain represents the block chain with a genesis block. The Blockchain manages
+// Blockchain represents the blockchain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure. we must keep all of its parameters are thread safe too.
 type Blockchain struct {
@@ -116,12 +116,12 @@ type Blockchain struct {
 	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 }
 
-// NewBlockchain returns an initialized block chain with the given store and account state DB.
+// NewBlockchain returns an initialized blockchain with the given store and account state DB.
 func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
 	return NewBlockchainRecoverable(bcStore, accountStateDB, "")
 }
 
-// NewBlockchainRecoverable returns an initialized block chain with the given store and account state DB.
+// NewBlockchainRecoverable returns an initialized blockchain with the given store and account state DB.
 func NewBlockchainRecoverable(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
