@@ -8,18 +8,24 @@ package trie
 const (
 	// numBranchChildren number children in branch node
 	numBranchChildren int = 17 // for 0-f branches + value node; reduce the height of tree for performance
+
+	nodeStatusDirty     nodeStatus = iota // node is newly created or modified, but not update the node hash
+	nodeStatusUpdated                     // node hash updated
+	nodeStatusPersisted                   // node persisted in DB, in which case the node hash also updated
 )
+
+type nodeStatus byte
 
 // Noder interface for node
 type noder interface {
 	Hash() []byte
-	IsDirty() bool // node is just created;value/childern is modified;it return true.
+	Status() nodeStatus
 }
 
 // Node is trie node struct
 type Node struct {
-	hash  []byte // hash of the node
-	dirty bool   // is the node dirty,need to write to database
+	hash   []byte     // hash of the node
+	status nodeStatus // status of the node
 }
 
 // ExtensionNode is extension node struct
@@ -51,9 +57,9 @@ func (n hashNode) Hash() []byte {
 	return n
 }
 
-// IsDirty is node dirty
-func (n hashNode) IsDirty() bool {
-	return false
+// Status return the status of node
+func (n hashNode) Status() nodeStatus {
+	return nodeStatusPersisted
 }
 
 // Hash return the hash of node
@@ -61,7 +67,7 @@ func (n Node) Hash() []byte {
 	return n.hash
 }
 
-// IsDirty is node dirty
-func (n Node) IsDirty() bool {
-	return n.dirty
+// Status return the status of node
+func (n Node) Status() nodeStatus {
+	return n.status
 }
