@@ -368,14 +368,16 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 
 	// check before applying tx
-	fromAddr := testGenesisAccounts[0].addr
-	assert.Equal(t, statedb.GetBalance(fromAddr), big.NewInt(100))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
 
 	// apply tx
 	_, err = bc.ApplyTransaction(tx, 1, coinbase, statedb, block.Header)
 	assert.Equal(t, err, nil)
 
 	// check after applying tx
-	assert.Equal(t, statedb.GetBalance(fromAddr), big.NewInt(100-10-2))
-	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50+2))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(88))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
 }
