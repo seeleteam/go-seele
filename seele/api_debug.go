@@ -6,9 +6,9 @@
 package seele
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
@@ -46,7 +46,11 @@ func (api *PrivateDebugAPI) PrintBlock(height *int64, result *string) error {
 		return err
 	}
 
-	*result = spew.Sdump(block)
+	resultBytes, err := json.MarshalIndent(block, "", "\t")
+	if err != nil {
+		return err
+	}
+	*result = string(resultBytes)
 	return nil
 }
 
