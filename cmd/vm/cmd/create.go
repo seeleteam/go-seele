@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"path/filepath"
 
@@ -25,7 +26,7 @@ var (
 )
 
 func init() {
-	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a text file that contains the binary contract code in the local directory(Required)")
+	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a readable file that contains the binary contract code in the local directory(Required)")
 	createCmd.Flags().StringVarP(&solFile, "file", "f", "", "solidity file path")
 	createCmd.Flags().StringVarP(&account, "account", "a", "", "the account address(Default is random and has 100 balance)")
 	rootCmd.AddCommand(createCmd)
@@ -57,6 +58,11 @@ func createContract() {
 		compileOutput = output
 		code = output.HexByteCodes
 		defer dispose()
+	}
+
+	// Try to read the file, if successful, use the file code
+	if bytecode, err := ioutil.ReadFile(code); err == nil {
+		code = string(bytecode)
 	}
 
 	bytecode, err := hexutil.HexToBytes(code)
