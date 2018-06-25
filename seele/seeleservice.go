@@ -90,7 +90,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	}
 
 	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	s.chain, err = core.NewBlockchainRecoverable(bcStore, s.accountStateDB, recoveryPointFile)
+	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile)
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()

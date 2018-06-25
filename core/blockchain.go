@@ -117,12 +117,7 @@ type Blockchain struct {
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
-func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
-	return NewBlockchainRecoverable(bcStore, accountStateDB, "")
-}
-
-// NewBlockchainRecoverable returns an initialized blockchain with the given store and account state DB.
-func NewBlockchainRecoverable(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,

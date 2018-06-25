@@ -6,6 +6,7 @@
 package core
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 
@@ -44,8 +45,8 @@ func loadRecoveryPoint(file string) (*recoveryPoint, error) {
 		return &rp, err
 	}
 
-	if err = common.Deserialize(bytes, &rp); err != nil {
-		rpLog.Warn("Failed to deserialize encoded bytes to recovery point info, %v", err.Error())
+	if err = json.Unmarshal(bytes, &rp); err != nil {
+		rpLog.Warn("Failed to unmarshal encoded JSON data to recovery point info, file = %v, error = %v", file, err.Error())
 		rp.serialize()
 	}
 
@@ -119,14 +120,22 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 }
 
 func (rp *recoveryPoint) serialize() {
+	// do nothing if file is empty.
+	// Generally, UT could use empty file name to ignore the recovery point mechanism.
 	if len(rp.file) == 0 {
 		return
 	}
 
-	encoded := common.SerializePanic(rp)
+	encoded, err := json.MarshalIndent(rp, "", "\t")
+	if err != nil {
+		// just log the error so as not to block the blockchain initialization.
+		rpLog.Warn("Failed to marshal recovery point info to JSON data, rp = %+v, error = %v", *rp, err.Error())
+		return
+	}
 
 	if err := ioutil.WriteFile(rp.file, encoded, os.ModePerm); err != nil {
-		rpLog.Warn("Failed to serialize recovery point info to file, file = %v, error = %v", rp.file, err.Error())
+		// just log the error so as not to block the blockchain initialization.
+		rpLog.Warn("Failed to write recovery point JSON data to file, file = %v, error = %v", rp.file, err.Error())
 	}
 }
 
