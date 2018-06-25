@@ -32,11 +32,11 @@ func randomAddress(t *testing.T) common.Address {
 	return address
 }
 
-func newTestTx(t *testing.T, amount int64, nonce uint64, sign bool) *Transaction {
+func newTestTx(t *testing.T, amount, fee, nonce uint64, sign bool) *Transaction {
 	fromPrivKey, fromAddress := randomAccount(t)
 	toAddress := randomAddress(t)
 
-	tx, _ := NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
+	tx, _ := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
 
 	if sign {
 		tx.Sign(fromPrivKey)
@@ -75,7 +75,7 @@ func newTestStateDB(address common.Address, nonce, balance uint64) *mockStateDB 
 
 // Validate successfully if no data changed.
 func Test_Transaction_Validate_NoDataChange(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
+	tx := newTestTx(t, 100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, error(nil))
@@ -83,7 +83,7 @@ func Test_Transaction_Validate_NoDataChange(t *testing.T) {
 
 // Validate failed if transaction not signed.
 func Test_Transaction_Validate_NotSigned(t *testing.T) {
-	tx := newTestTx(t, 100, 38, false)
+	tx := newTestTx(t, 100, 2, 38, false)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrSigMissing)
@@ -91,7 +91,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 
 // Validate failed if transaction Hash value changed.
 func Test_Transaction_Validate_HashChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
+	tx := newTestTx(t, 100, 2, 38, true)
 	tx.Hash = crypto.HashBytes([]byte("test"))
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
@@ -100,7 +100,7 @@ func Test_Transaction_Validate_HashChanged(t *testing.T) {
 
 // Validate failed if transaction data changed.
 func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
+	tx := newTestTx(t, 100, 2, 38, true)
 	tx.Data.Amount.SetInt64(200)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
@@ -109,7 +109,7 @@ func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
 
 // Validate failed if transaction data changed along with Hash updated.
 func Test_Transaction_Validate_SignInvalid(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
+	tx := newTestTx(t, 100, 2, 38, true)
 
 	// Change amount and update Hash in transaction.
 	tx.Data.Amount.SetInt64(200)
@@ -127,8 +127,8 @@ func Test_MerkleRootHash_Empty(t *testing.T) {
 }
 
 func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
-	statedb := newTestStateDB(tx.Data.From, 38, 50)
+	tx := newTestTx(t, 100, 2, 38, true)
+	statedb := newTestStateDB(tx.Data.From, 38, 101)
 	err := tx.Validate(statedb)
 	if err == nil {
 		panic("expected error")
@@ -136,7 +136,7 @@ func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
-	tx := newTestTx(t, 100, 38, true)
+	tx := newTestTx(t, 100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
 	if err == nil {
