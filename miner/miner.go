@@ -131,13 +131,11 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	if atomic.CompareAndSwapInt32(&miner.isFirstBlockPrepared, 0, 1) {
-		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
-			miner.log.Warn(err.Error())
-			atomic.StoreInt32(&miner.mining, 0)
+	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
 
-			return err
-		}
+		return err
 	}
 
 	atomic.StoreInt32(&miner.stopped, 0)
