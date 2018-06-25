@@ -73,11 +73,11 @@ func newTestBlockchain(db database.Database) *Blockchain {
 	return bc
 }
 
-func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transaction {
+func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
 	toAddress := crypto.MustGenerateRandomAddress()
 
-	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx
@@ -89,7 +89,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 
 	txs := []*types.Transaction{rewardTx}
 	for i := uint64(0); i < txNum; i++ {
-		txs = append(txs, newTestBlockTx(0, 1, startNonce+i))
+		txs = append(txs, newTestBlockTx(0, 1, 1, startNonce+i))
 	}
 
 	header := &types.BlockHeader{
@@ -350,4 +350,34 @@ func Test_Blockchain_Shard(t *testing.T) {
 	shardNum, err := bc.GetShardNumber()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, shardNum, uint(8))
+}
+
+func Test_Blockchain_ApplyTransaction(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	// prepare tx to apply, amount is 10 and fee is 2
+	tx := newTestBlockTx(0, 10, 2, 0)
+	coinbase := *crypto.MustGenerateRandomAddress()
+	statedb, err := bc.GetCurrentState()
+	assert.Equal(t, err, nil)
+	statedb.CreateAccount(coinbase)
+	statedb.SetBalance(coinbase, big.NewInt(50))
+	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
+
+	// check before applying tx
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
+
+	// apply tx
+	_, err = bc.ApplyTransaction(tx, 1, coinbase, statedb, block.Header)
+	assert.Equal(t, err, nil)
+
+	// check after applying tx
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(88))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
 }
