@@ -80,7 +80,11 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 		receipt.Result, _, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, common.MAXTXGAS, tx.Data.Amount)
 	}
 
-	if err != nil {
+	// Below error handling comes from ETH:
+	// The only possible consensus-error would be if there wasn't
+	// sufficient balance to make the transfer happen. The first
+	// balance transfer may never fail.
+	if err == vm.ErrInsufficientBalance {
 		return nil, err
 	}
 
