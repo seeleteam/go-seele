@@ -10,6 +10,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/miner"
+	"fmt"
 )
 
 // PrivateMinerAPI provides an API to access miner information.
@@ -89,6 +90,12 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}
 	coinbase, err := common.HexToAddress(*coinbaseStr)
 	if err != nil {
 		return err
+	}
+	if !common.IsShardEnabled() {
+		return fmt.Errorf("local shard number is invalid:[%v], it must greater than %v, less than %v.", common.LocalShardNumber, common.UndefinedShardNumber, common.ShardCount)
+	}
+	if coinbase.Shard() != common.LocalShardNumber{
+		return fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v].", coinbase.Shard(), common.LocalShardNumber)
 	}
 	api.s.miner.SetCoinbase(coinbase)
 
