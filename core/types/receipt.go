@@ -18,7 +18,6 @@ type Receipt struct {
 	Result          []byte      // the execution result of the tx
 	Failed          bool        // indicates if execution failed
 	UsedGas         uint64      // tx used gas
-	BlockUsedGas    uint64      // block cumulative used gas
 	PostState       common.Hash // the root hash of the state trie after the tx is processed.
 	Logs            []*Log      // the log objects
 	TxHash          common.Hash // the hash of the executed transaction
