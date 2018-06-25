@@ -16,6 +16,8 @@ var emptyReceiptRootHash = crypto.MustHash("empty receipt root hash")
 // Receipt represents the transaction processing receipt.
 type Receipt struct {
 	Result          []byte      // the execution result of the tx
+	Failed          bool        // indicates if execution failed
+	UsedGas         uint64      // tx used gas
 	PostState       common.Hash // the root hash of the state trie after the tx is processed.
 	Logs            []*Log      // the log objects
 	TxHash          common.Hash // the hash of the executed transaction
@@ -61,7 +63,7 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 
 // MakeRewardReceipt generates the receipt for the specified reward transaction
 func MakeRewardReceipt(reward *Transaction) *Receipt {
-    return &Receipt{
-	    TxHash: reward.Hash,
+	return &Receipt{
+		TxHash: reward.Hash,
 	}
 }
