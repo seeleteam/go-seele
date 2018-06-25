@@ -114,10 +114,6 @@ func (t *Trie) Hash() common.Hash {
 // Note, it will panic on nil batch, please use Hash() instead
 // to get the root hash.
 func (t *Trie) Commit(batch database.Batch) common.Hash {
-	if batch == nil {
-		panic("cannot commit with nil batch")
-	}
-
 	if t.root != nil {
 		buf := new(bytes.Buffer)
 		t.sha.Reset()
