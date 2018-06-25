@@ -59,6 +59,10 @@ func (api *PrivateMinerAPI) Stop(input *string, result *string) error {
 
 // Hashrate returns the POW hashrate.
 func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
+	if !api.s.miner.IsMining() {
+		return miner.ErrMinerIsStopped
+	}
+
 	*hashrate = uint64(api.s.miner.Hashrate())
 
 	return nil
