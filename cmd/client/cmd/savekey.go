@@ -47,7 +47,11 @@ var savekey = &cobra.Command{
 			PrivateKey: privateKey,
 		}
 
-		keystore.StoreKey(*keyFile, pass, &key)
+		err = keystore.StoreKey(*keyFile, pass, &key)
+		if err != nil {
+			fmt.Printf("failed to store the key file %s, %s\n", *keyFile, err.Error())
+			return
+		}
 	},
 }
 

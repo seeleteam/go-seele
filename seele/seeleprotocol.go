@@ -486,7 +486,7 @@ handler:
 			}
 
 			p.log.Debug("got block msg height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
-      peer.knownBlocks.Add(block.HeaderHash, nil)
+			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
 				p.chain.WriteBlock(&block)
@@ -533,7 +533,7 @@ handler:
 				headList = append(headList, head)
 			}
 
-			if err = peer.sendBlockHeaders(headList); err != nil {
+			if err = peer.sendBlockHeaders(query.Magic, headList); err != nil {
 				p.log.Error("HandleMsg sendBlockHeaders err. %s", err)
 				break handler
 			}
@@ -592,7 +592,7 @@ handler:
 				p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL)-1].Header.Height)
 			}
 
-			if err = peer.sendBlocks(blocksL); err != nil {
+			if err = peer.sendBlocks(query.Magic, blocksL); err != nil {
 				p.log.Error("HandleMsg GetBlocksMsg sendBlocks err. %s", err)
 				break handler
 			}
@@ -600,7 +600,7 @@ handler:
 			p.log.Debug("send downloader.sendBlocks")
 
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
-			p.log.Debug("Received downloader Msg. %s", codeToStr(msg.Code))
+			p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
 			p.downloader.DeliverMsg(peer.peerStrID, &msg)
 
 		case statusChainHeadMsgCode:

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
 
@@ -26,8 +27,8 @@ var (
 
 type Peer interface {
 	Head() (common.Hash, *big.Int)
-	RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amount int, reverse bool) error
-	RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error
+	RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error
+	RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error
 }
 
 type peerConn struct {
@@ -36,14 +37,16 @@ type peerConn struct {
 	waitingMsgMap  map[uint16]chan *p2p.Message //
 	lockForWaiting sync.RWMutex                 //
 
+	log    *log.SeeleLog
 	quitCh chan struct{}
 }
 
-func newPeerConn(p Peer, peerID string) *peerConn {
+func newPeerConn(p Peer, peerID string, log *log.SeeleLog) *peerConn {
 	return &peerConn{
 		peerID:        peerID,
 		peer:          p,
 		waitingMsgMap: make(map[uint16]chan *p2p.Message),
+		log:           log,
 		quitCh:        make(chan struct{}),
 	}
 }
@@ -52,30 +55,51 @@ func (p *peerConn) close() {
 	close(p.quitCh)
 }
 
-func (p *peerConn) waitMsg(msgCode uint16, cancelCh chan struct{}) (*p2p.Message, error) {
+func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh chan struct{}) (ret interface{}, err error) {
 	rcvCh := make(chan *p2p.Message)
 	p.lockForWaiting.Lock()
 	p.waitingMsgMap[msgCode] = rcvCh
 	p.lockForWaiting.Unlock()
 
+Again:
 	timeout := time.NewTimer(MsgWaitTimeout)
 	select {
 	case <-p.quitCh:
-		return nil, errPeerQuit
+		err = errPeerQuit
 	case <-cancelCh:
-		p.lockForWaiting.Lock()
-		delete(p.waitingMsgMap, msgCode)
-		p.lockForWaiting.Unlock()
-		return nil, errRecvedQuitMsg
+		err = errRecvedQuitMsg
 	case msg := <-rcvCh:
-		p.lockForWaiting.Lock()
-		delete(p.waitingMsgMap, msgCode)
-		p.lockForWaiting.Unlock()
-		close(rcvCh)
-		return msg, nil
+		switch msgCode {
+		case BlockHeadersMsg:
+			var reqMsg BlockHeadersMsgBody
+			if err := common.Deserialize(msg.Payload, &reqMsg); err != nil {
+				goto Again
+			}
+			if reqMsg.Magic != magic {
+				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH")
+				goto Again
+			}
+			ret = reqMsg.Headers
+		case BlocksMsg:
+			var reqMsg BlocksMsgBody
+			if err := common.Deserialize(msg.Payload, &reqMsg); err != nil {
+				goto Again
+			}
+			if reqMsg.Magic != magic {
+				p.log.Debug("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH")
+				goto Again
+			}
+			ret = reqMsg.Blocks
+		}
 	case <-timeout.C:
-		return nil, fmt.Errorf("wait for msg %s timeout", CodeToStr(msgCode))
+		err = fmt.Errorf("wait for msg %s timeout", CodeToStr(msgCode))
 	}
+
+	p.lockForWaiting.Lock()
+	delete(p.waitingMsgMap, msgCode)
+	p.lockForWaiting.Unlock()
+	close(rcvCh)
+	return
 }
 
 func (p *peerConn) deliverMsg(msgCode uint16, msg *p2p.Message) {

@@ -27,9 +27,6 @@ var (
 	// ErrAmountNil is returned when the transation amount is nil.
 	ErrAmountNil = errors.New("amount is null")
 
-	// ErrBalanceNotEnough is returned when the account balance is not enough to transfer to another account.
-	ErrBalanceNotEnough = errors.New("balance not enough")
-
 	// ErrFeeNegative is returned when the transaction fee is negative.
 	ErrFeeNegative = errors.New("failed to create tx, fee is negative")
 
@@ -245,8 +242,9 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	}
 
 	// validate state dependent fields
-	if balance := statedb.GetBalance(tx.Data.From); tx.Data.Amount.Cmp(balance) > 0 {
-		return fmt.Errorf("balance is not enough, account %s, have %d, want %d", tx.Data.From.ToHex(), balance, tx.Data.Amount)
+	consumed := new(big.Int).Add(tx.Data.Amount, tx.Data.Fee)
+	if balance := statedb.GetBalance(tx.Data.From); consumed.Cmp(balance) > 0 {
+		return fmt.Errorf("balance is not enough, account = %s, balance = %v, amount = %v, fee = %v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {

@@ -26,6 +26,9 @@ type BlockchainStore interface {
 	// GetHeadBlockHash retrieves the HEAD block hash.
 	GetHeadBlockHash() (common.Hash, error)
 
+	// PutHeadBlockHash writes the HEAD block hash into the store.
+	PutHeadBlockHash(hash common.Hash) error
+
 	// GetBlockHeader retrieves the block header for the specified block hash.
 	GetBlockHeader(hash common.Hash) (*types.BlockHeader, error)
 
@@ -45,6 +48,9 @@ type BlockchainStore interface {
 
 	// HasBlock checks if the block with the specified hash exists.
 	HasBlock(hash common.Hash) (bool, error)
+
+	// DeleteBlock deletes the block of the specified block hash.
+	DeleteBlock(hash common.Hash) error
 
 	// GetBlockByHeight retrieves the block for the specified block height.
 	GetBlockByHeight(height uint64) (*types.Block, error)

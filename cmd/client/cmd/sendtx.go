@@ -8,27 +8,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
-	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
-type txInfo struct {
-	amount  *string // amount specifies the coin amount to be transferred
-	to      *string // to is the public address of the receiver
-	from    *string // from is the key file path of the sender
-	fee     *string // transaction fee
-	payload *string // transaction payload in hex format
-}
-
-var parameter = txInfo{}
+var parameter = util.TxInfo{}
 
 // sendtxCmd represents the sendtx command
 var sendtxCmd = &cobra.Command{
@@ -46,57 +35,24 @@ var sendtxCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var toAddr *common.Address
-		if len(*parameter.to) > 0 {
-			toAddr = new(common.Address)
-			if *toAddr, err = common.HexToAddress(*parameter.to); err != nil {
-				fmt.Printf("invalid receiver address: %s\n", err.Error())
-				return
-			}
-		}
-
 		pass, err := common.GetPassword()
 		if err != nil {
 			fmt.Printf("get password failed %s\n", err.Error())
 			return
 		}
 
-		key, err := keystore.GetKey(*parameter.from, pass)
+		key, err := keystore.GetKey(*parameter.From, pass)
 		if err != nil {
 			fmt.Printf("invalid sender key file. it should be a private key: %s\n", err.Error())
 			return
 		}
 
-		amount, ok := big.NewInt(0).SetString(*parameter.amount, 10)
+		txd, ok := util.CheckParameter(parameter, &key.PrivateKey.PublicKey, client)
 		if !ok {
-			fmt.Println("invalid amount value")
 			return
 		}
 
-		fee, ok := big.NewInt(0).SetString(*parameter.fee, 10)
-		if !ok {
-			fmt.Println("invalid fee value")
-			return
-		}
-
-		var nonce uint64
-		fromAddr := crypto.GetAddress(&key.PrivateKey.PublicKey)
-		err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
-		if err != nil {
-			fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
-			return
-		}
-		fmt.Printf("got the sender account %s nonce: %d\n", fromAddr.ToHex(), nonce)
-
-		payload := []byte(nil)
-		if len(*parameter.payload) > 0 {
-			if payload, err = hexutil.HexToBytes(*parameter.payload); err != nil {
-				fmt.Println("invalid payload,", err.Error())
-				return
-			}
-		}
-
-		tx, ok := util.Sendtx(client, key.PrivateKey, toAddr, amount, fee, nonce, payload)
+		tx, ok := util.Sendtx(client, key.PrivateKey, &txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 		if ok {
 			fmt.Println("adding the tx succeeded.")
 			printTx := seele.PrintableOutputTx(tx)
@@ -114,16 +70,16 @@ var sendtxCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(sendtxCmd)
 
-	parameter.to = sendtxCmd.Flags().StringP("to", "t", "", "public address of the receiver")
+	parameter.To = sendtxCmd.Flags().StringP("to", "t", "", "public address of the receiver")
 
-	parameter.amount = sendtxCmd.Flags().StringP("amount", "m", "", "the amount of the transferred coins")
+	parameter.Amount = sendtxCmd.Flags().StringP("amount", "m", "", "the amount of the transferred coins")
 	sendtxCmd.MarkFlagRequired("amount")
 
-	parameter.from = sendtxCmd.Flags().StringP("from", "f", "", "key file path of the sender")
+	parameter.From = sendtxCmd.Flags().StringP("from", "f", "", "key file path of the sender")
 	sendtxCmd.MarkFlagRequired("from")
 
-	parameter.fee = sendtxCmd.Flags().StringP("fee", "", "", "transaction fee")
+	parameter.Fee = sendtxCmd.Flags().StringP("fee", "", "", "transaction fee")
 	sendtxCmd.MarkFlagRequired("fee")
 
-	parameter.payload = sendtxCmd.Flags().StringP("payload", "", "", "transaction payload")
+	parameter.Payload = sendtxCmd.Flags().StringP("payload", "", "", "transaction payload")
 }

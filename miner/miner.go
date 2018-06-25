@@ -150,11 +150,11 @@ func (miner *Miner) Start() error {
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
+	// set stopped to 1 to prevent restart
+	atomic.StoreInt32(&miner.stopped, 1)
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
-
-	atomic.StoreInt32(&miner.stopped, 1)
 
 	// notify all threads to terminate
 	if miner.stopChan != nil {
@@ -200,10 +200,13 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
-		miner.log.Info("got download end event, start miner")
-		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 		atomic.StoreInt32(&miner.canStart, 1)
-		miner.Start()
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
+
+		if atomic.LoadInt32(&miner.stopped) == 0 {
+			miner.log.Info("got download end event, start miner")
+			miner.Start()
+		}
 	}
 }
 
