@@ -52,7 +52,7 @@ var sendtxCmd = &cobra.Command{
 			return
 		}
 
-		tx, ok := util.Sendtx(client, key.PrivateKey, &txd.From, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+		tx, ok := util.Sendtx(client, key.PrivateKey, &txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 		if ok {
 			fmt.Println("adding the tx succeeded.")
 			printTx := seele.PrintableOutputTx(tx)
