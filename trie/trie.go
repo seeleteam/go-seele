@@ -138,8 +138,9 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		return node.Hash()
 	}
 
-	// calculate node hash for different node type if dirty
+	// update node hash for different node type if dirty
 	if node.Status() == nodeStatusDirty {
+		// calculate node hash
 		switch n := node.(type) {
 		case *LeafNode:
 			buf.Reset()
@@ -171,26 +172,22 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		default:
 			panic(fmt.Sprintf("invalid node: %v", node))
 		}
-	}
 
-	n := node.(Node)
-
-	// update node hash if dirty
-	if node.Status() == nodeStatusDirty {
+		// update node hash and status
 		sha.Reset()
 		sha.Write(buf.Bytes())
-
-		copy(n.hash, sha.Sum(nil))
-		n.status = nodeStatusUpdated
+		hash := sha.Sum(nil)
+		node.SetHash(hash)
+		node.SetStatus(nodeStatusUpdated)
 	}
 
 	// persist node if batch specified
 	if batch != nil {
-		batch.Put(append(t.dbprefix, n.hash...), buf.Bytes())
-		n.status = nodeStatusPersisted
+		batch.Put(append(t.dbprefix, node.Hash()...), buf.Bytes())
+		node.SetStatus(nodeStatusPersisted)
 	}
 
-	return n.hash
+	return node.Hash()
 }
 
 // return true if insert succeed,it also mean node is dirty,should recalc hash

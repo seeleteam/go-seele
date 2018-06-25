@@ -18,8 +18,10 @@ type nodeStatus byte
 
 // Noder interface for node
 type noder interface {
-	Hash() []byte
-	Status() nodeStatus
+	Hash() []byte                // return the node hash
+	Status() nodeStatus          // return the node status
+	SetHash(hash []byte)         // update the node hash
+	SetStatus(status nodeStatus) // update the node status
 }
 
 // Node is trie node struct
@@ -62,6 +64,16 @@ func (n hashNode) Status() nodeStatus {
 	return nodeStatusPersisted
 }
 
+// SetHash do nothing
+func (n hashNode) SetHash(hash []byte) {
+	panic("hashnode do not support to change hash")
+}
+
+// SetStatus do nothing
+func (n hashNode) SetStatus(status nodeStatus) {
+	panic("hashnode do not support to change status")
+}
+
 // Hash return the hash of node
 func (n Node) Hash() []byte {
 	return n.hash
@@ -70,4 +82,14 @@ func (n Node) Hash() []byte {
 // Status return the status of node
 func (n Node) Status() nodeStatus {
 	return n.status
+}
+
+// SetHash set the node hash
+func (n Node) SetHash(hash []byte) {
+	copy(n.hash, hash)
+}
+
+// SetStatus set the node status
+func (n Node) SetStatus(status nodeStatus) {
+	n.status = nodeStatusUpdated
 }
