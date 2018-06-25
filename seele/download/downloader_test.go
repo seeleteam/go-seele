@@ -116,7 +116,7 @@ func newTestBlockchain(db database.Database) *core.Blockchain {
 		panic(err)
 	}
 
-	bc, err := core.NewBlockchain(bcStore, db)
+	bc, err := core.NewBlockchain(bcStore, db, "")
 	if err != nil {
 		panic(err)
 	}
@@ -139,12 +139,12 @@ func (p TestPeer) Head() (hash common.Hash, td *big.Int) {
 }
 
 // RequestHeadersByHashOrNumber fetches a batch of blocks' headers
-func (p TestPeer) RequestHeadersByHashOrNumber(origin common.Hash, num uint64, amount int, reverse bool) error {
+func (p TestPeer) RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error {
 	return nil
 }
 
 // RequestBlocksByHashOrNumber fetches a batch of blocks
-func (p TestPeer) RequestBlocksByHashOrNumber(origin common.Hash, num uint64, amount int) error {
+func (p TestPeer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error {
 	return nil
 }
 
@@ -154,7 +154,7 @@ func Test_findCommonAncestorHeight_localHeightIsZero(t *testing.T) {
 	dl := newTestDownloader(db)
 	height := uint64(1000)
 	var testPeer TestPeer
-	p := newPeerConn(testPeer, "test")
+	p := newPeerConn(testPeer, "test", nil)
 	ancestorHeight, err := dl.findCommonAncestorHeight(p, height)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, uint64(0), ancestorHeight)

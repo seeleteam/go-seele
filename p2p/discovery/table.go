@@ -19,12 +19,12 @@ const (
 	hashBits             = len(common.Hash{}) * 8
 	nBuckets             = hashBits + 1 // Number of buckets
 	shardTargeNodeNumber = 1            // other shard minimal node number for start
-	UndefinedShardNumber = 0            // shard number indicate its shard is undefined
+	UndefinedShardNumber = 0            // UndefinedShardNumber indicates the shard number is undefined
 )
 
 type Table struct {
 	buckets      [nBuckets]*bucket
-	shardBuckets [common.ShardNumber + 1]*bucket // 0 represents undefined shard number node.
+	shardBuckets [common.ShardCount + 1]*bucket // 0 represents undefined shard number node.
 	selfNode     *Node                           //info of local node
 
 	log *log.SeeleLog
@@ -42,7 +42,7 @@ func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLo
 		table.buckets[i] = newBuckets(log)
 	}
 
-	for i := 0; i < common.ShardNumber+1; i++ {
+	for i := 0; i < common.ShardCount+1; i++ {
 		table.shardBuckets[i] = newBuckets(log)
 	}
 

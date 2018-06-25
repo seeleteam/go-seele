@@ -7,6 +7,7 @@ package miner
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
@@ -64,16 +65,15 @@ type Miner struct {
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
 		stopped:              0,
 		seele:                seele,
 		wg:                   sync.WaitGroup{},
-		stopChan:             make(chan struct{}, 1),
 		recv:                 make(chan *Result, 1),
-		log:                  log,
+		log:                  log.GetLogger("miner", common.LogConfig.PrintLog),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		threads:              1,
@@ -86,13 +86,29 @@ func NewMiner(addr common.Address, seele SeeleBackend, log *log.SeeleLog) *Miner
 	return miner
 }
 
+// GetCoinbase returns the coinbase.
 func (miner *Miner) GetCoinbase() common.Address {
 	return miner.coinbase
 }
 
 // SetThreads sets the number of mining threads.
 func (miner *Miner) SetThreads(threads int) {
+	if threads <= 0 {
+		threads = runtime.NumCPU()
+	}
+
 	miner.threads = threads
+}
+
+// GetThreads gets the number of mining threads.
+func (miner *Miner) GetThreads() int {
+
+	return miner.threads
+}
+
+// SetCoinbase set the coinbase.
+func (miner *Miner) SetCoinbase(coinbase common.Address) {
+	miner.coinbase = coinbase
 }
 
 // Start is used to start the miner
@@ -107,17 +123,21 @@ func (miner *Miner) Start() error {
 		return ErrNodeIsSyncing
 	}
 
-	atomic.StoreInt32(&miner.mining, 1)
+	// CAS to ensure only 1 mining goroutine.
+	if !atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
+		miner.log.Info("Another goroutine has already started to mine")
+		return nil
+	}
 
-	if atomic.LoadInt32(&miner.isFirstBlockPrepared) == 0 {
+	miner.stopChan = make(chan struct{})
+
+	if atomic.CompareAndSwapInt32(&miner.isFirstBlockPrepared, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
 			miner.log.Warn(err.Error())
 			atomic.StoreInt32(&miner.mining, 0)
 
 			return err
 		}
-
-		atomic.StoreInt32(&miner.isFirstBlockPrepared, 1)
 	}
 
 	atomic.StoreInt32(&miner.stopped, 0)
@@ -130,11 +150,16 @@ func (miner *Miner) Start() error {
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
-	atomic.StoreInt32(&miner.mining, 0)
+	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
+	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
+		return
+	}
 
-	for i := 0; i < miner.threads; i++ {
-		miner.stopChan <- struct{}{}
+	// notify all threads to terminate
+	if miner.stopChan != nil {
+		close(miner.stopChan)
+		miner.stopChan = nil
 	}
 
 	// wait for all threads to terminate
@@ -143,10 +168,17 @@ func (miner *Miner) Stop() {
 	miner.log.Info("Miner is stopped.")
 }
 
-// Close closes the miner
+// Close closes the miner.
 func (miner *Miner) Close() {
-	close(miner.stopChan)
-	close(miner.recv)
+	if miner.stopChan != nil {
+		close(miner.stopChan)
+		miner.stopChan = nil
+	}
+
+	if miner.recv != nil {
+		close(miner.recv)
+		miner.recv = nil
+	}
 }
 
 // IsMining returns true if the miner is started, otherwise false
@@ -162,20 +194,28 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 
 	switch e.(int) {
 	case event.DownloaderStartEvent:
+		miner.log.Info("got download start event, stop miner")
 		atomic.StoreInt32(&miner.canStart, 0)
 		if miner.IsMining() {
 			miner.Stop()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
-		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 		atomic.StoreInt32(&miner.canStart, 1)
-		miner.Start()
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
+
+		if atomic.LoadInt32(&miner.stopped) == 0 {
+			miner.log.Info("got download end event, start miner")
+			miner.Start()
+		}
 	}
 }
 
 // newTxCallback handles the new tx event
 func (miner *Miner) newTxCallback(e event.Event) {
-	miner.log.Debug("got the new tx event")
+	if common.PrintExplosionLog {
+		miner.log.Debug("got the new tx event")
+	}
+
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil {
@@ -191,21 +231,24 @@ out:
 	for {
 		select {
 		case result := <-miner.recv:
-			if result == nil || result.task != miner.current {
-				continue
+			for {
+				if result == nil || result.task != miner.current {
+					break
+				}
+
+				miner.log.Info("found a new mined block, block height:%d, hash:%s", result.block.Header.Height, result.block.HeaderHash.ToHex())
+				ret := miner.saveBlock(result)
+				if ret != nil {
+					miner.log.Error("saving the block failed, for %s", ret.Error())
+					break
+				}
+
+				miner.log.Info("saving block succeeded and notify p2p")
+				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
+				break
 			}
 
-			miner.log.Info("found a new mined block, block height:%d", result.block.Header.Height)
-			ret := miner.saveBlock(result)
-			if ret != nil {
-				miner.log.Error("saving the block failed, for %s", ret.Error())
-				continue
-			}
-
-			miner.log.Info("saving block succeeded and notify p2p")
-			event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 			atomic.StoreInt32(&miner.mining, 0)
-
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
@@ -219,7 +262,10 @@ func (miner *Miner) prepareNewBlock() error {
 	miner.log.Debug("starting mining the new block")
 
 	timestamp := time.Now().Unix()
-	parent, stateDB := miner.seele.BlockChain().CurrentBlock()
+	parent, stateDB, err := miner.seele.BlockChain().GetCurrentInfo()
+	if err != nil {
+		return fmt.Errorf("get current info failed, %s", err)
+	}
 
 	if parent.Header.CreateTimestamp.Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
 		timestamp = parent.Header.CreateTimestamp.Int64() + 1
@@ -250,19 +296,13 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	txs := miner.seele.TxPool().GetProcessableTransactions()
-
-	cpyStateDB, err := stateDB.GetCopy()
+	err = miner.current.applyTransactions(miner.seele, stateDB, txs, miner.log)
 	if err != nil {
-		return err
-	}
-	err = miner.current.applyTransactions(miner.seele, cpyStateDB, header.Height, txs, miner.log)
-	if err != nil {
-		return err
+		return fmt.Errorf("apply transaction failed %s", err)
 	}
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
 	miner.commitTask(miner.current)
-	miner.seele.TxPool().RemoveTransactions()
 
 	return nil
 }
@@ -280,11 +320,6 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	threads := miner.threads
-
-	if threads <= 0 {
-		threads = runtime.NumCPU()
-		miner.threads = threads
-	}
 	miner.log.Debug("miner threads num:%d", threads)
 
 	var step uint64

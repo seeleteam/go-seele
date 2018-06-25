@@ -69,7 +69,7 @@ func Test_NewTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 
 		if bytes.Compare(tree.MerkleRoot().Bytes(), table[i].expectedHash) != 0 {
@@ -82,7 +82,7 @@ func Test_MerkleTree_MerkleRoot(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		if bytes.Compare(tree.MerkleRoot().Bytes(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
@@ -94,11 +94,11 @@ func Test_MerkleTree_RebuildTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		err = tree.RebuildTree()
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		if bytes.Compare(tree.MerkleRoot().Bytes(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
@@ -110,11 +110,11 @@ func Test_MerkleTree_RebuildTreeWith(t *testing.T) {
 	for i := 0; i < len(table)-1; i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		err = tree.RebuildTreeWith(table[i+1].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		if bytes.Compare(tree.MerkleRoot().Bytes(), table[i+1].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i+1].expectedHash, tree.MerkleRoot())
@@ -126,7 +126,7 @@ func Test_MerkleTree_VerifyTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		v1 := tree.VerifyTree()
 		if v1 != true {
@@ -145,7 +145,7 @@ func Test_MerkleTree_VerifyContent(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		if len(table[i].contents) > 0 {
 			v := tree.VerifyContent(tree.MerkleRoot().Bytes(), table[i].contents[0])
@@ -185,7 +185,7 @@ func Test_MerkleTree_String(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
 		if err != nil {
-			t.Fatalf("error: unexpected error:  ", err)
+			t.Fatalf("error: unexpected error: %s", err)
 		}
 		if tree.String() == "" {
 			t.Error("error: expected not empty string")

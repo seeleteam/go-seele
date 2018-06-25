@@ -4,13 +4,14 @@
     "version": "1.0",
     "dataDir": "node2",
     "address": "0.0.0.0:55028",
-    "coinbase": "0x4dd6881d13ab5152127533c5954e4e062eb4bb2dcd93becf4f4e9b1d2d69f1363eea0395e8e76a2716b033d1e3cc8da2bf24811b1e31a86ac8bcacca4c4b29bd"
+    "coinbase": "0x954e4e062eb4bb2dcd93becf4f4e9b1d2d69f136"
   },
   "p2p": {
     "address": "0.0.0.0:39008",
     "privateKey": "0x66bfaadbbade123f0dde5c35ec7053f88027ce3ea2f7f0296b99a5e87de6dea7",
     "staticNodes": [
-      "snode://23ddfb54a488f906cdb9cbd257eac5663a4c74ba25619bb902651602a4491be4ce437907fcc567b31be6746a014931f4670ac116c0010e5beb28b0dce2c6eaad@127.0.0.1:39007[0]"
+      "127.0.0.1:39007",
+      "127.0.0.1:39008"
     ],
     "networkID": 1
   },
@@ -28,10 +29,6 @@
     ]
   },
   "genesis": {
-    "accounts": {
-      "0x55489251c9d3b394e430d50cb20e271c8560d39b02dfb7efe9610ff51fa4affcf663ad4337117263f64b24149fed5c4fe95d5fb3a00d45a32e6433a200fa0301":100,
-      "0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23":200
-    },
     "difficult":22,
     "shard":12
   }

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// gettxpooltxcountCmd represents the get tx pool status command
+// gettxpooltxcountCmd represents the get tx pool count command
 var gettxpooltxcountCmd = &cobra.Command{
 	Use:   "gettxpooltxcount",
 	Short: "get the number of all processable transactions contained within the transaction pool",
@@ -26,13 +26,14 @@ var gettxpooltxcountCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		var status uint64
-		err = client.Call("debug.GetTxPoolTxCount", nil, &status)
-
+		var count uint64
+		err = client.Call("debug.GetTxPoolTxCount", nil, &count)
 		if err != nil {
 			fmt.Printf("get tx pool status failed %s\n", err.Error())
+			return
 		}
-		fmt.Printf("tx pool status : %d\n", status)
+
+		fmt.Printf("tx pool count : %d\n", count)
 	},
 }
 

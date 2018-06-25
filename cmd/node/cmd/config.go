@@ -7,7 +7,9 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
@@ -38,7 +40,7 @@ type Config struct {
 	WSServerConfig rpc.WSServerConfig `json:"wsserver"`
 
 	// metrics config info
-	MetricsConfig metrics.Config `json:"metrics"`
+	MetricsConfig *metrics.Config `json:"metrics"`
 
 	// genesis config info
 	GenesisConfig core.GenesisInfo `json:"genesis"`
@@ -57,14 +59,18 @@ func GetConfigFromFile(filepath string) (*Config, error) {
 }
 
 // LoadConfigFromFile gets node config from the given file
-func LoadConfigFromFile(configFile string) (*node.Config, error) {
+func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error) {
 	cmdConfig, err := GetConfigFromFile(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	config := CopyConfig(cmdConfig)
+	cmdConfig.GenesisConfig.Accounts, err = LoadAccountConfig(accounts)
+	if err != nil {
+		return nil, err
+	}
 
+	config := CopyConfig(cmdConfig)
 	config.P2PConfig, err = GetP2pConfig(cmdConfig)
 	if err != nil {
 		return config, err
@@ -75,6 +81,7 @@ func LoadConfigFromFile(configFile string) (*node.Config, error) {
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	common.LogConfig.PrintLog = config.LogConfig.PrintLog
 	common.LogConfig.IsDebug = config.LogConfig.IsDebug
+	common.LogFileName = fmt.Sprintf("%s.%s", config.BasicConfig.DataDir, common.LogFileName)
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
 }
@@ -103,4 +110,19 @@ func GetP2pConfig(cmdConfig *Config) (p2p.Config, error) {
 		cmdConfig.P2PConfig.PrivateKey = key
 	}
 	return cmdConfig.P2PConfig, nil
+}
+
+func LoadAccountConfig(account string) (map[common.Address]*big.Int, error) {
+	result := make(map[common.Address]*big.Int)
+	if account == "" {
+		return result, nil
+	}
+
+	buff, err := ioutil.ReadFile(account)
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal(buff, &result)
+	return result, err
 }

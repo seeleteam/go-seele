@@ -18,16 +18,17 @@ func collectRuntimeMetrics() {
 		return
 	}
 
-	memAllocs := metrics.GetOrRegisterGauge("runtime.memory.allocs", metrics.DefaultRegistry)
-	memFrees := metrics.GetOrRegisterGauge("runtime.memory.frees", metrics.DefaultRegistry)
+	memAlloc := metrics.GetOrRegisterGauge("runtime.memory.alloc", metrics.DefaultRegistry)
+	memPauses := metrics.GetOrRegisterMeter("runtime.memory.pauses", metrics.DefaultRegistry)
 
 	memStats := new(runtime.MemStats)
+	var lastPauseNs uint64
 	// collect metrics
 	for {
 		runtime.ReadMemStats(memStats)
-		memAllocs.Update(int64(memStats.Mallocs))
-		memFrees.Update(int64(memStats.Frees))
-
+		memAlloc.Update(int64(memStats.Alloc))
+		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
+		lastPauseNs = memStats.PauseTotalNs
 		// sleep 5 seconds
 		time.Sleep(5 * time.Second)
 	}

@@ -4,18 +4,18 @@
     "version": "1.0",
     "dataDir": "node4",
     "address": "0.0.0.0:55026",
-    "coinbase": "0x753349a20837e3ec0ca506faf7a7ef40d63f319e2fd1f5141252f7864bae8416a15618225b963862828ff942edabee8d043e2c1ee7f22642702b7576246b9d46"
+    "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81"
   },
   "p2p": {
     "address": "0.0.0.0:39006",
-    "privateKey": "0x22f81fcecbff483488458d97ed3e91d4b0c8a844548f509675c165fcb5d75737",
+    "privateKey": "0xa0cbd83aa6141014bf1ddd4b7da1ca5e3951ae6b0a4ec5811537adacb5b46417",
     "staticNodes": [
-      "snode://1953af4c1f4b658f2b190aa3b622554bc7579f87776bbff2745e79a0850897a33b855cb70f7eb8a29355e08ed706b2cc858c19f3b4522f352fc48aeb6f02f8db@127.0.0.1:39007[0]"
+      "127.0.0.1:39007"
     ],
     "networkID": 1
   },
   "log": {
-    "isDebug": true,
+    "isDebug": false,
     "printLog": true
   },
   "httpServer": {
@@ -32,18 +32,14 @@
     "pattern": "/ws"
   },
   "metrics": {
-    "Addr": "127.0.0.1:8086",
-    "Duration": 10,
-    "Database": "influxdb",
-    "Username": "test",
-    "Password": "test123"
+    "address": "127.0.0.1:8086",
+    "duration": 10,
+    "database": "influxdb",
+    "username": "test",
+    "password": "test123"
   },
   "genesis": {
-    "accounts":{
-      "0x55489251c9d3b394e430d50cb20e271c8560d39b02dfb7efe9610ff51fa4affcf663ad4337117263f64b24149fed5c4fe95d5fb3a00d45a32e6433a200fa0301":100,
-      "0x2d7d61c30a2f62cacc84bdd17759da7498ba7f0b9081f501a3a4c37c492eb493a0dcd59caaa7284bf38500d4d896cbb0caea504e5b9b3d1802433d06465a0a23":200
-    },
-    "difficult":10000000,
+    "difficult":8000000,
     "shard":1
   }
 }

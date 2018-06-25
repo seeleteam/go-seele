@@ -13,7 +13,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var (
@@ -77,11 +76,13 @@ func (store *blockchainDatabase) PutBlockHash(height uint64, hash common.Hash) e
 func (store *blockchainDatabase) DeleteBlockHash(height uint64) (bool, error) {
 	key := heightToHashKey(height)
 
-	_, err := store.db.Get(key)
-	if err == errors.ErrNotFound {
-		return false, nil
-	} else if err != nil {
+	found, err := store.db.Has(key)
+	if err != nil {
 		return false, err
+	}
+
+	if !found {
+		return false, nil
 	}
 
 	if err = store.db.Delete(key); err != nil {
@@ -108,6 +109,11 @@ func (store *blockchainDatabase) GetHeadBlockHash() (common.Hash, error) {
 	return common.BytesToHash(hashBytes), nil
 }
 
+// PutHeadBlockHash writes the HEAD block hash into the store.
+func (store *blockchainDatabase) PutHeadBlockHash(hash common.Hash) error {
+	return store.db.Put(keyHeadBlockHash, hash.Bytes())
+}
+
 // GetBlockHeader gets the header of the block with the specified hash in the blockchain database
 func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockHeader, error) {
 	headerBytes, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
@@ -125,16 +131,14 @@ func (store *blockchainDatabase) GetBlockHeader(hash common.Hash) (*types.BlockH
 
 // HasBlock indicates if the block with the specified hash exists in the blockchain database
 func (store *blockchainDatabase) HasBlock(hash common.Hash) (bool, error) {
-	_, err := store.db.Get(hashToHeaderKey(hash.Bytes()))
-	if err == errors.ErrNotFound {
-		return false, nil
-	}
+	key := hashToHeaderKey(hash.Bytes())
 
+	found, err := store.db.Has(key)
 	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return found, nil
 }
 
 // PutBlockHeader serializes the given block header of the block with the specified hash
@@ -149,10 +153,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 		panic("header is nil")
 	}
 
-	headerBytes, err := common.Serialize(header)
-	if err != nil {
-		return err
-	}
+	headerBytes := common.SerializePanic(header)
 
 	hashBytes := hash.Bytes()
 
@@ -165,12 +166,8 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 		// Write index for each tx.
 		for i, tx := range body.Txs {
-			idx := types.TxIndex{hash, uint(i)}
-			encodedTxIndex, err := common.Serialize(idx)
-			if err != nil {
-				return err
-			}
-
+			idx := types.TxIndex{BlockHash: hash, Index: uint(i)}
+			encodedTxIndex := common.SerializePanic(idx)
 			batch.Put(txHashToIndexKey(tx.Hash.Bytes()), encodedTxIndex)
 		}
 	}
@@ -243,6 +240,68 @@ func (store *blockchainDatabase) GetBlock(hash common.Hash) (*types.Block, error
 		Header:       header,
 		Transactions: body.Txs,
 	}, nil
+}
+
+// DeleteBlock deletes the block of the specified block hash.
+func (store *blockchainDatabase) DeleteBlock(hash common.Hash) error {
+	hashBytes := hash.Bytes()
+	batch := store.db.NewBatch()
+
+	// delete header, TD and receipts if any.
+	headerKey := hashToHeaderKey(hashBytes)
+	tdKey := hashToTDKey(hashBytes)
+	receiptsKey := hashToReceiptsKey(hashBytes)
+	if err := store.delete(batch, headerKey, tdKey, receiptsKey); err != nil {
+		return err
+	}
+
+	// get body for more deletion
+	bodyKey := hashToBodyKey(hashBytes)
+	found, err := store.db.Has(bodyKey)
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return batch.Commit()
+	}
+
+	encodedBody, err := store.db.Get(bodyKey)
+	if err != nil {
+		return err
+	}
+
+	var body blockBody
+	if err = common.Deserialize(encodedBody, &body); err != nil {
+		return err
+	}
+
+	// delete all tx index in block
+	for _, tx := range body.Txs {
+		if err = store.delete(batch, txHashToIndexKey(tx.Hash.Bytes())); err != nil {
+			return err
+		}
+	}
+
+	// delete body
+	batch.Delete(bodyKey)
+
+	return batch.Commit()
+}
+
+func (store *blockchainDatabase) delete(batch database.Batch, keys ...[]byte) error {
+	for _, k := range keys {
+		found, err := store.db.Has(k)
+		if err != nil {
+			return err
+		}
+
+		if found {
+			batch.Delete(k)
+		}
+	}
+
+	return nil
 }
 
 // GetBlockByHeight gets the block with the specified height in the blockchain database

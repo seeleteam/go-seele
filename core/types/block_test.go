@@ -68,9 +68,9 @@ func Test_BlockHeader_Hash(t *testing.T) {
 func Test_Block_FindTransaction(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
-		newTestTx(t, 10, 1, true),
-		newTestTx(t, 20, 2, true),
-		newTestTx(t, 30, 3, true),
+		newTestTx(t, 10, 1, 1, true),
+		newTestTx(t, 20, 1, 2, true),
+		newTestTx(t, 30, 1, 3, true),
 	}
 
 	block := NewBlock(header, txs, nil)

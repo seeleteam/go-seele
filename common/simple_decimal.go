@@ -12,13 +12,16 @@ import (
 )
 
 var (
-	//SeeleToCoin base coin number
-	SeeleToCoin = big.NewInt(100000000)
+	//SeeleToFan base feifan coin number
+	SeeleToFan = big.NewInt(100000000)
 )
+
+// MAXTXGAS evm limited the maximum gas of transaction
+const MAXTXGAS = uint64(10000000)
 
 //BigToDecimal simply changes big int to decimal which will miss additional 0 in the last
 func BigToDecimal(amount *big.Int) string {
-	base := SeeleToCoin
+	base := SeeleToFan
 	var quotient = big.NewInt(0)
 	var mod = big.NewInt(0)
 	var numstr string

@@ -15,4 +15,10 @@ go build -o ./build/node.exe ./cmd/node
 go build -o ./build/client.exe ./cmd/client
 @echo "Done client building"
 
+go build -o ./build/tool.exe ./cmd/tool
+@echo "Done tool building"
+
+go build -o ./build/vm.exe ./cmd/vm
+@echo "Done vm building"
+
 pause

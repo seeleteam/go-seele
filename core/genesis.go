@@ -85,7 +85,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 	}
 }
 
-// GetShardNumber get shard number of genesis
+// GetShardNumber gets the shard number of genesis
 func (genesis *Genesis) GetShardNumber() uint {
 	return genesis.info.ShardNumber
 }
@@ -115,7 +115,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {
-		return errors.New("specific shard is not matched with shard number in genesis info")
+		return errors.New("specific shard number does not match with the shard number in genesis info")
 	}
 
 	headerHash := genesis.header.Hash()
@@ -149,7 +149,7 @@ func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 	}
 
 	for addr, amount := range info.Accounts {
-		if addrShardNum := common.GetShardNumber(addr); addrShardNum == info.ShardNumber {
+		if !common.IsShardEnabled() || addr.Shard() == info.ShardNumber {
 			stateObj := statedb.GetOrNewStateObject(addr)
 			stateObj.SetNonce(0)
 			stateObj.SetAmount(amount)

@@ -85,8 +85,8 @@ func Test_SimpleStorage(t *testing.T) {
 	createContractTx, err := types.NewContractTransaction(address, new(big.Int), new(big.Int), 38, code)
 	assert.Equal(t, err, nil)
 
-	evmContext := newEVMContext(createContractTx, header, header.Creator, bcStore)
-	receipt, err := processContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
+	receipt, err := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
 
 	// Validate receipt of contract creation.
 	assert.Equal(t, err, nil)
@@ -106,12 +106,12 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err := types.NewMessageTransaction(from, contractAddr, new(big.Int), new(big.Int), 1, input)
 	assert.Equal(t, err, nil)
 
-	evmContext = newEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = processContract(evmContext, callContractTx, 9, statedb, vmConfnig)
+	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
+	receipt, err = ProcessContract(evmContext, callContractTx, 9, statedb, vmConfnig)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.Result, []byte{5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5})
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
 
@@ -121,8 +121,8 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err = types.NewMessageTransaction(from, contractAddr, new(big.Int), new(big.Int), 1, input)
 	assert.Equal(t, err, nil)
 
-	evmContext = newEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = processContract(evmContext, callContractTx, 10, statedb, vmConfnig)
+	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
+	receipt, err = ProcessContract(evmContext, callContractTx, 10, statedb, vmConfnig)
 
 	// Validate receipt contract call
 	assert.Equal(t, err, nil)
@@ -136,12 +136,12 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err = types.NewMessageTransaction(from, contractAddr, new(big.Int), new(big.Int), 1, input)
 	assert.Equal(t, err, nil)
 
-	evmContext = newEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = processContract(evmContext, callContractTx, 11, statedb, vmConfnig)
+	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
+	receipt, err = ProcessContract(evmContext, callContractTx, 11, statedb, vmConfnig)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.Result, []byte{2, 154, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}) // 666
+	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 154}) // 666
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
 }

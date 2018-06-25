@@ -28,6 +28,9 @@ const (
 
 	// AccountStateDir account state info directory based on config.DataRoot
 	AccountStateDir = "/db/accountState"
+
+	// BlockChainRecoveryPointFile is used to store the recovery point info of blockchain.
+	BlockChainRecoveryPointFile = "recoveryPoint.json"
 )
 
 // statusData the structure for peers to exchange status
@@ -41,6 +44,7 @@ type statusData struct {
 
 // blockHeadersQuery represents a block header query.
 type blockHeadersQuery struct {
+	Magic   uint32      // Magic number for request
 	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
 	Number  uint64      // Block number from which to retrieve headers (excludes Hash)
 	Amount  uint64      // Maximum number of headers to retrieve
@@ -48,6 +52,7 @@ type blockHeadersQuery struct {
 }
 
 type blocksQuery struct {
+	Magic  uint32      // Magic number for request
 	Hash   common.Hash // Block hash from which to retrieve (excludes Number)
 	Number uint64      // Block hash from which to retrieve (excludes Hash)
 	Amount uint64      // Maximum number of headers to retrieve

@@ -89,7 +89,8 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB)
+	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
+	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile)
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
@@ -97,7 +98,14 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.txPool = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
+	s.txPool, err = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
+	if err != nil {
+		s.chainDB.Close()
+		s.accountStateDB.Close()
+		log.Error("NewSeeleService create transaction pool failed, %s", err)
+		return nil, err
+	}
+
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
 		s.chainDB.Close()
@@ -106,7 +114,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.log)
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
 
 	return s, nil
 }

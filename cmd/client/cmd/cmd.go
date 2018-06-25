@@ -85,12 +85,19 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 				return
 			}
 
-			jsonOutput, err := json.MarshalIndent(output, "", "\t")
-			if err != nil {
-				fmt.Println(err)
-				return
+			if output != nil {
+				jsonOutput, err := json.MarshalIndent(output, "", "\t")
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+
+				fmt.Println("output :\n", string(jsonOutput))
 			}
-			fmt.Println("output :\n", string(jsonOutput))
+
+			if request.Handler != nil {
+				request.Handler(output)
+			}
 		},
 	}
 
@@ -101,24 +108,25 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 }
 
 // ParseCmdFlag parse cmd flag
-func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Command) error {
+func ParseCmdFlag(param *Param, paramFlags map[string]interface{}, cmd *cobra.Command) {
 	switch param.ParamType {
 	case "*string":
-		paramFlags[param.ReflectName] = cmd.Flags().StringP(param.ParamName, param.ShortHand, param.DefaultValue.(string), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().StringP(param.FlagName, param.ShortFlag, param.DefaultValue.(string), param.Usage)
 	case "*bool":
-		paramFlags[param.ReflectName] = cmd.Flags().BoolP(param.ParamName, param.ShortHand, param.DefaultValue.(bool), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().BoolP(param.FlagName, param.ShortFlag, param.DefaultValue.(bool), param.Usage)
 	case "*int64":
-		paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.ParamName, param.ShortHand, int64(param.DefaultValue.(int)), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().Int64P(param.FlagName, param.ShortFlag, int64(param.DefaultValue.(int)), param.Usage)
 	case "*uint64":
-		paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.ParamName, param.ShortHand, uint64(param.DefaultValue.(int)), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().Uint64P(param.FlagName, param.ShortFlag, uint64(param.DefaultValue.(int)), param.Usage)
 	case "*int":
-		paramFlags[param.ReflectName] = cmd.Flags().IntP(param.ParamName, param.ShortHand, param.DefaultValue.(int), param.Usage)
+		paramFlags[param.ReflectName] = cmd.Flags().IntP(param.FlagName, param.ShortFlag, param.DefaultValue.(int), param.Usage)
+	case "*uint":
+		paramFlags[param.ReflectName] = cmd.Flags().UintP(param.FlagName, param.ShortFlag, uint(param.DefaultValue.(int)), param.Usage)
 	default:
-		return errors.New("param type match miss, check or add new match in ParseCmdFlag function")
+		panic(fmt.Sprintf("unsupported param type [%v].", param.ParamType))
 	}
 
 	if param.Required {
-		cmd.MarkFlagRequired(param.ParamName)
+		cmd.MarkFlagRequired(param.FlagName)
 	}
-	return nil
 }

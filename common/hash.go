@@ -34,9 +34,13 @@ func StringToHash(s string) Hash {
 	return BytesToHash([]byte(s))
 }
 
-// SetBytes sets the hash to the value of b. If b is greater than len(a) it will panic
+// SetBytes sets the hash to the value of b.
 func (a *Hash) SetBytes(b []byte) {
-	copy(a[:], b)
+	if len(b) > HashLength {
+		b = b[len(b)-HashLength:]
+	}
+
+	copy(a[HashLength-len(b):], b)
 }
 
 // Bytes returns its actual bits
@@ -79,3 +83,20 @@ func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
 
 // Big converts this Hash to a big int.
 func (a Hash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
+
+// MarshalText marshals the Hash to HEX string.
+func (id Hash) MarshalText() ([]byte, error) {
+	str := id.ToHex()
+	return []byte(str), nil
+}
+
+// UnmarshalText unmarshals Hash from HEX string.
+func (id *Hash) UnmarshalText(json []byte) error {
+	a, err := HexToHash(string(json))
+	if err != nil {
+		return err
+	}
+
+	copy(id[:], a[:])
+	return nil
+}

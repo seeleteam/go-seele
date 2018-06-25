@@ -5,6 +5,12 @@
 
 package cmd
 
+import (
+	"fmt"
+
+	"github.com/seeleteam/go-seele/common/hexutil"
+)
+
 // NewCmdData load all cmd data for init
 func NewCmdData() []*Request {
 	return []*Request{
@@ -19,8 +25,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for the block",
@@ -28,8 +34,8 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
@@ -48,8 +54,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for the block",
@@ -57,13 +63,18 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "FullTx",
-					ParamName:    "fulltx",
-					ShortHand:    "f",
+					FlagName:     "fulltx",
+					ShortFlag:    "f",
 					ParamType:    "*bool",
 					DefaultValue: false,
 					Usage:        "whether get full transaction info, default is false",
 					Required:     false,
 				},
+			},
+			Handler: func(v interface{}) {
+				result := v.(map[string]interface{})
+				txs := result["transactions"].([]interface{})
+				fmt.Printf("transaction numbers: %d\n", len(txs))
 			},
 		},
 		&Request{
@@ -77,13 +88,23 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for the block",
 					Required:     true,
 				},
+			},
+			Handler: func(i interface{}) {
+				v := i.(string)
+				buff, err := hexutil.HexToBytes(v)
+				if err != nil {
+					fmt.Println("hex to byte failed ", err)
+					return
+				}
+
+				fmt.Printf("block size: %d byte", len(buff))
 			},
 		},
 		&Request{
@@ -106,8 +127,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1, // -1 represent the current block
 					Usage:        "height for get block transaction count",
@@ -125,8 +146,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block transaction count",
@@ -144,8 +165,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "Height",
-					ParamName:    "height",
-					ShortHand:    "",
+					FlagName:     "height",
+					ShortFlag:    "",
 					ParamType:    "*int64",
 					DefaultValue: -1,
 					Usage:        "height for get block",
@@ -153,9 +174,9 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
-					ParamType:    "*int",
+					FlagName:     "index",
+					ShortFlag:    "",
+					ParamType:    "*uint",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
 					Required:     false,
@@ -172,8 +193,8 @@ func NewCmdData() []*Request {
 			Params: []*Param{
 				&Param{
 					ReflectName:  "HashHex",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash for get block",
@@ -181,9 +202,9 @@ func NewCmdData() []*Request {
 				},
 				&Param{
 					ReflectName:  "Index",
-					ParamName:    "index",
-					ShortHand:    "",
-					ParamType:    "*int",
+					FlagName:     "index",
+					ShortFlag:    "",
+					ParamType:    "*uint",
 					DefaultValue: 0,
 					Usage:        "index of the transaction in block",
 					Required:     false,
@@ -231,23 +252,124 @@ func NewCmdData() []*Request {
 			Params:           []*Param{},
 		},
 		&Request{
-			Use:   "gettransactionbyhash",
-			Short: "get transaction count by hash",
+			Use:   "gettxbyhash",
+			Short: "get transaction info by hash",
 			Long: `For example:
-  			client.exe gettransactionbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+  			client.exe gettxbyhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
 			ParamReflectType: "string",
 			Method:           "txpool.GetTransactionByHash",
 			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
 					ReflectName:  "TxHash",
-					ParamName:    "hash",
-					ShortHand:    "",
+					FlagName:     "hash",
+					ShortFlag:    "",
 					ParamType:    "*string",
 					DefaultValue: "",
 					Usage:        "hash of the transaction",
 					Required:     true,
 				},
+			},
+		},
+		&Request{
+			Use:   "getreceiptbytxhash",
+			Short: "get receipt by tx hash",
+			Long: `For example:
+  			client.exe getreceiptbytxhash --hash 0xf5aa155ae1d0a126195a70bda69c7f1db0a728f7f860f33244fee83703a80195`,
+			ParamReflectType: "string",
+			Method:           "txpool.GetReceiptByTxHash",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "TxHash",
+					FlagName:     "hash",
+					ShortFlag:    "",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "hash of the transaction",
+					Required:     true,
+				},
+			},
+		},
+		&Request{
+			Use:   "setminerthreads",
+			Short: "set miner threads",
+			Long: `For example:
+  			client.exe setminerthreads -t 2`,
+			ParamReflectType: "int",
+			Method:           "miner.SetThreads",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "Thread",
+					FlagName:     "thread",
+					ShortFlag:    "t",
+					ParamType:    "*int",
+					DefaultValue: 0,
+					Usage:        "threads of the miner",
+					Required:     true,
+				},
+			},
+			Handler: func(interface{}) { fmt.Println("succeed to set miner thread number") },
+		},
+		&Request{
+			Use:   "setcoinbase",
+			Short: "set coinbase",
+			Long: `For example:
+  			client.exe setcoinbase -c "0x4c10f2cd2159bb432094e3be7e17904c2b4aeb21"`,
+			ParamReflectType: "string",
+			Method:           "miner.SetCoinbase",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "CoinbaseStr",
+					FlagName:     "coinbase",
+					ShortFlag:    "c",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "coinbase of the miner",
+					Required:     true,
+				},
+			},
+			Handler: func(interface{}) { fmt.Println("miner set coinbase succeed") },
+		},
+		&Request{
+			Use:              "getdownloadstatus",
+			Short:            "get the download status of block synchronization",
+			Long:             "Get the download status of block synchronization",
+			ParamReflectType: "nil",
+			Method:           "download.GetStatus",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+		},
+		&Request{
+			Use:   "getminerthreads",
+			Short: "get miner threads",
+			Long: `For example:
+  			client.exe getminerthreads`,
+			ParamReflectType: "nil",
+			Method:           "miner.GetThreads",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+			Handler: func(out interface{}) {
+				if out == nil {
+					fmt.Println("Failed to get the miner thread number.")
+				}
+			},
+		},
+		&Request{
+			Use:   "getcoinbase",
+			Short: "get coinbase",
+			Long: `For example:
+  			client.exe getcoinbase`,
+			ParamReflectType: "nil",
+			Method:           "miner.GetCoinbase",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+			Handler: func(out interface{}) {
+				if out == nil {
+					fmt.Println("Failed to get the coinbase.")
+				}
 			},
 		},
 	}

@@ -6,7 +6,9 @@
 package seele
 
 import (
-	"github.com/davecgh/go-spew/spew"
+	"encoding/json"
+	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
@@ -44,7 +46,11 @@ func (api *PrivateDebugAPI) PrintBlock(height *int64, result *string) error {
 		return err
 	}
 
-	*result = spew.Sdump(block)
+	resultBytes, err := json.MarshalIndent(block, "", "\t")
+	if err != nil {
+		return err
+	}
+	*result = string(resultBytes)
 	return nil
 }
 
@@ -57,7 +63,7 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 	for adress, txs := range data {
 		trans := make([]map[string]interface{}, len(txs))
 		for i, tran := range txs {
-			trans[i] = rpcOutputTx(tran)
+			trans[i] = PrintableOutputTx(tran)
 		}
 		content[adress.ToHex()] = trans
 	}
@@ -70,5 +76,51 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
 	txPool := api.s.TxPool()
 	*result = uint64(txPool.GetProcessableTransactionsCount())
+	return nil
+}
+
+// TpsInfo tps detail info
+type TpsInfo struct {
+	StartHeight uint64
+	EndHeight   uint64
+	Count       uint64
+	Duration    uint64
+}
+
+// GetTPS get tps info
+func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
+	chain := api.s.BlockChain()
+	block := chain.CurrentBlock()
+	timeInterval := uint64(150)
+	if block.Header.Height == 0 {
+		return nil
+	}
+
+	var count = uint64(len(block.Transactions) - 1)
+	var duration uint64
+	var endHeight uint64
+	startTime := block.Header.CreateTimestamp.Uint64()
+	for height := block.Header.Height - 1; height > 0; height-- {
+		current, err := chain.GetStore().GetBlockByHeight(height)
+		if err != nil {
+			return fmt.Errorf("get block failed, error:%s, block height:%d", err, height)
+		}
+
+		count += uint64(len(current.Transactions) - 1)
+		duration = startTime - current.Header.CreateTimestamp.Uint64()
+		endHeight = height
+
+		if duration > timeInterval {
+			break
+		}
+	}
+
+	*result = TpsInfo{
+		StartHeight: endHeight,
+		EndHeight:   block.Header.Height,
+		Count:       count,
+		Duration:    duration,
+	}
+
 	return nil
 }

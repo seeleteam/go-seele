@@ -10,6 +10,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/spf13/cobra"
@@ -35,7 +36,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		bootstrap := make([]*discovery.Node, 0)
 		if *bootstrapNode != "" {
-			n, err := discovery.NewNodeFromString(*bootstrapNode)
+			n, err := discovery.NewNodeFromIP(*bootstrapNode)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -69,7 +70,7 @@ var startCmd = &cobra.Command{
 			mynode = n
 		}
 
-		discovery.StartService(mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
+		discovery.StartService(common.GetTempFolder(), mynode.ID, mynode.GetUDPAddr(), bootstrap, *shard)
 
 		wg := sync.WaitGroup{}
 		wg.Add(1)

@@ -13,6 +13,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/trie"
+
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/database"
@@ -131,7 +134,7 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 	}
 
 	hash, statedb := commitAndNewStateDB(statedb)
-	
+
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
 		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
@@ -182,4 +185,40 @@ func TestStatedb_Cache(t *testing.T) {
 	if statedb.trie.Hash() == common.EmptyHash {
 		t.Error("trie root hash should changed")
 	}
+}
+
+func Test_Commit_AccountStorages(t *testing.T) {
+	db, remove := newTestStateDB()
+	defer remove()
+
+	statedb, err := NewStatedb(common.EmptyHash, db)
+	assert.Equal(t, err, nil)
+
+	addr := *crypto.MustGenerateRandomAddress()
+	statedb.CreateAccount(addr)
+	statedb.SetBalance(addr, big.NewInt(99))
+	statedb.SetNonce(addr, 38)
+	statedb.SetCode(addr, []byte("test code"))
+	statedb.SetState(addr, common.StringToHash("test key"), common.StringToHash("test value"))
+
+	// Get root hash for receipt PostState
+	root1, err := statedb.Commit(nil)
+	assert.Equal(t, err, nil)
+
+	// Commit to DB
+	batch := db.NewBatch()
+	root2, err := statedb.Commit(batch)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, root1, root2)
+	assert.Equal(t, batch.Commit(), nil)
+
+	stateObj := statedb.getStateObject(addr)
+
+	// Validate state trie of created account
+	trie, err := trie.NewTrie(common.BytesToHash(stateObj.account.StorageRootHash), dbPrefixStorage, db)
+	assert.Equal(t, err, nil)
+	storageKey := stateObj.getStorageKey(common.StringToHash("test key"))
+	storageValue, found := trie.Get(storageKey)
+	assert.Equal(t, found, true)
+	assert.Equal(t, storageValue, common.StringToHash("test value").Bytes())
 }

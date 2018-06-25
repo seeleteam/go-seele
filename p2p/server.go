@@ -11,6 +11,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -18,11 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/crypto/ecies"
-	"github.com/seeleteam/go-seele/crypto/secp256k1"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
@@ -42,14 +41,11 @@ const (
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
 
-	// peerSyncDuration the duration of syncing peer info with node discovery, must bigger than discovery.discoveryInterval
-	peerSyncDuration = 25 * time.Second
-
 	inboundConn  = 1
 	outboundConn = 2
 
 	// In transfering handshake msg, length of extra data
-	hsExtraDataLen = 32
+	extraDataLen = 24
 )
 
 //P2PConfig is the Configuration of p2p
@@ -83,13 +79,11 @@ type Server struct {
 
 	quit chan struct{}
 
-	addPeerChan chan *Peer
-	delPeerChan chan *Peer
-	loopWG      sync.WaitGroup // loop, listenLoop
+	loopWG sync.WaitGroup // loop, listenLoop
 
-	peerMap      map[common.Address]*Peer
-	shardPeerMap map[uint]map[common.Address]*Peer
-	log          *log.SeeleLog
+	peerSet  *peerSet
+	peerLock sync.Mutex // lock for peer set
+	log      *log.SeeleLog
 
 	// MaxPeers max number of peers that can be connected
 	MaxPeers int
@@ -103,40 +97,32 @@ type Server struct {
 	Protocols []Protocol
 
 	SelfNode *discovery.Node
+
+	genesis core.GenesisInfo
 }
 
-func NewServer(config Config, protocols []Protocol) *Server {
-	peers := make(map[uint]map[common.Address]*Peer)
-	for i := 1; i < common.ShardNumber+1; i++ {
-		peers[uint(i)] = make(map[common.Address]*Peer)
-	}
-
+// NewServer initialize a server
+func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *Server {
 	return &Server{
 		Config:          config,
 		running:         false,
 		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
 		MaxPeers:        defaultMaxPeers,
-		peerMap:         make(map[common.Address]*Peer),
 		quit:            make(chan struct{}),
-		addPeerChan:     make(chan *Peer),
-		delPeerChan:     make(chan *Peer),
-		shardPeerMap:    peers,
+		peerSet:         NewPeerSet(),
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
+		genesis:         genesis,
 	}
 }
 
 // PeerCount return the count of peers
 func (srv *Server) PeerCount() int {
-	if srv.peerMap != nil {
-		return len(srv.peerMap)
-	}
-
-	return 0
+	return srv.peerSet.count()
 }
 
 // Start starts running the server.
-func (srv *Server) Start(shard uint) (err error) {
+func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 	if srv.running {
@@ -144,19 +130,18 @@ func (srv *Server) Start(shard uint) (err error) {
 	}
 
 	srv.running = true
-	srv.log.Info("Starting P2P networking...")
+	srv.log.Debug("Starting P2P networking...")
 	// self node
-	id := crypto.PubkeyToString(&srv.PrivateKey.PublicKey)
-	address := common.HexMustToAddres(id)
+	address := crypto.GetAddress(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
 
-	srv.SelfNode = discovery.NewNodeWithAddr(address, addr, shard)
+	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 	if err != nil {
 		return err
 	}
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
-	srv.kadDB = discovery.StartService(address, addr, srv.StaticNodes, shard)
+	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 
@@ -175,15 +160,18 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
-	srv.log.Info("got discovery a new node event, node info:%s", node)
-	_, ok := srv.peerMap[node.ID]
-	if ok {
+	srv.log.Debug("got discovery a new node event, node info:%s", node)
+	if srv.checkPeerExist(node.ID) {
 		return
 	}
 
 	//TODO UDPPort==> TCPPort
-	addr, _ := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
-	srv.log.Info("connecting to a new node... %s", addr.String())
+	addr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
+	if err != nil {
+		srv.log.Error("resolve tpc address failed %s", err)
+		return
+	}
+
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
 		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
@@ -194,8 +182,9 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
+	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Info("add new node. setupConn called err returns. err=%s", err)
+		srv.log.Info("add new node failed. err=%s", err)
 	}
 }
 
@@ -203,48 +192,58 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 	srv.deletePeer(node.ID)
 }
 
-func (srv *Server) addPeer(p *Peer) {
+func (srv *Server) checkPeerExist(id common.Address) bool {
+	srv.peerLock.Lock()
+	srv.peerLock.Unlock()
+
+	peer := srv.peerSet.find(id)
+	return peer != nil
+}
+
+func (srv *Server) addPeer(p *Peer) bool {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
-		return
+		return false
 	}
 
-	srv.log.Info("server addPeer, len(peers)=%d", len(srv.peerMap))
-	oldPeer, ok := srv.peerMap[p.Node.ID]
-
-	if ok {
-		srv.log.Info("peer already exists, disconnect it and update the new peer")
-		p.Disconnect(discAlreadyConnected)
-
-		peerMap := srv.shardPeerMap[oldPeer.getShardNumber()]
-		delete(peerMap, oldPeer.Node.ID)
+	peer := srv.peerSet.find(p.Node.ID)
+	if peer != nil {
+		srv.log.Debug("peer is already exist %s -> %s, skip %s -> %s", peer.LocalAddr(), peer.RemoteAddr(),
+			p.LocalAddr(), p.RemoteAddr())
+		return false
 	}
 
-	srv.shardPeerMap[p.getShardNumber()][p.Node.ID] = p
-	srv.peerMap[p.Node.ID] = p
+	srv.peerSet.add(p)
+	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
+	p.notifyProtocolsAddPeer()
 
 	metricsAddPeerMeter.Mark(1)
-	metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
+	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+	return true
 }
 
 func (srv *Server) deletePeer(id common.Address) {
-	p, ok := srv.peerMap[id]
-	if ok {
-		delete(srv.peerMap, p.Node.ID)
-		delete(srv.shardPeerMap[p.getShardNumber()], p.Node.ID)
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
+	p := srv.peerSet.find(id)
+	if p != nil {
+		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
-		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", len(srv.peerMap))
+		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", srv.PeerCount())
 
 		metricsDeletePeerMeter.Mark(1)
-		metricsPeerCountGauge.Update(int64(len(srv.peerMap)))
+		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
 	} else {
-		srv.log.Info("server.run delPeerChan recved. peer not match")
+		srv.log.Info("server.run delPeerChan received. peer not match")
 	}
 }
 
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
-	peerMap := srv.peerMap
 	srv.log.Info("p2p start running...")
 
 running:
@@ -253,22 +252,13 @@ running:
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
-		case p := <-srv.addPeerChan:
-			srv.addPeer(p)
-		case p := <-srv.delPeerChan:
-			srv.deletePeer(p.Node.ID)
 		}
 	}
 
 	// Disconnect all peers.
-	for _, p := range peerMap {
+	srv.peerSet.foreach(func(p *Peer) {
 		p.Disconnect(discServerQuit)
-	}
-
-	for len(peerMap) > 0 {
-		p := <-srv.delPeerChan
-		srv.deletePeer(p.Node.ID)
-	}
+	})
 }
 
 func (srv *Server) startListening() error {
@@ -326,7 +316,7 @@ func (srv *Server) listenLoop() {
 			break
 		}
 		go func() {
-			srv.log.Info("Accept new connection from, %s", fd.RemoteAddr())
+			srv.log.Info("Accept new connection from, %s -> %s", fd.RemoteAddr(), fd.LocalAddr())
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
@@ -342,91 +332,151 @@ func (srv *Server) listenLoop() {
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd}, srv.Protocols, srv.log, dialDest)
-
 	var caps []Cap
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.cap())
 	}
 
-	recvMsg, nounceCnt, nounceSvr, err := srv.doHandShake(caps, peer, flags, dialDest)
+	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
 		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
 
-	peerCaps, peerNodeID := recvMsg.Caps, recvMsg.NodeID
+	srv.log.Debug("handshake succeed. %s -> %s", fd.LocalAddr(), fd.RemoteAddr())
+	peerNodeID := recvMsg.NodeID
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
-			srv.log.Info("p2p.setupConn conn handshaked, not found nodeID")
+			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID")
 			peer.close()
-			return errors.New("Not found nodeID in discovery database")
+			return errors.New("not found nodeID in discovery database")
 		}
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
 		peer.Node = peerNode
 	}
 
-	srv.log.Debug("p2p.setupConn conn handshaked. nounceCnt=%d nounceSvr=%d peerCaps=%s", nounceCnt, nounceSvr, peerCaps)
 	go func() {
 		srv.loopWG.Add(1)
-		srv.addPeerChan <- peer
-		peer.run()
-		srv.delPeerChan <- peer
+		if srv.addPeer(peer) {
+			peer.run()
+			srv.deletePeer(peer.Node.ID)
+		} else {
+			peer.close()
+		}
+
 		srv.loopWG.Done()
 	}()
 
 	return nil
 }
 
+func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) bool {
+	var genesis core.GenesisInfo
+	err := json.Unmarshal(recvMsg.Params, &genesis)
+	if err != nil {
+		return false
+	}
+
+	for key, val := range genesis.Accounts {
+		v, ok := srv.genesis.Accounts[key]
+		if !ok {
+			return false
+		}
+		if val.Cmp(v) != 0 {
+			return false
+		}
+	}
+
+	if srv.Config.NetworkID != recvMsg.NetworkID {
+		return false
+	}
+
+	var caps []Cap
+	for _, proto := range srv.Protocols {
+		caps = append(caps, proto.cap())
+	}
+	if len(caps) != len(recvMsg.Caps) {
+		return false
+	}
+
+	var str string
+	var tag = true
+	len := len(caps)
+	for i := 0; i < len; i++ {
+		str = caps[i].String()
+		for j := 0; j < len; j++ {
+			if recvMsg.Caps[j].String() != str {
+				tag = false
+				continue
+			}
+			tag = true
+			break
+		}
+		if !tag {
+			break
+		}
+	}
+	return tag
+}
+
 // doHandShake Communicate each other
-func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *discovery.Node) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
+	var renounceCnt uint64
 	handshakeMsg := &ProtoHandShake{Caps: caps}
+	handshakeMsg.NetworkID = srv.Config.NetworkID
+	params, err := json.Marshal(srv.genesis)
+	if err != nil {
+		return nil, 0, err
+	}
+	handshakeMsg.Params = params
 	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
-
 	if flags == outboundConn {
 		// client side. Send msg first
 		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt, nounceSvr)
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
-		recvMsg, _, nounceSvr, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		recvMsg, renounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
+		}
+		if renounceCnt != nounceCnt {
+			return nil, 0, errors.New("client nounceCnt is changed")
+		}
+		if !srv.peerIsValidate(recvMsg) {
+			return nil, 0, errors.New("node is not consitent with groups")
 		}
 	} else {
-		// server side. Recv handshake msg first
-		binary.Read(rand.Reader, binary.BigEndian, &nounceSvr)
+		// server side. Receive handshake msg first
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
-		recvMsg, nounceCnt, _, err = srv.unPackWrapHSMsg(recvWrapMsg)
+		recvMsg, nounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
-		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt, nounceSvr)
+		if !srv.peerIsValidate(recvMsg) {
+			return nil, 0, errors.New("node is not consitent with groups")
+		}
+		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
-
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
-			return nil, 0, 0, err
+			return nil, 0, err
 		}
 	}
 	return
@@ -434,9 +484,10 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 
 // packWrapHSMsg compose the wrapped send msg.
 // A 32 byte ExtraData is used for verification process.
-func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64, nounceSvr uint64) (Message, error) {
+func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64) (Message, error) {
 	// Serialize should handle big-endian
 	hdmsgRLP, err := common.Serialize(handshakeMsg)
+
 	if err != nil {
 		return Message{}, err
 	}
@@ -447,30 +498,18 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	if _, err := md5Inst.Write(hdmsgRLP); err != nil {
 		return Message{}, err
 	}
-	extBuf := make([]byte, hsExtraDataLen)
+	extBuf := make([]byte, extraDataLen)
+
 	// first 16 bytes, contains md5sum of hdmsgRLP;
-	// then 8 bytes for client side nounce; 8 bytes for server side nounce
+	// then 8 bytes for client side nounce;
 	copy(extBuf, md5Inst.Sum(nil))
 	binary.BigEndian.PutUint64(extBuf[16:], nounceCnt)
-	binary.BigEndian.PutUint64(extBuf[24:], nounceSvr)
 
-	// 1. Sign with local privateKey first
-	priKeyLocal := math.PaddedBigBytes(srv.PrivateKey.D, 32)
-	sig, err := secp256k1.Sign(extBuf, priKeyLocal)
-	if err != nil {
-		return Message{}, err
-	}
-	// 2. Encrypt with peer publicKey
-	pubObj := crypto.ToECDSAPub(peerNodeID[0:])
-	remotePub := ecies.ImportECDSAPublic(pubObj)
-
-	encOrg := make([]byte, hsExtraDataLen+len(sig))
-	copy(encOrg, extBuf)
-	copy(encOrg[hsExtraDataLen:], sig)
-	enc, err := ecies.Encrypt(rand.Reader, remotePub, encOrg, nil, nil)
-	if err != nil {
-		return Message{}, err
-	}
+	// Sign with local privateKey first
+	signature := crypto.MustSign(srv.PrivateKey, crypto.MustHash(extBuf).Bytes())
+	enc := make([]byte, extraDataLen+len(signature.Sig))
+	copy(enc, extBuf)
+	copy(enc[extraDataLen:], signature.Sig)
 
 	// Format of wrapMsg payload, [handshake's rlp body, encoded extra data, length of encoded extra data]
 	size := uint32(len(hdmsgRLP) + len(enc) + 4)
@@ -482,52 +521,43 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 }
 
 // unPackWrapHSMsg verify recved msg, and recover the handshake msg
-func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, nounceSvr uint64, err error) {
+func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
 	size := uint32(len(recvWrapMsg.Payload))
-	if size < hsExtraDataLen+4 {
-		err = errors.New("recved err msg")
+	if size < extraDataLen+4 {
+		err = errors.New("received msg with invalid length")
 		return
 	}
+
 	extraEncLen := binary.BigEndian.Uint32(recvWrapMsg.Payload[size-4:])
 	recvHSMsgLen := size - extraEncLen - 4
 	nounceCnt = binary.BigEndian.Uint64(recvWrapMsg.Payload[recvHSMsgLen+16:])
-	nounceSvr = binary.BigEndian.Uint64(recvWrapMsg.Payload[recvHSMsgLen+24:])
 	recvEnc := recvWrapMsg.Payload[recvHSMsgLen : size-4]
-
 	recvMsg = &ProtoHandShake{}
 	if err = common.Deserialize(recvWrapMsg.Payload[:recvHSMsgLen], recvMsg); err != nil {
 		return
 	}
+	// verify signature
+	sig := crypto.Signature{
+		Sig: recvEnc[extraDataLen:],
+	}
 
-	// Decrypt with local private key, make sure it is sended to local
-	eciesPriKey := ecies.ImportECDSA(srv.PrivateKey)
-	encOrg, err := eciesPriKey.Decrypt(rand.Reader, recvEnc, nil, nil)
-	if err != nil {
+	if !sig.Verify(recvMsg.NodeID, crypto.MustHash(recvEnc[0:extraDataLen]).Bytes()) {
+		err = errors.New("unPackWrapHSMsg: received public key not match")
 		return
 	}
 
-	// Verify peer public key, make sure it is sended from correct peer
-	recvPubkey, err := secp256k1.RecoverPubkey(encOrg[0:hsExtraDataLen], encOrg[hsExtraDataLen:])
-	if err != nil {
-		return
-	}
-
-	if !bytes.Equal(recvMsg.NodeID[0:], recvPubkey[1:]) {
-		err = errors.New("unPackWrapHSMsg: recvPubkey not match")
-		return
-	}
-
-	// Verify recvMsg's payload md5sum to prevent modification
+	// verify recvMsg's payload md5sum to prevent modification
 	md5Inst := md5.New()
 	if _, err = md5Inst.Write(recvWrapMsg.Payload[:recvHSMsgLen]); err != nil {
 		return
 	}
 
-	if !bytes.Equal(md5Inst.Sum(nil), encOrg[:16]) {
-		err = errors.New("unPackWrapHSMsg: recved md5sum not match!")
+	if !bytes.Equal(md5Inst.Sum(nil), recvEnc[:16]) {
+		err = errors.New("unPackWrapHSMsg: received md5sum not match")
 		return
 	}
-	srv.log.Info("unPackWrapHSMsg: verify OK!")
+
+	srv.log.Debug("unPackWrapHSMsg: verify OK!")
 	return
 }
 
@@ -559,12 +589,13 @@ func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // PeersInfo returns an array of metadata objects describing connected peers.
 func (srv *Server) PeersInfo() *[]PeerInfo {
 	infos := make([]PeerInfo, 0, srv.PeerCount())
-	for _, peer := range srv.peerMap {
+	srv.peerSet.foreach(func(peer *Peer) {
 		if peer != nil {
 			peerInfo := peer.Info()
 			infos = append(infos, *peerInfo)
 		}
-	}
+	})
+
 	sort.Sort(PeerInfos(infos))
 	return &infos
 }

@@ -67,7 +67,7 @@ miner:
 					logAbort(log)
 				case result <- found:
 					atomic.StoreInt32(isNonceFound, 1)
-					log.Info("nonce finding succeeded")
+					log.Debug("nonce finding succeeded")
 				}
 
 				break miner
@@ -83,7 +83,7 @@ miner:
 				case <-abort:
 					logAbort(log)
 				case result <- nil:
-					log.Info("nonce finding outage")
+					log.Warn("nonce finding outage")
 				}
 
 				break miner

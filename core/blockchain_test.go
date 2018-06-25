@@ -33,8 +33,6 @@ var testGenesisAccounts = []*testAccount{
 }
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
-	common.IsShardDisabled = true
-
 	addr, privKey, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -51,8 +49,6 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
-	common.IsShardDisabled = true
-
 	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
 		accounts[account.addr] = account.data.Amount
@@ -69,7 +65,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db)
+	bc, err := NewBlockchain(bcStore, db, "")
 	if err != nil {
 		panic(err)
 	}
@@ -77,26 +73,23 @@ func newTestBlockchain(db database.Database) *Blockchain {
 	return bc
 }
 
-func newTestBlockTx(genesisAccountIndex int, amount, nonce uint64) *types.Transaction {
+func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
 	toAddress := crypto.MustGenerateRandomAddress()
 
-	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
-	common.IsShardDisabled = true
-
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
-	rewardTx, _ := types.NewTransaction(common.Address{}, minerAccount.addr, minerAccount.data.Amount, big.NewInt(0), minerAccount.data.Nonce)
-	rewardTx.Sign(minerAccount.privKey)
+	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.data.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 	for i := uint64(0); i < txNum; i++ {
-		txs = append(txs, newTestBlockTx(0, 1, startNonce+i))
+		txs = append(txs, newTestBlockTx(0, 1, 1, startNonce+i))
 	}
 
 	header := &types.BlockHeader{
@@ -180,6 +173,19 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockInvalidHeight)
 }
 
+func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock.Header.ExtraData = []byte("test extra data")
+	newBlock.HeaderHash = newBlock.Header.Hash()
+
+	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty)
+}
+
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	db, dispose := newTestDatabase()
 	defer dispose()
@@ -189,7 +195,7 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(newBlock), error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	storedBlock, err := bc.bcStore.GetBlock(newBlock.HeaderHash)
@@ -211,7 +217,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	err := bc.WriteBlock(newBlock)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
@@ -228,14 +234,14 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 
 	block2 := newTestBlock(bc, block1.HeaderHash, 2, 3, 3)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ = bc.CurrentBlock()
+	currentBlock = bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block2)
 }
 
@@ -249,7 +255,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 	err := bc.WriteBlock(block1)
 	assert.Equal(t, err, error(nil))
 
-	currentBlock, _ := bc.CurrentBlock()
+	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
 	assert.Equal(t, bc.blockLeaves.Count(), 1)
 
@@ -327,11 +333,6 @@ func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHa
 }
 
 func Test_Blockchain_Shard(t *testing.T) {
-	common.IsShardDisabled = false
-	defer func() {
-		common.IsShardDisabled = true
-	}()
-
 	db, dispose := newTestDatabase()
 	defer dispose()
 
@@ -341,7 +342,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db)
+	bc, err := NewBlockchain(bcStore, db, "")
 	if err != nil {
 		panic(err)
 	}
@@ -349,4 +350,34 @@ func Test_Blockchain_Shard(t *testing.T) {
 	shardNum, err := bc.GetShardNumber()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, shardNum, uint(8))
+}
+
+func Test_Blockchain_ApplyTransaction(t *testing.T) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	// prepare tx to apply, amount is 10 and fee is 2
+	tx := newTestBlockTx(0, 10, 2, 0)
+	coinbase := *crypto.MustGenerateRandomAddress()
+	statedb, err := bc.GetCurrentState()
+	assert.Equal(t, err, nil)
+	statedb.CreateAccount(coinbase)
+	statedb.SetBalance(coinbase, big.NewInt(50))
+	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
+
+	// check before applying tx
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
+
+	// apply tx
+	_, err = bc.ApplyTransaction(tx, 1, coinbase, statedb, block.Header)
+	assert.Equal(t, err, nil)
+
+	// check after applying tx
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(88))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
+	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
 }

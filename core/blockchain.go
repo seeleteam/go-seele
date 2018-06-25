@@ -8,6 +8,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -18,18 +19,24 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
-var (
+const (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
-	// block transaction number limit
-	BlockTransactionNumberLimit = 500
+	// block transaction number limit, 1000 simple transactions are about 152kb
+	// If for block size as 100KB, it could contains about 5k transactions
+	BlockTransactionNumberLimit = 5000
 )
 
 var (
+	// ErrBlockHeaderNil is returned when the block header is nil.
+	ErrBlockHeaderNil = errors.New("block header is nil")
+
 	// ErrBlockHashMismatch is returned when the block hash does not match the header hash.
 	ErrBlockHashMismatch = errors.New("block header hash mismatch")
 
@@ -79,7 +86,8 @@ var (
 	// ErrBlockTooManyTxs is returned when block have too many txs
 	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
-	errContractCreationNotSupported = errors.New("smart contract creation not supported yet")
+	// ErrBlockExtraDataNotEmpty is returned when the block extra data is not empty.
+	ErrBlockExtraDataNotEmpty = errors.New("block extra data is not empty")
 )
 
 type consensusEngine interface {
@@ -92,64 +100,81 @@ type consensusEngine interface {
 	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
 }
 
-// Blockchain represents the block chain with a genesis block. The Blockchain manages
+// Blockchain represents the blockchain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure. we must keep all of its parameters are thread safe too.
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
 	engine         consensusEngine
-	headerChain    *HeaderChain
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves *BlockLeaves
+	log         *log.SeeleLog
+
+	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 }
 
-// NewBlockchain returns an initialized block chain with the given store and account state DB.
-func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database) (*Blockchain, error) {
+// NewBlockchain returns an initialized blockchain with the given store and account state DB.
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
 		engine:         &pow.Engine{},
+		log:            log.GetLogger("blockchain", common.LogConfig.PrintLog),
 	}
 
 	var err error
-	bc.headerChain, err = NewHeaderChain(bcStore)
+
+	// recover from program crash
+	bc.rp, err = loadRecoveryPoint(recoveryPointFile)
 	if err != nil {
+		bc.log.Error("Failed to load recovery point info from file, %v", err.Error())
+		return nil, err
+	}
+
+	if err = bc.rp.recover(bcStore); err != nil {
+		bc.log.Error("Failed to recover blockchain, info = %+v, error = %v", *bc.rp, err.Error())
 		return nil, err
 	}
 
 	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
+		bc.log.Error("Failed to get block hash of genesis block height, %v", err.Error())
 		return nil, err
 	}
 
 	bc.genesisBlock, err = bcStore.GetBlock(genesisHash)
 	if err != nil {
+		bc.log.Error("Failed to get block by genesis block hash, hash = %v, error = %v", genesisHash.ToHex(), err.Error())
 		return nil, err
 	}
 
 	// Get the HEAD block from store
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
+		bc.log.Error("Failed to get HEAD block hash, %v", err.Error())
 		return nil, err
 	}
 
 	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
 	if err != nil {
+		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
 		return nil, err
 	}
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
+		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
 		return nil, err
 	}
 
 	// Get the state DB of the current block
 	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
 	if err != nil {
+		bc.log.Error("Failed to create state DB, state hash = %v, error = %v", currentBlock.Header.StateHash, err.Error())
 		return nil, err
 	}
 
@@ -161,26 +186,37 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
-func (bc *Blockchain) CurrentBlock() (*types.Block, *state.Statedb) {
+func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
 	index := bc.blockLeaves.GetBestBlockIndex()
 	if index == nil {
-		return nil, nil
+		return nil
 	}
 
-	return index.currentBlock, index.state
+	return index.currentBlock
 }
 
-// CurrentState returns the state DB of the current block.
-func (bc *Blockchain) CurrentState() *state.Statedb {
-	_, state := bc.CurrentBlock()
-	return state
+// GetCurrentState returns the state DB of the current block.
+func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
+	block := bc.CurrentBlock()
+	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+}
+
+// GetCurrentInfo return the current block and current state info
+func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
+	block := bc.CurrentBlock()
+	statedb, err := state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
+	return block, statedb, err
 }
 
 // WriteBlock writes the specified block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	if err := bc.validateBlock(block); err != nil {
+		return err
+	}
+
 	// Do not write the block if already exists.
 	exist, err := bc.bcStore.HasBlock(block.HeaderHash)
 	if err != nil {
@@ -200,7 +236,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	// Ensure the specified block is valid to insert.
-	if err = bc.validateBlock(block, preBlock); err != nil {
+	if err = bc.validateBlockInChain(block, preBlock); err != nil {
 		return err
 	}
 
@@ -248,63 +284,80 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	}
 
 	blockIndex := NewBlockIndex(blockStatedb, currentBlock, td.Add(td, block.Header.Difficulty))
-
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
-	bc.blockLeaves.Add(blockIndex)
-	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
-	bc.headerChain.WriteHeader(currentBlock.Header)
 
-	// If the new block has larger TD, the canonical chain will be changed.
-	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
-	if isHead {
-		if err = bc.updateHashByHeight(block); err != nil {
-			return err
-		}
+	/////////////////////////////////////////////////////////////////
+	// PAY ATTENTION TO THE ORDER OF WRITING DATA INTO DB.
+	// OTHERWISE, THERE MAY BE INCONSISTENT DATA.
+	// 1. Write account states
+	// 2. Write receipts
+	// 3. Write block
+	/////////////////////////////////////////////////////////////////
+	if err = batch.Commit(); err != nil {
+		bc.log.Error("Failed to batch commit account states, %v", err.Error())
+		return err
 	}
 
-	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
+	if err = bc.rp.onPutBlockStart(block, bc.bcStore, isHead); err != nil {
+		bc.log.Error("Failed to set recovery point before put block into store, %v", err.Error())
 		return err
 	}
 
 	if err = bc.bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
+		bc.log.Error("Failed to save receipts into store, %v", err.Error())
 		return err
 	}
 
-	// FIXME: write the block and update the account state in a batch.
-	// Otherwise, restore the account state during service startup.
-	if err = batch.Commit(); err != nil {
+	if err = bc.bcStore.PutBlock(block, td, isHead); err != nil {
+		bc.log.Error("Failed to save block into store, %v", err.Error())
 		return err
 	}
+
+	bc.rp.onPutBlockEnd()
+
+	// If the new block has larger TD, the canonical chain will be changed.
+	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
+	if isHead {
+		if err = deleteLargerHeightBlocks(bc.bcStore, block.Header.Height+1, bc.rp); err != nil {
+			bc.log.Error("Failed to delete larger height blocks when HEAD changed, larger height = %v, error = %v", block.Header.Height+1, err.Error())
+			return err
+		}
+
+		if err = overwriteStaleBlocks(bc.bcStore, block.Header.PreviousBlockHash, bc.rp); err != nil {
+			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
+			return err
+		}
+	}
+
+	// update block header after meta info updated
+	bc.blockLeaves.Add(blockIndex)
+	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 
 	committed = true
+	if isHead {
+		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
+	}
 
 	return nil
 }
 
-func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
-	if len(block.Transactions) > BlockTransactionNumberLimit {
-		return ErrBlockTooManyTxs
+// validateBlock validates all blockhain independent fields in the block.
+func (bc *Blockchain) validateBlock(block *types.Block) error {
+	if block == nil || block.Header == nil {
+		return ErrBlockHeaderNil
 	}
 
 	if !block.HeaderHash.Equal(block.Header.Hash()) {
 		return ErrBlockHashMismatch
 	}
 
-	txsHash := types.MerkleRootHash(block.Transactions)
-	if !txsHash.Equal(block.Header.TxHash) {
-		return ErrBlockTxsHashMismatch
+	if len(block.Transactions) > BlockTransactionNumberLimit {
+		return ErrBlockTooManyTxs
 	}
 
-	if block.Header.Height != preBlock.Header.Height+1 {
-		return ErrBlockInvalidHeight
-	}
-
+	// Validate timestamp
 	if block.Header.CreateTimestamp == nil {
 		return ErrBlockCreateTimeNull
-	}
-
-	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
-		return ErrBlockCreateTimeOld
 	}
 
 	future := new(big.Int).SetInt64(time.Now().Unix() + futureBlockLimit)
@@ -312,12 +365,43 @@ func (bc *Blockchain) validateBlock(block, preBlock *types.Block) error {
 		return ErrBlockCreateTimeInFuture
 	}
 
+	// Now, the extra data in block header should be empty except the genesis block.
+	if len(block.Header.ExtraData) > 0 {
+		return ErrBlockExtraDataNotEmpty
+	}
+
+	// Validate miner shard
+	if common.IsShardEnabled() {
+		if shard := block.GetShardNumber(); shard != common.LocalShardNumber {
+			return fmt.Errorf("invalid shard number. block shard number is [%v], but local shard number is [%v]", shard, common.LocalShardNumber)
+		}
+	}
+
+	// Validate tx merkle root hash
+	txsHash := types.MerkleRootHash(block.Transactions)
+	if !txsHash.Equal(block.Header.TxHash) {
+		return ErrBlockTxsHashMismatch
+	}
+
+	return bc.engine.ValidateHeader(block.Header)
+}
+
+// validateBlockInChain validates the specified block against with the previous block.
+func (bc *Blockchain) validateBlockInChain(block, preBlock *types.Block) error {
+	if block.Header.Height != preBlock.Header.Height+1 {
+		return ErrBlockInvalidHeight
+	}
+
+	if block.Header.CreateTimestamp.Cmp(preBlock.Header.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
+	}
+
 	difficult := pow.GetDifficult(block.Header.CreateTimestamp.Uint64(), preBlock.Header)
 	if difficult == nil || difficult.Cmp(block.Header.Difficulty) != 0 {
 		return ErrBlockDifficultInvalid
 	}
 
-	return bc.engine.ValidateHeader(block.Header)
+	return nil
 }
 
 // GetStore returns the blockchain store instance.
@@ -352,7 +436,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	}
 
 	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data == nil || minerRewardTx.Data.To == nil {
+	if minerRewardTx.Data.To.IsEmpty() {
 		return nil, ErrBlockInvalidToAddress
 	}
 
@@ -372,26 +456,30 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 		return nil, err
 	}
 
+	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {
+		return nil, types.ErrTimestampMismatch
+	}
+
 	return minerRewardTx, nil
 }
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	stateObj := statedb.GetOrNewStateObject(*minerRewardTx.Data.To)
+	stateObj := statedb.GetOrNewStateObject(minerRewardTx.Data.To)
 	stateObj.AddAmount(minerRewardTx.Data.Amount)
 
 	receipts := make([]*types.Receipt, len(txs)+1)
-	
+
 	// add the receipt of the reward tx
 	receipts[0] = types.MakeRewardReceipt(minerRewardTx)
-	
+
 	// process other txs
 	for i, tx := range txs {
 		if err := tx.Validate(statedb); err != nil {
 			return nil, err
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, i+1, *minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, i+1, minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
 			return nil, err
 		}
@@ -404,8 +492,8 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
 func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
-	context := newEVMContext(tx, blockHeader, coinbase, bc.bcStore)
-	receipt, err := processContract(context, tx, txIndex, statedb, &vm.Config{})
+	context := NewEVMContext(tx, blockHeader, coinbase, bc.bcStore)
+	receipt, err := ProcessContract(context, tx, txIndex, statedb, &vm.Config{})
 	if err != nil {
 		return nil, err
 	}
@@ -413,11 +501,19 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	return receipt, nil
 }
 
-// updateHashByHeight updates the height-to-hash mapping for the specified new HEAD block in the canonical chain.
-func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
-	// Delete height-to-hash mappings with the larger height than that of the new HEAD block in the canonical chain.
-	for i := block.Header.Height + 1; ; i++ {
-		deleted, err := bc.bcStore.DeleteBlockHash(i)
+// deleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.
+func deleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64, rp *recoveryPoint) error {
+	// When recover the blockchain, the larger height block hash may be already deleted before program crash.
+	if _, err := bcStore.DeleteBlockHash(largerHeight); err != nil {
+		return err
+	}
+
+	for i := largerHeight + 1; ; i++ {
+		if rp != nil {
+			rp.onDeleteLargerHeightBlocks(i)
+		}
+
+		deleted, err := bcStore.DeleteBlockHash(i)
 		if err != nil {
 			return err
 		}
@@ -427,30 +523,64 @@ func (bc *Blockchain) updateHashByHeight(block *types.Block) error {
 		}
 	}
 
-	// Overwrite stale canonical height-to-hash mappings
-	for headerHash := block.Header.PreviousBlockHash; !headerHash.Equal(common.EmptyHash); {
-		header, err := bc.bcStore.GetBlockHeader(headerHash)
-		if err != nil {
-			return err
-		}
-
-		canonicalHash, err := bc.bcStore.GetBlockHash(header.Height)
-		if err != nil {
-			return err
-		}
-
-		if headerHash.Equal(canonicalHash) {
-			break
-		}
-
-		if err = bc.bcStore.PutBlockHash(header.Height, headerHash); err != nil {
-			return err
-		}
-
-		headerHash = header.PreviousBlockHash
+	if rp != nil {
+		rp.onDeleteLargerHeightBlocks(0)
 	}
 
 	return nil
+}
+
+// overwriteStaleBlocks overwrites the stale canonical height-to-hash mappings.
+func overwriteStaleBlocks(bcStore store.BlockchainStore, staleHash common.Hash, rp *recoveryPoint) error {
+	var overwritten bool
+	var err error
+
+	// When recover the blockchain, the stale block hash my be already overwritten before program crash.
+	if _, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
+		return err
+	}
+
+	for !staleHash.Equal(common.EmptyHash) {
+		if rp != nil {
+			rp.onOverwriteStaleBlocks(staleHash)
+		}
+
+		if overwritten, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
+			return err
+		}
+
+		if !overwritten {
+			break
+		}
+	}
+
+	if rp != nil {
+		rp.onOverwriteStaleBlocks(common.EmptyHash)
+	}
+
+	return nil
+}
+
+func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) (overwritten bool, preBlockHash common.Hash, err error) {
+	header, err := bcStore.GetBlockHeader(hash)
+	if err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	canonicalHash, err := bcStore.GetBlockHash(header.Height)
+	if err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	if hash.Equal(canonicalHash) {
+		return false, header.PreviousBlockHash, nil
+	}
+
+	if err = bcStore.PutBlockHash(header.Height, hash); err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	return true, header.PreviousBlockHash, nil
 }
 
 // GetShardNumber returns the shard number of blockchian.

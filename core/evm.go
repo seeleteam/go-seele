@@ -6,7 +6,6 @@
 package core
 
 import (
-	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -17,8 +16,8 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 )
 
-// newEVMContext creates a new context for use in the EVM.
-func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
+// NewEVMContext creates a new context for use in the EVM.
+func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 		return db.GetBalance(addr).Cmp(amount) >= 0
 	}
@@ -61,8 +60,8 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 	}
 }
 
-// processContract process the specified contract tx and return the receipt.
-func processContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
+// ProcessContract process the specified contract tx and return the receipt.
+func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
 	statedb.Prepare(txIndex)
 	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
 
@@ -70,18 +69,22 @@ func processContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
 
-	// Currently, use math.MaxUint64 gas to bypass ErrInsufficientBalance error.
-	if tx.Data.To == nil {
+	// Currently, use common.MAXTXGAS gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
+	if tx.Data.To.IsEmpty() {
 		var createdContractAddr common.Address
-		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, math.MaxUint64, tx.Data.Amount); err == nil {
+		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, common.MAXTXGAS, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
-		statedb.SetNonce(tx.Data.From, statedb.GetNonce(tx.Data.From)+1)
-		receipt.Result, _, err = evm.Call(caller, *tx.Data.To, tx.Data.Payload, math.MaxUint64, tx.Data.Amount)
+		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
+		receipt.Result, _, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, common.MAXTXGAS, tx.Data.Amount)
 	}
 
-	if err != nil {
+	// Below error handling comes from ETH:
+	// The only possible consensus-error would be if there wasn't
+	// sufficient balance to make the transfer happen. The first
+	// balance transfer may never fail.
+	if err == vm.ErrInsufficientBalance {
 		return nil, err
 	}
 
@@ -93,6 +96,10 @@ func processContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	if receipt.Logs == nil {
 		receipt.Logs = make([]*types.Log, 0)
 	}
+
+	// transfer fee to coinbase
+	statedb.SubBalance(tx.Data.From, tx.Data.Fee)
+	statedb.AddBalance(context.Coinbase, tx.Data.Fee)
 
 	return receipt, nil
 }

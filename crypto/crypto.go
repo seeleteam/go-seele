@@ -51,10 +51,8 @@ func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 }
 
 // PubkeyToString returns the string of the given public key, with prefix 0x
-func PubkeyToString(pub *ecdsa.PublicKey) (pubStr string) {
-	buff := FromECDSAPub(pub)
-	pubStr = "0x" + hex.EncodeToString(buff[1:])
-	return
+func PubkeyToString(pub *ecdsa.PublicKey) string {
+	return GetAddress(pub).ToHex()
 }
 
 // FromECDSAPub marshals and returns the byte array of the specified ECDSA public key.
@@ -120,40 +118,20 @@ func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 		return nil, nil, err
 	}
 
-	id, err := GetAddress(keypair)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	id := GetAddress(&keypair.PublicKey)
 	return id, keypair, err
 }
 
-// GetAddress gets an address from the given private key
-func GetAddress(key *ecdsa.PrivateKey) (*common.Address, error) {
-	buff := FromECDSAPub(&key.PublicKey)
-	id, err := common.NewAddress(buff[1:])
-	if err != nil {
-		return nil, err
-	}
-
-	return &id, nil
-}
-
-// MustGetAddress gets an address from the given private key. in fact the error will not occur, so MustGetAddress will always work
-func MustGetAddress(key *ecdsa.PrivateKey) *common.Address {
-	addr, err := GetAddress(key)
-	if err != nil {
-		panic(err)
-	}
-
-	return addr
+// GetAddress gets an address from the given public key
+func GetAddress(key *ecdsa.PublicKey) *common.Address {
+	addr := common.PubKeyToAddress(key, MustHash)
+	return &addr
 }
 
 // GenerateRandomAddress generates and returns a random address.
 func GenerateRandomAddress() (*common.Address, error) {
-	publicKey, _, error := GenerateKeyPair()
-
-	return publicKey, error
+	addr, _, err := GenerateKeyPair()
+	return addr, err
 }
 
 // MustGenerateRandomAddress generates and returns a random address.
@@ -170,18 +148,23 @@ func MustGenerateRandomAddress() *common.Address {
 // MustGenerateShardAddress generates and returns a random address that match the specified shard number.
 // Panic on any error.
 func MustGenerateShardAddress(shardNum uint) *common.Address {
-	if shardNum == 0 || shardNum > common.ShardNumber {
-		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardNumber))
+	addr, _ := MustGenerateShardKeyPair(shardNum)
+	return addr
+}
+
+func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
+	if shard == 0 || shard > common.ShardCount {
+		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardCount))
 	}
 
-	for {
-		address, err := GenerateRandomAddress()
+	for i := 1; ; i++ {
+		addr, privateKey, err := GenerateKeyPair()
 		if err != nil {
 			panic(err)
 		}
 
-		if common.GetShardNumber(*address) == shardNum {
-			return address
+		if addr.Shard() == shard {
+			return addr, privateKey
 		}
 	}
 }
@@ -191,8 +174,5 @@ func MustGenerateShardAddress(shardNum uint) *common.Address {
 // address and nonce. Note, the new created contract address and the account
 // address are in the same shard.
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
-	addrHash := MustHash(addr)
-	nonceHash := MustHash(nonce)
-
-	return common.CreateContractAddress(addr, addrHash.Bytes(), nonceHash.Bytes())
+	return addr.CreateContractAddress(nonce, MustHash)
 }

@@ -32,6 +32,7 @@ var getinfo = &cobra.Command{
 		err = client.Call("seele.GetInfo", nil, &info)
 		if err != nil {
 			fmt.Printf("getting the miner info failed: %s\n", err.Error())
+			return
 		}
 
 		fmt.Printf("coinbase address: %s\n", info.Coinbase.ToHex())

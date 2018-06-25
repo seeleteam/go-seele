@@ -7,27 +7,39 @@ package discovery
 
 import (
 	"container/list"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	rand2 "math/rand"
 	"net"
+	"path/filepath"
 	"time"
 
+	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	responseTimeout = 10 * time.Second
+	responseTimeout = 20 * time.Second
 
-	pingpongInterval  = 15 * time.Second // sleep between ping pong, must big than response time out
-	discoveryInterval = 20 * time.Second // sleep between discovery, must big than response time out
+	pingpongConcurrentNumber = 5
+	pingpongInterval         = 30 * time.Second // sleep between ping pong, must big than response time out
+
+	discoveryConcurrentNumber = 5
+	discoveryInterval         = 35 * time.Second // sleep between discovery, must big than response time out
+
+	// a node will be delete after n continuous time out.
+	timeoutCountForDeleteNode = 8
 )
 
 type udp struct {
-	conn  *net.UDPConn
-	self  *Node
-	table *Table
+	conn           *net.UDPConn
+	self           *Node
+	table          *Table
+	trustNodes     []*Node
+	bootstrapNodes []*Node
 
 	db        *Database
 	localAddr *net.UDPAddr
@@ -37,6 +49,8 @@ type udp struct {
 	writer     chan *send
 
 	log *log.SeeleLog
+
+	timeoutNodesCount cmap.ConcurrentMap //node id -> count
 }
 
 type pending struct {
@@ -54,15 +68,13 @@ type send struct {
 	toId   common.Address
 	toAddr *net.UDPAddr
 	buff   []byte
-	//to   *Node
-	code msgType
+	code   msgType
 }
 
 type reply struct {
 	fromId   common.Address
 	fromAddr *net.UDPAddr
-	//from *Node
-	code msgType
+	code     msgType
 
 	err bool // got error when send msg
 
@@ -82,13 +94,14 @@ func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
 		self:      NewNodeWithAddr(id, addr, shard),
 		localAddr: addr,
 
-		db: NewDatabase(),
+		db: NewDatabase(log),
 
 		gotReply:   make(chan *reply, 1),
 		addPending: make(chan *pending, 1),
 		writer:     make(chan *send, 1),
 
-		log: log,
+		log:               log,
+		timeoutNodesCount: cmap.New(),
 	}
 
 	return transport
@@ -106,22 +119,21 @@ func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *n
 		buff:   buff,
 		toId:   toId,
 		toAddr: toAddr,
-		//to:   to,
-		code: t,
+		code:   t,
 	}
+
 	u.writer <- s
 }
 
 func (u *udp) sendConnMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
-	//log.Debug("buff length:", len(buff))
 	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
-		u.log.Info("send msg failed:%s", err.Error())
+		u.log.Warn("discovery send msg to %s failed:%s", to, err)
 		return false
 	}
 
 	if n != len(buff) {
-		u.log.Error("send msg failed, expected length: %d, actuall length: %d", len(buff), n)
+		u.log.Warn("discovery send msg failed to %s, expected length: %d, actual length: %d", to, len(buff), n)
 		return false
 	}
 
@@ -132,15 +144,13 @@ func (u *udp) sendLoop() {
 	for {
 		select {
 		case s := <-u.writer:
-			//log.Debug("send msg to: %d", s.to.Port)
 			success := u.sendConnMsg(s.buff, u.conn, s.toAddr)
 			if !success {
 				r := &reply{
 					fromId:   s.toId,
 					fromAddr: s.toAddr,
-					//from: s.to,
-					code: s.code,
-					err:  true,
+					code:     s.code,
+					err:      true,
 				}
 
 				u.gotReply <- r
@@ -153,7 +163,9 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
-		//log.Debug("msg type: %d", code)
+		if common.PrintExplosionLog {
+			u.log.Debug("receive msg type: %s", codeToStr(code))
+		}
 		switch code {
 		case pingMsgType:
 			msg := &ping{}
@@ -246,10 +258,12 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 func (u *udp) readLoop() {
 	for {
-		data := make([]byte, 1024)
+		// 1472 is udp max transfer size for once
+		data := make([]byte, 1472)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
-			u.log.Info(err.Error())
+			u.log.Warn("discovery read from udp failed. %s", err)
+			continue
 		}
 
 		data = data[:n]
@@ -278,23 +292,18 @@ func (u *udp) loopReply() {
 			}
 		}
 
-		// if there is no pending request, stop timer
-		if pendingList.Len() == 0 {
-			timeout.Stop()
-		} else {
-			timeout.Reset(minTime)
-		}
+		timeout.Reset(minTime)
 	}
 
-	for {
-		resetTimer()
+	resetTimer()
 
+	for {
 		select {
 		case r := <-u.gotReply:
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 
-				if p.from.ID == r.fromId && p.code == r.code {
+				if p.code == r.code && p.from.GetUDPAddr().String() == r.fromAddr.String() {
 					if r.err {
 						p.errorCallBack()
 						pendingList.Remove(el)
@@ -303,7 +312,6 @@ func (u *udp) loopReply() {
 							pendingList.Remove(el)
 						}
 					}
-
 					break
 				}
 			}
@@ -314,7 +322,13 @@ func (u *udp) loopReply() {
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
-					u.log.Info("time out to wait for msg with msg type %d", p.code)
+					errorMsg := fmt.Sprintf("time out to wait for msg with msg type %s for node %s", codeToStr(p.code), p.from)
+					if p.code == pongMsgType {
+						u.log.Info(errorMsg)
+					} else {
+						u.log.Debug(errorMsg)
+					}
+
 					p.errorCallBack()
 					pendingList.Remove(el)
 				}
@@ -325,7 +339,7 @@ func (u *udp) loopReply() {
 	}
 }
 
-func (u *udp) discovery(isFast bool) {
+func (u *udp) discovery() {
 	for {
 		id, err := crypto.GenerateRandomAddress()
 		if err != nil {
@@ -335,14 +349,11 @@ func (u *udp) discovery(isFast bool) {
 
 		nodes := u.table.findNodeForRequest(crypto.HashBytes(id.Bytes()))
 
-		u.log.Debug("find node with id: %s", id.ToHex())
+		u.log.Debug("query node with id: %s", id.ToHex())
 		sendFindNodeRequest(u, nodes, *id)
 
-		if !isFast {
-			time.Sleep(discoveryInterval)
-		}
-
-		for i := 1; i < common.ShardNumber+1; i++ {
+		concurrentCount := 0
+		for i := 1; i < common.ShardCount+1; i++ {
 			shardBucket := u.table.shardBuckets[i]
 			size := shardBucket.size()
 			if size < bucketSize {
@@ -361,80 +372,98 @@ func (u *udp) discovery(isFast bool) {
 
 				sendFindShardNodeRequest(u, uint(i), node)
 
-				if !isFast {
+				concurrentCount++
+				if concurrentCount == discoveryConcurrentNumber {
 					time.Sleep(discoveryInterval)
+					concurrentCount = 0
 				}
 			}
 		}
 
-		if isFast {
-			time.Sleep(discoveryInterval)
-		}
-
-		if isFast {
-			enough := true
-			for i := 1; i < common.ShardNumber+1; i++ {
-				if uint(i) == u.self.Shard {
-					continue
-				}
-
-				if u.table.shardBuckets[i].size() < shardTargeNodeNumber {
-					enough = false
-				}
-			}
-
-			// if we get enough peers, stop fast discovery
-			if enough {
-				break
-			}
-		}
+		time.Sleep(discoveryInterval)
 	}
-}
-
-func (u *udp) discoveryWithTwoStags() {
-	// discovery with two stage
-	// 1. fast discovery, with small network interval. fast stage will stop when got minimal number of peers
-	// 2. normal discovery, with normal network interval
-	//u.discovery(true) // disable fast discovery
-
-	u.discovery(false)
 }
 
 func (u *udp) pingPongService() {
 	for {
 		copyMap := u.db.GetCopy()
+		loopPingPongNodes := make(map[string]*Node, 0)
 
-		for _, value := range copyMap {
-			p := &ping{
-				Version:   discoveryProtocolVersion,
-				SelfID:    u.self.ID,
-				SelfShard: u.self.Shard,
-
-				to: value,
+		// loopPingPongNodes add backup nodes, only ping pong once
+		if len(u.bootstrapNodes) > 0 {
+			for i := range u.bootstrapNodes {
+				loopPingPongNodes[u.bootstrapNodes[i].GetUDPAddr().String()] = u.bootstrapNodes[i]
 			}
-
-			p.send(u)
-			time.Sleep(pingpongInterval)
+			u.bootstrapNodes = nil
 		}
+
+		// loopPingPongNodes add trust nodes, loop ping pong; if bootstrapNodes have the same key, will use the trust node to update it
+		if len(u.trustNodes) > 0 {
+			for i := range u.trustNodes {
+				loopPingPongNodes[u.trustNodes[i].GetUDPAddr().String()] = u.trustNodes[i]
+			}
+		}
+
+		// loopPingPongNodes add db nodes, loop ping pong; if bootstrapNodes or trustNodes have the same key, will use the db node to update it
+		if len(copyMap) > 0 {
+			for _, value := range copyMap {
+				loopPingPongNodes[value.GetUDPAddr().String()] = value
+			}
+		}
+
+		u.log.Debug("loop ping pong nodes %d", len(loopPingPongNodes))
+		concurrentCount := 0
+		for _, n := range loopPingPongNodes {
+			u.ping(n)
+
+			concurrentCount++
+			if concurrentCount == pingpongConcurrentNumber {
+				time.Sleep(pingpongInterval)
+				concurrentCount = 0
+			}
+		}
+
+		time.Sleep(pingpongInterval)
 	}
 }
 
-func (u *udp) StartServe() {
-	go u.readLoop()
-	go u.loopReply()
-	go u.discoveryWithTwoStags()
-	go u.pingPongService()
-	go u.sendLoop()
+func (u *udp) ping(value *Node) {
+	p := &ping{
+		Version:   discoveryProtocolVersion,
+		SelfID:    u.self.ID,
+		SelfShard: u.self.Shard,
+
+		to: value,
+	}
+
+	p.send(u)
 }
 
-func (u *udp) addNode(n *Node) {
-	if n == nil || n.ID == u.self.ID {
+func (u *udp) StartServe(nodeDir string) {
+	go u.readLoop()
+	go u.loopReply()
+	go u.discovery()
+	go u.pingPongService()
+	go u.sendLoop()
+	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
+}
+
+// only notify connect when got pong msg
+func (u *udp) addNode(n *Node, notifyConnect bool) {
+	if n == nil || u.self.ID.Equal(n.ID) {
 		return
 	}
 
+	count := u.db.size()
 	u.table.addNode(n)
-	u.db.add(n)
-	u.log.Info("after add node, total nodes:%d", u.db.size())
+	u.db.add(n, notifyConnect)
+
+	newCount := u.db.size()
+	if count != newCount {
+		u.log.Info("add node %s, total nodes:%d", n, newCount)
+	} else {
+		u.log.Debug("got add node event, but it is already exist. total nodes didn't change:%d", newCount)
+	}
 }
 
 func (u *udp) deleteNode(n *Node) {
@@ -444,7 +473,59 @@ func (u *udp) deleteNode(n *Node) {
 		return
 	}
 
-	u.table.deleteNode(n)
-	u.db.delete(sha)
-	u.log.Info("after delete node, total nodes:%d", u.db.size())
+	if _, ok := u.db.FindByNodeID(n.ID); !ok {
+		return
+	}
+
+	idStr := n.ID.ToHex()
+	var count = 0
+	value, ok := u.timeoutNodesCount.Get(idStr)
+	if ok {
+		count = value.(int)
+	}
+
+	count++
+	if count == timeoutCountForDeleteNode {
+		u.table.deleteNode(n)
+		u.db.delete(sha)
+
+		u.log.Info("after delete node %s, total nodes:%d", n, u.db.size())
+		u.timeoutNodesCount.Remove(idStr)
+	} else {
+		u.log.Info("node %s got time out, current timeout count %d", n, count)
+		u.timeoutNodesCount.Set(idStr, count)
+	}
+}
+
+func (u *udp) loadNodes(nodeDir string) {
+	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
+
+	if !common.FileOrFolderExists(fileFullPath) {
+		u.log.Debug("nodes info backup file isn't exists in the path:%s", fileFullPath)
+		return
+	}
+
+	data, err := ioutil.ReadFile(fileFullPath)
+	if err != nil {
+		u.log.Error("read nodes info backup file failed for:[%s]", err)
+		return
+	}
+
+	var nodes []string
+	err = json.Unmarshal(data, &nodes)
+	if err != nil {
+		u.log.Error("nodes unmarshal failed for:[%s]", err)
+		return
+	}
+
+	for i := range nodes {
+		n, err := NewNodeFromString(nodes[i])
+		if err != nil {
+			u.log.Error("new node from string failed for:[%s]", err)
+			continue
+		}
+		u.bootstrapNodes = append(u.bootstrapNodes, n)
+	}
+
+	u.log.Debug("load %d nodes from back file", len(u.bootstrapNodes))
 }

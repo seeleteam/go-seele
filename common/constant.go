@@ -13,7 +13,11 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 )
 
-const ShardNumber = 20
+//ShardCount represents the total number of shards.
+const ShardCount = 20
+
+// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
+const PrintExplosionLog = false
 
 var (
 	// tempFolder used to store temp file, such as log files
@@ -24,10 +28,12 @@ var (
 
 	// LogConfig is the Configuration of log
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
+
+	LogFileName = "log.txt"
 )
 
 func init() {
-	tempFolder = filepath.Join(os.TempDir(), "SeeleTemp")
+	tempFolder = filepath.Join(os.TempDir(), "seeleTemp")
 
 	usr, err := user.Current()
 	if err != nil {

@@ -32,7 +32,7 @@ func Test_LogFile(t *testing.T) {
 	log.Warn("warn msg")
 	log.Error("error msg")
 	log.Info("fold is:", LogFolder)
-	log.Info("log file is:%s/", LogFolder, LogFile)
-	exist := common.FileOrFolderExists(filepath.Join(LogFolder, LogFile))
+	log.Info("log file is:%s/", LogFolder, common.LogFileName)
+	exist := common.FileOrFolderExists(filepath.Join(LogFolder, common.LogFileName))
 	assert.Equal(t, exist, true)
 }
