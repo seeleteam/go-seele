@@ -16,6 +16,8 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 )
 
+const maxTxGas = uint64(10000000)
+
 // NewEVMContext creates a new context for use in the EVM.
 func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
@@ -68,11 +70,14 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
-	gas := common.MAXTXGAS
+	gas := maxTxGas
 	leftOverGas := uint64(0)
+	var gasFee uint64
 
-	// Currently, use common.MAXTXGAS gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
+	// Currently, use maxTxGas gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
+		gasFee = contractCreationFee(tx.Data.Payload)
+
 		var createdContractAddr common.Address
 		if receipt.Result, createdContractAddr, leftOverGas, err = evm.Create(caller, tx.Data.Payload, gas, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
@@ -80,6 +85,8 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	} else {
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
+
+		gasFee = usedGasFee(gas - leftOverGas)
 	}
 
 	// Below error handling comes from ETH:
@@ -88,6 +95,11 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	// balance transfer may never fail.
 	if err == vm.ErrInsufficientBalance {
 		return nil, err
+	}
+
+	totalFee := new(big.Int).Add(new(big.Int).SetUint64(gasFee), tx.Data.Fee)
+	if balance := statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
+		return nil, vm.ErrInsufficientBalance
 	}
 
 	if err != nil {
@@ -126,4 +138,44 @@ func getDefaultChainConfig() *params.ChainConfig {
 		ConstantinopleBlock: nil,
 		Ethash:              new(params.EthashConfig),
 	}
+}
+
+func contractCreationFee(code []byte) uint64 {
+	codeLen := len(code)
+
+	// complex contract > 16KB
+	if codeLen > 16*1024*1024 {
+		return 4 * common.SeeleToFan.Uint64()
+	}
+
+	// custom simple ERC20 token between [8KB, 16KB)
+	if codeLen > 8*1024*1024 {
+		return 3 * common.SeeleToFan.Uint64()
+	}
+
+	// standard ERC20 token between [5KB, 8KB)
+	if codeLen > 4*1024*1024 {
+		return 2 * common.SeeleToFan.Uint64()
+	}
+
+	// other simple contract
+	return common.SeeleToFan.Uint64()
+}
+
+func usedGasFee(usedGas uint64) uint64 {
+	if usedGas == 0 {
+		return 0
+	}
+
+	storeGas := uint64(20000)
+	lowPriceStoreCount := uint64(5)
+
+	if usedGas <= storeGas*lowPriceStoreCount {
+		return common.SeeleToFan.Uint64() / 100
+	}
+
+	overUsedStoreCount := (usedGas-storeGas*lowPriceStoreCount)/storeGas + 1
+
+	// Now, the max used gas is 10M, and the max fee is about 246K
+	return common.SeeleToFan.Uint64() / 10 * overUsedStoreCount * overUsedStoreCount
 }
