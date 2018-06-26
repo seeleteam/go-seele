@@ -6,12 +6,12 @@
 package log
 
 import (
-	"testing"
-
-	"github.com/seeleteam/go-seele/common"
-	"time"
 	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 )
 
 func Test_Log(t *testing.T) {
