@@ -6,11 +6,12 @@
 package log
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"time"
+	"path/filepath"
+	"github.com/magiconair/properties/assert"
 )
 
 func Test_Log(t *testing.T) {
@@ -19,9 +20,7 @@ func Test_Log(t *testing.T) {
 	lg.Info("info msg")
 	lg.Warn("warn msg")
 	lg.Error("error msg")
-	lg.Info("fold is:", LogFolder)
-	//Fatal("fatal msg")
-	//panic("panic msg")
+	lg.Info("folder is: %s", LogFolder)
 }
 
 func Test_LogFile(t *testing.T) {
@@ -30,9 +29,14 @@ func Test_LogFile(t *testing.T) {
 	log.Debug("debug")
 	log.Info("info msg")
 	log.Warn("warn msg")
+
 	log.Error("error msg")
-	log.Info("fold is:", LogFolder)
-	log.Info("log file is:%s/", LogFolder, common.LogFileName)
-	exist := common.FileOrFolderExists(filepath.Join(LogFolder, common.LogFileName))
+	log.Info("folder is:", LogFolder)
+
+	now := time.Now().Format(".20060102")
+	logPath := filepath.Join(LogFolder, common.LogFileName) + now
+	log.Info("log file is:%s", logPath)
+
+	exist := common.FileOrFolderExists(logPath)
 	assert.Equal(t, exist, true)
 }

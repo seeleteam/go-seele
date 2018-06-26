@@ -10,7 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/lestrrat-go/file-rotatelogs"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/sirupsen/logrus"
 )
@@ -86,11 +88,19 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 			panic(fmt.Sprintf("creating log dir failed: %s", err.Error()))
 		}
 		logFullPath := filepath.Join(LogFolder, common.LogFileName)
-		file, err := os.OpenFile(logFullPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModePerm)
+
+		writer, err := rotatelogs.New(
+			logFullPath+".%Y%m%d",
+			rotatelogs.WithClock(rotatelogs.Local),
+			rotatelogs.WithMaxAge(24*7*time.Second),
+			rotatelogs.WithRotationTime(24*time.Second),
+		)
+
 		if err != nil {
-			panic(fmt.Sprintf("creating log file failed: %s", err.Error()))
+			panic(fmt.Sprintf("creating log file failed: %s", err))
 		}
-		log.Out = file
+
+		log.Out = writer
 	}
 
 	if common.LogConfig.IsDebug {
