@@ -32,22 +32,29 @@ var (
 
 func getCPU(interval time.Duration, percpu bool) (int64,error){
 	out,err := cpu.Percent(interval, percpu)
+	if err != nil {
+		fmt.Printf("get cpu cmd failed: %s", err.Error())
+		return *new(int64), err
+	}
 	var resul float64
 	for i := 1; i <= len(out); i++{
 		resul = resul + out[i - 1]
 	}
 	resul = resul / float64(len(out))
-	result := strconv.FormatFloat(resul, 'E', -1, 32)
-	fmt.Printf("cup data: %s\n", result)
-	if err != nil {
-		fmt.Printf("get cpu cmd failed: %s", err.Error())
-		return *new(int64), err
-	}
 
-	i, err := strconv.ParseInt(result, 10, 64)
-	if err != nil{
-		fmt.Printf("data type conversion failed: %s", err.Error())
-		return *new(int64), err
-	}
-	return i, nil
+	return int64(resul),nil
+
+	//result := strconv.FormatFloat(resul, 'E', -1, 32)
+	//fmt.Printf("cup data: %s\n", result)
+	//if err != nil {
+	//	fmt.Printf("get cpu cmd failed: %s", err.Error())
+	//	return *new(int64), err
+	//}
+	//
+	//i, err := strconv.ParseInt(result, 10, 64)
+	//if err != nil{
+	//	fmt.Printf("data type conversion failed: %s", err.Error())
+	//	return *new(int64), err
+	//}
+	//return i, nil
 }
