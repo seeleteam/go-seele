@@ -16,7 +16,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"runtime/debug"
 )
 
 var refresh = 5 * time.Second
