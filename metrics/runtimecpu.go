@@ -15,6 +15,7 @@ func getCPU() (int64,error){
 	c := "top -d 1 | grep node | awk -F '[ ]+' '{print $10}'"
 	cmd := exec.Command("sh", "-c", c)
 	out, err := cmd.Output()
+	fmt.Printf("cup data: %s\n", string(out))
 	if err != nil {
 		fmt.Printf("get cpu cmd failed: %s", err.Error())
 		return *new(int64), err
