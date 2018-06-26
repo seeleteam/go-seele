@@ -145,21 +145,21 @@ func contractCreationFee(code []byte) uint64 {
 
 	// complex contract > 16KB
 	if codeLen > 16*1024*1024 {
-		return 4 * common.SeeleToFan.Uint64()
+		return common.SeeleToFan.Uint64() / 10
 	}
 
 	// custom simple ERC20 token between [8KB, 16KB)
 	if codeLen > 8*1024*1024 {
-		return 3 * common.SeeleToFan.Uint64()
+		return common.SeeleToFan.Uint64() / 20
 	}
 
 	// standard ERC20 token between [5KB, 8KB)
 	if codeLen > 4*1024*1024 {
-		return 2 * common.SeeleToFan.Uint64()
+		return common.SeeleToFan.Uint64() / 50
 	}
 
 	// other simple contract
-	return common.SeeleToFan.Uint64()
+	return common.SeeleToFan.Uint64() / 100
 }
 
 func usedGasFee(usedGas uint64) uint64 {
@@ -168,14 +168,13 @@ func usedGasFee(usedGas uint64) uint64 {
 	}
 
 	storeGas := uint64(20000)
-	lowPriceStoreCount := uint64(5)
+	lowPriceStoreCount := uint64(2)
 
 	if usedGas <= storeGas*lowPriceStoreCount {
-		return common.SeeleToFan.Uint64() / 100
+		return common.SeeleToFan.Uint64() / 10000
 	}
 
 	overUsedStoreCount := (usedGas-storeGas*lowPriceStoreCount)/storeGas + 1
 
-	// Now, the max used gas is 10M, and the max fee is about 246K
-	return common.SeeleToFan.Uint64() / 10 * overUsedStoreCount * overUsedStoreCount
+	return common.SeeleToFan.Uint64() / 1000 * overUsedStoreCount * overUsedStoreCount
 }
