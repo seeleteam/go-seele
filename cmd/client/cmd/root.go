@@ -41,7 +41,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
 	rootCmd.PersistentFlags().StringVarP(&wsAddr, "wsaddr", "w", "ws://127.0.0.1:8080/ws", "websocket rpc address")
 	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("client"))
-	rootCmd.AddCommand(util.GetAccountShardNumCmd())
 }
 
 // initConfig reads in the config file and ENV variables if set.
