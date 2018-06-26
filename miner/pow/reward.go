@@ -31,8 +31,7 @@ func init() {
 		rewardTableCoin[i] = convertSeeleToFan(r)
 	}
 
-	reward := convertSeeleToFan(tailReward)
-	tailRewardCoin = big.NewInt(0).Mul(reward, common.SeeleToFan)
+	tailRewardCoin = convertSeeleToFan(tailReward)
 }
 
 func convertSeeleToFan(seele float64) *big.Int {
