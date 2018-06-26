@@ -104,7 +104,8 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 			return Message{}, err
 		}
 	}
-
+	metricsReceiveMessageCountMeter.Mark(1)
+	metricsReceivePortSpeedMeter.Mark(headBuffLegth + int64(size))
 	return msgRecv, nil
 }
 
@@ -128,6 +129,7 @@ func (c *connection) WriteMsg(msg Message) error {
 			return err
 		}
 	}
-
+	metricsSendMessageCountMeter.Mark(1)
+	metricsSendPortSpeedMeter.Mark(headBuffLegth + headBuffLegth)
 	return nil
 }
