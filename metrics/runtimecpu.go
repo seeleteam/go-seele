@@ -11,7 +11,7 @@ var (
 	metricsCputGauge    = metrics.GetOrRegisterGauge("cpu.accout", nil)
 )
 
-func getCPU(interval time.Duration, percpu bool) (int64,error){
+func getCPURate(interval time.Duration, percpu bool) (int64,error){
 	out,err := cpu.Percent(interval, percpu)
 	if err != nil {
 		fmt.Printf("get cpu cmd failed: %s", err.Error())
