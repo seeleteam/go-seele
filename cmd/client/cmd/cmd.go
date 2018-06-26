@@ -92,7 +92,7 @@ func (c *Config) InitCommand(request *Request) (*cobra.Command, error) {
 					return
 				}
 
-				fmt.Println("output :\n", string(jsonOutput))
+				fmt.Println(string(jsonOutput))
 			}
 
 			if request.Handler != nil {

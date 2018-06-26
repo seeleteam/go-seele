@@ -372,5 +372,16 @@ func NewCmdData() []*Request {
 				}
 			},
 		},
+		&Request{
+			Use:   "getinfo",
+			Short: "get the miner info",
+			Long: `get the miner info
+			For example:
+				client.exe getinfo -a 127.0.0.1:55027`,
+			ParamReflectType: "nil",
+			Method:           "seele.GetInfo",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+		},
 	}
 }
