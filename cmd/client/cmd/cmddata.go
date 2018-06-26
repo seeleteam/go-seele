@@ -22,26 +22,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "GetBlockByHashRequest",
 			Method:           "seele.GetBlockByHash",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "HashHex",
-					FlagName:     "hash",
-					ShortFlag:    "",
-					ParamType:    "*string",
-					DefaultValue: "",
-					Usage:        "hash for the block",
-					Required:     true,
-				},
-				&Param{
-					ReflectName:  "FullTx",
-					FlagName:     "fulltx",
-					ShortFlag:    "f",
-					ParamType:    "*bool",
-					DefaultValue: false,
-					Usage:        "whether get full transaction info, default is false",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHash, paramFullTx},
 		},
 		&Request{
 			Use:   "getblockbyheight",
@@ -51,26 +32,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "GetBlockByHeightRequest",
 			Method:           "seele.GetBlockByHeight",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "Height",
-					FlagName:     "height",
-					ShortFlag:    "",
-					ParamType:    "*int64",
-					DefaultValue: -1, // -1 represent the current block
-					Usage:        "height for the block",
-					Required:     true,
-				},
-				&Param{
-					ReflectName:  "FullTx",
-					FlagName:     "fulltx",
-					ShortFlag:    "f",
-					ParamType:    "*bool",
-					DefaultValue: false,
-					Usage:        "whether get full transaction info, default is false",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHeight, paramFullTx},
 			Handler: func(v interface{}) {
 				result := v.(map[string]interface{})
 				txs := result["transactions"].([]interface{})
@@ -85,17 +47,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "int64",
 			Method:           "debug.GetBlockRlp",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "Height",
-					FlagName:     "height",
-					ShortFlag:    "",
-					ParamType:    "*int64",
-					DefaultValue: -1,
-					Usage:        "height for the block",
-					Required:     true,
-				},
-			},
+			Params:           []*Param{paramBlockHeight},
 			Handler: func(i interface{}) {
 				v := i.(string)
 				buff, err := hexutil.HexToBytes(v)
@@ -124,17 +76,7 @@ func NewCmdData() []*Request {
   			client.exe getblocktxcountbyheight --height -1`,
 			ParamReflectType: "int64",
 			Method:           "txpool.GetBlockTransactionCountByHeight",
-			Params: []*Param{
-				&Param{
-					ReflectName:  "Height",
-					FlagName:     "height",
-					ShortFlag:    "",
-					ParamType:    "*int64",
-					DefaultValue: -1, // -1 represent the current block
-					Usage:        "height for get block transaction count",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHeight},
 		},
 		&Request{
 			Use:   "getblocktxcountbyhash",
@@ -143,17 +85,7 @@ func NewCmdData() []*Request {
   			client.exe getblocktxcountbyhash --hash 0x00000006f1c704b54ba9c7d9a3d50982d0479680afcf62d3e69bc42b30e595fd`,
 			ParamReflectType: "string",
 			Method:           "txpool.GetBlockTransactionCountByHash",
-			Params: []*Param{
-				&Param{
-					ReflectName:  "HashHex",
-					FlagName:     "hash",
-					ShortFlag:    "",
-					ParamType:    "*string",
-					DefaultValue: "",
-					Usage:        "hash for get block transaction count",
-					Required:     true,
-				},
-			},
+			Params:           []*Param{paramBlockHash},
 		},
 		&Request{
 			Use:   "gettxbyheightandindex",
@@ -162,26 +94,7 @@ func NewCmdData() []*Request {
   			client.exe gettxbyheightandindex --height -1 --index 0`,
 			ParamReflectType: "GetTxByBlockHeightAndIndexRequest",
 			Method:           "txpool.GetTransactionByBlockHeightAndIndex",
-			Params: []*Param{
-				&Param{
-					ReflectName:  "Height",
-					FlagName:     "height",
-					ShortFlag:    "",
-					ParamType:    "*int64",
-					DefaultValue: -1,
-					Usage:        "height for get block",
-					Required:     false,
-				},
-				&Param{
-					ReflectName:  "Index",
-					FlagName:     "index",
-					ShortFlag:    "",
-					ParamType:    "*uint",
-					DefaultValue: 0,
-					Usage:        "index of the transaction in block",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHeight, paramTxIndex},
 		},
 		&Request{
 			Use:   "gettxbyhashandindex",
@@ -190,26 +103,7 @@ func NewCmdData() []*Request {
   			client.exe gettxbyhashandindex --hash 0x00000006f1c704b54ba9c7d9a3d50982d0479680afcf62d3e69bc42b30e595fd --index 0`,
 			ParamReflectType: "GetTxByBlockHashAndIndexRequest",
 			Method:           "txpool.GetTransactionByBlockHashAndIndex",
-			Params: []*Param{
-				&Param{
-					ReflectName:  "HashHex",
-					FlagName:     "hash",
-					ShortFlag:    "",
-					ParamType:    "*string",
-					DefaultValue: "",
-					Usage:        "hash for get block",
-					Required:     true,
-				},
-				&Param{
-					ReflectName:  "Index",
-					FlagName:     "index",
-					ShortFlag:    "",
-					ParamType:    "*uint",
-					DefaultValue: 0,
-					Usage:        "index of the transaction in block",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHash, paramTxIndex},
 		},
 		&Request{
 			Use:   "getpeercount",
@@ -259,17 +153,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "string",
 			Method:           "txpool.GetTransactionByHash",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "TxHash",
-					FlagName:     "hash",
-					ShortFlag:    "",
-					ParamType:    "*string",
-					DefaultValue: "",
-					Usage:        "hash of the transaction",
-					Required:     true,
-				},
-			},
+			Params:           []*Param{paramTxHash},
 		},
 		&Request{
 			Use:   "getreceiptbytxhash",
@@ -279,17 +163,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "string",
 			Method:           "txpool.GetReceiptByTxHash",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "TxHash",
-					FlagName:     "hash",
-					ShortFlag:    "",
-					ParamType:    "*string",
-					DefaultValue: "",
-					Usage:        "hash of the transaction",
-					Required:     true,
-				},
-			},
+			Params:           []*Param{paramTxHash},
 		},
 		&Request{
 			Use:   "setminerthreads",
@@ -322,7 +196,7 @@ func NewCmdData() []*Request {
 			UseWebsocket:     false,
 			Params: []*Param{
 				&Param{
-					ReflectName:  "CoinbaseStr",
+					ReflectName:  "Coinbase",
 					FlagName:     "coinbase",
 					ShortFlag:    "c",
 					ParamType:    "*string",
@@ -331,7 +205,7 @@ func NewCmdData() []*Request {
 					Required:     true,
 				},
 			},
-			Handler: func(interface{}) { fmt.Println("miner set coinbase succeed") },
+			Handler: func(interface{}) { fmt.Println("succeed to set miner coinbase") },
 		},
 		&Request{
 			Use:              "getdownloadstatus",
@@ -351,11 +225,6 @@ func NewCmdData() []*Request {
 			Method:           "miner.GetThreads",
 			UseWebsocket:     false,
 			Params:           []*Param{},
-			Handler: func(out interface{}) {
-				if out == nil {
-					fmt.Println("Failed to get the miner thread number.")
-				}
-			},
 		},
 		&Request{
 			Use:   "getcoinbase",
@@ -366,11 +235,6 @@ func NewCmdData() []*Request {
 			Method:           "miner.GetCoinbase",
 			UseWebsocket:     false,
 			Params:           []*Param{},
-			Handler: func(out interface{}) {
-				if out == nil {
-					fmt.Println("Failed to get the coinbase.")
-				}
-			},
 		},
 		&Request{
 			Use:   "getinfo",
@@ -401,17 +265,7 @@ func NewCmdData() []*Request {
 			ParamReflectType: "int64",
 			Method:           "debug.PrintBlock",
 			UseWebsocket:     false,
-			Params: []*Param{
-				&Param{
-					ReflectName:  "Height",
-					FlagName:     "height",
-					ShortFlag:    "",
-					ParamType:    "*int64",
-					DefaultValue: -1, // -1 represent the current block
-					Usage:        "block height",
-					Required:     false,
-				},
-			},
+			Params:           []*Param{paramBlockHeight},
 		},
 	}
 }
