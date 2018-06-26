@@ -38,7 +38,7 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		result,err := getCPU()
+		result,err := getCPU(refresh, false)
 		if err != nil{
 			metricsCputMeter.Mark(result)
 
