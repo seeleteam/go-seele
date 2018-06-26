@@ -19,23 +19,27 @@ var (
 	tailRewardCoin *big.Int
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
-	blockNumberPerEra uint64 = 525000 * 4
-	//SeeleToFan base coin number
-	SeeleToFan = common.SeeleToFan
+	blockNumberPerEra uint64 = 63000000
 )
 
 func init() {
-	rewardTable := [...]int64{200, 100, 50, 40, 30}
-	tailReward := int64(30)
+	rewardTable := [...]float64{1.5, 1, 0.4, 0.4, 0.25}
+	tailReward := float64(0.25)
 
 	rewardTableCoin = make([]*big.Int, len(rewardTable))
 	for i, r := range rewardTable {
-		seele := big.NewInt(r)
-		rewardTableCoin[i] = big.NewInt(0).Mul(seele, SeeleToFan)
+		rewardTableCoin[i] = convertSeeleToFan(r)
 	}
 
-	reward := big.NewInt(tailReward)
-	tailRewardCoin = big.NewInt(0).Mul(reward, SeeleToFan)
+	reward := convertSeeleToFan(tailReward)
+	tailRewardCoin = big.NewInt(0).Mul(reward, common.SeeleToFan)
+}
+
+func convertSeeleToFan(seele float64) *big.Int {
+	uint := common.SeeleToFan.Int64()
+	f := uint64(seele * float64(uint))
+
+	return big.NewInt(0).SetUint64(f)
 }
 
 // GetReward get reward amount according to block height
