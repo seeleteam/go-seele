@@ -2,7 +2,6 @@ package metrics
 
 import (
 	metrics "github.com/rcrowley/go-metrics"
-	"os/exec"
 	"fmt"
 	"strconv"
 	"github.com/shirou/gopsutil/cpu"
