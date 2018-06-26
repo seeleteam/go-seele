@@ -34,7 +34,7 @@ var (
 		ParamType:    "*int64",
 		DefaultValue: -1, // negative value represents the current block
 		Usage:        "block height",
-		Required:     true,
+		Required:     false,
 	}
 
 	paramTxIndex = &Param{
