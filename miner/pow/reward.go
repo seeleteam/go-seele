@@ -35,8 +35,8 @@ func init() {
 }
 
 func convertSeeleToFan(seele float64) *big.Int {
-	uint := common.SeeleToFan.Int64()
-	f := uint64(seele * float64(uint))
+	unit := common.SeeleToFan.Int64()
+	f := uint64(seele * float64(unit))
 
 	return big.NewInt(0).SetUint64(f)
 }
