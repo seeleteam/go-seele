@@ -32,6 +32,9 @@ type MinerInfo struct {
 	Coinbase           common.Address
 	CurrentBlockHeight uint64
 	HeaderHash         common.Hash
+	Shard              uint
+	MinerStatus        string
+	MinerThread        int
 }
 
 // GetBlockByHeightRequest request param for GetBlockByHeight api
@@ -62,10 +65,20 @@ type GetTxByBlockHashAndIndexRequest struct {
 func (api *PublicSeeleAPI) GetInfo(input interface{}, info *MinerInfo) error {
 	block := api.s.chain.CurrentBlock()
 
+	var status string
+	if api.s.miner.IsMining() {
+		status = "Running"
+	} else {
+		status = "Stopped"
+	}
+
 	*info = MinerInfo{
 		Coinbase:           api.s.miner.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
+		Shard:              common.LocalShardNumber,
+		MinerStatus:        status,
+		MinerThread:        api.s.miner.GetThreads(),
 	}
 
 	return nil
