@@ -16,6 +16,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"runtime/debug"
 )
 
 var refresh = 5 * time.Second
@@ -39,9 +40,10 @@ func collectRuntimeMetrics() {
 		lastPauseNs = memStats.PauseTotalNs
 
 		result,err := getCPU(refresh, false)
-		if err != nil{
-			metricsCputMeter.Mark(result)
-
+		fmt.Printf("========cup Mark: %v\n", result)
+		if err == nil{
+			metricsCputGauge.Update(result)
+			fmt.Printf("========cup Mark: %v\n", result)
 		}
 		// sleep 5 seconds
 		time.Sleep(refresh)
