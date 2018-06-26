@@ -241,7 +241,7 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	defer t.lock.Unlock()
 
 	if len(headers) == 0 {
-		t.log.Warn("get block header msg with empty header info")
+		t.log.Debug("get block header msg with empty header info")
 		return nil
 	}
 

@@ -522,7 +522,6 @@ handler:
 
 				hash, err := p.chain.GetStore().GetBlockHash(curNum)
 				if err != nil {
-					p.log.Error("get error when get block hash by height. err: %s, height:%d", err, curNum)
 					break
 				}
 
