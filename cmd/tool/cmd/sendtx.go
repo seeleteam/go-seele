@@ -155,8 +155,10 @@ func loopSendMode1_2() {
 
 		for _, b := range copyBalances {
 			newBalance := send(b)
-			if newBalance.amount > 0 {
-				txCh <- newBalance
+			if mode == 2 {
+				if newBalance.amount > 0 {
+					txCh <- newBalance
+				}
 			}
 
 			count++

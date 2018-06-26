@@ -7,10 +7,10 @@ package seele
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/miner"
-	"fmt"
 )
 
 // PrivateMinerAPI provides an API to access miner information.
@@ -80,7 +80,7 @@ func (api *PrivateMinerAPI) SetThreads(threads *int, result *interface{}) error 
 }
 
 // GetThreads  API is used to get the number of threads.
-func (api *PrivateMinerAPI) GetThreads(threads *int, result *interface{}) error {
+func (api *PrivateMinerAPI) GetThreads(threads *int, result *int) error {
 	*result = api.s.miner.GetThreads()
 	return nil
 }
@@ -92,10 +92,10 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}
 		return err
 	}
 	if !common.IsShardEnabled() {
-		return fmt.Errorf("local shard number is invalid:[%v], it must greater than %v, less than %v.", common.LocalShardNumber, common.UndefinedShardNumber, common.ShardCount)
+		return fmt.Errorf("local shard number is invalid:[%v], it must greater than %v, less than %v", common.LocalShardNumber, common.UndefinedShardNumber, common.ShardCount)
 	}
-	if coinbase.Shard() != common.LocalShardNumber{
-		return fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v].", coinbase.Shard(), common.LocalShardNumber)
+	if coinbase.Shard() != common.LocalShardNumber {
+		return fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v]", coinbase.Shard(), common.LocalShardNumber)
 	}
 	api.s.miner.SetCoinbase(coinbase)
 
@@ -103,7 +103,7 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}
 }
 
 // GetCoinbase API is used to get the coinbase.
-func (api *PrivateMinerAPI) GetCoinbase(input interface{}, result *interface{}) error {
+func (api *PrivateMinerAPI) GetCoinbase(input interface{}, result *common.Address) error {
 	*result = api.s.miner.GetCoinbase()
 
 	return nil
