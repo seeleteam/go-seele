@@ -105,7 +105,10 @@ func (pool *TransactionPool) MonitorChainHeaderChange() {
 			}
 
 			reinject := getReinjectTransaction(pool.chain.GetStore(), newHeader, pool.lastHeader, pool.log)
-			pool.addTransactions(reinject)
+			count := pool.addTransactions(reinject)
+			if count > 0 {
+				pool.log.Info("add %d reinject transactions", count)
+			}
 
 			pool.lastHeader = newHeader
 			pool.RemoveTransactions()
@@ -188,12 +191,17 @@ func getReinjectTransaction(chainStore store.BlockchainStore, newHeader, lastHea
 	return nil
 }
 
-func (pool *TransactionPool) addTransactions(txs []*types.Transaction) {
+func (pool *TransactionPool) addTransactions(txs []*types.Transaction) int {
+	count := 0
 	for _, tx := range txs {
 		if err := pool.AddTransaction(tx); err != nil {
-			pool.log.Warn("add transaction failed, %s", err)
+			pool.log.Debug("add transaction failed, %s", err)
+		} else {
+			count++
 		}
 	}
+
+	return count
 }
 
 // AddTransaction adds a single transaction into the pool if it is valid and returns nil.

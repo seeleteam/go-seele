@@ -131,13 +131,11 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	if atomic.CompareAndSwapInt32(&miner.isFirstBlockPrepared, 0, 1) {
-		if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
-			miner.log.Warn(err.Error())
-			atomic.StoreInt32(&miner.mining, 0)
+	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
+		miner.log.Warn(err.Error())
+		atomic.StoreInt32(&miner.mining, 0)
 
-			return err
-		}
+		return err
 	}
 
 	atomic.StoreInt32(&miner.stopped, 0)
@@ -152,6 +150,10 @@ func (miner *Miner) Start() error {
 func (miner *Miner) Stop() {
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
+	miner.stopMining()
+}
+
+func (miner *Miner) stopMining() {
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
@@ -197,7 +199,7 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 		miner.log.Info("got download start event, stop miner")
 		atomic.StoreInt32(&miner.canStart, 0)
 		if miner.IsMining() {
-			miner.Stop()
+			miner.stopMining()
 		}
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
 		atomic.StoreInt32(&miner.canStart, 1)

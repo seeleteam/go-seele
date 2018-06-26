@@ -110,7 +110,9 @@ func (t *Trie) Hash() common.Hash {
 	return common.EmptyHash
 }
 
-// Commit commit the dirty node to database
+// Commit commit the dirty node to database with given batch.
+// Note, it will panic on nil batch, please use Hash() instead
+// to get the root hash.
 func (t *Trie) Commit(batch database.Batch) common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
@@ -125,66 +127,67 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	if node == nil {
 		return nil
 	}
-	if !node.IsDirty() {
+
+	// node already persisted after call Commit(batch)
+	if node.Status() == nodeStatusPersisted {
 		return node.Hash()
 	}
-	switch n := node.(type) {
-	case *LeafNode:
-		buf.Reset()
-		rlp.Encode(buf, []interface{}{
-			n.Key,
-			n.Value,
-		})
-		sha.Reset()
-		sha.Write(buf.Bytes())
-		hash := sha.Sum(nil)
-		if batch != nil {
-			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
-			n.dirty = false
-		}
-		copy(n.hash, hash)
-		return n.hash
-	case *ExtensionNode:
-		nexthash := t.hash(n.NextNode, buf, sha, batch)
-		buf.Reset()
-		rlp.Encode(buf, []interface{}{
-			true, //add it to diff with extension node;modify later using compact func?
-			n.Key,
-			nexthash,
-		})
-		sha.Reset()
-		sha.Write(buf.Bytes())
-		hash := sha.Sum(nil)
-		if batch != nil {
-			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
-			n.dirty = false
-		}
-		copy(n.hash, hash)
-		return n.hash
-	case *BranchNode:
-		var children [numBranchChildren][]byte
-		for i, child := range n.Children {
-			children[i] = t.hash(child, buf, sha, batch)
-		}
-		buf.Reset()
-		rlp.Encode(buf, []interface{}{
-			children,
-		})
 
+	// node hash alredy updated after call Hash()
+	if node.Status() == nodeStatusUpdated && batch == nil {
+		return node.Hash()
+	}
+
+	// update node hash for different node type if dirty
+	if node.Status() == nodeStatusDirty {
+		// calculate node hash
+		switch n := node.(type) {
+		case *LeafNode:
+			buf.Reset()
+			rlp.Encode(buf, []interface{}{
+				n.Key,
+				n.Value,
+			})
+		case *ExtensionNode:
+			nexthash := t.hash(n.NextNode, buf, sha, batch)
+
+			buf.Reset()
+			rlp.Encode(buf, []interface{}{
+				true, //add it to diff with extension node;modify later using compact func?
+				n.Key,
+				nexthash,
+			})
+		case *BranchNode:
+			var children [numBranchChildren][]byte
+			for i, child := range n.Children {
+				children[i] = t.hash(child, buf, sha, batch)
+			}
+
+			buf.Reset()
+			rlp.Encode(buf, []interface{}{
+				children,
+			})
+		case hashNode:
+			return n.Hash()
+		default:
+			panic(fmt.Sprintf("invalid node: %v", node))
+		}
+
+		// update node hash and status
 		sha.Reset()
 		sha.Write(buf.Bytes())
 		hash := sha.Sum(nil)
-		if batch != nil {
-			batch.Put(append(t.dbprefix, hash...), buf.Bytes())
-			n.dirty = false
-		}
-		copy(n.hash, hash)
-		return n.hash
-	case hashNode:
-		return n.Hash()
-	default:
-		panic(fmt.Sprintf("invalid node: %v", node))
+		node.SetHash(hash)
+		node.SetStatus(nodeStatusUpdated)
 	}
+
+	// persist node if batch specified
+	if batch != nil {
+		batch.Put(append(t.dbprefix, node.Hash()...), buf.Bytes())
+		node.SetStatus(nodeStatusPersisted)
+	}
+
+	return node.Hash()
 }
 
 // return true if insert succeed,it also mean node is dirty,should recalc hash
@@ -200,7 +203,7 @@ func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error)
 			return false, nil, err
 		}
 		n.Children[key[0]] = child
-		n.dirty = true
+		n.status = nodeStatusDirty
 		return true, n, nil
 	case hashNode:
 		loadnode, err := t.loadNode(n)
@@ -212,8 +215,8 @@ func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error)
 	case nil:
 		newnode := &LeafNode{
 			Node: Node{
-				dirty: true,
-				hash:  make([]byte, common.HashLength),
+				status: nodeStatusDirty,
+				hash:   make([]byte, common.HashLength),
 			},
 			Key:   key,
 			Value: value,
@@ -229,21 +232,21 @@ func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (
 		var dirty bool
 		dirty, n.NextNode, _ = t.insert(n.NextNode, key[matchlen:], value)
 		if dirty {
-			n.dirty = true
+			n.status = nodeStatusDirty
 		}
-		return n.dirty, n, nil
+		return dirty, n, nil
 	}
 	branchnode := &BranchNode{
 		Node: Node{
-			dirty: true,
-			hash:  make([]byte, common.HashLength),
+			status: nodeStatusDirty,
+			hash:   make([]byte, common.HashLength),
 		},
 	}
 
 	if matchlen != len(n.Key)-1 {
 		branchnode.Children[n.Key[matchlen]] = n
 		n.Key = n.Key[matchlen+1:]
-		n.dirty = true
+		n.status = nodeStatusDirty
 	} else {
 		branchnode.Children[n.Key[matchlen]] = n.NextNode
 	}
@@ -259,8 +262,8 @@ func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (
 
 	return true, &ExtensionNode{ // have match key,return extension node
 		Node: Node{
-			dirty: true,
-			hash:  make([]byte, common.HashLength),
+			status: nodeStatusDirty,
+			hash:   make([]byte, common.HashLength),
 		},
 		Key:      key[:matchlen],
 		NextNode: branchnode,
@@ -271,19 +274,19 @@ func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, node
 	matchlen := matchkeyLen(n.Key, key)
 	if matchlen == len(n.Key) { // key match, change the value of leaf node
 		n.Value = value
-		n.dirty = true
+		n.status = nodeStatusDirty
 		return true, n, nil
 	}
 	branchnode := &BranchNode{
 		Node: Node{
-			dirty: true,
-			hash:  make([]byte, common.HashLength),
+			status: nodeStatusDirty,
+			hash:   make([]byte, common.HashLength),
 		},
 	}
 	var err error
 	branchnode.Children[n.Key[matchlen]] = n
 	n.Key = n.Key[matchlen+1:]
-	n.dirty = true
+	n.status = nodeStatusDirty
 
 	_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
 	if err != nil {
@@ -295,8 +298,8 @@ func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, node
 
 	return true, &ExtensionNode{ // have match key,return extension node
 		Node: Node{
-			dirty: true,
-			hash:  make([]byte, common.HashLength),
+			status: nodeStatusDirty,
+			hash:   make([]byte, common.HashLength),
 		},
 		Key:      key[:matchlen],
 		NextNode: branchnode,
@@ -316,7 +319,7 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 		if matchlen == len(n.Key) {
 			match, newnode, err := t.delete(n.NextNode, key[matchlen:])
 			if err == nil && match {
-				n.dirty = true
+				n.status = nodeStatusDirty
 				n.NextNode = newnode
 				if newnode == nil {
 					return true, nil, nil
@@ -331,7 +334,7 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 			n.Children[key[0]] = newnode
 		}
 		if match {
-			n.dirty = true
+			n.status = nodeStatusDirty
 		}
 		pos := -1
 		count := 0
@@ -355,8 +358,8 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 			case *LeafNode:
 				newnode := &LeafNode{
 					Node: Node{
-						dirty: true,
-						hash:  make([]byte, common.HashLength),
+						status: nodeStatusDirty,
+						hash:   make([]byte, common.HashLength),
 					},
 					Key:   append([]byte{byte(pos)}, childnode.Key...),
 					Value: childnode.Value,
@@ -365,8 +368,8 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 			case *ExtensionNode:
 				newnode := &ExtensionNode{
 					Node: Node{
-						dirty: true,
-						hash:  make([]byte, common.HashLength),
+						status: nodeStatusDirty,
+						hash:   make([]byte, common.HashLength),
 					},
 					Key:      append([]byte{byte(pos)}, childnode.Key...),
 					NextNode: childnode.NextNode,
@@ -435,8 +438,8 @@ func (t *Trie) decodeLeafNode(hash, values []byte) (noder, error) {
 	}
 	return &LeafNode{
 		Node: Node{
-			dirty: false,
-			hash:  hash,
+			status: nodeStatusPersisted,
+			hash:   hash,
 		},
 		Key:   key,
 		Value: val,
@@ -455,8 +458,8 @@ func (t *Trie) decodeExtensionNode(hash, values []byte) (noder, error) {
 	}
 	return &ExtensionNode{
 		Node: Node{
-			dirty: false,
-			hash:  hash,
+			status: nodeStatusPersisted,
+			hash:   hash,
 		},
 		Key:      key,
 		NextNode: append(hashNode{}, val...),
@@ -475,8 +478,8 @@ func (t *Trie) decodeBranchNode(hash, values []byte) (noder, error) {
 	}
 	branchnode := &BranchNode{
 		Node: Node{
-			dirty: false,
-			hash:  hash,
+			status: nodeStatusPersisted,
+			hash:   hash,
 		},
 	}
 	for i := 0; i < numBranchChildren; i++ {
