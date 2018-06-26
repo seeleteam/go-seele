@@ -76,7 +76,7 @@ Again:
 				goto Again
 			}
 			if reqMsg.Magic != magic {
-				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH")
+				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
 				goto Again
 			}
 			ret = reqMsg.Headers
@@ -86,7 +86,7 @@ Again:
 				goto Again
 			}
 			if reqMsg.Magic != magic {
-				p.log.Debug("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH")
+				p.log.Debug("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
 				goto Again
 			}
 			ret = reqMsg.Blocks
@@ -103,6 +103,11 @@ Again:
 }
 
 func (p *peerConn) deliverMsg(msgCode uint16, msg *p2p.Message) {
+	defer func() {
+		if recover() != nil {
+			p.log.Info("peerConn.deliverMsg PANIC msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
+		}
+	}()
 	p.lockForWaiting.Lock()
 	ch, ok := p.waitingMsgMap[msgCode]
 	p.lockForWaiting.Unlock()
