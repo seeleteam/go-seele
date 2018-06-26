@@ -512,6 +512,7 @@ handler:
 			}
 
 			p.log.Debug("Received downloader.GetBlockHeadersMsg start %d, amount %d", orgNum, query.Amount)
+			maxHeight := p.chain.CurrentBlock().Header.Height
 			for cnt := uint64(0); cnt < query.Amount; cnt++ {
 				var curNum uint64
 				if query.Reverse {
@@ -520,8 +521,12 @@ handler:
 					curNum = orgNum + cnt
 				}
 
+				if curNum > maxHeight {
+					break
+				}
 				hash, err := p.chain.GetStore().GetBlockHash(curNum)
 				if err != nil {
+					p.log.Error("get error when get block hash by height. curNum=%d", curNum)
 					break
 				}
 
