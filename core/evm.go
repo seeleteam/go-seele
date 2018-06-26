@@ -68,16 +68,18 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
+	gas := common.MAXTXGAS
+	leftOverGas := uint64(0)
 
 	// Currently, use common.MAXTXGAS gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
 		var createdContractAddr common.Address
-		if receipt.Result, createdContractAddr, _, err = evm.Create(caller, tx.Data.Payload, common.MAXTXGAS, tx.Data.Amount); err == nil {
+		if receipt.Result, createdContractAddr, leftOverGas, err = evm.Create(caller, tx.Data.Payload, gas, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
-		receipt.Result, _, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, common.MAXTXGAS, tx.Data.Amount)
+		receipt.Result, leftOverGas, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
 	}
 
 	// Below error handling comes from ETH:
@@ -87,6 +89,13 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	if err == vm.ErrInsufficientBalance {
 		return nil, err
 	}
+
+	if err != nil {
+		receipt.Failed = true
+		receipt.Result = []byte(err.Error())
+	}
+
+	receipt.UsedGas = gas - leftOverGas
 
 	if receipt.PostState, err = statedb.Commit(nil); err != nil {
 		return nil, err

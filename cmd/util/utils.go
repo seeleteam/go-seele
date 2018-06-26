@@ -31,7 +31,7 @@ func Sendtx(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amou
 
 	var tx *types.Transaction
 	var err error
-	if to == nil {
+	if to == nil || to.IsEmpty() {
 		tx, err = types.NewContractTransaction(*fromAddr, amount, fee, nonce, payload)
 	} else {
 		switch to.Type() {
@@ -77,15 +77,14 @@ func GetNonce(client *rpc.Client, address common.Address) uint64 {
 func CheckParameter(parameter TxInfo, publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.TransactionData, bool) {
 	info := &types.TransactionData{}
 	var err error
-	var toAddr *common.Address
 	if len(*parameter.To) > 0 {
-		toAddr = new(common.Address)
+		toAddr := new(common.Address)
 		if *toAddr, err = common.HexToAddress(*parameter.To); err != nil {
 			fmt.Printf("invalid receiver address: %s\n", err.Error())
 			return info, false
 		}
+		info.To = *toAddr
 	}
-	info.To = *toAddr
 
 	amount, ok := big.NewInt(0).SetString(*parameter.Amount, 10)
 	if !ok {

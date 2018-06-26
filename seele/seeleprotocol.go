@@ -405,7 +405,7 @@ handler:
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
-				p.log.Info("[transactionRequestMsgCode] not found tx %s", txHash.ToHex())
+				p.log.Debug("[transactionRequestMsgCode] not found tx in tx pool %s", txHash.ToHex())
 				continue
 			}
 
@@ -485,7 +485,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got block msg height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
+			p.log.Info("got block message and save it. height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
