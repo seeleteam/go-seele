@@ -31,7 +31,7 @@
   },
   "metrics": {
     "address": "127.0.0.1:8086",
-    "duration": 1,
+    "duration": 10,
     "database": "influxdb",
     "username": "test",
     "password": "test123"

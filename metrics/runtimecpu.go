@@ -21,7 +21,6 @@ func getCPURate(interval time.Duration, percpu bool) (int64,error){
 	for i := 1; i <= len(out); i++{
 		resul = resul + out[i - 1]
 	}
-	resul = resul / float64(len(out))
 	fmt.Printf("cup data: %v\n", resul)
 	return int64(resul),nil
 }
