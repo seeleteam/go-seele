@@ -34,7 +34,7 @@ var generateKeystoreCmd = &cobra.Command{
 	Long: `For example:
 	tool.exe genkeys`,
 	Run: func(cmd *cobra.Command, args []string) {
-		shards := strings.Split(shardRange, ";")
+		shards := strings.Split(shardRange, ",")
 		shardSet := set.New()
 		for _, s := range shards {
 			i, err := strconv.Atoi(s)
@@ -93,5 +93,5 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
-	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ;")
+	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ,")
 }
