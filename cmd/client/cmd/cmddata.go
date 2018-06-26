@@ -383,5 +383,35 @@ func NewCmdData() []*Request {
 			UseWebsocket:     false,
 			Params:           []*Param{},
 		},
+		&Request{
+			Use:   "gettxpooltxcount",
+			Short: "get the number of all processable transactions contained within the transaction pool",
+			Long: `For example:
+				client.exe gettxpooltxcount`,
+			ParamReflectType: "nil",
+			Method:           "debug.GetTxPoolTxCount",
+			UseWebsocket:     false,
+			Params:           []*Param{},
+		},
+		&Request{
+			Use:   "printblock",
+			Short: "get block pretty printed form by block height",
+			Long: `For example:
+				client.exe printblock --height -1 [-a 127.0.0.1:55027]`,
+			ParamReflectType: "int64",
+			Method:           "debug.PrintBlock",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "Height",
+					FlagName:     "height",
+					ShortFlag:    "",
+					ParamType:    "*int64",
+					DefaultValue: -1, // -1 represent the current block
+					Usage:        "block height",
+					Required:     false,
+				},
+			},
+		},
 	}
 }
