@@ -3,7 +3,6 @@ package metrics
 import (
 	metrics "github.com/rcrowley/go-metrics"
 	"fmt"
-	"strconv"
 	"github.com/shirou/gopsutil/cpu"
 	"time"
 )
