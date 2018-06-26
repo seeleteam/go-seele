@@ -18,6 +18,11 @@ make all
 buildall.bat
 ```
 
+# Running Seele
+
+For running node, please refer to [Get Started](https://github.com/seeleteam/go-seele/wiki/Getting-Started-With-Seele).
+For more usage and explanation, please consult our [Seele Wiki](https://github.com/seeleteam/go-seele/wiki).
+
 # Contribution
 
 Thank you for considering to help out with our source code. We appreciate any contributions even the smallest fixes.
