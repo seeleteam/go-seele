@@ -59,12 +59,14 @@ func (c *Config) InitStructData() {
 	c.structMap["GetTxByBlockHeightAndIndexRequest"] = seele.GetTxByBlockHeightAndIndexRequest{}
 	c.structMap["GetTxByBlockHashAndIndexRequest"] = seele.GetTxByBlockHashAndIndexRequest{}
 	c.structMap["GetBlockByHashRequest"] = seele.GetBlockByHashRequest{}
+	c.structMap["DumpHeapRequest"] = seele.DumpHeapRequest{}
 }
 
 // InitBasicData init basic data for cmd config
 func (c *Config) InitBasicData() {
 	c.basicMap["string"] = nil
 	c.basicMap["int"] = nil
+	c.basicMap["uint"] = nil
 	c.basicMap["bool"] = nil
 	c.basicMap["int64"] = nil
 	c.basicMap["uint64"] = nil
