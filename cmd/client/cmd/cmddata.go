@@ -294,6 +294,7 @@ func NewCmdData() []*Request {
 					Required:     false,
 				},
 			},
+			Handler: func(interface{}) { fmt.Println("succeed to dump heap.") },
 		},
 	}
 }
