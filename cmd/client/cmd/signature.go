@@ -37,7 +37,7 @@ var signCmd = &cobra.Command{
 
 		key, err := crypto.LoadECDSAFromString(*privateKey)
 		if err != nil {
-			fmt.Printf("load key failed %s", err)
+			fmt.Printf("load key failed %s\n", err)
 			return
 		}
 
