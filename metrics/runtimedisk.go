@@ -3,7 +3,6 @@ package metrics
 import (
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/shirou/gopsutil/disk"
-	"fmt"
 )
 
 var (
@@ -16,16 +15,14 @@ var (
 func getDiskRate(name string) (disk.IOCountersStat,error){
 	out,err := disk.IOCounters(name)
 	if err != nil {
-		fmt.Printf("get cpu cmd failed: %s", err.Error())
 		return *new(disk.IOCountersStat), err
 	}
-	resul :=  disk.IOCountersStat{}
+	result :=  disk.IOCountersStat{}
 	for _,v := range out{
-		resul.ReadBytes = resul.ReadBytes + v.ReadBytes
-		resul.ReadCount = resul.ReadCount + v.ReadCount
-		resul.WriteBytes = resul.WriteBytes + v.WriteBytes
-		resul.WriteCount = resul.WriteCount + v.WriteCount
+		result.ReadBytes = result.ReadBytes + v.ReadBytes
+		result.ReadCount = result.ReadCount + v.ReadCount
+		result.WriteBytes = result.WriteBytes + v.WriteBytes
+		result.WriteCount = result.WriteCount + v.WriteCount
 	}
-	fmt.Printf("disk data: %v\n", resul)
-	return resul,nil
+	return result,nil
 }

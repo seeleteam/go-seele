@@ -130,6 +130,6 @@ func (c *connection) WriteMsg(msg Message) error {
 		}
 	}
 	metricsSendMessageCountMeter.Mark(1)
-	metricsSendPortSpeedMeter.Mark(headBuffLegth + headBuffLegth)
+	metricsSendPortSpeedMeter.Mark(headBuffLegth + int64(len(msg.Payload)))
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-var refresh = 5 * time.Second
+var refreshTime = 5 * time.Second
 
 // CollectRuntimeMetrics collected runtime datas
 func collectRuntimeMetrics() {
@@ -32,7 +32,7 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		cpuresult,err := getCPURate(refresh, false)
+		cpuresult,err := getCPURate(refreshTime, false)
 		if err == nil{
 			metricsCputGauge.Update(cpuresult)
 		}
@@ -45,6 +45,6 @@ func collectRuntimeMetrics() {
 			metricsDiskWriteBytesGauge.Update(int64(diskresult.WriteBytes))
 		}
 		// sleep 5 seconds
-		time.Sleep(refresh)
+		time.Sleep(refreshTime)
 	}
 }

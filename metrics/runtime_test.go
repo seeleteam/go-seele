@@ -7,7 +7,7 @@ import (
 )
 
 func Test_getCPURate(t *testing.T) {
-	_,err := getCPURate(refresh, false)
+	_,err := getCPURate(refreshTime, false)
 	assert.Equal(t, err, nil)
 }
 

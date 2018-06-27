@@ -1,9 +1,7 @@
 package metrics
 
 import (
-	"fmt"
 	"time"
-
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/shirou/gopsutil/cpu"
 )
@@ -15,13 +13,11 @@ var (
 func getCPURate(interval time.Duration, percpu bool) (int64, error) {
 	out, err := cpu.Percent(interval, percpu)
 	if err != nil {
-		fmt.Printf("get cpu cmd failed: %s", err.Error())
-		return *new(int64), err
+		return 0, err
 	}
-	var resul float64
-	for i := 1; i <= len(out); i++ {
-		resul = resul + out[i-1]
+	var result float64
+	for i := 0; i < len(out); i++ {
+		result = result + out[i]
 	}
-	fmt.Printf("cup data: %v\n", resul)
-	return int64(resul), nil
+	return int64(result), nil
 }
