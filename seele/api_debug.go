@@ -7,6 +7,9 @@ package seele
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime/pprof"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -119,4 +122,20 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	}
 
 	return nil
+}
+
+// DumpHeap dumps the heap usage.
+func (api *PrivateDebugAPI) DumpHeap(filename *string, result *interface{}) error {
+	if len(*filename) == 0 {
+		*filename = "heap.dump"
+	}
+
+	dumpFilePath := filepath.Join(common.GetDefaultDataFolder(), *filename)
+
+	f, err := os.Create(dumpFilePath)
+	if err != nil {
+		return err
+	}
+
+	return pprof.WriteHeapProfile(f)
 }

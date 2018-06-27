@@ -267,5 +267,24 @@ func NewCmdData() []*Request {
 			UseWebsocket:     false,
 			Params:           []*Param{paramBlockHeight},
 		},
+		&Request{
+			Use:              "dumpheap",
+			Short:            "dump heap",
+			Long:             "dump heap for profiling",
+			ParamReflectType: "string",
+			Method:           "debug.DumpHeap",
+			UseWebsocket:     false,
+			Params: []*Param{
+				&Param{
+					ReflectName:  "Filename",
+					FlagName:     "filename",
+					ShortFlag:    "f",
+					ParamType:    "*string",
+					DefaultValue: "",
+					Usage:        "heap dump file name",
+					Required:     false,
+				},
+			},
+		},
 	}
 }
