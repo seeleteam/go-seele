@@ -8,6 +8,7 @@ package metrics
 import (
 	"runtime"
 	"time"
+
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 )
@@ -32,13 +33,13 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		cpuresult,err := getCPURate(refreshTime, false)
-		if err == nil{
+		cpuresult, err := getCPURate(refreshTime, false)
+		if err == nil {
 			metricsCputGauge.Update(cpuresult)
 		}
 
-		diskresult,err := getDiskRate(common.GetTempFolder())
-		if err == nil{
+		diskresult, err := getDiskRate(common.GetTempFolder())
+		if err == nil {
 			metricsDiskReadCountGauge.Update(int64(diskresult.ReadCount))
 			metricsDiskReadBytesGauge.Update(int64(diskresult.ReadBytes))
 			metricsDiskWriteCountGauge.Update(int64(diskresult.WriteCount))

@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"time"
+
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/shirou/gopsutil/cpu"
 )
