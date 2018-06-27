@@ -9,9 +9,9 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"time"
 
 	"github.com/seeleteam/go-seele/log/comm"
-	"time"
 )
 
 //ShardCount represents the total number of shards.
