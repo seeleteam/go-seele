@@ -72,7 +72,7 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	receipt := &types.Receipt{TxHash: tx.Hash}
 	gas := maxTxGas
 	leftOverGas := uint64(0)
-	var gasFee uint64
+	gasFee := new(big.Int)
 
 	// Currently, use maxTxGas gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
@@ -97,7 +97,7 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 		return nil, err
 	}
 
-	totalFee := new(big.Int).Add(new(big.Int).SetUint64(gasFee), tx.Data.Fee)
+	totalFee := new(big.Int).Add(gasFee, tx.Data.Fee)
 	if balance := statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
 		return nil, vm.ErrInsufficientBalance
 	}
@@ -140,41 +140,60 @@ func getDefaultChainConfig() *params.ChainConfig {
 	}
 }
 
-func contractCreationFee(code []byte) uint64 {
+///////////////////////////////////////////////////////////////////////////////////////
+// Gas fee model for test net
+///////////////////////////////////////////////////////////////////////////////////////
+var (
+	contractFeeComplex       = new(big.Int).Div(common.SeeleToFan, big.NewInt(100))
+	contractFeeCustomToken   = new(big.Int).Div(common.SeeleToFan, big.NewInt(200))
+	contractFeeStandardToken = new(big.Int).Div(common.SeeleToFan, big.NewInt(500))
+	contractFeeSimple        = new(big.Int).Div(common.SeeleToFan, big.NewInt(1000))
+
+	lowPriceGas  = uint64(50000) // 2 storage op allowed
+	overUsedStep = uint64(20000) // about 1 storage op
+
+	gasFeeZero          = new(big.Int)
+	gasFeeLowPrice      = new(big.Int).Div(contractFeeSimple, big.NewInt(1000))
+	gasFeeHighPriceUnit = new(big.Int).Div(contractFeeSimple, big.NewInt(100))
+)
+
+// contractCreationFee returns the contract creation fee according to code size.
+func contractCreationFee(code []byte) *big.Int {
 	codeLen := len(code)
 
 	// complex contract > 16KB
 	if codeLen > 16*1024*1024 {
-		return common.SeeleToFan.Uint64() / 10
+		return contractFeeComplex
 	}
 
 	// custom simple ERC20 token between [8KB, 16KB)
 	if codeLen > 8*1024*1024 {
-		return common.SeeleToFan.Uint64() / 20
+		return contractFeeCustomToken
 	}
 
 	// standard ERC20 token between [5KB, 8KB)
 	if codeLen > 4*1024*1024 {
-		return common.SeeleToFan.Uint64() / 50
+		return contractFeeStandardToken
 	}
 
 	// other simple contract
-	return common.SeeleToFan.Uint64() / 100
+	return contractFeeSimple
 }
 
-func usedGasFee(usedGas uint64) uint64 {
+// usedGasFee returns the contract execution fee according to used gas.
+//   - if usedGas == 0, returns 0.
+//   - if usedGas <= 50000 (2 store op allowed), returns 1/1000 * contractFeeSimple
+//   - else returns 1/100 * contractFeeSimple * overUsed^2
+func usedGasFee(usedGas uint64) *big.Int {
 	if usedGas == 0 {
-		return 0
+		return gasFeeZero
 	}
 
-	storeGas := uint64(20000)
-	lowPriceStoreCount := uint64(2)
-
-	if usedGas <= storeGas*lowPriceStoreCount {
-		return common.SeeleToFan.Uint64() / 10000
+	if usedGas <= lowPriceGas {
+		return gasFeeLowPrice
 	}
 
-	overUsedStoreCount := (usedGas-storeGas*lowPriceStoreCount)/storeGas + 1
+	overUsed := (usedGas-lowPriceGas)/overUsedStep + 1
 
-	return common.SeeleToFan.Uint64() / 1000 * overUsedStoreCount * overUsedStoreCount
+	return new(big.Int).Mul(gasFeeHighPriceUnit, new(big.Int).SetUint64(overUsed*overUsed))
 }
