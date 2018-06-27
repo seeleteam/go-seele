@@ -33,8 +33,6 @@ var threads int
 // mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
 var mode int
 
-//var balanceList []*balance
-//var balanceListLock sync.Mutex
 var wg = sync.WaitGroup{}
 
 type balance struct {
@@ -114,10 +112,10 @@ func newBalancesList(balanceList []*balance, splitNum int, copyValue bool) [][]*
 			end = len(balanceList)
 		}
 
-		balances[i] = make([]*balance, end - start)
+		balances[i] = make([]*balance, end-start)
 
 		if copyValue {
-			fmt.Printf("balance %d length %d\n", i, end - start)
+			fmt.Printf("balance %d length %d\n", i, end-start)
 			copy(balances[i], balanceList[start:end])
 		}
 	}
@@ -332,7 +330,7 @@ func initAccount(threads int) []*balance {
 	}
 
 	keyList := strings.Split(string(keys), "\r\n")
-	unit := len(keyList)/threads
+	unit := len(keyList) / threads
 
 	wg := &sync.WaitGroup{}
 	balanceList := make([]*balance, len(keyList))
@@ -343,7 +341,7 @@ func initAccount(threads int) []*balance {
 		}
 
 		wg.Add(1)
-		go initBalance(balanceList, keyList, i * unit, end, wg)
+		go initBalance(balanceList, keyList, i*unit, end, wg)
 	}
 
 	wg.Wait()
