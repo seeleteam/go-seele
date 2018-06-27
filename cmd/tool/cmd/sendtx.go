@@ -54,7 +54,7 @@ var sendTxCmd = &cobra.Command{
 	tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
-		balanceList := initAccount()
+		balanceList := initAccount(threads)
 
 		fmt.Println("use mode ", mode)
 		fmt.Println("threads", threads)
@@ -325,18 +325,45 @@ func getRandClient() *rpc.Client {
 	return nil
 }
 
-func initAccount() []*balance {
-	balanceList := make([]*balance, 0)
-
+func initAccount(threads int) []*balance {
 	keys, err := ioutil.ReadFile(keyFile)
 	if err != nil {
 		panic(fmt.Sprintf("read key file failed %s", err))
 	}
 
 	keyList := strings.Split(string(keys), "\r\n")
+	unit := len(keyList)/threads
+
+	wg := &sync.WaitGroup{}
+	balanceList := make([]*balance, len(keyList))
+	for i := 0; i < threads; i++ {
+		end := (i + 1) * unit
+		if end > len(keyList) {
+			end = len(keyList)
+		}
+
+		wg.Add(1)
+		go initBalance(balanceList, keyList, i * unit, end, wg)
+	}
+
+	wg.Wait()
+
+	result := make([]*balance, 0)
+	for _, b := range balanceList {
+		if b != nil && b.amount > 0 {
+			result = append(result, b)
+		}
+	}
+
+	return result
+}
+
+func initBalance(balanceList []*balance, keyList []string, start int, end int, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	// init balance and nonce
-	for _, hex := range keyList {
+	for i := start; i < end; i++ {
+		hex := keyList[i]
 		if hex == "" {
 			continue
 		}
@@ -369,11 +396,9 @@ func initAccount() []*balance {
 
 		if b.amount > 0 {
 			b.nonce = getNonce(*b.address)
-			balanceList = append(balanceList, b)
+			balanceList[i] = b
 		}
 	}
-
-	return balanceList
 }
 
 func getBalance(address common.Address) (int, bool) {
