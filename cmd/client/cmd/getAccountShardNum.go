@@ -14,7 +14,7 @@ import (
 
 var account *string
 
-// getacountshardnumcmd represents the get account shard number command
+// getacountshardnumCmd represents the get account shard number command
 var getacountshardnumCmd = &cobra.Command{
 	Use:   "getacountshardnum",
 	Short: "get account shard number with specified account",
