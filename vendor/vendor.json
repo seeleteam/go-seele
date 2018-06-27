@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "0QOXP59md3PRp12XzGtPiXHfrFg=",
+			"path": "github.com/StackExchange/wmi",
+			"revision": "cdffdb33acae0e14efff2628f9bae377b597840e",
+			"revisionTime": "2018-04-12T20:51:11Z"
+		},
+		{
 			"checksumSHA1": "YdWmkLgfIqoZgQA0bWB71jCizpc=",
 			"path": "github.com/aristanetworks/goarista/monotime",
 			"revision": "bdff49616af24181f3b83535ed73127c615ba55a",
@@ -62,6 +68,18 @@
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9",
 			"revisionTime": "2018-01-10T05:33:47Z"
+		},
+		{
+			"checksumSHA1": "ssTPXaA8TifoLud6kI1cRxPZgBo=",
+			"path": "github.com/go-ole/go-ole",
+			"revision": "7a0fa49edf48165190530c675167e2f319a05268",
+			"revisionTime": "2018-06-25T08:58:08Z"
+		},
+		{
+			"checksumSHA1": "8WEwmkTfx50YYgQZblE1fKHsgDI=",
+			"path": "github.com/go-ole/go-ole/oleutil",
+			"revision": "7a0fa49edf48165190530c675167e2f319a05268",
+			"revisionTime": "2018-06-25T08:58:08Z"
 		},
 		{
 			"checksumSHA1": "OV+/R43DDDJ/Gxrx9oQob/K7sL0=",
@@ -255,6 +273,24 @@
 			"path": "github.com/rs/cors",
 			"revision": "12972ae4e7775151d0d53aaad277be85133ce445",
 			"revisionTime": "2018-04-17T22:52:04Z"
+		},
+		{
+			"checksumSHA1": "hBWL5QkBzF3+oa5fQtLwnH7Vdi4=",
+			"path": "github.com/shirou/gopsutil/cpu",
+			"revision": "4a180b209f5f494e5923cfce81ea30ba23915877",
+			"revisionTime": "2018-06-25T08:11:43Z"
+		},
+		{
+			"checksumSHA1": "mAkhcNwWAJEDJwgl2BXJ+YrMj+U=",
+			"path": "github.com/shirou/gopsutil/disk",
+			"revision": "4a180b209f5f494e5923cfce81ea30ba23915877",
+			"revisionTime": "2018-06-25T08:11:43Z"
+		},
+		{
+			"checksumSHA1": "B7CoVeMV7TC0N6ipFHH7weAqQDY=",
+			"path": "github.com/shirou/gopsutil/internal/common",
+			"revision": "4a180b209f5f494e5923cfce81ea30ba23915877",
+			"revisionTime": "2018-06-25T08:11:43Z"
 		},
 		{
 			"checksumSHA1": "M2DUp/DFDbt//z8237GdM79+61s=",
