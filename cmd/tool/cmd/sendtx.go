@@ -25,6 +25,7 @@ import (
 
 var tps int
 var debug bool
+var threads int
 
 // send tx mode
 // mode 1: send tx and check the txs periodically. add them back to balances after confirmed
@@ -32,8 +33,8 @@ var debug bool
 // mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
 var mode int
 
-var balanceList []*balance
-var balanceListLock sync.Mutex
+//var balanceList []*balance
+//var balanceListLock sync.Mutex
 var wg = sync.WaitGroup{}
 
 type balance struct {
@@ -53,45 +54,45 @@ var sendTxCmd = &cobra.Command{
 	tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
-		balanceList = initAccount()
+		balanceList := initAccount()
 
 		fmt.Println("use mode ", mode)
+		fmt.Println("threads", threads)
+		balances := newBalancesList(balanceList, threads, true)
 
-		if mode == 3 {
-			wg.Add(1)
-			loopSendMode3()
-		} else {
-			wg.Add(1)
-			go loopSendMode1_2()
+		for i := 0; i < threads; i++ {
+			go StartSend(balances[i], i)
 		}
 
-		if mode == 1 {
-			wg.Add(1)
-			go loopCheckMode1()
-		}
-
+		time.Sleep(5 * time.Second)
 		wg.Wait()
 	},
+}
+
+func StartSend(balanceList []*balance, threadNum int) {
+	lock := &sync.Mutex{}
+	if mode == 3 {
+		wg.Add(1)
+		loopSendMode3(balanceList)
+	} else {
+		wg.Add(1)
+		go loopSendMode1_2(balanceList, lock, threadNum)
+	}
+
+	if mode == 1 {
+		wg.Add(1)
+		go loopCheckMode1(balanceList, lock)
+	}
 }
 
 var tpsStartTime time.Time
 var tpsCount = 0
 
-func loopSendMode3() {
+func loopSendMode3(balanceList []*balance) {
 	defer wg.Done()
 
-	balances := newBalanceMode3()
-	nextBalances := newBalanceMode3()
-	splitNum := len(balanceList) / 3
-
-	copy(nextBalances[0], balanceList[0:splitNum])
-	fmt.Println("balance 1 length ", len(nextBalances[0]))
-
-	copy(nextBalances[1], balanceList[splitNum:2*splitNum])
-	fmt.Println("balance 1 length ", len(nextBalances[1]))
-
-	copy(nextBalances[2], balanceList[2*splitNum:])
-	fmt.Println("balance 2 length ", len(nextBalances[2]))
+	balances := newBalancesList(balanceList, 3, false)
+	nextBalances := newBalancesList(balanceList, 3, true)
 
 	tpsStartTime = time.Now()
 	// send tx periodically
@@ -102,13 +103,24 @@ func loopSendMode3() {
 	}
 }
 
-func newBalanceMode3() [][]*balance {
-	balances := make([][]*balance, 3)
-	splitNum := len(balanceList) / 3
+func newBalancesList(balanceList []*balance, splitNum int, copyValue bool) [][]*balance {
+	balances := make([][]*balance, splitNum)
+	unit := len(balanceList) / splitNum
 
-	balances[0] = make([]*balance, splitNum)
-	balances[1] = make([]*balance, splitNum)
-	balances[2] = make([]*balance, len(balanceList)-2*splitNum)
+	for i := 0; i < splitNum; i++ {
+		var start = unit * i
+		var end = unit * (i + 1)
+		if end > len(balanceList) {
+			end = len(balanceList)
+		}
+
+		balances[i] = make([]*balance, end - start)
+
+		if copyValue {
+			fmt.Printf("balance %d length %d\n", i, end - start)
+			copy(balances[i], balanceList[start:end])
+		}
+	}
 
 	return balances
 }
@@ -139,7 +151,7 @@ func SendMode3(current []*balance, next []*balance) {
 
 var txCh = make(chan *balance, 100000)
 
-func loopSendMode1_2() {
+func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 	defer wg.Done()
 
 	count := 0
@@ -147,11 +159,11 @@ func loopSendMode1_2() {
 
 	// send tx periodically
 	for {
-		balanceListLock.Lock()
+		lock.Lock()
 		copyBalances := make([]*balance, len(balanceList))
 		copy(copyBalances, balanceList)
-		fmt.Printf("balance total length %d\n", len(balanceList))
-		balanceListLock.Unlock()
+		fmt.Printf("balance total length %d at thread %d\n", len(balanceList), threadNum)
+		lock.Unlock()
 
 		for _, b := range copyBalances {
 			newBalance := send(b)
@@ -163,7 +175,7 @@ func loopSendMode1_2() {
 
 			count++
 			if count == tps {
-				fmt.Println("send txs ", count)
+				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
 				elapse := time.Now().Sub(tpsStartTime)
 				if elapse < time.Second {
 					time.Sleep(time.Second - elapse)
@@ -174,7 +186,7 @@ func loopSendMode1_2() {
 			}
 		}
 
-		balanceListLock.Lock()
+		lock.Lock()
 		nextBalanceList := make([]*balance, 0)
 		for _, b := range balanceList {
 			if b.amount > 0 {
@@ -182,11 +194,11 @@ func loopSendMode1_2() {
 			}
 		}
 		balanceList = nextBalanceList
-		balanceListLock.Unlock()
+		lock.Unlock()
 	}
 }
 
-func loopCheckMode1() {
+func loopCheckMode1(balanceList []*balance, lock *sync.Mutex) {
 	defer wg.Done()
 	toPackedBalanceList := make([]*balance, 0)
 	toConfirmBalanceList := make(map[time.Time][]*balance)
@@ -210,10 +222,10 @@ func loopCheckMode1() {
 				duration := time.Now().Sub(key)
 				if duration > confirmTime {
 
-					balanceListLock.Lock()
+					lock.Lock()
 					balanceList = append(balanceList, value...)
 					fmt.Printf("add confirmed balance %d, new: %d\n", len(value), len(balanceList))
-					balanceListLock.Unlock()
+					lock.Unlock()
 
 					delete(toConfirmBalanceList, key)
 				}
@@ -321,7 +333,7 @@ func initAccount() []*balance {
 		panic(fmt.Sprintf("read key file failed %s", err))
 	}
 
-	keyList := strings.Split(string(keys), "\n")
+	keyList := strings.Split(string(keys), "\r\n")
 
 	// init balance and nonce
 	for _, hex := range keyList {
@@ -410,4 +422,5 @@ func init() {
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
 	sendTxCmd.Flags().IntVarP(&mode, "mode", "m", 1, "send tx mode")
+	sendTxCmd.Flags().IntVarP(&threads, "threads", "t", 1, "send tx threads")
 }
