@@ -92,8 +92,8 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		writer, err := rotatelogs.New(
 			logFullPath+".%Y%m%d",
 			rotatelogs.WithClock(rotatelogs.Local),
-			rotatelogs.WithMaxAge(24*7*time.Second),
-			rotatelogs.WithRotationTime(24*time.Second),
+			rotatelogs.WithMaxAge(24*7*time.Hour),
+			rotatelogs.WithRotationTime(24*time.Hour),
 		)
 
 		if err != nil {
