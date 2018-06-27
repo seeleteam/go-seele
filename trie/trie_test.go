@@ -5,6 +5,7 @@
 package trie
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
@@ -195,4 +197,112 @@ func Test_trie_Commit(t *testing.T) {
 	value, _ = trienew.Get([]byte("12375879"))
 	fmt.Println(string(value))
 	assert.Equal(t, string(value), "test2")
+}
+
+const benchElemCount = 20000
+
+func Benchmark_Trie_Get(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	k := make([]byte, 32)
+	for i := 0; i < benchElemCount; i++ {
+		binary.LittleEndian.PutUint64(k, uint64(i))
+		if err := trie.Put(k, k); err != nil {
+			panic(err)
+		}
+	}
+	binary.LittleEndian.PutUint64(k, benchElemCount/2)
+
+	batch := db.NewBatch()
+	trie.Commit(batch)
+	if err := batch.Commit(); err != nil {
+		panic(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		trie.Get(k)
+	}
+	b.StopTimer()
+}
+
+func Benchmark_Trie_Put(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	k := make([]byte, 32)
+	for i := 0; i < b.N; i++ {
+		binary.BigEndian.PutUint64(k, uint64(i))
+		if err := trie.Put(k, k); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func Benchmark_GenAddr(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		crypto.MustGenerateRandomAddress()
+	}
+}
+
+func Benchmark_Trie_PutAddress(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	code := make([]byte, 4*1024, 4*1024)
+
+	for i := 0; i < b.N; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		if err := trie.Put(addr[:], code); err != nil {
+			panic(err)
+		}
+	}
+}
+
+var addrList [][]byte
+var code = make([]byte, 4*1024, 4*1024)
+
+func init() {
+	for i := 0; i < 2000; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		addrList = append(addrList, addr[:])
+	}
+}
+
+func Benchmark_Trie_Commit(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	code := make([]byte, 4*1024, 4*1024)
+
+	for _, addr := range addrList {
+		if err := trie.Put(addr, code); err != nil {
+			panic(err)
+		}
+	}
+
+	b.ResetTimer()
+
+	trie.Commit(nil)
 }

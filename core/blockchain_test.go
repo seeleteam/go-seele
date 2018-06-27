@@ -7,7 +7,10 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+	"math"
 	"math/big"
+	"runtime"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -58,7 +61,8 @@ func newTestGenesis() *Genesis {
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
-	bcStore := store.NewBlockchainDatabase(db)
+	// bcStore := store.NewBlockchainDatabase(db)
+	bcStore := store.NewMemStore()
 
 	genesis := newTestGenesis()
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
@@ -71,6 +75,12 @@ func newTestBlockchain(db database.Database) *Blockchain {
 	}
 
 	return bc
+}
+
+func Benchmark_newTestBlockTx(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		newTestBlockTx(0, 1, 1, 0)
+	}
 }
 
 func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
@@ -380,4 +390,62 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(88))
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
+}
+
+func Benchmark_CreateMaxBlock(b *testing.B) {
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	for i := 0; i < b.N; i++ {
+		newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
+	}
+}
+
+// func Benchmark_Blockchain_WriteBlock(b *testing.B) {
+func Test_Blockchain_WriteBlockMax(t *testing.T) {
+	// Adjust the balance of genesis default accounts for benchmark test
+	preAmount := testGenesisAccounts[0].data.Amount
+	testGenesisAccounts[0].data.Amount = new(big.Int).SetUint64(math.MaxUint64)
+	defer func() {
+		testGenesisAccounts[0].data.Amount = preAmount
+	}()
+
+	// Prepare blockchain to test
+	db, dispose := newTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	statedb, _ := bc.GetCurrentState()
+	from := *crypto.MustGenerateRandomAddress()
+	statedb.CreateAccount(from)
+	statedb.SetBalance(from, new(big.Int).SetUint64(math.MaxUint64))
+
+	preBlock := bc.genesisBlock
+
+	// block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+	newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, 2000, 0)
+
+	// Test write block benchmark.
+	// b.ResetTimer()
+	// for i := 0; i < 1; i++ {
+
+	// if err := bc.WriteBlock(block); err != nil {
+	// 	t.Fatal("failed to write block,", err.Error())
+	// }
+
+	ms := new(runtime.MemStats)
+	runtime.ReadMemStats(ms)
+	fmt.Println("GC:", ms.NumGC, ms.NumForcedGC)
+
+	t.Fail()
+	// b.Fatal()
+	// b.ResetTimer()
+	// if err := bc.WriteBlock(block); err != nil {
+	// 	b.Fatalf("failed to write block, %v", err.Error())
+	// }
+
+	// preBlock = block
+	// }
 }
