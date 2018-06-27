@@ -32,17 +32,22 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		cpuresult, err := getCPURate(common.RefreshTime, false)
+		cpuResult, err := getCPURate(common.RefreshTime, false)
 		if err == nil {
-			metricsCputGauge.Update(cpuresult)
+			metricsCputGauge.Update(cpuResult)
+		}
+		cpuSeeleResult, err := getProcessCPURate(common.RefreshTime)
+		if err == nil {
+			metricsSeeleCputGauge.Update(cpuSeeleResult)
 		}
 
-		diskresult, err := disk.Usage(common.GetDefaultDataFolder())
+
+		diskResult, err := disk.Usage(common.GetDefaultDataFolder())
 		if err == nil {
-			metricsDiskUsedCountGauge.Update(int64(diskresult.Used))
-			metricsDiskFreeCountGauge.Update(int64(diskresult.Free))
-			metricsDiskUsedPercentGauge.Update(int64(diskresult.UsedPercent))
-			metricsDiskTotalCountGauge.Update(int64(diskresult.Total))
+			metricsDiskUsedCountGauge.Update(int64(diskResult.Used))
+			metricsDiskFreeCountGauge.Update(int64(diskResult.Free))
+			metricsDiskUsedPercentGauge.Update(int64(diskResult.UsedPercent))
+			metricsDiskTotalCountGauge.Update(int64(diskResult.Total))
 		}
 		// sleep 5 seconds
 		time.Sleep(common.RefreshTime)
