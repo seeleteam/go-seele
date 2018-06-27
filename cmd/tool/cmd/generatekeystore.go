@@ -19,7 +19,6 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
-	"gopkg.in/fatih/set.v0"
 )
 
 var num int
@@ -35,14 +34,14 @@ var generateKeystoreCmd = &cobra.Command{
 	tool.exe genkeys`,
 	Run: func(cmd *cobra.Command, args []string) {
 		shards := strings.Split(shardRange, ",")
-		shardSet := set.New()
-		for _, s := range shards {
+		shardSet := make([]uint, len(shards))
+		for index, s := range shards {
 			i, err := strconv.Atoi(s)
 			if err != nil {
 				panic(err)
 			}
 
-			shardSet.Add(uint(i))
+			shardSet[index] = uint(i)
 		}
 
 		var results map[common.Address]*big.Int
@@ -50,21 +49,16 @@ var generateKeystoreCmd = &cobra.Command{
 		bigValue := big.NewInt(0).SetUint64(value)
 
 		var keyList bytes.Buffer
+		shardIndex := 0
 		for i := 0; i < num; {
-			addr, privateKey, err := crypto.GenerateKeyPair()
-			if !shardSet.Has(addr.Shard()) {
-				continue
-			}
-
-			if err != nil {
-				panic(err)
-			}
+			addr, privateKey := crypto.MustGenerateShardKeyPair(shardSet[shardIndex])
+			shardIndex = (shardIndex + 1) % len(shardSet)
 
 			results[*addr] = bigValue
 
 			key := crypto.FromECDSA(privateKey)
 			keyList.WriteString(hexutil.BytesToHex(key))
-			keyList.WriteString("\n")
+			keyList.WriteString("\r\n")
 
 			i++
 		}
@@ -93,5 +87,5 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
-	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1;2", "shard range, split by ,")
+	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1,2", "shard range, split by ,")
 }
