@@ -20,7 +20,7 @@ const ShardCount = 20
 // PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
 const PrintExplosionLog = false
 
-// refreshTime is the time of metrics sleep 5 seconds
+// RefreshTime is the time of metrics sleep 5 seconds
 const RefreshTime = 5 * time.Second
 
 var (
@@ -33,6 +33,7 @@ var (
 	// LogConfig is the Configuration of log
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 
+	// LogFileName default log file name
 	LogFileName = "log.txt"
 )
 
