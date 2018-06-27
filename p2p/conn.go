@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	headBuffLegth     = 6
+	headBuffLength    = 6
 	headBuffSizeStart = 0
 	headBuffSizeEnd   = 4
 	headBuffCodeStart = 4
@@ -88,7 +88,7 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 	c.rmutux.Lock()
 	defer c.rmutux.Unlock()
 
-	headbuff := make([]byte, headBuffLegth)
+	headbuff := make([]byte, headBuffLength)
 	if err = c.readFull(headbuff); err != nil {
 		return Message{}, err
 	}
@@ -105,7 +105,7 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 		}
 	}
 	metricsReceiveMessageCountMeter.Mark(1)
-	metricsReceivePortSpeedMeter.Mark(headBuffLegth + int64(size))
+	metricsReceivePortSpeedMeter.Mark(headBuffLength + int64(size))
 	return msgRecv, nil
 }
 
@@ -114,7 +114,7 @@ func (c *connection) WriteMsg(msg Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
 
-	b := make([]byte, headBuffLegth)
+	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
 
@@ -130,6 +130,6 @@ func (c *connection) WriteMsg(msg Message) error {
 		}
 	}
 	metricsSendMessageCountMeter.Mark(1)
-	metricsSendPortSpeedMeter.Mark(headBuffLegth + int64(len(msg.Payload)))
+	metricsSendPortSpeedMeter.Mark(headBuffLength + int64(len(msg.Payload)))
 	return nil
 }
