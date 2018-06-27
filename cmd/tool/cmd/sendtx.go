@@ -56,6 +56,7 @@ var sendTxCmd = &cobra.Command{
 
 		fmt.Println("use mode ", mode)
 		fmt.Println("threads", threads)
+		fmt.Println("total balance ", len(balanceList))
 		balances := newBalancesList(balanceList, threads, true)
 
 		for i := 0; i < threads; i++ {
@@ -108,7 +109,7 @@ func newBalancesList(balanceList []*balance, splitNum int, copyValue bool) [][]*
 	for i := 0; i < splitNum; i++ {
 		var start = unit * i
 		var end = unit * (i + 1)
-		if end > len(balanceList) {
+		if i == splitNum-1 {
 			end = len(balanceList)
 		}
 
@@ -336,7 +337,7 @@ func initAccount(threads int) []*balance {
 	balanceList := make([]*balance, len(keyList))
 	for i := 0; i < threads; i++ {
 		end := (i + 1) * unit
-		if end > len(keyList) {
+		if i == threads-1 {
 			end = len(keyList)
 		}
 
