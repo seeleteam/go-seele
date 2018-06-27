@@ -6,11 +6,11 @@
 package seele
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 // PrivateDebugAPI provides an API to access full node-related information for debug.
@@ -40,17 +40,13 @@ func (api *PrivateDebugAPI) GetBlockRlp(height *int64, result *string) error {
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form, when height is -1 the chain head is returned
-func (api *PrivateDebugAPI) PrintBlock(height *int64, result *string) error {
+func (api *PrivateDebugAPI) PrintBlock(height *int64, result *types.Block) error {
 	block, err := getBlock(api.s.chain, *height)
 	if err != nil {
 		return err
 	}
 
-	resultBytes, err := json.MarshalIndent(block, "", "\t")
-	if err != nil {
-		return err
-	}
-	*result = string(resultBytes)
+	*result = *block
 	return nil
 }
 

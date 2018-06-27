@@ -382,7 +382,7 @@ outLoop:
 			d.log.Debug("request header by number. start %d, amount %d", startNo, amount)
 			magic := rand2.Uint32()
 			if err = conn.peer.RequestHeadersByHashOrNumber(magic, common.Hash{}, startNo, amount, false); err != nil {
-				d.log.Warn("RequestHeadersByHashOrNumber err! %s", err)
+				d.log.Warn("RequestHeadersByHashOrNumber err! %s pid=%s", err, peerID)
 				break
 			}
 			msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
