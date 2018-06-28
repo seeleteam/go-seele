@@ -160,6 +160,19 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool) error {
 		return nil
 	}
 
+	// validate shard of from/to address
+	if common.IsShardEnabled() {
+		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+		}
+	}
+
+	if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
+		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
+		}
+	}
+
 	// vaildate signature
 	if len(tx.Signature.Sig) == 0 {
 		return ErrSigMissing
@@ -226,19 +239,6 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 	// validate state independent fields
 	if err := tx.ValidateWithoutState(true); err != nil {
 		return err
-	}
-
-	// validate shard of from/to address
-	if common.IsShardEnabled() {
-		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
-			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
-		}
-	}
-
-	if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
-		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
-			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
-		}
 	}
 
 	// validate state dependent fields
