@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 func newTestHeaderChain(db database.Database) *HeaderChain {
@@ -32,7 +33,7 @@ func newTestHeaderChain(db database.Database) *HeaderChain {
 }
 
 func Test_HeaderChain_WriteHeader(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	hc := newTestHeaderChain(db)

@@ -12,10 +12,11 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
-	db, dispose := newTestStateDB()
+	db, dispose := leveldb.NewTestDatabase()
 
 	statedb, err := NewStatedb(common.EmptyHash, db)
 	if err != nil {
