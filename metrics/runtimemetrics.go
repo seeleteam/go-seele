@@ -32,26 +32,23 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		cpuResult, err := getCPURate(common.RefreshTime, false)
-		if err == nil {
+		if cpuResult, err := getCPURate(common.RefreshTime, false); err == nil {
 			metricsCputGauge.Update(cpuResult)
 		}
-		cpuSeeleResult, err := getProcessCPURate(common.RefreshTime)
-		if err == nil {
+
+		if cpuSeeleResult, err := getProcessCPURate(common.RefreshTime); err == nil {
 			metricsSeeleCputGauge.Update(cpuSeeleResult)
 		}
 
-		diskResult, err := disk.Usage(common.GetDefaultDataFolder())
-		if err == nil {
+		if diskResult, err := disk.Usage(common.GetDefaultDataFolder()); err == nil {
 			metricsDiskFreeCountGauge.Update(int64(diskResult.Free))
 		}
 
-		if diskInfo := GetDiskInfo(common.GetDefaultDataFolder()); diskInfo != nil {
+		if diskInfo := GetDiskInfo(); diskInfo != nil {
 			metricsDiskReadCountGauge.Update(int64(diskInfo.ReadCount))
 			metricsDiskWriteCountGauge.Update(int64(diskInfo.WriteCount))
 			metricsDiskReadBytesGauge.Update(int64(diskInfo.ReadBytes))
 			metricsDiskWriteBytesGauge.Update(int64(diskInfo.WriteBytes))
-			metricsDiskIoTimeGauge.Update(int64(diskInfo.IoTime))
 		}
 
 		time.Sleep(common.RefreshTime)
