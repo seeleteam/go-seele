@@ -41,15 +41,19 @@ func collectRuntimeMetrics() {
 			metricsSeeleCputGauge.Update(cpuSeeleResult)
 		}
 
-
 		diskResult, err := disk.Usage(common.GetDefaultDataFolder())
 		if err == nil {
-			metricsDiskUsedCountGauge.Update(int64(diskResult.Used))
 			metricsDiskFreeCountGauge.Update(int64(diskResult.Free))
-			metricsDiskUsedPercentGauge.Update(int64(diskResult.UsedPercent))
-			metricsDiskTotalCountGauge.Update(int64(diskResult.Total))
 		}
-		// sleep 5 seconds
+
+		if diskInfo := GetDiskInfo(common.GetDefaultDataFolder()); diskInfo != nil {
+			metricsDiskReadCountGauge.Update(int64(diskInfo.ReadCount))
+			metricsDiskWriteCountGauge.Update(int64(diskInfo.WriteCount))
+			metricsDiskReadBytesGauge.Update(int64(diskInfo.ReadBytes))
+			metricsDiskWriteBytesGauge.Update(int64(diskInfo.WriteBytes))
+			metricsDiskIoTimeGauge.Update(int64(diskInfo.IoTime))
+		}
+
 		time.Sleep(common.RefreshTime)
 	}
 }

@@ -1,16 +1,16 @@
 package metrics
 
 import (
+	"os"
 	"time"
 
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/process"
-	"os"
 )
 
 var (
-	metricsCputGauge = metrics.GetOrRegisterGauge("cpu.accout", nil)
+	metricsCputGauge      = metrics.GetOrRegisterGauge("cpu.accout", nil)
 	metricsSeeleCputGauge = metrics.GetOrRegisterGauge("cpu.seele.accout", nil)
 )
 
@@ -27,7 +27,7 @@ func getCPURate(interval time.Duration, percpu bool) (int64, error) {
 }
 
 func getProcessCPURate(interval time.Duration) (int64, error) {
-	checkPid := os.Getpid() // process.test
+	checkPid := os.Getpid()
 	ret, err := process.NewProcess(int32(checkPid))
 	if err != nil {
 		return 0, err
