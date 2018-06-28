@@ -316,7 +316,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 		go func(offset int) {
 			defer wg.Done()
 
-			for j := offset; j < len; j += threads {
+			for j := offset; j < len && err == nil; j += threads {
 				if e := txs[j].ValidateWithoutState(true); e != nil {
 					if err != nil {
 						err = e
