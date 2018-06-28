@@ -5,7 +5,6 @@
 package trie
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -201,35 +200,44 @@ func Test_trie_Commit(t *testing.T) {
 
 const benchElemCount = 20000
 
-func Benchmark_Trie_Get(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
+var addrList [][]byte
+var code = make([]byte, 4*1024, 4*1024) // 4KB bytes code size
 
+func init() {
+	for i := 0; i < benchElemCount; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		addrList = append(addrList, addr[:])
+	}
+}
+
+func constructTrie(db database.Database) *Trie {
 	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
 	if err != nil {
 		panic(err)
 	}
 
-	k := make([]byte, 32)
-	for i := 0; i < benchElemCount; i++ {
-		binary.LittleEndian.PutUint64(k, uint64(i))
-		if err := trie.Put(k, k); err != nil {
+	for _, addr := range addrList {
+		if err = trie.Put(addr, code); err != nil {
 			panic(err)
 		}
 	}
-	binary.LittleEndian.PutUint64(k, benchElemCount/2)
 
-	batch := db.NewBatch()
-	trie.Commit(batch)
-	if err := batch.Commit(); err != nil {
-		panic(err)
-	}
+	return trie
+}
 
+func Benchmark_Trie_Get(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie := constructTrie(db)
+	key := addrList[len(addrList)/2]
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		trie.Get(k)
+		if _, found := trie.Get(key); !found {
+			panic("value not found by key")
+		}
 	}
-	b.StopTimer()
 }
 
 func Benchmark_Trie_Put(b *testing.B) {
@@ -241,47 +249,10 @@ func Benchmark_Trie_Put(b *testing.B) {
 		panic(err)
 	}
 
-	k := make([]byte, 32)
-	for i := 0; i < b.N; i++ {
-		binary.BigEndian.PutUint64(k, uint64(i))
-		if err := trie.Put(k, k); err != nil {
+	for i, addrLen := 0, len(addrList); i < b.N; i++ {
+		if err = trie.Put(addrList[i%addrLen], code); err != nil {
 			panic(err)
 		}
-	}
-}
-
-func Benchmark_GenAddr(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		crypto.MustGenerateRandomAddress()
-	}
-}
-
-func Benchmark_Trie_PutAddress(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
-	code := make([]byte, 4*1024, 4*1024)
-
-	for i := 0; i < b.N; i++ {
-		addr := *crypto.MustGenerateRandomAddress()
-		if err := trie.Put(addr[:], code); err != nil {
-			panic(err)
-		}
-	}
-}
-
-var addrList [][]byte
-var code = make([]byte, 4*1024, 4*1024)
-
-func init() {
-	for i := 0; i < 2000; i++ {
-		addr := *crypto.MustGenerateRandomAddress()
-		addrList = append(addrList, addr[:])
 	}
 }
 
@@ -289,20 +260,10 @@ func Benchmark_Trie_Commit(b *testing.B) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
-	code := make([]byte, 4*1024, 4*1024)
-
-	for _, addr := range addrList {
-		if err := trie.Put(addr, code); err != nil {
-			panic(err)
-		}
-	}
-
+	trie := constructTrie(db)
 	b.ResetTimer()
 
-	trie.Commit(nil)
+	for i := 0; i < b.N; i++ {
+		trie.Commit(nil)
+	}
 }

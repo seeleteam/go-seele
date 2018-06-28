@@ -183,6 +183,7 @@ func Benchmark_CreateContract(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+		createContractTx.Data.AccountNonce++
 	}
 }
 

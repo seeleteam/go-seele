@@ -7,7 +7,6 @@ package core
 
 import (
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
@@ -65,9 +64,6 @@ func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 
 // ProcessContract process the specified contract tx and return the receipt.
 func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
-	common.ResetDebug()
-	defer common.PrintDebug(8 * time.Millisecond)
-
 	statedb.Prepare(txIndex)
 	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
 
@@ -87,12 +83,10 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
-		common.AddDebug("EVM", "start to call contract")
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
 
 		gasFee = usedGasFee(gas - leftOverGas)
-		common.AddDebug("EVM", "end of call contract")
 	}
 
 	// Below error handling comes from ETH:
@@ -115,13 +109,9 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 
 	receipt.UsedGas = gas - leftOverGas
 
-	common.AddDebug("EVM", "calculate post state")
-
 	if receipt.PostState, err = statedb.Commit(nil); err != nil {
 		return nil, err
 	}
-
-	common.AddDebug("EVM", "got post state")
 
 	receipt.Logs = statedb.GetCurrentLogs()
 	if receipt.Logs == nil {

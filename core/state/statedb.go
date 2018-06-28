@@ -152,8 +152,6 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 
 // Commit commits memory state objects to db
 func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
-	common.AddDebug("STATE", "begin to commit ...")
-
 	if s.dbErr != nil {
 		return common.EmptyHash, s.dbErr
 	}
@@ -169,13 +167,7 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 		}
 	}
 
-	common.AddDebug("STATE", "commit dirty to trie finished.")
-
-	hash := s.trie.Commit(batch)
-
-	common.AddDebug("STATE", "commit finished.")
-
-	return hash, nil
+	return s.trie.Commit(batch), nil
 }
 
 func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
