@@ -40,6 +40,7 @@ func collectRuntimeMetrics() {
 			metricsSeeleCputGauge.Update(cpuSeeleResult)
 		}
 
+		// diskResult is the disk info of the current system
 		if diskResult, err := disk.Usage(common.GetDefaultDataFolder()); err == nil {
 			metricsDiskFreeCountGauge.Update(int64(diskResult.Free))
 		}

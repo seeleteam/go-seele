@@ -1,14 +1,15 @@
 package metrics
 
 import (
-	metrics "github.com/rcrowley/go-metrics"
-	"strconv"
-	"os"
-	"fmt"
 	"bufio"
+	"fmt"
 	"io"
-	"strings"
+	"os"
 	"runtime"
+	"strconv"
+	"strings"
+
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -26,10 +27,11 @@ type DiskStats struct {
 	WriteBytes int64
 }
 
+// GetDiskInfo get the disk info of the linux system
 func GetDiskInfo() *DiskStats {
 	diskStats := DiskStats{}
 	if runtime.GOOS == "linux" {
-		if err := GetDiskInfoLinux(&diskStats); err != nil{
+		if err := getDiskInfoLinux(&diskStats); err == nil {
 			return &diskStats
 		}
 	}
@@ -37,18 +39,15 @@ func GetDiskInfo() *DiskStats {
 }
 
 // GetDiskInfo retrieves the disk IO info belonging to the current process.
-func GetDiskInfoLinux(stats *DiskStats) error {
-	// Open the process disk IO counter file
-	inf, err := os.Open(fmt.Sprintf("/proc/%d/io", os.Getpid()))
+func getDiskInfoLinux(stats *DiskStats) error {
+	ioInfo, err := os.Open(fmt.Sprintf("/proc/%d/io", os.Getpid()))
 	if err != nil {
 		return err
 	}
-	defer inf.Close()
-	in := bufio.NewReader(inf)
+	defer ioInfo.Close()
+	in := bufio.NewReader(ioInfo)
 
-	// Iterate over the IO counter, and extract what we need
 	for {
-		// Read the next line and split to key and value
 		line, err := in.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -66,7 +65,6 @@ func GetDiskInfoLinux(stats *DiskStats) error {
 			return err
 		}
 
-		// Update the counter based on the key
 		switch key {
 		case "syscr":
 			stats.ReadCount = value
