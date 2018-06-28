@@ -13,18 +13,20 @@ import (
 )
 
 var (
-	metricsDiskFreeCountGauge  = metrics.GetOrRegisterGauge("disk.free.count", nil)
-	metricsDiskReadCountGauge  = metrics.GetOrRegisterGauge("disk.read.count", nil)
-	metricsDiskWriteCountGauge = metrics.GetOrRegisterGauge("disk.write.count", nil)
-	metricsDiskReadBytesGauge  = metrics.GetOrRegisterGauge("disk.read.bytes", nil)
-	metricsDiskWriteBytesGauge = metrics.GetOrRegisterGauge("disk.write.bytes", nil)
+	metricsDiskFreeCountGauge           = metrics.GetOrRegisterGauge("disk.free.count", nil)
+	metricsDiskReadCountGauge           = metrics.GetOrRegisterGauge("disk.read.count", nil)
+	metricsDiskWriteCountGauge          = metrics.GetOrRegisterGauge("disk.write.count", nil)
+	metricsDiskReadBytesGauge           = metrics.GetOrRegisterGauge("disk.read.bytes", nil)
+	metricsDiskWriteBytesGauge          = metrics.GetOrRegisterGauge("disk.write.bytes", nil)
+	metricsDiskcancelledWriteBytesGauge = metrics.GetOrRegisterGauge("disk.cancelled.Write.bytes", nil)
 )
 
 type DiskStats struct {
-	ReadCount  int64
-	ReadBytes  int64
-	WriteCount int64
-	WriteBytes int64
+	ReadCount           int64
+	ReadBytes           int64
+	WriteCount          int64
+	WriteBytes          int64
+	cancelledWriteBytes int64
 }
 
 // GetDiskInfo get the disk info of the linux system
@@ -74,6 +76,8 @@ func getDiskInfoLinux(stats *DiskStats) error {
 			stats.ReadBytes = value
 		case "wchar":
 			stats.WriteBytes = value
+		case "cancelled_write_bytes":
+			stats.cancelledWriteBytes = value
 		}
 	}
 }

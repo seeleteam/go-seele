@@ -50,6 +50,7 @@ func collectRuntimeMetrics() {
 			metricsDiskWriteCountGauge.Update(int64(diskInfo.WriteCount))
 			metricsDiskReadBytesGauge.Update(int64(diskInfo.ReadBytes))
 			metricsDiskWriteBytesGauge.Update(int64(diskInfo.WriteBytes))
+			metricsDiskcancelledWriteBytesGauge.Update(int64((diskInfo.cancelledWriteBytes)))
 		}
 
 		time.Sleep(common.RefreshTime)
