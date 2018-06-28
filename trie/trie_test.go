@@ -12,6 +12,7 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
@@ -195,4 +196,74 @@ func Test_trie_Commit(t *testing.T) {
 	value, _ = trienew.Get([]byte("12375879"))
 	fmt.Println(string(value))
 	assert.Equal(t, string(value), "test2")
+}
+
+const benchElemCount = 20000
+
+var addrList [][]byte
+var code = make([]byte, 4*1024, 4*1024) // 4KB bytes code size
+
+func init() {
+	for i := 0; i < benchElemCount; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		addrList = append(addrList, addr[:])
+	}
+}
+
+func constructTrie(db database.Database) *Trie {
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, addr := range addrList {
+		if err = trie.Put(addr, code); err != nil {
+			panic(err)
+		}
+	}
+
+	return trie
+}
+
+func Benchmark_Trie_Get(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie := constructTrie(db)
+	key := addrList[len(addrList)/2]
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if _, found := trie.Get(key); !found {
+			panic("value not found by key")
+		}
+	}
+}
+
+func Benchmark_Trie_Put(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	for i, addrLen := 0, len(addrList); i < b.N; i++ {
+		if err = trie.Put(addrList[i%addrLen], code); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func Benchmark_Trie_Commit(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie := constructTrie(db)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		trie.Commit(nil)
+	}
 }
