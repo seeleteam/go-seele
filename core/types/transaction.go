@@ -120,7 +120,7 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 		Signature: crypto.Signature{Sig: make([]byte, 0)},
 	}
 
-	if err := tx.ValidateWithoutState(false); err != nil {
+	if err := tx.ValidateWithoutState(false, true); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 }
 
 // ValidateWithoutState validates state independent fields in tx.
-func (tx Transaction) ValidateWithoutState(signNeeded bool) error {
+func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) error {
 	// validate amount
 	if tx.Data.Amount == nil {
 		return ErrAmountNil
@@ -163,13 +163,13 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool) error {
 	}
 
 	// validate shard of from/to address
-	if common.IsShardEnabled() {
+	if shardNeeded && common.IsShardEnabled() {
 		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
 		}
 	}
 
-	if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
+	if shardNeeded && !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
 		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
 			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 		}
@@ -238,7 +238,7 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 
 // Validate validates all fields in tx.
 func (tx *Transaction) Validate(statedb stateDB) error {
-	if err := tx.ValidateWithoutState(true); err != nil {
+	if err := tx.ValidateWithoutState(true, true); err != nil {
 		return err
 	}
 
@@ -299,7 +299,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 	// single thread for few CPU kernel or few txs to validate.
 	if threads <= 1 || len < threads {
 		for _, tx := range txs {
-			if err := tx.ValidateWithoutState(true); err != nil {
+			if err := tx.ValidateWithoutState(true, true); err != nil {
 				return err
 			}
 		}
@@ -317,7 +317,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 			defer wg.Done()
 
 			for j := offset; j < len && err == nil; j += threads {
-				if e := txs[j].ValidateWithoutState(true); e != nil {
+				if e := txs[j].ValidateWithoutState(true, true); e != nil {
 					if err != nil {
 						err = e
 					}
