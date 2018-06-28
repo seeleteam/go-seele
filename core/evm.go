@@ -16,6 +16,8 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 )
 
+const maxTxGas = uint64(10000000)
+
 // NewEVMContext creates a new context for use in the EVM.
 func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
@@ -68,11 +70,14 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
-	gas := common.MAXTXGAS
+	gas := maxTxGas
 	leftOverGas := uint64(0)
+	gasFee := new(big.Int)
 
-	// Currently, use common.MAXTXGAS gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
+	// Currently, use maxTxGas gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
+		gasFee = contractCreationFee(tx.Data.Payload)
+
 		var createdContractAddr common.Address
 		if receipt.Result, createdContractAddr, leftOverGas, err = evm.Create(caller, tx.Data.Payload, gas, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
@@ -80,6 +85,8 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	} else {
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
+
+		gasFee = usedGasFee(gas - leftOverGas)
 	}
 
 	// Below error handling comes from ETH:
@@ -88,6 +95,11 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	// balance transfer may never fail.
 	if err == vm.ErrInsufficientBalance {
 		return nil, err
+	}
+
+	totalFee := new(big.Int).Add(gasFee, tx.Data.Fee)
+	if balance := statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
+		return nil, vm.ErrInsufficientBalance
 	}
 
 	if err != nil {
@@ -107,8 +119,8 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	}
 
 	// transfer fee to coinbase
-	statedb.SubBalance(tx.Data.From, tx.Data.Fee)
-	statedb.AddBalance(context.Coinbase, tx.Data.Fee)
+	statedb.SubBalance(tx.Data.From, totalFee)
+	statedb.AddBalance(context.Coinbase, totalFee)
 
 	return receipt, nil
 }
@@ -126,4 +138,62 @@ func getDefaultChainConfig() *params.ChainConfig {
 		ConstantinopleBlock: nil,
 		Ethash:              new(params.EthashConfig),
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+// Gas fee model for test net
+///////////////////////////////////////////////////////////////////////////////////////
+var (
+	contractFeeComplex       = new(big.Int).Div(common.SeeleToFan, big.NewInt(100))
+	contractFeeCustomToken   = new(big.Int).Div(common.SeeleToFan, big.NewInt(200))
+	contractFeeStandardToken = new(big.Int).Div(common.SeeleToFan, big.NewInt(500))
+	contractFeeSimple        = new(big.Int).Div(common.SeeleToFan, big.NewInt(1000))
+
+	lowPriceGas  = uint64(50000) // 2 storage op allowed
+	overUsedStep = uint64(20000) // about 1 storage op
+
+	gasFeeZero          = new(big.Int)
+	gasFeeLowPrice      = new(big.Int).Div(contractFeeSimple, big.NewInt(1000))
+	gasFeeHighPriceUnit = new(big.Int).Div(contractFeeSimple, big.NewInt(100))
+)
+
+// contractCreationFee returns the contract creation fee according to code size.
+func contractCreationFee(code []byte) *big.Int {
+	codeLen := len(code)
+
+	// complex contract > 16KB
+	if codeLen > 16*1024*1024 {
+		return contractFeeComplex
+	}
+
+	// custom simple ERC20 token between [8KB, 16KB)
+	if codeLen > 8*1024*1024 {
+		return contractFeeCustomToken
+	}
+
+	// standard ERC20 token between [5KB, 8KB)
+	if codeLen > 4*1024*1024 {
+		return contractFeeStandardToken
+	}
+
+	// other simple contract
+	return contractFeeSimple
+}
+
+// usedGasFee returns the contract execution fee according to used gas.
+//   - if usedGas == 0, returns 0.
+//   - if usedGas <= 50000 (2 store op allowed), returns 1/1000 * contractFeeSimple
+//   - else returns 1/100 * contractFeeSimple * overUsed^2
+func usedGasFee(usedGas uint64) *big.Int {
+	if usedGas == 0 {
+		return gasFeeZero
+	}
+
+	if usedGas <= lowPriceGas {
+		return gasFeeLowPrice
+	}
+
+	overUsed := (usedGas-lowPriceGas)/overUsedStep + 1
+
+	return new(big.Int).Mul(gasFeeHighPriceUnit, new(big.Int).SetUint64(overUsed*overUsed))
 }
