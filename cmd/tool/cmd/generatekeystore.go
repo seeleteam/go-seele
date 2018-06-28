@@ -57,10 +57,11 @@ var generateKeystoreCmd = &cobra.Command{
 
 			go func(start int) {
 				defer wg.Done()
-				shardIndex := 0
 				for j := start; j < num; j += threads {
-					addr, privateKey := crypto.MustGenerateShardKeyPair(shardSet[shardIndex])
-					shardIndex = (shardIndex + 1) % len(shardSet)
+					addr, privateKey, err := crypto.GenerateKeyPair()
+					if err != nil {
+						panic(err)
+					}
 
 					infos[j] = &KeyInfo{
 						addr:addr,
