@@ -17,7 +17,6 @@ var (
 	metricsDiskWriteCountGauge          = metrics.GetOrRegisterGauge("disk.write.count", nil)
 	metricsDiskReadBytesGauge           = metrics.GetOrRegisterGauge("disk.read.bytes", nil)
 	metricsDiskWriteBytesGauge          = metrics.GetOrRegisterGauge("disk.write.bytes", nil)
-	metricsDiskcancelledWriteBytesGauge = metrics.GetOrRegisterGauge("disk.cancelled.Write.bytes", nil)
 )
 
 type DiskStats struct {
@@ -25,22 +24,20 @@ type DiskStats struct {
 	ReadBytes           int64
 	WriteCount          int64
 	WriteBytes          int64
-	cancelledWriteBytes int64
 }
 
 func GetDiskInfo() *DiskStats {
 	diskStats := DiskStats{}
 	if runtime.GOOS == "linux" {
-		if err := GetDiskInfoLinux(&diskStats); err != nil{
+		if err := getDiskInfoLinux(&diskStats); err == nil{
 			return &diskStats
 		}
 	}
 	return nil
 }
 
-// GetDiskInfo retrieves the disk IO info belonging to the current process.
-func GetDiskInfoLinux(stats *DiskStats) error {
-	// Open the process disk IO counter file
+// getDiskInfoLinux retrieves the disk IO info belonging to the current process.
+func getDiskInfoLinux(stats *DiskStats) error {
 	inf, err := os.Open(fmt.Sprintf("/proc/%d/io", os.Getpid()))
 	if err != nil {
 		return err
@@ -48,9 +45,7 @@ func GetDiskInfoLinux(stats *DiskStats) error {
 	defer inf.Close()
 	in := bufio.NewReader(inf)
 
-	// Iterate over the IO counter, and extract what we need
 	for {
-		// Read the next line and split to key and value
 		line, err := in.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -68,7 +63,6 @@ func GetDiskInfoLinux(stats *DiskStats) error {
 			return err
 		}
 
-		// Update the counter based on the key
 		switch key {
 		case "syscr":
 			stats.ReadCount = value
@@ -78,8 +72,6 @@ func GetDiskInfoLinux(stats *DiskStats) error {
 			stats.ReadBytes = value
 		case "wchar":
 			stats.WriteBytes = value
-		case "cancelled_write_bytes":
-			stats.cancelledWriteBytes = value
 		}
 	}
 }
