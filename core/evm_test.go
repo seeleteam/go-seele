@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +39,7 @@ func mustHexToBytes(hex string) []byte {
 // preprocessContract creates the contract tx dependent state DB, blockchain store
 // and a default account with specified balance and nonce.
 func preprocessContract(balance, nonce uint64) (*state.Statedb, store.BlockchainStore, common.Address, func()) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 
 	statedb, err := state.NewStatedb(common.EmptyHash, db)
 	if err != nil {

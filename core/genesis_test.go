@@ -6,38 +6,16 @@
 package core
 
 import (
-	"io/ioutil"
-	"os"
-	"testing"
-
 	"math/big"
+	"testing"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
-
-func newTestDatabase() (db database.Database, dispose func()) {
-	dir, err := ioutil.TempDir("", "BlockchainCore")
-	if err != nil {
-		panic(err)
-	}
-
-	db, err = leveldb.NewLevelDB(dir)
-	if err != nil {
-		os.RemoveAll(dir)
-		panic(err)
-	}
-
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
 
 func Test_Genesis_GetGenesis(t *testing.T) {
 	genesis1 := GetGenesis(GenesisInfo{})
@@ -59,7 +37,7 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 }
 
 func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bcStore := store.NewBlockchainDatabase(db)
@@ -85,7 +63,7 @@ func Test_Genesis_Init_DefaultGenesis(t *testing.T) {
 }
 
 func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bcStore := store.NewBlockchainDatabase(db)

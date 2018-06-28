@@ -7,42 +7,24 @@ package state
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"strconv"
 	"testing"
 
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/trie"
-
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/trie"
 )
-
-func newTestStateDB() (database.Database, func()) {
-	dir, err := ioutil.TempDir("", "teststatedb")
-	if err != nil {
-		panic(err)
-	}
-	db, err := leveldb.NewLevelDB(dir)
-	if err != nil {
-		panic(err)
-	}
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
 
 func BytesToAddressForTest(b []byte) common.Address {
 	return common.BytesToAddress(b)
 }
 
 func Test_Statedb_Operate(t *testing.T) {
-	db, remove := newTestStateDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 
 	hash := teststatedbaddbalance(common.Hash{}, db)
@@ -156,7 +138,7 @@ func getAddr(a int) common.Address {
 }
 
 func TestStatedb_Cache(t *testing.T) {
-	db, remove := newTestStateDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	statedb, err := NewStatedb(common.Hash{}, db)
 	if err != nil {
@@ -188,7 +170,7 @@ func TestStatedb_Cache(t *testing.T) {
 }
 
 func Test_Commit_AccountStorages(t *testing.T) {
-	db, remove := newTestStateDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 
 	statedb, err := NewStatedb(common.EmptyHash, db)
