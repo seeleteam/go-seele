@@ -10,6 +10,8 @@ import (
 	"time"
 
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/shirou/gopsutil/disk"
 )
 
 // CollectRuntimeMetrics collected runtime datas
@@ -29,7 +31,20 @@ func collectRuntimeMetrics() {
 		memAlloc.Update(int64(memStats.Alloc))
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
+
+		cpuresult, err := getCPURate(common.RefreshTime, false)
+		if err == nil {
+			metricsCputGauge.Update(cpuresult)
+		}
+
+		diskresult, err := disk.Usage(common.GetDefaultDataFolder())
+		if err == nil {
+			metricsDiskUsedCountGauge.Update(int64(diskresult.Used))
+			metricsDiskFreeCountGauge.Update(int64(diskresult.Free))
+			metricsDiskUsedPercentGauge.Update(int64(diskresult.UsedPercent))
+			metricsDiskTotalCountGauge.Update(int64(diskresult.Total))
+		}
 		// sleep 5 seconds
-		time.Sleep(5 * time.Second)
+		time.Sleep(common.RefreshTime)
 	}
 }

@@ -69,6 +69,7 @@ func newStateObject(address common.Address) *StateObject {
 		address:       address,
 		addrHash:      crypto.HashBytes(address.Bytes()),
 		account:       newAccount(),
+		dirtyAccount:  true,
 		cachedStorage: make(map[common.Hash]common.Hash),
 		dirtyStorage:  make(map[common.Hash]common.Hash),
 	}

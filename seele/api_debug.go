@@ -7,6 +7,10 @@ package seele
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -119,4 +123,30 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	}
 
 	return nil
+}
+
+// DumpHeapRequest represents the heamp dump request.
+type DumpHeapRequest struct {
+	Filename     string
+	GCBeforeDump bool
+}
+
+// DumpHeap dumps the heap usage.
+func (api *PrivateDebugAPI) DumpHeap(request *DumpHeapRequest, result *interface{}) error {
+	filename := "heap.dump"
+
+	if len(request.Filename) > 0 {
+		filename = request.Filename
+	}
+
+	if request.GCBeforeDump {
+		runtime.GC()
+	}
+
+	f, err := os.Create(filepath.Join(common.GetDefaultDataFolder(), filename))
+	if err != nil {
+		return err
+	}
+
+	return pprof.WriteHeapProfile(f)
 }
