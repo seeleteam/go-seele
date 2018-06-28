@@ -180,6 +180,36 @@ func Test_trie_Commit(t *testing.T) {
 	assert.Equal(t, string(value), "test2")
 }
 
+func Test_trie_CommitOneByOne(t *testing.T) {
+	db, remove := leveldb.NewTestDatabase()
+	defer remove()
+
+	trie, err := NewTrie(common.Hash{}, []byte("qb"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	trie.Put([]byte{1, 2, 3}, []byte{1, 2, 3})
+	trie.Hash()
+	trie.Put([]byte{1, 2, 4}, []byte{1, 2, 4})
+	trie.Hash()
+
+	batch := db.NewBatch()
+	hash := trie.Commit(batch)
+	batch.Commit()
+
+	trienew, err := NewTrie(hash, []byte("qb"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	value, _ := trienew.Get([]byte{1, 2, 3})
+	assert.Equal(t, value, []byte{1, 2, 3})
+
+	value, _ = trienew.Get([]byte{1, 2, 4})
+	assert.Equal(t, value, []byte{1, 2, 4})
+}
+
 const benchElemCount = 20000
 
 var addrList [][]byte
