@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime"
+	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -236,12 +238,15 @@ func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 
 // Validate validates all fields in tx.
 func (tx *Transaction) Validate(statedb stateDB) error {
-	// validate state independent fields
 	if err := tx.ValidateWithoutState(true); err != nil {
 		return err
 	}
 
-	// validate state dependent fields
+	return tx.ValidateState(statedb)
+}
+
+// ValidateState validates state dependent fields in tx.
+func (tx *Transaction) ValidateState(statedb stateDB) error {
 	consumed := new(big.Int).Add(tx.Data.Amount, tx.Data.Fee)
 	if balance := statedb.GetBalance(tx.Data.From); consumed.Cmp(balance) > 0 {
 		return fmt.Errorf("balance is not enough, account = %s, balance = %v, amount = %v, fee = %v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
@@ -282,4 +287,48 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 	bmt, _ := merkle.NewTree(contents)
 
 	return bmt.MerkleRoot()
+}
+
+// BatchValidateTxs validates the state independent fields of specified txs in multiple threads.
+// Because the signature verification is time consuming (see test Benchmark_Transaction_ValidateWithoutState),
+// once a block includes too many txs (e.g. 5000), the txs validation will consume too much time.
+func BatchValidateTxs(txs []*Transaction) error {
+	len := len(txs)
+	threads := runtime.NumCPU() / 4 // in case of CPU 100%
+
+	// single thread for few CPU kernel or few txs to validate.
+	if threads <= 1 || len < threads {
+		for _, tx := range txs {
+			if err := tx.ValidateWithoutState(true); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	// parallel validates txs
+	var err error
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < threads; i++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+
+			for j := offset; j < len; j += threads {
+				if e := txs[j].ValidateWithoutState(true); e != nil {
+					if err != nil {
+						err = e
+					}
+
+					break
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	return err
 }

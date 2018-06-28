@@ -473,9 +473,13 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	// add the receipt of the reward tx
 	receipts[0] = types.MakeRewardReceipt(minerRewardTx)
 
+	if err := types.BatchValidateTxs(txs); err != nil {
+		return nil, err
+	}
+
 	// process other txs
 	for i, tx := range txs {
-		if err := tx.Validate(statedb); err != nil {
+		if err := tx.ValidateState(statedb); err != nil {
 			return nil, err
 		}
 
