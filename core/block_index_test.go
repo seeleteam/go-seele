@@ -11,10 +11,11 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 func getTestBlock(t *testing.T, difficulty int64) *types.Block {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)

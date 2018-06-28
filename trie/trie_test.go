@@ -6,8 +6,6 @@ package trie
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -17,24 +15,8 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func newTestTrieDB() (database.Database, func()) {
-	dir, err := ioutil.TempDir("", "trietest")
-	if err != nil {
-		panic(err)
-	}
-	db, err := leveldb.NewLevelDB(dir)
-	if err != nil {
-		os.RemoveAll(dir)
-		panic(err)
-	}
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
-
 func Test_trie_Update(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {
@@ -82,7 +64,7 @@ func Test_trie_Update(t *testing.T) {
 }
 
 func Test_trie_Delete(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {
@@ -133,7 +115,7 @@ func Test_trie_Delete(t *testing.T) {
 }
 
 func Test_trie_Commit(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {

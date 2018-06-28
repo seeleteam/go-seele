@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -221,7 +222,7 @@ func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
 
 func Test_GetRejectTransacton(t *testing.T) {
 	log := log.GetLogger("test", true)
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)

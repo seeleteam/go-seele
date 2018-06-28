@@ -7,9 +7,7 @@ package downloader
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -22,24 +20,6 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 )
-
-func newTestDatabase() (db database.Database, dispose func()) {
-	dir, err := ioutil.TempDir("", "Downloader")
-	if err != nil {
-		panic(err)
-	}
-
-	db, err = leveldb.NewLevelDB(dir)
-	if err != nil {
-		os.RemoveAll(dir)
-		panic(err)
-	}
-
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 	privKey, keyErr := crypto.GenerateKey()
@@ -149,7 +129,7 @@ func (p TestPeer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, 
 }
 
 func Test_findCommonAncestorHeight_localHeightIsZero(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 	dl := newTestDownloader(db)
 	height := uint64(1000)

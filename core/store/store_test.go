@@ -6,9 +6,7 @@
 package store
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -19,21 +17,8 @@ import (
 )
 
 func newTestBlockchainDatabase() (BlockchainStore, func()) {
-	dir, err := ioutil.TempDir("", "BlockchainStore")
-	if err != nil {
-		panic(err)
-	}
-
-	db, err := leveldb.NewLevelDB(dir)
-	if err != nil {
-		defer os.RemoveAll(dir)
-		panic(err)
-	}
-
-	return NewBlockchainDatabase(db), func() {
-		defer db.Close()
-		defer os.RemoveAll(dir)
-	}
+	db, dispose := leveldb.NewTestDatabase()
+	return NewBlockchainDatabase(db), dispose
 }
 
 func newTestBlockHeader() *types.BlockHeader {
