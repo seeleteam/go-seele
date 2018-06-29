@@ -8,7 +8,6 @@ package state
 import (
 	"math/big"
 
-	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
@@ -26,7 +25,7 @@ var (
 type Statedb struct {
 	db           database.Database
 	trie         *trie.Trie
-	stateObjects *lru.Cache // stateObjects maps account addresses of common.Address type to the state objects of *StateObject type
+	stateObjects map[common.Address]*StateObject
 
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
@@ -46,31 +45,22 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		return nil, err
 	}
 
-	stateCache, err := lru.New(StateCacheCapacity)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Statedb{
 		db:           db,
 		trie:         trie,
-		stateObjects: stateCache,
+		stateObjects: make(map[common.Address]*StateObject),
 		curJournal:   journal{},
 	}, nil
 }
 
 // GetCopy is a memory copy of state db.
 func (s *Statedb) GetCopy() (*Statedb, error) {
-	copies, err := lru.New(StateCacheCapacity)
-	if err != nil {
-		panic(err) // call panic, in case of the error which happens only when StateCacheCapacity is negative.
-	}
-
-	for _, k := range s.stateObjects.Keys() {
-		v, ok := s.stateObjects.Peek(k)
-		if ok {
-			copies.Add(k, v)
+	copyObjecsFunc := func(src map[common.Address]*StateObject) map[common.Address]*StateObject {
+		dest := make(map[common.Address]*StateObject)
+		for k, v := range src {
+			dest[k] = v
 		}
+		return dest
 	}
 
 	cpyTrie, err := s.trie.ShallowCopy()
@@ -81,7 +71,7 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	return &Statedb{
 		db:           s.db,
 		trie:         cpyTrie,
-		stateObjects: copies,
+		stateObjects: copyObjecsFunc(s.stateObjects),
 
 		dbErr:  s.dbErr,
 		refund: s.refund,
@@ -156,14 +146,9 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 		return common.EmptyHash, s.dbErr
 	}
 
-	for _, key := range s.stateObjects.Keys() {
-		value, ok := s.stateObjects.Peek(key)
-		if ok {
-			addr := key.(common.Address)
-			object := value.(*StateObject)
-			if err := s.commitOne(addr, object, batch); err != nil {
-				return common.EmptyHash, err
-			}
+	for addr, object := range s.stateObjects {
+		if err := s.commitOne(addr, object, batch); err != nil {
+			return common.EmptyHash, err
 		}
 	}
 
@@ -198,34 +183,21 @@ func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch databas
 	return nil
 }
 
-func (s *Statedb) cache(addr common.Address, obj *StateObject) {
-	if s.stateObjects.Len() == StateCacheCapacity {
-		s.Commit(nil)
-
-		// clear a quarter of the cached state infos to avoid frequent commits
-		for i := 0; i < StateCacheCapacity/4; i++ {
-			s.stateObjects.RemoveOldest()
-		}
-	}
-
-	s.stateObjects.Add(addr, obj)
-}
-
 // GetOrNewStateObject gets or creates a state object
 func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
 	object := s.getStateObject(addr)
 	if object == nil {
 		object = newStateObject(addr)
 		object.SetNonce(0)
-		s.cache(addr, object)
+		s.stateObjects[addr] = object
 	}
 
 	return object
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *StateObject {
-	if value, ok := s.stateObjects.Get(addr); ok {
-		if object := value.(*StateObject); !object.deleted {
+	if object, ok := s.stateObjects[addr]; ok {
+		if !object.deleted {
 			return object
 		}
 
@@ -243,7 +215,7 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 
-	s.cache(addr, object)
+	s.stateObjects[addr] = object
 	return object
 }
 
