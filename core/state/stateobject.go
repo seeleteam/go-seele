@@ -53,9 +53,10 @@ type StateObject struct {
 	code      []byte // contract code
 	dirtyCode bool
 
-	storageTrie   *trie.Trie
-	cachedStorage map[common.Hash]common.Hash // cache the retrieved account states.
-	dirtyStorage  map[common.Hash]common.Hash // changed account states that need to flush to DB.
+	storageTrie      *trie.Trie
+	cachedStorage    map[common.Hash]common.Hash // cache the retrieved account states.
+	dirtyStorage     map[common.Hash]common.Hash // changed account states that need to flush to DB.
+	storageTrieDirty bool
 
 	// When a state object is marked as suicided, it will be deleted from the trie when commit the state DB.
 	suicided bool
@@ -229,7 +230,8 @@ func (s *StateObject) getStorageKey(key common.Hash) []byte {
 
 // commitStorageTrie flush dirty storage to trie if any, and update the storage merkle root hash.
 func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch database.Batch) error {
-	if len(s.dirtyStorage) == 0 {
+	// not dirty and do not persist storage trie
+	if len(s.dirtyStorage) == 0 && (commitBatch == nil || !s.storageTrieDirty) {
 		return nil
 	}
 
@@ -237,19 +239,26 @@ func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch da
 		return err
 	}
 
+	// flush dirty storage into trie if any dirty
 	for k, v := range s.dirtyStorage {
 		if err := s.storageTrie.Put(s.getStorageKey(k), v.Bytes()); err != nil {
 			return err
 		}
+
+		s.storageTrieDirty = true
 	}
 
-	// Update the storage merkle root hash and mark account as dirty.
-	s.account.StorageRootHash = s.storageTrie.Commit(commitBatch).Bytes()
-	s.dirtyAccount = true
-
-	// Reset dirty storage flag
-	if commitBatch != nil {
+	// set account as dirty if dirty and reset dirty storage cache
+	if len(s.dirtyStorage) > 0 {
+		s.dirtyAccount = true
 		s.dirtyStorage = make(map[common.Hash]common.Hash)
+	}
+
+	// commit to update the storage root hash or persist the storage trie to DB
+	s.account.StorageRootHash = s.storageTrie.Commit(commitBatch).Bytes()
+
+	if commitBatch != nil {
+		s.storageTrieDirty = false
 	}
 
 	return nil

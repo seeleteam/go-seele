@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -222,6 +223,37 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 
 		if value := statedb2.GetState(addr, common.StringToHash("key")); !value.Equal(common.StringToHash("value")) {
 			t.Fatalf("Invalid acocunt state value, %v", value.ToHex())
+		}
+	}
+}
+
+func Benchmark_Trie_Hash(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	statedb, err := NewStatedb(common.EmptyHash, db)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < 5000; i++ {
+		addr := common.BytesToAddress([]byte(strconv.Itoa(i)))
+
+		statedb.CreateAccount(addr)
+		statedb.SetBalance(addr, big.NewInt(38))
+		statedb.SetNonce(addr, 6)
+		statedb.SetCode(addr, []byte("hello"))
+		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+
+		if _, err := statedb.Commit(nil); err != nil {
+			panic(err)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := statedb.Commit(nil); err != nil {
+			panic(err)
 		}
 	}
 }
