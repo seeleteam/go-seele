@@ -96,5 +96,5 @@ func (ch suicideChange) revert(s *Statedb) {
 }
 
 func (ch createObjectChange) revert(s *Statedb) {
-	s.stateObjects.Remove(*ch.account)
+	delete(s.stateObjects, *ch.account)
 }
