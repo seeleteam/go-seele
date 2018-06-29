@@ -22,7 +22,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 	var generateKeyPairCmd = &cobra.Command{
 		Use:   "key",
 		Short: "generate a key pair with specified shard number",
-		Long:  "generate a key pair and print them with hex values\n For example:\n" + name + " generateKeyPair --shard 1",
+		Long:  "generate a key pair and print them with hex values\n For example:\n" + name + " key --shard 1",
 		Run: func(cmd *cobra.Command, args []string) {
 			var publicKey *common.Address
 			var privateKey *ecdsa.PrivateKey
