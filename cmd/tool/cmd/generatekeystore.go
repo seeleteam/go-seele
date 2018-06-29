@@ -12,24 +12,23 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"strconv"
-	"strings"
+	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/spf13/cobra"
-	"sync"
+	"gopkg.in/fatih/set.v0"
 )
 
 var num int
 var value uint64
 var keyFile string
 var output string
-var shardRange string
+var shard int
 
 type KeyInfo struct {
-	addr *common.Address
+	addr       *common.Address
 	privateKey string
 }
 
@@ -39,15 +38,9 @@ var generateKeystoreCmd = &cobra.Command{
 	Long: `For example:
 	tool.exe genkeys`,
 	Run: func(cmd *cobra.Command, args []string) {
-		shards := strings.Split(shardRange, ",")
-		shardSet := make([]uint, len(shards))
-		for index, s := range shards {
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				panic(err)
-			}
-
-			shardSet[index] = uint(i)
+		shardSet := set.New()
+		for i := 1; i <= shard; i++ {
+			shardSet.Add(uint(i))
 		}
 
 		wg := sync.WaitGroup{}
@@ -57,16 +50,22 @@ var generateKeystoreCmd = &cobra.Command{
 
 			go func(start int) {
 				defer wg.Done()
-				for j := start; j < num; j += threads {
+				for j := start; j < num; {
 					addr, privateKey, err := crypto.GenerateKeyPair()
 					if err != nil {
 						panic(err)
 					}
 
-					infos[j] = &KeyInfo{
-						addr:addr,
-						privateKey:hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
+					if !shardSet.Has(addr.Shard()) {
+						continue
 					}
+
+					infos[j] = &KeyInfo{
+						addr:       addr,
+						privateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
+					}
+
+					j += threads
 				}
 			}(i)
 		}
@@ -80,7 +79,7 @@ var generateKeystoreCmd = &cobra.Command{
 
 		var keyList bytes.Buffer
 
-		for i := 0; i < num; i++{
+		for i := 0; i < num; i++ {
 			results[*infos[i].addr] = bigValue
 
 			keyList.WriteString(infos[i].privateKey)
@@ -111,6 +110,6 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
-	generateKeystoreCmd.Flags().StringVarP(&shardRange, "shards", "", "1,2", "shard range, split by ,")
+	generateKeystoreCmd.Flags().IntVarP(&shard, "shard", "", 1, "shard number, it will generate key in [a:shard]")
 	generateKeystoreCmd.Flags().IntVarP(&threads, "threads", "t", 1, "threads to generate keys")
 }
