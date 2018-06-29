@@ -34,7 +34,7 @@ func collectRuntimeMetrics() {
 
 		// cpuResult is the cpu info of the current system
 		if cpuResult, err := getCPURate(common.RefreshTime, false); err == nil {
-			metricsCputGauge.Update(cpuResult)
+			metricsCpuGauge.Update(cpuResult)
 		}
 
 		// cpuSeeleResult is the cpu info of the current process

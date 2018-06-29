@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	metricsCputGauge      = metrics.GetOrRegisterGauge("cpu.accout", nil)
+	metricsCpuGauge       = metrics.GetOrRegisterGauge("cpu.accout", nil)
 	metricsSeeleCputGauge = metrics.GetOrRegisterGauge("cpu.seele.accout", nil)
 )
 
