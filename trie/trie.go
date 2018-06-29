@@ -138,42 +138,41 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 		return node.Hash()
 	}
 
-	// update node hash for different node type if dirty
-	if node.Status() == nodeStatusDirty {
-		// calculate node hash
-		switch n := node.(type) {
-		case *LeafNode:
-			buf.Reset()
-			rlp.Encode(buf, []interface{}{
-				n.Key,
-				n.Value,
-			})
-		case *ExtensionNode:
-			nexthash := t.hash(n.NextNode, buf, sha, batch)
+	// node hash is dirty or requires to commit with specified batch
+	switch n := node.(type) {
+	case *LeafNode:
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			n.Key,
+			n.Value,
+		})
+	case *ExtensionNode:
+		nexthash := t.hash(n.NextNode, buf, sha, batch)
 
-			buf.Reset()
-			rlp.Encode(buf, []interface{}{
-				true, //add it to diff with extension node;modify later using compact func?
-				n.Key,
-				nexthash,
-			})
-		case *BranchNode:
-			var children [numBranchChildren][]byte
-			for i, child := range n.Children {
-				children[i] = t.hash(child, buf, sha, batch)
-			}
-
-			buf.Reset()
-			rlp.Encode(buf, []interface{}{
-				children,
-			})
-		case hashNode:
-			return n.Hash()
-		default:
-			panic(fmt.Sprintf("invalid node: %v", node))
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			true, //add it to diff with extension node;modify later using compact func?
+			n.Key,
+			nexthash,
+		})
+	case *BranchNode:
+		var children [numBranchChildren][]byte
+		for i, child := range n.Children {
+			children[i] = t.hash(child, buf, sha, batch)
 		}
 
-		// update node hash and status
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			children,
+		})
+	case hashNode:
+		return n.Hash()
+	default:
+		panic(fmt.Sprintf("invalid node: %v", node))
+	}
+
+	// update node hash and status if dirty
+	if node.Status() == nodeStatusDirty {
 		sha.Reset()
 		sha.Write(buf.Bytes())
 		hash := sha.Sum(nil)
