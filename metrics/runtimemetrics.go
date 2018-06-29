@@ -33,12 +33,12 @@ func collectRuntimeMetrics() {
 		lastPauseNs = memStats.PauseTotalNs
 
 		// cpuResult is the cpu info of the current system
-		if cpuResult, err := getCPURate(common.RefreshTime, false); err == nil {
+		if cpuResult, err := getCPURate(common.IntervalTime, false); err == nil {
 			metricsCpuGauge.Update(cpuResult)
 		}
 
 		// cpuSeeleResult is the cpu info of the current process
-		if cpuSeeleResult, err := getProcessCPURate(common.RefreshTime); err == nil {
+		if cpuSeeleResult, err := getProcessCPURate(common.IntervalTime); err == nil {
 			metricsSeeleCputGauge.Update(cpuSeeleResult)
 		}
 

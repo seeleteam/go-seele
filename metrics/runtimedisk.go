@@ -1,35 +1,36 @@
 package metrics
 
 import (
-	metrics "github.com/rcrowley/go-metrics"
-	"strconv"
-	"os"
-	"fmt"
 	"bufio"
+	"fmt"
 	"io"
-	"strings"
+	"os"
 	"runtime"
+	"strconv"
+	"strings"
+
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 var (
-	metricsDiskFreeCountGauge           = metrics.GetOrRegisterGauge("disk.free.count", nil)
-	metricsDiskReadCountGauge           = metrics.GetOrRegisterGauge("disk.read.count", nil)
-	metricsDiskWriteCountGauge          = metrics.GetOrRegisterGauge("disk.write.count", nil)
-	metricsDiskReadBytesGauge           = metrics.GetOrRegisterGauge("disk.read.bytes", nil)
-	metricsDiskWriteBytesGauge          = metrics.GetOrRegisterGauge("disk.write.bytes", nil)
+	metricsDiskFreeCountGauge  = metrics.GetOrRegisterGauge("disk.free.count", nil)
+	metricsDiskReadCountGauge  = metrics.GetOrRegisterGauge("disk.read.count", nil)
+	metricsDiskWriteCountGauge = metrics.GetOrRegisterGauge("disk.write.count", nil)
+	metricsDiskReadBytesGauge  = metrics.GetOrRegisterGauge("disk.read.bytes", nil)
+	metricsDiskWriteBytesGauge = metrics.GetOrRegisterGauge("disk.write.bytes", nil)
 )
 
 type DiskStats struct {
-	ReadCount           int64
-	ReadBytes           int64
-	WriteCount          int64
-	WriteBytes          int64
+	ReadCount  int64
+	ReadBytes  int64
+	WriteCount int64
+	WriteBytes int64
 }
 
 func GetDiskInfo() *DiskStats {
 	diskStats := DiskStats{}
 	if runtime.GOOS == "linux" {
-		if err := getDiskInfoLinux(&diskStats); err == nil{
+		if err := getDiskInfoLinux(&diskStats); err == nil {
 			return &diskStats
 		}
 	}
