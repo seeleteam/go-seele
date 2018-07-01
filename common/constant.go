@@ -21,11 +21,11 @@ const (
 	// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
 	PrintExplosionLog = false
 
-	// RefreshTime is the time of metrics sleep 1 minute
-	RefreshTime = time.Minute
+	// MetricsRefreshTime is the time of metrics sleep 1 minute
+	MetricsRefreshTime = time.Minute
 
-	// IntervalTime is a duration time of cpu
-	IntervalTime = time.Second
+	// CPUMetricsIntervalTime is a duration time of cpu
+	CPUMetricsIntervalTime = time.Second
 )
 
 var (
