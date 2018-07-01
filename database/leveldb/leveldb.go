@@ -6,6 +6,9 @@
 package leveldb
 
 import (
+	"io/ioutil"
+	"os"
+
 	"github.com/seeleteam/go-seele/database"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -92,4 +95,23 @@ func (db *LevelDB) NewBatch() database.Batch {
 		batch:   new(leveldb.Batch),
 	}
 	return batch
+}
+
+// NewTestDatabase creates a database instance under temp folder.
+func NewTestDatabase() (db database.Database, dispose func()) {
+	dir, err := ioutil.TempDir("", "Seele-LevelDB-")
+	if err != nil {
+		panic(err)
+	}
+
+	db, err = NewLevelDB(dir)
+	if err != nil {
+		os.RemoveAll(dir)
+		panic(err)
+	}
+
+	return db, func() {
+		db.Close()
+		os.RemoveAll(dir)
+	}
 }

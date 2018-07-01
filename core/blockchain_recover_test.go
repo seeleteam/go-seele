@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 func newTestRecoveryPointFile() (string, func()) {
@@ -96,7 +97,7 @@ func Test_RecoveryPoint_PutBlockCorrupted(t *testing.T) {
 	rpFile, dispose1 := newTestRecoveryPointFile()
 	defer dispose1()
 
-	db, dispose2 := newTestDatabase()
+	db, dispose2 := leveldb.NewTestDatabase()
 	defer dispose2()
 
 	// mock corrupt when put a block in DB.

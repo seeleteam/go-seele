@@ -6,43 +6,25 @@
 package state
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
-	"strconv"
 	"testing"
-
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/trie"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/trie"
 )
-
-func newTestStateDB() (database.Database, func()) {
-	dir, err := ioutil.TempDir("", "teststatedb")
-	if err != nil {
-		panic(err)
-	}
-	db, err := leveldb.NewLevelDB(dir)
-	if err != nil {
-		panic(err)
-	}
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
 
 func BytesToAddressForTest(b []byte) common.Address {
 	return common.BytesToAddress(b)
 }
 
 func Test_Statedb_Operate(t *testing.T) {
-	db, remove := newTestStateDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 
 	hash := teststatedbaddbalance(common.Hash{}, db)
@@ -151,44 +133,8 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 	return hash
 }
 
-func getAddr(a int) common.Address {
-	return common.BytesToAddress([]byte(strconv.Itoa(a)))
-}
-
-func TestStatedb_Cache(t *testing.T) {
-	db, remove := newTestStateDB()
-	defer remove()
-	statedb, err := NewStatedb(common.Hash{}, db)
-	if err != nil {
-		panic(err)
-	}
-
-	i := 0
-	for ; i < StateCacheCapacity; i++ {
-		state := statedb.GetOrNewStateObject(getAddr(i))
-
-		if i == 0 {
-			state.SetAmount(big.NewInt(4))
-		}
-	}
-
-	assert.Equal(t, statedb.stateObjects.Len(), StateCacheCapacity)
-	assert.Equal(t, statedb.trie.Hash(), common.Hash{})
-
-	statedb.GetOrNewStateObject(getAddr(i))
-	empty := statedb.getStateObject(BytesToAddressForTest([]byte{byte(0)}))
-	if empty != nil {
-		t.Error("empty should be nil")
-	}
-
-	assert.Equal(t, statedb.stateObjects.Len(), StateCacheCapacity*3/4+1)
-	if statedb.trie.Hash() == common.EmptyHash {
-		t.Error("trie root hash should changed")
-	}
-}
-
 func Test_Commit_AccountStorages(t *testing.T) {
-	db, remove := newTestStateDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 
 	statedb, err := NewStatedb(common.EmptyHash, db)
@@ -221,4 +167,61 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	storageValue, found := trie.Get(storageKey)
 	assert.Equal(t, found, true)
 	assert.Equal(t, storageValue, common.StringToHash("test value").Bytes())
+}
+
+func Test_StateDB_CommitMultipleChanges(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	statedb, err := NewStatedb(common.EmptyHash, db)
+	assert.Equal(t, err, nil)
+
+	var allAddr []common.Address
+
+	// create multiple accounts with code and states
+	for i := 0; i < 1500; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		statedb.CreateAccount(addr)
+		statedb.SetBalance(addr, big.NewInt(38))
+		statedb.SetNonce(addr, 6)
+		statedb.SetCode(addr, []byte("hello"))
+		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+
+		if _, err = statedb.Commit(nil); err != nil {
+			panic(err)
+		}
+
+		allAddr = append(allAddr, addr)
+	}
+
+	// serialize the new created accounts into DB
+	batch := db.NewBatch()
+	root, err := statedb.Commit(batch)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, batch.Commit(), nil)
+
+	// ensure all accounts could be loaded again with new statedb
+	statedb2, err := NewStatedb(root, db)
+	assert.Equal(t, err, nil)
+	for i, addr := range allAddr {
+		if !statedb2.Exist(addr) {
+			t.Fatalf("Cannot find the inserted account, index = %v", i)
+		}
+
+		if balance := statedb2.GetBalance(addr).Int64(); balance != 38 {
+			t.Fatalf("Invalid account balance %v", balance)
+		}
+
+		if nonce := statedb2.GetNonce(addr); nonce != 6 {
+			t.Fatalf("Invalid account nonce %v", nonce)
+		}
+
+		if code := statedb2.GetCode(addr); !bytes.Equal(code, []byte("hello")) {
+			t.Fatalf("Invalid account code %v", code)
+		}
+
+		if value := statedb2.GetState(addr, common.StringToHash("key")); !value.Equal(common.StringToHash("value")) {
+			t.Fatalf("Invalid acocunt state value, %v", value.ToHex())
+		}
+	}
 }

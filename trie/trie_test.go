@@ -6,34 +6,17 @@ package trie
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func newTestTrieDB() (database.Database, func()) {
-	dir, err := ioutil.TempDir("", "trietest")
-	if err != nil {
-		panic(err)
-	}
-	db, err := leveldb.NewLevelDB(dir)
-	if err != nil {
-		os.RemoveAll(dir)
-		panic(err)
-	}
-	return db, func() {
-		db.Close()
-		os.RemoveAll(dir)
-	}
-}
-
 func Test_trie_Update(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {
@@ -81,7 +64,7 @@ func Test_trie_Update(t *testing.T) {
 }
 
 func Test_trie_Delete(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {
@@ -132,7 +115,7 @@ func Test_trie_Delete(t *testing.T) {
 }
 
 func Test_trie_Commit(t *testing.T) {
-	db, remove := newTestTrieDB()
+	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
 	if err != nil {
@@ -195,4 +178,104 @@ func Test_trie_Commit(t *testing.T) {
 	value, _ = trienew.Get([]byte("12375879"))
 	fmt.Println(string(value))
 	assert.Equal(t, string(value), "test2")
+}
+
+func Test_trie_CommitOneByOne(t *testing.T) {
+	db, remove := leveldb.NewTestDatabase()
+	defer remove()
+
+	trie, err := NewTrie(common.Hash{}, []byte("qb"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	trie.Put([]byte{1, 2, 3}, []byte{1, 2, 3})
+	trie.Hash()
+	trie.Put([]byte{1, 2, 4}, []byte{1, 2, 4})
+	trie.Hash()
+
+	batch := db.NewBatch()
+	hash := trie.Commit(batch)
+	batch.Commit()
+
+	trienew, err := NewTrie(hash, []byte("qb"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	value, _ := trienew.Get([]byte{1, 2, 3})
+	assert.Equal(t, value, []byte{1, 2, 3})
+
+	value, _ = trienew.Get([]byte{1, 2, 4})
+	assert.Equal(t, value, []byte{1, 2, 4})
+}
+
+const benchElemCount = 20000
+
+var addrList [][]byte
+var code = make([]byte, 4*1024, 4*1024) // 4KB bytes code size
+
+func init() {
+	for i := 0; i < benchElemCount; i++ {
+		addr := *crypto.MustGenerateRandomAddress()
+		addrList = append(addrList, addr[:])
+	}
+}
+
+func constructTrie(db database.Database) *Trie {
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, addr := range addrList {
+		if err = trie.Put(addr, code); err != nil {
+			panic(err)
+		}
+	}
+
+	return trie
+}
+
+func Benchmark_Trie_Get(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie := constructTrie(db)
+	key := addrList[len(addrList)/2]
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if _, found := trie.Get(key); !found {
+			panic("value not found by key")
+		}
+	}
+}
+
+func Benchmark_Trie_Put(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
+	if err != nil {
+		panic(err)
+	}
+
+	for i, addrLen := 0, len(addrList); i < b.N; i++ {
+		if err = trie.Put(addrList[i%addrLen], code); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func Benchmark_Trie_Commit(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	trie := constructTrie(db)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		trie.Commit(nil)
+	}
 }

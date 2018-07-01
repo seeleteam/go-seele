@@ -81,6 +81,33 @@ func Test_Transaction_Validate_NoDataChange(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 }
 
+func Benchmark_Transaction_ValidateWithState(b *testing.B) {
+	tx := newTestTx(nil, 100, 2, 38, true)
+	statedb := newTestStateDB(tx.Data.From, 38, 200)
+
+	for i := 0; i < b.N; i++ {
+		tx.Validate(statedb)
+	}
+}
+
+func Benchmark_Transaction_ValidateWithoutState(b *testing.B) {
+	tx := newTestTx(nil, 100, 2, 38, true)
+
+	for i := 0; i < b.N; i++ {
+		tx.ValidateWithoutState(true, true)
+	}
+}
+
+func Benchmark_Transaction_ParallelValidte(b *testing.B) {
+	tx := newTestTx(nil, 100, 2, 38, true)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			tx.ValidateWithoutState(true, true)
+		}
+	})
+}
+
 // Validate failed if transaction not signed.
 func Test_Transaction_Validate_NotSigned(t *testing.T) {
 	tx := newTestTx(t, 100, 2, 38, false)

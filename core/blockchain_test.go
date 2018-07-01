@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
@@ -27,9 +28,9 @@ type testAccount struct {
 }
 
 var testGenesisAccounts = []*testAccount{
-	newTestAccount(big.NewInt(100), 0),
-	newTestAccount(big.NewInt(100), 0),
-	newTestAccount(big.NewInt(100), 0),
+	newTestAccount(big.NewInt(100000), 0),
+	newTestAccount(big.NewInt(100000), 0),
+	newTestAccount(big.NewInt(100000), 0),
 }
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
@@ -136,7 +137,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, st
 }
 
 func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -148,7 +149,7 @@ func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -161,7 +162,7 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -174,7 +175,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -187,7 +188,7 @@ func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -207,7 +208,7 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -225,7 +226,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -246,7 +247,7 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 }
 
 func Test_Blockchain_BlockFork(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -267,7 +268,7 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 }
 
 func Test_BlockChain_InvalidParent(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -277,7 +278,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 }
 
 func Test_Blockchain_InvalidHeight(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -287,7 +288,7 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 }
 
 func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -333,7 +334,7 @@ func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHa
 }
 
 func Test_Blockchain_Shard(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bcStore := store.NewBlockchainDatabase(db)
@@ -353,7 +354,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 }
 
 func Test_Blockchain_ApplyTransaction(t *testing.T) {
-	db, dispose := newTestDatabase()
+	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
@@ -368,7 +369,7 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 
 	// check before applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100000))
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
 
@@ -377,7 +378,36 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	// check after applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(88))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(99988))
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
+}
+
+func Benchmark_NewTestBlock(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		newTestBlock(bc, bc.genesisBlock.HeaderHash, bc.genesisBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+	}
+}
+
+func Benchmark_Blockchain_WriteBlock(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	preBlock := bc.genesisBlock
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+		if err := bc.WriteBlock(block); err != nil {
+			b.Fatalf("failed to write block, %v", err.Error())
+		}
+		preBlock = block
+	}
 }

@@ -119,8 +119,8 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	}
 
 	// transfer fee to coinbase
-	statedb.SubBalance(tx.Data.From, tx.Data.Fee)
-	statedb.AddBalance(context.Coinbase, tx.Data.Fee)
+	statedb.SubBalance(tx.Data.From, totalFee)
+	statedb.AddBalance(context.Coinbase, totalFee)
 
 	return receipt, nil
 }
