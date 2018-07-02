@@ -14,14 +14,19 @@ import (
 	"github.com/seeleteam/go-seele/log/comm"
 )
 
-//ShardCount represents the total number of shards.
-const ShardCount = 20
+const (
+	//ShardCount represents the total number of shards.
+	ShardCount = 20
 
-// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
-const PrintExplosionLog = false
+	// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
+	PrintExplosionLog = false
 
-// RefreshTime is the time of metrics sleep 5 seconds
-const RefreshTime = 5 * time.Second
+	// MetricsRefreshTime is the time of metrics sleep 1 minute
+	MetricsRefreshTime = time.Minute
+
+	// CPUMetricsIntervalTime is the time of metrics monitor cpu
+	CPUMetricsIntervalTime = time.Second
+)
 
 var (
 	// tempFolder used to store temp file, such as log files

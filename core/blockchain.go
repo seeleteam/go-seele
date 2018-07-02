@@ -213,6 +213,17 @@ func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 
 // WriteBlock writes the specified block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
+	startWriteBlockTime := time.Now()
+	if err := bc.writeBlock(block); err != nil {
+		return err
+	}
+	doneWriteBlockTime := time.Now()
+	markTime := doneWriteBlockTime.Sub(startWriteBlockTime)
+	metricsWriteBlockMeter.Mark(int64(markTime))
+	return nil
+}
+
+func (bc *Blockchain) writeBlock(block *types.Block) error {
 	if err := bc.validateBlock(block); err != nil {
 		return err
 	}
