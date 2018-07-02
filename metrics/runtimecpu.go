@@ -11,9 +11,9 @@ import (
 
 var (
 	// metricsCpuGauge is the usage rate of the metrics current system
-	metricsCpuGauge = metrics.GetOrRegisterGauge("cpu.account", nil)
+	metricsCpuGauge = metrics.GetOrRegisterGauge("cpu.os", nil)
 	// metricsSeeleCpuGauge is the usage rate of the metrics current process
-	metricsSeeleCpuGauge = metrics.GetOrRegisterGauge("cpu.seele.account", nil)
+	metricsSeeleCpuGauge = metrics.GetOrRegisterGauge("cpu.seele", nil)
 )
 
 func getCPURate(interval time.Duration, percpu bool) (int64, error) {
