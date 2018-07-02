@@ -15,6 +15,7 @@ import (
 )
 
 const (
+
 	//ShardCount represents the total number of shards.
 	ShardCount = 20
 
@@ -24,8 +25,8 @@ const (
 	// MetricsRefreshTime is the time of metrics sleep 1 minute
 	MetricsRefreshTime = time.Minute
 
-	// CPUMetricsIntervalTime is the time of metrics monitor cpu
-	CPUMetricsIntervalTime = time.Second
+	// CPUMetricsRefreshTime is the time of metrics monitor cpu
+	CPUMetricsRefreshTime = time.Second
 )
 
 var (

@@ -15,7 +15,7 @@ import (
 	influxdb "github.com/seeleteam/go-seele/metrics/go-metrics-influxdb"
 )
 
-var MetricsWriteBlockMeter = metrics.GetOrRegisterMeter("write.block.time", nil)
+var MetricsWriteBlockMeter = metrics.GetOrRegisterMeter("core.blockchain.writeBlock.time", nil)
 
 // Config infos for influxdb
 type Config struct {

@@ -218,9 +218,8 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	if err := bc.doWriteBlock(block); err != nil {
 		return err
 	}
-	doneWriteBlockTime := time.Now()
-	markTime := doneWriteBlockTime.Sub(startWriteBlockTime)
-	metrics.MetricsWriteBlockMeter.Mark(int64(markTime.Seconds()))
+	markTime := time.Since(startWriteBlockTime)
+	metrics.MetricsWriteBlockMeter.Mark(int64(markTime.Nanoseconds()))
 	return nil
 }
 
