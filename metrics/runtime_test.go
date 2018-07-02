@@ -8,6 +8,6 @@ import (
 )
 
 func Test_getCPURate(t *testing.T) {
-	_, err := getCPURate(common.RefreshTime, false)
+	_, err := getCPURate(common.MetricsRefreshTime, false)
 	assert.Equal(t, err, nil)
 }
