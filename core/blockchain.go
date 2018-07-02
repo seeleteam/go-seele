@@ -21,6 +21,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
@@ -214,16 +215,16 @@ func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 // WriteBlock writes the specified block to the blockchain store.
 func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	startWriteBlockTime := time.Now()
-	if err := bc.writeBlock(block); err != nil {
+	if err := bc.doWriteBlock(block); err != nil {
 		return err
 	}
 	doneWriteBlockTime := time.Now()
 	markTime := doneWriteBlockTime.Sub(startWriteBlockTime)
-	metricsWriteBlockMeter.Mark(int64(markTime))
+	metrics.MetricsWriteBlockMeter.Mark(int64(markTime.Seconds()))
 	return nil
 }
 
-func (bc *Blockchain) writeBlock(block *types.Block) error {
+func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if err := bc.validateBlock(block); err != nil {
 		return err
 	}
