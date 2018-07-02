@@ -39,7 +39,7 @@ func collectRuntimeMetrics() {
 
 		// cpuSeeleResult is the cpu info of the current process
 		if cpuSeeleResult, err := getProcessCPURate(common.CPUMetricsIntervalTime); err == nil {
-			metricsSeeleCputGauge.Update(cpuSeeleResult)
+			metricsSeeleCpuGauge.Update(cpuSeeleResult)
 		}
 
 		// diskResult is the disk info of the current system

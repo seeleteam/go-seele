@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	metricsCpuGauge       = metrics.GetOrRegisterGauge("cpu.accout", nil)
-	metricsSeeleCputGauge = metrics.GetOrRegisterGauge("cpu.seele.accout", nil)
+	metricsCpuGauge      = metrics.GetOrRegisterGauge("cpu.accout", nil)
+	metricsSeeleCpuGauge = metrics.GetOrRegisterGauge("cpu.seele.accout", nil)
 )
 
 func getCPURate(interval time.Duration, percpu bool) (int64, error) {
