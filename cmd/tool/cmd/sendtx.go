@@ -25,7 +25,6 @@ import (
 
 var tps int
 var debug bool
-var threads int
 
 // send tx mode
 // mode 1: send tx and check the txs periodically. add them back to balances after confirmed
