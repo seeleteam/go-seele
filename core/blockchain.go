@@ -219,7 +219,7 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 		return err
 	}
 	markTime := time.Since(startWriteBlockTime)
-	metrics.MetricsWriteBlockMeter.Mark(int64(markTime.Nanoseconds()))
+	metrics.MetricsWriteBlockMeter.Mark(markTime.Nanoseconds())
 	return nil
 }
 
