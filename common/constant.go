@@ -15,8 +15,7 @@ import (
 )
 
 const (
-
-	//ShardCount represents the total number of shards.
+	// ShardCount represents the total number of shards.
 	ShardCount = 20
 
 	// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
