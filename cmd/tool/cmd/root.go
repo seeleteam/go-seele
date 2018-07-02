@@ -16,6 +16,7 @@ import (
 
 var serveList string
 var clientList map[uint]*rpc.Client // shard -> client
+var threads int
 
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
@@ -37,7 +38,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&serveList, "server", "s", "127.0.0.1:55027", "server list for requesting and submit, split by ,")
+	rootCmd.PersistentFlags().StringVarP(&serveList, "server", "s", "127.0.0.1:8027", "server list for requesting and submit, split by ,")
 }
 
 func initClient() {

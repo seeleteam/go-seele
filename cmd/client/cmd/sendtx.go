@@ -26,7 +26,7 @@ var sendtxCmd = &cobra.Command{
 	Long: `send a tx to the miner
   For example:
     client.exe sendtx -m 0 -t 0x<public address> -f keyfile
-    client.exe sendtx -a 127.0.0.1:55027 -m 0 -t 0x<public address> -f keyfile `,
+    client.exe sendtx -a 127.0.0.1:8027 -m 0 -t 0x<public address> -f keyfile `,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {

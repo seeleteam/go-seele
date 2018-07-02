@@ -28,7 +28,7 @@ var (
 func init() {
 	createCmd.Flags().StringVarP(&code, "code", "c", "", "the binary code of the smart contract to create, or the name of a readable file that contains the binary contract code in the local directory(Required)")
 	createCmd.Flags().StringVarP(&solFile, "file", "f", "", "solidity file path")
-	createCmd.Flags().StringVarP(&account, "account", "a", "", "the account address(Default is random and has 100 balance)")
+	createCmd.Flags().StringVarP(&account, "account", "a", "", "the account address(Default is random and has 1 seele)")
 	rootCmd.AddCommand(createCmd)
 }
 

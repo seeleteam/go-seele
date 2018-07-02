@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rpcAddr string
-
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "node",
@@ -35,6 +33,5 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
 	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("node"))
 }
