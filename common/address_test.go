@@ -21,9 +21,7 @@ func Test_BytesToAddress(t *testing.T) {
 	// Create address with single byte.
 	b1 := make([]byte, addressLen)
 	b1[addressLen-1] = 1
-
-	bytesss := BytesToAddress([]byte{1})
-	assert.Equal(t, (&bytesss).Bytes(), b1)
+	assert.Equal(t, BytesToAddress([]byte{1}).Bytes(), b1)
 
 	// Create address with multiple bytes.
 	b2 := make([]byte, addressLen)
