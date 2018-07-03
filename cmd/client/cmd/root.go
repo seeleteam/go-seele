@@ -38,8 +38,8 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:55027", "rpc address")
-	rootCmd.PersistentFlags().StringVarP(&wsAddr, "wsaddr", "w", "ws://127.0.0.1:8080/ws", "websocket rpc address")
+	rootCmd.PersistentFlags().StringVarP(&rpcAddr, "addr", "a", "127.0.0.1:8027", "rpc address")
+	rootCmd.PersistentFlags().StringVarP(&wsAddr, "wsaddr", "w", "ws://127.0.0.1:8047/ws", "websocket rpc address")
 	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("client"))
 }
 
