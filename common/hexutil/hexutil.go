@@ -10,15 +10,19 @@ import (
 )
 
 var (
-	ErrEmptyString   = &decError{"empty hex string"}
-	ErrSyntax        = &decError{"invalid hex string"}
+	// ErrEmptyString empty hex string
+	ErrEmptyString = &decError{"empty hex string"}
+	// ErrSyntax invalid hex string
+	ErrSyntax = &decError{"invalid hex string"}
+	// ErrMissingPrefix hex string without 0x prefix
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
-	ErrOddLength     = &decError{"hex string of odd length"}
+	// ErrOddLength hex string of odd length
+	ErrOddLength = &decError{"hex string of odd length"}
 )
 
 type decError struct{ msg string }
 
-func (err decError) Error() string { return err.msg }
+func (err *decError) Error() string { return err.msg }
 
 // BytesToHex encodes b as a hex string with 0x prefix.
 func BytesToHex(b []byte) string {

@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -20,7 +21,9 @@ func Test_BytesToAddress(t *testing.T) {
 	// Create address with single byte.
 	b1 := make([]byte, addressLen)
 	b1[addressLen-1] = 1
-	assert.Equal(t, BytesToAddress([]byte{1}).Bytes(), b1)
+
+	bytesss := BytesToAddress([]byte{1})
+	assert.Equal(t, (&bytesss).Bytes(), b1)
 
 	// Create address with multiple bytes.
 	b2 := make([]byte, addressLen)
@@ -34,6 +37,40 @@ func Test_BytesToAddress(t *testing.T) {
 		b3[i] = byte(i + 1)
 	}
 	assert.Equal(t, BytesToAddress(b3).Bytes(), b3[1:])
+}
+
+func Test_ToHexAndEqualAndIsEmpty(t *testing.T) {
+	// ToHex
+	b1 := make([]byte, addressLen)
+	b1[addressLen-1] = 1
+	addr1 := BytesToAddress([]byte{1})
+	assert.Equal(t, addr1.ToHex(), "0x0000000000000000000000000000000000000001")
+
+	// Equal
+	b2 := make([]byte, addressLen)
+	b2[addressLen-1] = 1
+	addr2 := BytesToAddress([]byte{1})
+	assert.Equal(t, addr1.Equal(addr2), true)
+
+	// IsEmpty
+	emptyAddr := EmptyAddress
+	assert.Equal(t, emptyAddr.IsEmpty(), true)
+}
+
+func Test_Big(t *testing.T) {
+	b1 := make([]byte, addressLen)
+	b1[addressLen-1] = 1
+	addr1 := BytesToAddress([]byte{1})
+
+	assert.Equal(t, addr1.Big(), big.NewInt(1))
+}
+
+func Test_Shard(t *testing.T) {
+	b1 := make([]byte, addressLen)
+	b1[addressLen-1] = 1
+	addr1 := BytesToAddress([]byte{1})
+
+	assert.Equal(t, addr1.Shard(), uint(1))
 }
 
 func Test_JsonMarshal(t *testing.T) {
