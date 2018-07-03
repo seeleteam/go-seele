@@ -6,6 +6,7 @@
 package common
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,4 +64,13 @@ func Test_MarshalAndUnmarshalText(t *testing.T) {
 	hash.UnmarshalText(bytes)
 
 	assert.Equal(t, hash.Equal(StringToHash(str)), true)
+
+	buff, err := json.Marshal(hash.ToHex())
+	assert.Equal(t, err, nil)
+
+	var result Hash
+	err = json.Unmarshal(buff, &result)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, result.Bytes(), hash.Bytes())
+
 }
