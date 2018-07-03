@@ -26,7 +26,7 @@ var signCmd = &cobra.Command{
 	Long: `sign the data with your private key
   For example:
     client.exe sign -m 0 -t 0x<public address> --fee 0 -k privatekey
-    client.exe sign -a 127.0.0.1:55027 -m 0 -t 0x<public address> --fee 0 -k privatekey`,
+    client.exe sign -a 127.0.0.1:8027 -m 0 -t 0x<public address> --fee 0 -k privatekey`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {

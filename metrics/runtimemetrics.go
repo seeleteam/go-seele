@@ -32,19 +32,29 @@ func collectRuntimeMetrics() {
 		memPauses.Mark(int64(memStats.PauseTotalNs - lastPauseNs))
 		lastPauseNs = memStats.PauseTotalNs
 
-		cpuresult, err := getCPURate(common.RefreshTime, false)
-		if err == nil {
-			metricsCputGauge.Update(cpuresult)
+		// cpuResult is the cpu info of the current system
+		if cpuResult, err := getCPURate(common.CPUMetricsRefreshTime, false); err == nil {
+			metricsCpuGauge.Update(cpuResult)
 		}
 
-		diskresult, err := disk.Usage(common.GetDefaultDataFolder())
-		if err == nil {
-			metricsDiskUsedCountGauge.Update(int64(diskresult.Used))
-			metricsDiskFreeCountGauge.Update(int64(diskresult.Free))
-			metricsDiskUsedPercentGauge.Update(int64(diskresult.UsedPercent))
-			metricsDiskTotalCountGauge.Update(int64(diskresult.Total))
+		// cpuSeeleResult is the cpu info of the current process
+		if cpuSeeleResult, err := getProcessCPURate(common.CPUMetricsRefreshTime); err == nil {
+			metricsSeeleCpuGauge.Update(cpuSeeleResult)
 		}
-		// sleep 5 seconds
-		time.Sleep(common.RefreshTime)
+
+		// diskResult is the disk info of the current system
+		if diskResult, err := disk.Usage(common.GetDefaultDataFolder()); err == nil {
+			metricsDiskFreeCountGauge.Update(int64(diskResult.Free))
+		}
+
+		// diskInfo is the disk info of the current process
+		if diskInfo := GetDiskInfo(); diskInfo != nil {
+			metricsDiskReadCountGauge.Update(int64(diskInfo.ReadCount))
+			metricsDiskWriteCountGauge.Update(int64(diskInfo.WriteCount))
+			metricsDiskReadBytesGauge.Update(int64(diskInfo.ReadBytes))
+			metricsDiskWriteBytesGauge.Update(int64(diskInfo.WriteBytes))
+		}
+
+		time.Sleep(common.MetricsRefreshTime)
 	}
 }
