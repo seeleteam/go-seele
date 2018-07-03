@@ -20,7 +20,7 @@ ENV PATH /go-seele:$PATH
 
 RUN chmod +x /go-seele/node
 
-EXPOSE 55027 65027 39007
+EXPOSE 8027 8037 8057
 
 # start a node with your 'config.json' file, this file must be external from a volume
 # For example:
