@@ -386,7 +386,8 @@ func opSha3(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Sta
 }
 
 func opAddress(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Address().Big())
+	addr := contract.Address()
+	stack.push(addr.Big())
 	return nil, nil
 }
 
@@ -402,7 +403,8 @@ func opOrigin(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *S
 }
 
 func opCaller(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(contract.Caller().Big())
+	addr := contract.Caller()
+	stack.push(addr.Big())
 	return nil, nil
 }
 
