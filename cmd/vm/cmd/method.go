@@ -54,7 +54,7 @@ func newSolMethod(funcFullName, funcHash string) solMethod {
 	return method
 }
 
-func (m solMethod) createInput() string {
+func (m *solMethod) createInput() string {
 	input := []string{m.Hash}
 	methodArgs := os.Args[len(os.Args)-len(m.ArgTypes):]
 
@@ -71,7 +71,7 @@ func (m solMethod) createInput() string {
 	return strings.Join(input, "")
 }
 
-func (m solMethod) encodeInput(argType, argValue string) (string, error) {
+func (m *solMethod) encodeInput(argType, argValue string) (string, error) {
 	switch {
 	case argType == "bool":
 		boolValue, err := strconv.ParseBool(argValue)
@@ -117,6 +117,6 @@ func (m solMethod) encodeInput(argType, argValue string) (string, error) {
 	}
 }
 
-func (m solMethod) encodeValue(num *big.Int) string {
+func (m *solMethod) encodeValue(num *big.Int) string {
 	return common.BigToHash(num).ToHex()[2:]
 }
