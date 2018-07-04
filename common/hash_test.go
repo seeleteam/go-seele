@@ -65,12 +65,11 @@ func Test_MarshalAndUnmarshalText(t *testing.T) {
 
 	assert.Equal(t, hash.Equal(StringToHash(str)), true)
 
-	buff, err := json.Marshal(hash.ToHex())
+	buff, err := json.Marshal(&hash)
 	assert.Equal(t, err, nil)
 
 	var result Hash
 	err = json.Unmarshal(buff, &result)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result.Bytes(), hash.Bytes())
-
 }
