@@ -65,7 +65,7 @@ func Test_MarshalAndUnmarshalText(t *testing.T) {
 
 	assert.Equal(t, hash.Equal(StringToHash(str)), true)
 
-	buff, err := json.Marshal(&hash)
+	buff, err := json.Marshal(hash)
 	assert.Equal(t, err, nil)
 
 	var result Hash

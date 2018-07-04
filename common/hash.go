@@ -87,7 +87,7 @@ func BigToHash(b *big.Int) Hash { return BytesToHash(b.Bytes()) }
 func (a Hash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // MarshalText marshals the Hash to HEX string.
-func (a *Hash) MarshalText() ([]byte, error) {
+func (a Hash) MarshalText() ([]byte, error) {
 	str := a.ToHex()
 	return []byte(str), nil
 }
