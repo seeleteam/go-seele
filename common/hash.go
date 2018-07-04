@@ -50,12 +50,12 @@ func (a Hash) Bytes() []byte {
 }
 
 // String returns the string representation of the hash
-func (a Hash) String() string {
+func (a *Hash) String() string {
 	return string(a[:])
 }
 
 // Equal returns a boolean value indicating whether the hash a is equal to the input hash b.
-func (a Hash) Equal(b Hash) bool {
+func (a *Hash) Equal(b Hash) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
