@@ -39,3 +39,45 @@ func Test_Hex(t *testing.T) {
 	bytes, err = HexToBytes(str)
 	assert.Equal(t, err, ErrOddLength)
 }
+
+func Test_Has0xPrefix(t *testing.T) {
+	// Normal case 1
+	str := "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"
+	result := Has0xPrefix(str)
+	assert.Equal(t, result, true)
+
+	// Normal case 2
+	str = "0X5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, true)
+
+	// Normal case 3
+	str = "0x"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, true)
+
+	// Normal case 4
+	str = "0X"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, true)
+
+	// Bad case 1
+	str = "0"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, false)
+
+	// Bad case 2
+	str = "1x"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, false)
+
+	// Bad case 3
+	str = "1X"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, false)
+
+	// Bad case 4
+	str = "0a"
+	result = Has0xPrefix(str)
+	assert.Equal(t, result, false)
+}
