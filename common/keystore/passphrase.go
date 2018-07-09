@@ -33,7 +33,7 @@ var (
 	// ErrDecrypt error when the passphrase is not right
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 
-	// ErrEmptyAuthKey error when the passphrase is not right
+	// ErrEmptyAuthKey error when the auth key is empty
 	ErrEmptyAuthKey = errors.New("encryption auth key could not be empty")
 )
 
