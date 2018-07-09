@@ -15,6 +15,11 @@ func Test_IsShardEnabled(t *testing.T) {
 	// To store the "LocalShardNumber" so as not to impact other test cases that depend on this global variable.
 	orginalLocalShardNumber := LocalShardNumber
 
+	defer func() {
+		// Restore
+		LocalShardNumber = orginalLocalShardNumber
+	}()
+
 	// IsShardEnabled returns true if the LocalShardNumber is set and less than ShardCount+1.
 	// Otherwise, false.
 	LocalShardNumber = 0
@@ -27,7 +32,4 @@ func Test_IsShardEnabled(t *testing.T) {
 		LocalShardNumber = shard
 		assert.Equal(t, IsShardEnabled(), true)
 	}
-
-	// Restore
-	LocalShardNumber = orginalLocalShardNumber
 }
