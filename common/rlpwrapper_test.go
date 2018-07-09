@@ -27,6 +27,12 @@ var s = &Student{
 	_age:  24,
 }
 
+var sWithPartialValues = &Student{
+	Name: "s1",
+}
+
+var sEmpty = &Student{}
+
 // test rlp correction
 func Test_RLP(t *testing.T) {
 	buffer := bytes.Buffer{}
@@ -49,16 +55,36 @@ func Test_RLP(t *testing.T) {
 
 // test rlp wrapper
 func Test_RLPWrapper(t *testing.T) {
-	data, err := Serialize(&s)
-	if err != nil {
-		panic(err)
-	}
-
+	// Full object
+	data, _ := serializeStudent(s)
 	nst := Student{}
-	err = Deserialize(data, &nst)
+	err := Deserialize(data, &nst)
 
+	assert.Equal(t, err, nil)
 	assert.Equal(t, nst.Name, s.Name)
 	assert.Equal(t, nst.NO, s.NO)
+	assert.Equal(t, nst.score, uint(0))
+	assert.Equal(t, nst._age, uint(0))
+
+	// Partial object
+	data, _ = serializeStudent(sWithPartialValues)
+	nst = Student{}
+	err = Deserialize(data, &nst)
+
+	assert.Equal(t, err, nil)
+	assert.Equal(t, nst.Name, s.Name)
+	assert.Equal(t, nst.NO, uint(0))
+	assert.Equal(t, nst.score, uint(0))
+	assert.Equal(t, nst._age, uint(0))
+
+	// Empty object
+	data, _ = serializeStudent(sEmpty)
+	nst = Student{}
+	err = Deserialize(data, &nst)
+
+	assert.Equal(t, err, nil)
+	assert.Equal(t, nst.Name, "")
+	assert.Equal(t, nst.NO, uint(0))
 	assert.Equal(t, nst.score, uint(0))
 	assert.Equal(t, nst._age, uint(0))
 }
@@ -76,4 +102,13 @@ func Test_SerializePanic(t *testing.T) {
 	}()
 
 	SerializePanic(&student{1})
+}
+
+func serializeStudent(s *Student) ([]byte, error) {
+	data, err := Serialize(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return data, err
 }
