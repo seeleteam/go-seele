@@ -6,6 +6,7 @@
 package keystore
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -26,6 +27,7 @@ func Test_PassPhrase(t *testing.T) {
 
 	result, err := EncryptKey(key, password)
 	assert.Equal(t, err, nil)
+	assert.Equal(t, len(result), 376)
 
 	decryptKey, err := DecryptKey(result, password)
 	assert.Equal(t, err, nil)
@@ -34,4 +36,16 @@ func Test_PassPhrase(t *testing.T) {
 
 	_, err = DecryptKey(result, "badpass")
 	assert.Equal(t, err, ErrDecrypt)
+
+	// Empty password
+	_, err = EncryptKey(key, "")
+	assert.Equal(t, err, ErrEmptyAuthKey)
+
+	// Version not match
+	var encKey encryptedKey
+	err = json.Unmarshal(result, &encKey)
+	encKey.Version = 2
+	result, err = json.MarshalIndent(encKey, "", "\t")
+	_, err = DecryptKey(result, password)
+	assert.Equal(t, err.Error(), "Version not supported: 2")
 }
