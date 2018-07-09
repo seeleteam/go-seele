@@ -56,7 +56,7 @@ func Test_RLP(t *testing.T) {
 // test rlp wrapper
 func Test_RLPWrapper(t *testing.T) {
 	// Full object
-	data, _ := serializeStudent(s)
+	data := serializeStudent(s)
 	nst := Student{}
 	err := Deserialize(data, &nst)
 
@@ -67,7 +67,7 @@ func Test_RLPWrapper(t *testing.T) {
 	assert.Equal(t, nst._age, uint(0))
 
 	// Partial object
-	data, _ = serializeStudent(sWithPartialValues)
+	data = serializeStudent(sWithPartialValues)
 	nst = Student{}
 	err = Deserialize(data, &nst)
 
@@ -78,7 +78,7 @@ func Test_RLPWrapper(t *testing.T) {
 	assert.Equal(t, nst._age, uint(0))
 
 	// Empty object
-	data, _ = serializeStudent(sEmpty)
+	data = serializeStudent(sEmpty)
 	nst = Student{}
 	err = Deserialize(data, &nst)
 
@@ -104,11 +104,11 @@ func Test_SerializePanic(t *testing.T) {
 	SerializePanic(&student{1})
 }
 
-func serializeStudent(s *Student) ([]byte, error) {
+func serializeStudent(s *Student) []byte {
 	data, err := Serialize(s)
 	if err != nil {
 		panic(err)
 	}
 
-	return data, err
+	return data
 }
