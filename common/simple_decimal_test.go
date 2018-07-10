@@ -6,6 +6,7 @@
 package common
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
@@ -36,14 +37,11 @@ func Test_BigToDecimal(t *testing.T) {
 }
 
 func Test_MaxMinIntToDecimal(t *testing.T) {
-	const MaxUint = ^uint(0)
-	const MaxInt = int(MaxUint >> 1)
-
-	var num = int64(MaxUint >> 1) // 9223372036854775807
+	var num int64 = math.MaxInt64 // 9223372036854775807
 	var number = big.NewInt(num)
 	assert.Equal(t, BigToDecimal(number), "92233720368.54775807")
 
-	num = int64(-MaxInt - 1) // -9223372036854775808
+	num = int64(-math.MaxInt64 - 1) // -9223372036854775808
 	number = big.NewInt(num)
 	assert.Equal(t, BigToDecimal(number), "-92233720369.45224192")
 }
