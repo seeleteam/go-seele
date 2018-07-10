@@ -38,7 +38,7 @@ func Test_ConvertInt64ToBytes(t *testing.T) {
 	result = ConvertInt64ToBytes(num)
 	assert.Equal(t, bytes.Compare(numBytes, result), 0)
 
-	num = int64(-math.MaxInt64 - 1) // -9223372036854775808
+	num = math.MinInt64 // -9223372036854775808
 	numBytes = []byte{128, 0, 0, 0, 0, 0, 0, 0}
 	result = ConvertInt64ToBytes(num)
 	assert.Equal(t, bytes.Compare(numBytes, result), 0)

@@ -41,7 +41,7 @@ func Test_MaxMinIntToDecimal(t *testing.T) {
 	var number = big.NewInt(num)
 	assert.Equal(t, BigToDecimal(number), "92233720368.54775807")
 
-	num = int64(-math.MaxInt64 - 1) // -9223372036854775808
+	num = math.MinInt64 // -9223372036854775808
 	number = big.NewInt(num)
 	assert.Equal(t, BigToDecimal(number), "-92233720369.45224192")
 }
