@@ -44,8 +44,6 @@ func Test_LogFile(t *testing.T) {
 
 func Test_LogLevels(t *testing.T) {
 	log := GetLogger("test3", true)
-	levels := log.GetLevels()
-	assert.Equal(t, logrus.AllLevels, levels)
 	log.SetLevel(logrus.InfoLevel)
 	log.Debug("debug can be done")
 	log.Info("Info can be done")
