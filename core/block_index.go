@@ -16,16 +16,16 @@ import (
 
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
-	state          *state.Statedb
-	currentBlock   *types.Block
+	state           *state.Statedb
+	currentBlock    *types.Block
 	totalDifficulty *big.Int
 }
 
 // NewBlockIndex constructs and returns a BlockIndex instance
 func NewBlockIndex(state *state.Statedb, block *types.Block, td *big.Int) *BlockIndex {
 	return &BlockIndex{
-		state:          state,
-		currentBlock:   block,
+		state:           state,
+		currentBlock:    block,
 		totalDifficulty: td,
 	}
 }
@@ -125,7 +125,7 @@ func (bf *BlockLeaves) findBestBlockIndex() *BlockIndex {
 	return result
 }
 
-// IsBestBlockIndex indicates wether the given block index is the best compared with all indices in the block leaves
+// IsBestBlockIndex indicates whether the given block index is the best compared with all indexes in the block leaves
 func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
 	td := index.totalDifficulty
 	for item := range bf.blockIndexMap.IterBuffered() {
