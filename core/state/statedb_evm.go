@@ -21,7 +21,7 @@ func (s *Statedb) CreateAccount(address common.Address) {
 
 	stateObj = newStateObject(address)
 	s.curJournal.append(createObjectChange{&address})
-	s.cache(address, stateObj)
+	s.stateObjects[address] = stateObj
 }
 
 // GetCodeHash returns the hash of the contract code associated with the specified address if any.

@@ -14,6 +14,11 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
+var (
+	// ErrEmptyKey key is empty
+	ErrEmptyKey = errors.New("key could not be empty")
+)
+
 // LevelDB wraps the leveldb
 type LevelDB struct {
 	db       *leveldb.DB
@@ -60,6 +65,10 @@ func (db *LevelDB) Get(key []byte) ([]byte, error) {
 
 // Put sets the value for the given key
 func (db *LevelDB) Put(key []byte, value []byte) error {
+	if len(key) < 1 {
+		return ErrEmptyKey
+	}
+
 	return db.db.Put(key, value, nil)
 }
 

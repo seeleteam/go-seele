@@ -29,6 +29,10 @@ func Test_Put(t *testing.T) {
 	value, err := db.GetString("1")
 	assert.Equal(t, err, nil)
 	assert.Equal(t, value, "2")
+
+	// Put empty key
+	err = db.PutString("", "2")
+	assert.Equal(t, err, ErrEmptyKey)
 }
 
 func Test_Has(t *testing.T) {

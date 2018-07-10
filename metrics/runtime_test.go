@@ -2,12 +2,12 @@ package metrics
 
 import (
 	"testing"
+	"time"
 
 	"github.com/magiconair/properties/assert"
-	"github.com/seeleteam/go-seele/common"
 )
 
 func Test_getCPURate(t *testing.T) {
-	_, err := getCPURate(common.RefreshTime, false)
+	_, err := getCPURate(100*time.Millisecond, false)
 	assert.Equal(t, err, nil)
 }

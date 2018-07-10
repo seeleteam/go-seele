@@ -6,9 +6,11 @@
 package common
 
 import (
-	"github.com/magiconair/properties/assert"
+	"math"
 	"math/big"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 func Test_BigToDecimal(t *testing.T) {
@@ -32,4 +34,14 @@ func Test_BigToDecimal(t *testing.T) {
 
 	number = big.NewInt(800000600)
 	assert.Equal(t, BigToDecimal(number), "8.000006")
+}
+
+func Test_MaxMinIntToDecimal(t *testing.T) {
+	var num int64 = math.MaxInt64 // 9223372036854775807
+	var number = big.NewInt(num)
+	assert.Equal(t, BigToDecimal(number), "92233720368.54775807")
+
+	num = math.MinInt64 // -9223372036854775808
+	number = big.NewInt(num)
+	assert.Equal(t, BigToDecimal(number), "-92233720369.45224192")
 }

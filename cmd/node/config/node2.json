@@ -3,14 +3,14 @@
     "name": "seele node2",
     "version": "1.0",
     "dataDir": "node2",
-    "address": "0.0.0.0:55028",
+    "address": "0.0.0.0:8028",
     "coinbase": "0x0ea2a45ab5a909c309439b0e004c61b7b2a3e831"
   },
   "p2p": {
-    "address": "0.0.0.0:39008",
+    "address": "0.0.0.0:8058",
     "privateKey": "0xac6932c2e429e7f36a6b93979e2c28e11036c78c965e866151c21750bd5506ca",
     "staticNodes": [
-      "127.0.0.1:39007"
+      "127.0.0.1:8057"
     ],
     "networkID": 1
   },
@@ -19,7 +19,7 @@
     "printLog": true
   },
   "httpServer": {
-    "address": "127.0.0.1:65028",
+    "address": "127.0.0.1:8038",
     "crosssorgins": [
       "*"
     ],
@@ -28,11 +28,11 @@
     ]
   },
   "wsserver": {
-    "address": "127.0.0.1:8081",
+    "address": "127.0.0.1:8048",
     "pattern": "/ws"
   },
   "metrics": {
-    "address": "127.0.0.1:8086",
+    "address": "127.0.0.1:8087",
     "duration": 10,
     "database": "influxdb",
     "username": "test",

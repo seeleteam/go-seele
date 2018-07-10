@@ -20,7 +20,6 @@ func Test_KeyStore(t *testing.T) {
 		panic(err)
 	}
 
-	fileName := filepath.Join(dir, "keyfile")
 	addr, keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
 		panic(err)
@@ -32,6 +31,7 @@ func Test_KeyStore(t *testing.T) {
 	}
 
 	password := "testfile"
+	fileName := filepath.Join(dir, "keyfile")
 	err = StoreKey(fileName, password, key)
 	assert.Equal(t, err, nil)
 

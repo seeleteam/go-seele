@@ -18,7 +18,7 @@ func NewCmdData() []*Request {
 			Use:   "getblockbyhash",
 			Short: "get block info by block hash",
 			Long: `For example:
-  			client.exe getblockbyhash --hash 0x0000009721cf7bb5859f1a0ced952fcf71929ff8382db6ef20041ed441d5f92f [-f=true] [-a 127.0.0.1:55027]`,
+  			client.exe getblockbyhash --hash 0x0000009721cf7bb5859f1a0ced952fcf71929ff8382db6ef20041ed441d5f92f [-f=true] [-a 127.0.0.1:8027]`,
 			ParamReflectType: "GetBlockByHashRequest",
 			Method:           "seele.GetBlockByHash",
 			UseWebsocket:     false,
@@ -28,7 +28,7 @@ func NewCmdData() []*Request {
 			Use:   "getblockbyheight",
 			Short: "get block info by block height",
 			Long: `For example:
-  			client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:55027]`,
+  			client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:8027]`,
 			ParamReflectType: "GetBlockByHeightRequest",
 			Method:           "seele.GetBlockByHeight",
 			UseWebsocket:     false,
@@ -43,7 +43,7 @@ func NewCmdData() []*Request {
 			Use:   "getblockrlp",
 			Short: "get block rlp hex by block height",
 			Long: `For example:
-  			client.exe getblockrlp --height -1 [-a 127.0.0.1:55027]`,
+  			client.exe getblockrlp --height -1 [-a 127.0.0.1:8027]`,
 			ParamReflectType: "int64",
 			Method:           "debug.GetBlockRlp",
 			UseWebsocket:     false,
@@ -109,7 +109,7 @@ func NewCmdData() []*Request {
 			Use:   "getpeercount",
 			Short: "get count of connected peers",
 			Long: `For example:
-	  		client.exe getpeercount [-a 127.0.0.1:55027]`,
+	  		client.exe getpeercount [-a 127.0.0.1:8027]`,
 			ParamReflectType: "nil",
 			Method:           "network.GetPeerCount",
 			UseWebsocket:     false,
@@ -119,7 +119,7 @@ func NewCmdData() []*Request {
 			Use:   "getnetworkversion",
 			Short: "get current network version",
 			Long: `For example:
-	  		client.exe getnetworkversion [-a 127.0.0.1:55027]`,
+	  		client.exe getnetworkversion [-a 127.0.0.1:8027]`,
 			ParamReflectType: "nil",
 			Method:           "network.GetNetworkVersion",
 			UseWebsocket:     false,
@@ -129,7 +129,7 @@ func NewCmdData() []*Request {
 			Use:   "getprotocolversion",
 			Short: "get seele protocol version",
 			Long: `For example:
-	  		client.exe getprotocolversion [-a 127.0.0.1:55027]`,
+	  		client.exe getprotocolversion [-a 127.0.0.1:8027]`,
 			ParamReflectType: "nil",
 			Method:           "network.GetProtocolVersion",
 			UseWebsocket:     false,
@@ -139,7 +139,7 @@ func NewCmdData() []*Request {
 			Use:   "getpeersinfo",
 			Short: "get seele peers info",
 			Long: `For example:
-	  		client.exe getpeersinfo [-a 127.0.0.1:55027]`,
+	  		client.exe getpeersinfo [-a 127.0.0.1:8027]`,
 			ParamReflectType: "nil",
 			Method:           "network.GetPeersInfo",
 			UseWebsocket:     false,
@@ -241,7 +241,7 @@ func NewCmdData() []*Request {
 			Short: "get the miner info",
 			Long: `get the miner info
 			For example:
-				client.exe getinfo -a 127.0.0.1:55027`,
+				client.exe getinfo -a 127.0.0.1:8027`,
 			ParamReflectType: "nil",
 			Method:           "seele.GetInfo",
 			UseWebsocket:     false,
@@ -261,7 +261,7 @@ func NewCmdData() []*Request {
 			Use:   "printblock",
 			Short: "get block pretty printed form by block height",
 			Long: `For example:
-				client.exe printblock --height -1 [-a 127.0.0.1:55027]`,
+				client.exe printblock --height -1 [-a 127.0.0.1:8027]`,
 			ParamReflectType: "int64",
 			Method:           "debug.PrintBlock",
 			UseWebsocket:     false,

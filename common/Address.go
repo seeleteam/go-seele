@@ -69,27 +69,35 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 }
 
 // Type returns the address type
-func (id Address) Type() AddressType {
+func (id *Address) Type() AddressType {
 	return AddressType(id[addressLen-1] & 0x0F)
 }
 
 // Bytes get the actual bytes
+//
+// Note: if we want to use pointer type, need to change the code snippet in unit test:
+//   BytesToAddress([]byte{1, 2}).Bytes()
+//   ->
+//   addrBytes := BytesToAddress([]byte{1, 2})
+//   (&addrBytes).Bytes()
+//
+// refer link: https://stackoverflow.com/questions/10535743/address-of-a-temporary-in-go
 func (id Address) Bytes() []byte {
 	return id[:]
 }
 
 // ToHex converts address to 0x prefixed HEX format.
-func (id Address) ToHex() string {
+func (id *Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
 // Equal checks if this address is the same with the specified address b.
-func (id Address) Equal(b Address) bool {
+func (id *Address) Equal(b Address) bool {
 	return bytes.Equal(id[:], b[:])
 }
 
 // IsEmpty returns true if this address is empty. Otherwise, false.
-func (id Address) IsEmpty() bool {
+func (id *Address) IsEmpty() bool {
 	return id.Equal(EmptyAddress)
 }
 
@@ -136,7 +144,7 @@ func BytesToAddress(bs []byte) Address {
 func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 
 // Big converts address to a big int.
-func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
+func (id *Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
 
 // MarshalText marshals the address to HEX string.
 func (id Address) MarshalText() ([]byte, error) {
@@ -156,7 +164,7 @@ func (id *Address) UnmarshalText(json []byte) error {
 }
 
 // Shard returns the shard number of this address.
-func (id Address) Shard() uint {
+func (id *Address) Shard() uint {
 	var sum uint
 
 	// sum [0:18]
@@ -172,7 +180,7 @@ func (id Address) Shard() uint {
 }
 
 // CreateContractAddress returns a contract address that in the same shard of this address.
-func (id Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
+func (id *Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
 	hash := hashFunc([]interface{}{id, nonce}).Bytes()
 
 	targetShardNum := id.Shard()
