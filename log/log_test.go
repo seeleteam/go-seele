@@ -12,6 +12,7 @@ import (
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/sirupsen/logrus"
 )
 
 func Test_Log(t *testing.T) {
@@ -39,4 +40,13 @@ func Test_LogFile(t *testing.T) {
 
 	exist := common.FileOrFolderExists(logPath)
 	assert.Equal(t, exist, true)
+}
+
+func Test_LogLevels(t *testing.T) {
+	log := GetLogger("test3", true)
+	log.SetLevel(logrus.InfoLevel)
+	log.Debug("debug can be done")
+	log.Info("Info can be done")
+	log.Warn("Warn can be done")
+	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }
