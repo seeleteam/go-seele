@@ -64,6 +64,21 @@ func (p *SeeleLog) Debug(format string, args ...interface{}) {
 	p.log.Debugf(format, args...)
 }
 
+// SetLogLevel set the log level
+func (p *SeeleLog) SetLogLevel(level logrus.Level) {
+	p.log.SetLevel(level)
+}
+
+// GetLevel get the log level
+func (p *SeeleLog) GetLevel() logrus.Level {
+	return p.log.Level
+}
+
+// GetLevels get all the log level
+func (p *SeeleLog) GetLevels() []logrus.Level {
+	return logrus.AllLevels
+}
+
 // GetLogger gets logrus.Logger object according to logName
 // each module can have its own logger
 func GetLogger(logName string, bConsole bool) *SeeleLog {
