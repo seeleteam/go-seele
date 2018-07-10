@@ -64,8 +64,8 @@ func (p *SeeleLog) Debug(format string, args ...interface{}) {
 	p.log.Debugf(format, args...)
 }
 
-// SetLogLevel set the log level
-func (p *SeeleLog) SetLogLevel(level logrus.Level) {
+// SetLevel set the log level
+func (p *SeeleLog) SetLevel(level logrus.Level) {
 	p.log.SetLevel(level)
 }
 

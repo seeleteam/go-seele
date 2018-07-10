@@ -6,7 +6,6 @@
 package log
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -46,22 +45,10 @@ func Test_LogFile(t *testing.T) {
 func Test_LogLevels(t *testing.T) {
 	log := GetLogger("test3", true)
 	levels := log.GetLevels()
-	fmt.Println("levels:", levels)
-	for i, v := range levels {
-		fmt.Println("i:", i, ",v:", uint32(v))
-	}
-	level := log.GetLevel()
-	fmt.Println("level:", level)
-	log.SetLogLevel(logrus.DebugLevel)
-	level = log.GetLevel()
-	fmt.Println("changed level is:", level)
-	log.Debug("debug can be output")
-	log.Warn("warning can be output")
-	log.Info("Info can be output")
-	log.SetLogLevel(logrus.WarnLevel)
-	level = log.GetLevel()
-	fmt.Println("changed level is:", level)
-	log.Debug("debug can be output")
-	log.Warn("warning can be output")
-	log.Info("Info can be output")
+	assert.Equal(t, logrus.AllLevels, levels)
+	log.SetLevel(logrus.InfoLevel)
+	log.Debug("debug can be done")
+	log.Info("Info can be done")
+	log.Warn("Warn can be done")
+	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }
