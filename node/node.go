@@ -294,14 +294,3 @@ func (n *Node) Stop() error {
 
 	return nil
 }
-
-// Restart stops the running node and starts it again.
-func (n *Node) Restart() error {
-	if err := n.Stop(); err != nil {
-		return err
-	}
-	if err := n.Start(); err != nil {
-		return err
-	}
-	return nil
-}
