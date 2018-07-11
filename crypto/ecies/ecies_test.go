@@ -2,13 +2,17 @@ package ecies
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var dumpEnc bool
@@ -17,6 +21,28 @@ func init() {
 	flDump := flag.Bool("dump", false, "write encrypted test message to file")
 	flag.Parse()
 	dumpEnc = *flDump
+}
+
+func Test_ExportECDSA(t *testing.T) {
+	var pubKey = &PublicKey{
+		X: big.NewInt(1),
+		Y: big.NewInt(10),
+	}
+
+	exportedKey := pubKey.ExportECDSA()
+	assert.Equal(t, pubKey.X, exportedKey.X)
+	assert.Equal(t, pubKey.Y, exportedKey.Y)
+}
+
+func Test_ImportECDSAPublic(t *testing.T) {
+	var pubKey = &ecdsa.PublicKey{
+		X: big.NewInt(1),
+		Y: big.NewInt(10),
+	}
+
+	importedKey := ImportECDSAPublic(pubKey)
+	assert.Equal(t, pubKey.X, importedKey.X)
+	assert.Equal(t, pubKey.Y, importedKey.Y)
 }
 
 // Ensure the KDF generates appropriately sized keys.
