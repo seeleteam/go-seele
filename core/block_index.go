@@ -125,7 +125,7 @@ func (bf *BlockLeaves) findBestBlockIndex() *BlockIndex {
 	return result
 }
 
-// IsBestBlockIndex indicates whether the given block index is the best compared with all indexes in the block leaves
+// IsBestBlockIndex indicates whether the given block index is the best compared with all indices in the block leaves
 func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
 	td := index.totalDifficulty
 	for item := range bf.blockIndexMap.IterBuffered() {

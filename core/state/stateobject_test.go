@@ -69,7 +69,7 @@ func newTestStateObject() *StateObject {
 	return so1
 }
 
-func Test_StateObject(t *testing.T) {
+func Test_StateObject_AmountDirty(t *testing.T) {
 	so := newTestStateObject()
 
 	// Nonce
