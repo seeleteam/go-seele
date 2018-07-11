@@ -22,11 +22,11 @@ func Test_GetDiskInfo(t *testing.T) {
 
 	if result := GetDiskInfo(); result == nil {
 		if runtime.GOOS == "linux" {
-			t.Fatal("get disk info of linux machine failed")
+			t.Fatal("get the linux machine disk info failed")
 		}
 	} else {
 		if runtime.GOOS != "linux" {
-			t.Fatal("get disk info of windows machine failed")
+			t.Fatal("get the non linux machine disk info failed")
 		}
 	}
 }
