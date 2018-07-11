@@ -233,6 +233,10 @@ func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []stri
 		listerner net.Listener
 		err       error
 	)
+	// this would cause a panic when restart the node:
+	// panic: http: multiple registrations for /ws
+	// http.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
+	// haven't found an elegant way, so just use a different endpoint
 	rpcServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
 	if listerner, err = net.Listen("tcp", n.config.HTTPServer.HTTPAddr); err != nil {
 		n.log.Error("HTTP listening failed", "err", err)
