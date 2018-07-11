@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	hashCacheSize   = 1024
-	headerCacheSize = 512
-	tdCacheSize     = 1024
-	blockCacheSize  = 256
+	hashCacheSize   = 1024 // maximum 40K
+	headerCacheSize = 512  // maximum 100K
+	tdCacheSize     = 1024 // maximum 64K
+	blockCacheSize  = 64   // maximum 64M
 )
 
 // cachedStore is used to cache recent accessed data to avoid frequent data deserialization.
