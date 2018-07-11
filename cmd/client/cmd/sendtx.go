@@ -82,4 +82,6 @@ func init() {
 	sendtxCmd.MarkFlagRequired("fee")
 
 	parameter.Payload = sendtxCmd.Flags().StringP("payload", "", "", "transaction payload")
+
+	parameter.Nonce = sendtxCmd.Flags().StringP("nonce", "", util.DefaultNonce, "nonce of the transaction")
 }

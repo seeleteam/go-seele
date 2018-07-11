@@ -76,4 +76,6 @@ func init() {
 	signCmd.MarkFlagRequired("fee")
 
 	param.Payload = signCmd.Flags().StringP("payload", "", "", "transaction payload")
+
+	param.Nonce = signCmd.Flags().StringP("nonce", "", util.DefaultNonce, "nonce of the transaction")
 }
