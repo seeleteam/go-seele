@@ -33,5 +33,4 @@ func Test_StartMetrics(t *testing.T) {
 	} else {
 		t.Fatalf("db type is not 'LevelDB'")
 	}
-
 }
