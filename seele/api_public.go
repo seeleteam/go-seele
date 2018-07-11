@@ -324,3 +324,40 @@ func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 
 	return block, nil
 }
+
+// Call executes the given transaction on the statedb for the given block height.
+// It doesn't make and changes in the statedb/blockchain and is useful to execute and retrieve values.
+func (api *PublicSeeleAPI) Call(tx *types.Transaction, height uint64, result *map[string]interface{}) error {
+	// Get the current statedb snatshot.
+	statedb, err := api.s.chain.GetCurrentState()
+	if err != nil {
+		return fmt.Errorf("get current state db failed, error %s", err)
+	}
+
+	copyOfStatedb, err := statedb.GetCopy()
+	if err != nil {
+		return fmt.Errorf("get the copy of the current state db failed, error %s", err)
+	}
+
+	// Get the block by block height, if the height is zero, get the current block.
+	var block *types.Block
+	if height == 0 {
+		block = api.s.chain.CurrentBlock()
+	}
+	block, err = api.s.chain.GetStore().GetBlockByHeight(height)
+	if err != nil {
+		return err
+	}
+
+	// Get the transaction receipt, and the fee give to the miner coinbase
+	receipt, err := api.s.chain.ApplyTransaction(tx, 0, api.s.miner.GetCoinbase(), copyOfStatedb, block.Header)
+	if err != nil {
+		return err
+	}
+
+	// Format the receipt
+	if *result, err = PrintableReceipt(receipt); err != nil {
+		return err
+	}
+	return nil
+}
