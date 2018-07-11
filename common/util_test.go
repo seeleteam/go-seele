@@ -28,3 +28,13 @@ func Test_CopyBytes(t *testing.T) {
 	dest = CopyBytes(src)
 	assert.Equal(t, dest, []byte(nil))
 }
+
+func Test_MustNewCache(t *testing.T) {
+	cache := MustNewCache(3)
+	if cache == nil {
+		t.Fatal()
+	}
+
+	assert.Panic(t, func() { MustNewCache(0) }, "")
+	assert.Panic(t, func() { MustNewCache(-1) }, "")
+}
