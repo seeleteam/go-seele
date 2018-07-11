@@ -32,6 +32,9 @@ const (
 var (
 	// ErrDecrypt error when the passphrase is not right
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
+
+	// ErrEmptyAuthKey error when the auth key is empty
+	ErrEmptyAuthKey = errors.New("encryption auth key could not be empty")
 )
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
@@ -139,6 +142,10 @@ func doDecrypt(keyProtected *encryptedKey, auth string) ([]byte, error) {
 
 // use scrypt to calculate auth key
 func getScryptKey(salt []byte, auth string) ([]byte, error) {
+	if len(auth) < 1 {
+		return nil, ErrEmptyAuthKey
+	}
+
 	authArray := []byte(auth)
 	return scrypt.Key(authArray, salt, ScryptN, scryptR, ScryptP, scryptDKLen)
 }

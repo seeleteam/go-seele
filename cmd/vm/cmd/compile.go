@@ -84,8 +84,8 @@ func compile(solFilePath string) (*solCompileOutput, func()) {
 	}()
 
 	// run solidity compilation command
-	cmdArgs := fmt.Sprintf("--bin --hashes -o %v %v", tempDir, solFile)
-	cmd := exec.Command("solc.exe", strings.Split(cmdArgs, " ")...)
+	cmdArgs := fmt.Sprintf("--optimize --bin --hashes -o %v %v", tempDir, solFile)
+	cmd := exec.Command("solc", strings.Split(cmdArgs, " ")...)
 	if err = cmd.Run(); err != nil {
 		fmt.Println("Failed to compile the solidity file,", err.Error())
 		return nil, nil
