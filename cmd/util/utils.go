@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/seeleteam/go-seele/seele"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
@@ -23,6 +25,39 @@ type TxInfo struct {
 	From    *string // from is the key file path of the sender
 	Fee     *string // transaction fee
 	Payload *string // transaction payload in hex format
+}
+
+// Call call a transaction via RPC.
+func Call(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*map[string]interface{}, bool) {
+	fromAddr := crypto.GetAddress(&from.PublicKey)
+
+	var tx *types.Transaction
+	var err error
+	switch to.Type() {
+	case common.AddressTypeContract:
+		tx, err = types.NewMessageTransaction(*fromAddr, *to, amount, fee, nonce, payload)
+	default:
+		fmt.Println("unsupported address type:", to.Type())
+		return nil, false
+	}
+
+	if err != nil {
+		fmt.Println("create transaction err ", err)
+		return nil, false
+	}
+	tx.Sign(from)
+
+	request := seele.CallRequest{
+		Tx:     tx,
+		Height: -1,
+	}
+	result := make(map[string]interface{})
+	if err = client.Call("seele.Call", &request, &result); err != nil {
+		fmt.Printf("failed to call the tx: %s\n", err.Error())
+		return nil, false
+	}
+
+	return &result, true
 }
 
 // Sendtx sends a transaction via RPC.
