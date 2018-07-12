@@ -8,9 +8,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
@@ -46,12 +48,19 @@ var callCmd = &cobra.Command{
 			return
 		}
 
-		txd, ok := util.CheckParameter(callParameter, &key.PrivateKey.PublicKey, client)
-		if !ok {
+		contractAddr, err := common.HexToAddress(*callParameter.To)
+		if err != nil {
+			fmt.Printf("invalid contract address: %s\n", err.Error())
 			return
 		}
 
-		result, ok := util.Call(client, key.PrivateKey, &txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+		payload, err := hexutil.HexToBytes(*callParameter.Payload)
+		if err != nil {
+			fmt.Println("invalid payload,", err.Error())
+			return
+		}
+
+		result, ok := util.Call(client, key.PrivateKey, &contractAddr, big.NewInt(0), big.NewInt(0), 1, payload)
 		if ok {
 			fmt.Println("succeeded to call the tx")
 			str, err := json.MarshalIndent(result, "", "\t")
@@ -71,14 +80,8 @@ func init() {
 	callParameter.To = callCmd.Flags().StringP("to", "t", "", "the contract address")
 	callCmd.MarkFlagRequired("to")
 
-	callParameter.Amount = callCmd.Flags().StringP("amount", "m", "", "the amount of the transferred coins")
-	callCmd.MarkFlagRequired("amount")
-
 	callParameter.From = callCmd.Flags().StringP("from", "f", "", "key file path of the sender")
 	callCmd.MarkFlagRequired("from")
-
-	callParameter.Fee = callCmd.Flags().StringP("fee", "", "", "transaction fee")
-	callCmd.MarkFlagRequired("fee")
 
 	callParameter.Payload = callCmd.Flags().StringP("payload", "", "", "transaction payload")
 	callCmd.MarkFlagRequired("payload")
