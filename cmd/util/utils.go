@@ -17,12 +17,18 @@ import (
 	"github.com/seeleteam/go-seele/rpc"
 )
 
+const (
+	// DefaultNonce is the default value of nonce,when you are not set the nonce flag in client sendtx command by --nonce .
+	DefaultNonce uint64 = 0
+)
+
 type TxInfo struct {
 	Amount  *string // amount specifies the coin amount to be transferred
 	To      *string // to is the public address of the receiver
 	From    *string // from is the key file path of the sender
 	Fee     *string // transaction fee
 	Payload *string // transaction payload in hex format
+	Nonce   *uint64 // nonce number in transaction or contract
 }
 
 // Sendtx sends a transaction via RPC.
@@ -100,16 +106,25 @@ func CheckParameter(parameter TxInfo, publicKey *ecdsa.PublicKey, client *rpc.Cl
 	}
 	info.Fee = fee
 
-	var nonce uint64
 	fromAddr := crypto.GetAddress(publicKey)
 	info.From = *fromAddr
+
+	var nonce uint64
 	err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
 	if err != nil {
 		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
 		return info, false
 	}
-	fmt.Printf("got the sender account %s nonce: %d\n", fromAddr.ToHex(), nonce)
-	info.AccountNonce = nonce
+	if *parameter.Nonce == nonce || *parameter.Nonce == DefaultNonce {
+		info.AccountNonce = nonce
+	} else {
+		if *parameter.Nonce < nonce {
+			fmt.Printf("your nonce is: %d,current nonce is: %d,you must set your nonce greater than or equal to current nonce\n", *parameter.Nonce, nonce)
+			return info, false
+		}
+		info.AccountNonce = *parameter.Nonce
+	}
+	fmt.Printf(" the sender account %s current nonce: %d,sending nonce: %d\n", fromAddr.ToHex(), nonce, info.AccountNonce)
 
 	payload := []byte(nil)
 	if len(*parameter.Payload) > 0 {
