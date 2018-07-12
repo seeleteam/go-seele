@@ -97,6 +97,21 @@ func Test_Code(t *testing.T) {
 	assert.Equal(t, statedb2.GetCode(addr), code)
 	assert.Equal(t, statedb2.GetCodeSize(addr), len(code))
 	assert.Equal(t, stateObj.dirtyCode, false)
+
+	// Empty address
+	var emptyCode []byte
+	addr = common.EmptyAddress
+	assert.Equal(t, statedb2.GetCodeHash(addr), common.EmptyHash)
+	assert.Equal(t, statedb2.GetCode(addr), emptyCode)
+	assert.Equal(t, statedb2.GetCodeSize(addr), 0)
+	assert.Equal(t, statedb2.Empty(addr), true)
+
+	// An address that does not exist
+	addr = *crypto.MustGenerateRandomAddress()
+	assert.Equal(t, statedb2.GetCodeHash(addr), common.EmptyHash)
+	assert.Equal(t, statedb2.GetCode(addr), emptyCode)
+	assert.Equal(t, statedb2.GetCodeSize(addr), 0)
+	assert.Equal(t, statedb2.Empty(addr), true)
 }
 
 func Test_Refund(t *testing.T) {
