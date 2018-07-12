@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -59,6 +60,40 @@ type GetTxByBlockHeightAndIndexRequest struct {
 type GetTxByBlockHashAndIndexRequest struct {
 	HashHex string
 	Index   uint
+}
+
+// CallRequest request param for Call api
+type CallRequest struct {
+	Tx     *types.Transaction
+	Height int64
+}
+
+// Call is to execute a given transaction on a statedb of a given block height.
+// It does not affect this statedb and blockchain and is useful for executing and retrieve values.
+func (api *PublicSeeleAPI) Call(request *CallRequest, result *map[string]interface{}) error {
+	// Get the block by block height, if the height is less than zero, get the current block.
+	block, err := getBlock(api.s.chain, request.Height)
+	if err != nil {
+		return err
+	}
+
+	// Get the statedb by the given block height
+	statedb, err := state.NewStatedb(block.Header.StateHash, api.s.accountStateDB)
+	if err != nil {
+		return err
+	}
+
+	// Get the transaction receipt, and the fee give to the miner coinbase
+	receipt, err := api.s.chain.ApplyTransaction(request.Tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
+	if err != nil {
+		return err
+	}
+
+	// Format the receipt
+	if *result, err = PrintableReceipt(receipt); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetInfo gets the account address that mining rewards will be send to.
