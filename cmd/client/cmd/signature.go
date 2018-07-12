@@ -77,5 +77,5 @@ func init() {
 
 	param.Payload = signCmd.Flags().StringP("payload", "", "", "transaction payload")
 
-	param.Nonce = signCmd.Flags().StringP("nonce", "", util.DefaultNonce, "nonce of the transaction")
+	param.Nonce = signCmd.Flags().Uint64P("nonce", "", util.DefaultNonce, "uint64 nonce number of the transaction (default 0) ")
 }

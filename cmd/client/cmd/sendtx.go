@@ -83,5 +83,5 @@ func init() {
 
 	parameter.Payload = sendtxCmd.Flags().StringP("payload", "", "", "transaction payload")
 
-	parameter.Nonce = sendtxCmd.Flags().StringP("nonce", "", util.DefaultNonce, "nonce of the transaction")
+	parameter.Nonce = sendtxCmd.Flags().Uint64P("nonce", "", util.DefaultNonce, "uint64 nonce number of the transaction (default 0) ")
 }

@@ -19,7 +19,7 @@ import (
 
 const (
 	// DefaultNonce is the default value
-	DefaultNonce = "-1"
+	DefaultNonce uint64 = 0
 )
 
 type TxInfo struct {
@@ -28,7 +28,7 @@ type TxInfo struct {
 	From    *string // from is the key file path of the sender
 	Fee     *string // transaction fee
 	Payload *string // transaction payload in hex format
-	Nonce   *string // nonce number in transaction or contract
+	Nonce   *uint64 // nonce number in transaction or contract
 }
 
 // Sendtx sends a transaction via RPC.
@@ -110,22 +110,22 @@ func CheckParameter(parameter TxInfo, publicKey *ecdsa.PublicKey, client *rpc.Cl
 	info.From = *fromAddr
 
 	var nonce uint64
-	if *parameter.Nonce != DefaultNonce {
-		nonceNum, ok := big.NewInt(0).SetString(*parameter.Nonce, 10)
-		if !ok {
-			fmt.Println("invalid nonce value")
-			return info, false
-		}
-		nonce = nonceNum.Uint64()
-	} else {
-		err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
-		if err != nil {
-			fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
-			return info, false
-		}
-		fmt.Printf("got the sender account %s nonce: %d\n", fromAddr.ToHex(), nonce)
+	err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
+	if err != nil {
+		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+		return info, false
 	}
-	info.AccountNonce = nonce
+	if *parameter.Nonce == nonce || *parameter.Nonce == DefaultNonce {
+		info.AccountNonce = nonce
+	} else {
+		if *parameter.Nonce < nonce {
+			fmt.Printf("your nonce is: %d,current nonce is: %d,you must set your nonce greater than or equal to current nonce\n", *parameter.Nonce, nonce)
+			return info, false
+		}
+		info.AccountNonce = *parameter.Nonce
+	}
+	fmt.Printf(" the sender account %s current nonce: %d,sending nonce: %d\n", fromAddr.ToHex(), nonce, info.AccountNonce)
+
 	payload := []byte(nil)
 	if len(*parameter.Payload) > 0 {
 		if payload, err = hexutil.HexToBytes(*parameter.Payload); err != nil {
