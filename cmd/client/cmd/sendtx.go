@@ -83,5 +83,5 @@ func init() {
 
 	parameter.Payload = sendtxCmd.Flags().StringP("payload", "", "", "transaction payload")
 
-	parameter.Nonce = sendtxCmd.Flags().Uint64P("nonce", "", util.DefaultNonce, "nonce of the transaction. If not set, it will get from the node (defualt 0)")
+	parameter.Nonce = sendtxCmd.Flags().Uint64P("nonce", "", util.DefaultNonce, "nonce of the transaction. If not set, it will get from the node (default 0)")
 }
