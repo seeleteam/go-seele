@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	// DefaultNonce is the default value
+	// DefaultNonce is the default value of nonce,when you are not set the nonce flag in client sendtx command by --nonce .
 	DefaultNonce uint64 = 0
 )
 
