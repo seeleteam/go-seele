@@ -23,11 +23,11 @@ var callParameter = util.TxInfo{}
 // callCmd represents the call command
 var callCmd = &cobra.Command{
 	Use:   "call",
-	Short: "call tx",
-	Long: `call tx
+	Short: "call a contract",
+	Long: `call a contract
    For example:
-     client.exe call -m 0 -t 0x<public address> -f keyfile --fee 0 --payload 0x<abi bytecode>
-	 client.exe call -a 127.0.0.1:8027 -m 0 -t 0x<public address> -f keyfile --fee 0 --payload 0x<abi bytecode>`,
+     client.exe call -t 0x<public address> -f keyfile --payload 0x<abi bytecode>
+	 client.exe call -a 127.0.0.1:8027 -t 0x<public address> -f keyfile --payload 0x<abi bytecode>`,
 	Run: func(cmd *cobra.Command, args []string) {
 		client, err := rpc.Dial("tcp", rpcAddr)
 		if err != nil {
@@ -38,7 +38,7 @@ var callCmd = &cobra.Command{
 
 		pass, err := common.GetPassword()
 		if err != nil {
-			fmt.Printf("failed to get password %s\n", err.Error())
+			fmt.Printf("failed to get password: %s\n", err.Error())
 			return
 		}
 
@@ -56,16 +56,16 @@ var callCmd = &cobra.Command{
 
 		payload, err := hexutil.HexToBytes(*callParameter.Payload)
 		if err != nil {
-			fmt.Println("invalid payload,", err.Error())
+			fmt.Printf("invalid payload, %s\n", err.Error())
 			return
 		}
 
 		result, ok := util.Call(client, key.PrivateKey, &contractAddr, big.NewInt(0), big.NewInt(0), 1, payload)
 		if ok {
-			fmt.Println("succeeded to call the tx")
+			fmt.Println("succeeded in calling a contract")
 			str, err := json.MarshalIndent(result, "", "\t")
 			if err != nil {
-				fmt.Println("failed to marshal receipt", err)
+				fmt.Printf("failed to marshal receipt: %s\n", err.Error())
 				return
 			}
 

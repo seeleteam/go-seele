@@ -9,6 +9,7 @@ import (
 	"context"
 	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -60,7 +61,7 @@ func Test_PublicSeeleAPI(t *testing.T) {
 }
 
 func Test_Call(t *testing.T) {
-	api := newTestAPI(t)
+	api := newTestAPI(t, filepath.Join(common.GetTempFolder(), ".Call"))
 	// Create a simple_storage contract, get = 23
 	contractAddress, from := createContract(t, api, "0x6080604052601760005534801561001557600080fd5b5060df806100246000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a72305820a184cfae11a459efce14d114b09674a03d70eec7e0e19586a38528392a74d4b20029")
 
@@ -90,10 +91,10 @@ func Test_Call(t *testing.T) {
 	assert.Equal(t, statedbOri, statedbCur)
 }
 
-func newTestAPI(t *testing.T) *PublicSeeleAPI {
+func newTestAPI(t *testing.T, dbPath string) *PublicSeeleAPI {
 	conf := getTmpConfig()
 	serviceContext := ServiceContext{
-		DataDir: common.GetTempFolder(),
+		DataDir: dbPath,
 	}
 
 	var key interface{} = "ServiceContext"

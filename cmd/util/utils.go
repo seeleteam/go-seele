@@ -10,13 +10,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/seeleteam/go-seele/seele"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 type TxInfo struct {
@@ -42,7 +41,7 @@ func Call(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amount
 	}
 
 	if err != nil {
-		fmt.Println("create transaction err ", err)
+		fmt.Println("failed to create transaction:", err)
 		return nil, false
 	}
 	tx.Sign(from)
@@ -53,7 +52,7 @@ func Call(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amount
 	}
 	result := make(map[string]interface{})
 	if err = client.Call("seele.Call", &request, &result); err != nil {
-		fmt.Printf("failed to call the tx: %s\n", err.Error())
+		fmt.Println("failed to call contract:", err.Error())
 		return nil, false
 	}
 
