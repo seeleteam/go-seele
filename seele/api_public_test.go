@@ -76,7 +76,11 @@ func Test_Call(t *testing.T) {
 
 	// Verify the result
 	result := make(map[string]interface{})
-	err = api.Call(getTx, 0, &result)
+	request := CallRequest{
+		Tx:     getTx,
+		Height: -1,
+	}
+	err = api.Call(&request, &result)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000017")
 

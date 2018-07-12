@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -59,6 +60,40 @@ type GetTxByBlockHeightAndIndexRequest struct {
 type GetTxByBlockHashAndIndexRequest struct {
 	HashHex string
 	Index   uint
+}
+
+// CallRequest request param for Call api
+type CallRequest struct {
+	Tx     *types.Transaction
+	Height int64
+}
+
+// Call is to execute a given transaction on a statedb of a given block height.
+// It does not affect this statedb and blockchain and is useful for executing and retrieve values.
+func (api *PublicSeeleAPI) Call(request *CallRequest, result *map[string]interface{}) error {
+	// Get the block by block height, if the height is less than zero, get the current block.
+	block, err := getBlock(api.s.chain, request.Height)
+	if err != nil {
+		return err
+	}
+
+	// Get the statedb by the given block height
+	statedb, err := state.NewStatedb(block.Header.StateHash, api.s.accountStateDB)
+	if err != nil {
+		return err
+	}
+
+	// Get the transaction receipt, and the fee give to the miner coinbase
+	receipt, err := api.s.chain.ApplyTransaction(request.Tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
+	if err != nil {
+		return err
+	}
+
+	// Format the receipt
+	if *result, err = PrintableReceipt(receipt); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetInfo gets the account address that mining rewards will be send to.
@@ -323,41 +358,4 @@ func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	}
 
 	return block, nil
-}
-
-// Call executes the given transaction on the statedb for the given block height.
-// It doesn't make and changes in the statedb/blockchain and is useful to execute and retrieve values.
-func (api *PublicSeeleAPI) Call(tx *types.Transaction, height uint64, result *map[string]interface{}) error {
-	// Get the current statedb snatshot.
-	statedb, err := api.s.chain.GetCurrentState()
-	if err != nil {
-		return fmt.Errorf("get current state db failed, error %s", err)
-	}
-
-	copyOfStatedb, err := statedb.GetCopy()
-	if err != nil {
-		return fmt.Errorf("get the copy of the current state db failed, error %s", err)
-	}
-
-	// Get the block by block height, if the height is zero, get the current block.
-	var block *types.Block
-	if height == 0 {
-		block = api.s.chain.CurrentBlock()
-	}
-	block, err = api.s.chain.GetStore().GetBlockByHeight(height)
-	if err != nil {
-		return err
-	}
-
-	// Get the transaction receipt, and the fee give to the miner coinbase
-	receipt, err := api.s.chain.ApplyTransaction(tx, 0, api.s.miner.GetCoinbase(), copyOfStatedb, block.Header)
-	if err != nil {
-		return err
-	}
-
-	// Format the receipt
-	if *result, err = PrintableReceipt(receipt); err != nil {
-		return err
-	}
-	return nil
 }
