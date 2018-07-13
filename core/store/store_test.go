@@ -48,19 +48,52 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, hash, headerHash)
 
+	// Invaild block height
+	hash1, err1 := bcStore.GetBlockHash(10)
+	assert.Matches(t, err1.Error(), "not found")
+	assert.Equal(t, hash1, common.EmptyHash)
+
+	// PutBlockHash test
+	err2 := bcStore.PutBlockHash(10, headerHash)
+	assert.Equal(t, err2, error(nil))
+	hash2, err2 := bcStore.GetBlockHash(10)
+	assert.Equal(t, err2, error(nil))
+	assert.Equal(t, hash2, headerHash)
+
+	// DeleteBlockHash test
+	exist, err3 := bcStore.DeleteBlockHash(10)
+	assert.Equal(t, err3, error(nil))
+	assert.Equal(t, exist, true)
+
+	exist, err4 := bcStore.DeleteBlockHash(10)
+	assert.Equal(t, err4, error(nil))
+	assert.Equal(t, exist, false)
+
 	headHash, err := bcStore.GetHeadBlockHash()
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, headHash, headerHash)
+
+	// PutHeadBlockHash test
+	err5 := bcStore.PutHeadBlockHash(headerHash)
+	assert.Equal(t, err5, error(nil))
 
 	storedHeader, err := bcStore.GetBlockHeader(headerHash)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, storedHeader.Hash(), headerHash)
 
+	// Invalid block header hash
+	_, err6 := bcStore.GetBlockHeader(common.StringToHash("heh"))
+	assert.Matches(t, err6.Error(), "not found")
+
 	td, err := bcStore.GetBlockTotalDifficulty(headerHash)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, td, header.Difficulty)
 
-	exist, err := bcStore.HasBlock(headerHash)
+	// Invalid block header hash
+	_, err7 := bcStore.GetBlockTotalDifficulty(common.StringToHash("heh"))
+	assert.Matches(t, err7.Error(), "not found")
+
+	exist, err = bcStore.HasBlock(headerHash)
 	assert.Equal(t, exist, true)
 	assert.Equal(t, err, nil)
 
@@ -103,6 +136,31 @@ func Test_blockchainDatabase_Block(t *testing.T) {
 	storedBlock, err := bcStore.GetBlock(block.HeaderHash)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, storedBlock, block)
+
+	// GetBlockByHeight test
+	block3, err3 := bcStore.GetBlockByHeight(1)
+	assert.Equal(t, err3, nil)
+	assert.Equal(t, block3, block)
+
+	// DeleteBlock test
+	err4 := bcStore.DeleteBlock(block.HeaderHash)
+	assert.Equal(t, err4, nil)
+
+	// Invalid block hash
+	block2 := block
+	block2.HeaderHash = common.StringToHash("heh")
+	_, err2 := bcStore.GetBlock(block2.HeaderHash)
+	assert.Matches(t, err2.Error(), "not found")
+
+	// Invalid block
+	var block1 *types.Block
+	defer func() {
+		err1 := recover()
+		err1str, ok := err1.(string)
+		assert.Equal(t, ok, true)
+		assert.Matches(t, err1str, "block is nil")
+	}()
+	bcStore.PutBlock(block1, header.Difficulty, true)
 }
 
 func Test_blockchainDatabase_Receipt(t *testing.T) {
