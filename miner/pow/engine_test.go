@@ -40,3 +40,60 @@ func getDiff(interval uint64, diff *big.Int) *big.Int {
 
 	return GetDifficult(interval, header)
 }
+
+func Test_ValidateRewardAmount(t *testing.T) {
+	var engine Engine
+	amount := big.NewInt(150000000)
+	var height uint64 = 0
+	err := engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 1
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 10000
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 62999999
+	amount = big.NewInt(150000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000
+	amount = big.NewInt(100000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000 + 10000
+	amount = big.NewInt(100000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000 * 2
+	amount = big.NewInt(40000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000 * 3
+	amount = big.NewInt(40000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000 * 4
+	amount = big.NewInt(25000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 6300000010
+	amount = big.NewInt(25000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+	height = 63000000100
+	amount = big.NewInt(25000000)
+	err = engine.ValidateRewardAmount(height, amount)
+	assert.Equal(t, err, nil)
+
+}
