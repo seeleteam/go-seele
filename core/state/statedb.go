@@ -97,7 +97,7 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 
 // SetBalance sets the balance of the specified account
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
 		object.SetAmount(balance)
@@ -133,7 +133,7 @@ func (s *Statedb) GetNonce(addr common.Address) uint64 {
 
 // SetNonce sets the nonce of the specified account
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
-	object := s.GetOrNewStateObject(addr)
+	object := s.getStateObject(addr)
 	if object != nil {
 		s.curJournal.append(nonceChange{&addr, object.GetNonce()})
 		object.SetNonce(nonce)
