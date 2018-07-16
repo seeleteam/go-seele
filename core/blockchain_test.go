@@ -59,7 +59,7 @@ func newTestGenesis() *Genesis {
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
-	bcStore := store.NewBlockchainDatabase(db)
+	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(db))
 
 	genesis := newTestGenesis()
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
