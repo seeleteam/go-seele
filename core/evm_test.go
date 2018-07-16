@@ -83,7 +83,7 @@ func Test_SimpleStorage(t *testing.T) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	createContractTx, err := types.NewContractTransaction(address, new(big.Int), new(big.Int), 38, code)
+	createContractTx, err := types.NewContractTransaction(address, new(big.Int), big.NewInt(1), 38, code)
 	assert.Equal(t, err, nil)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
@@ -103,7 +103,7 @@ func Test_SimpleStorage(t *testing.T) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.get(), it returns 5 as initialized in constructor.
 	input := mustHexToBytes("0x6d4ce63c")
-	callContractTx, err := types.NewMessageTransaction(address, contractAddr, new(big.Int), new(big.Int), 1, input)
+	callContractTx, err := types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
@@ -118,7 +118,7 @@ func Test_SimpleStorage(t *testing.T) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.set(666)
 	input = mustHexToBytes("0x60fe47b1000000000000000000000000000000000000000000000000000000000000029a")
-	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), new(big.Int), 1, input)
+	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
@@ -133,7 +133,7 @@ func Test_SimpleStorage(t *testing.T) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.get(), it returns 666 as set above.
 	input = mustHexToBytes("0x6d4ce63c")
-	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), new(big.Int), 1, input)
+	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)

@@ -13,12 +13,11 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
-
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
@@ -72,7 +71,7 @@ func Test_Call(t *testing.T) {
 	// Call the get function
 	msg, err := hexutil.HexToBytes("0x6d4ce63c")
 	assert.Equal(t, err, nil)
-	getTx, err := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(0), 1, msg)
+	getTx, err := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(1), 1, msg)
 	assert.Equal(t, err, nil)
 
 	// Verify the result
@@ -164,7 +163,7 @@ func createContract(t *testing.T, api *PublicSeeleAPI, payload string) (contract
 	assert.Equal(t, err, nil)
 
 	from = getFromAddress(statedb)
-	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(0), 0, bytecode)
+	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), 0, bytecode)
 	assert.Equal(t, err, nil)
 
 	receipt, err := api.s.chain.ApplyTransaction(createContractTx, 0, api.s.miner.GetCoinbase(), statedb, api.s.chain.CurrentBlock().Header)

@@ -35,6 +35,6 @@ func Test_MustNewCache(t *testing.T) {
 		t.Fatal()
 	}
 
-	assert.Panic(t, func() { MustNewCache(0) }, "")
-	assert.Panic(t, func() { MustNewCache(-1) }, "")
+	assert.Panic(t, func() { MustNewCache(0) }, "Must provide a positive size")
+	assert.Panic(t, func() { MustNewCache(-1) }, "Must provide a positive size")
 }
