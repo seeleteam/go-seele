@@ -102,7 +102,7 @@ func Test_GetLogs(t *testing.T) {
 	// Call the get function
 	msg, err := hexutil.HexToBytes("0x6d4ce63c")
 	assert.Equal(t, err, nil)
-	getTx, err := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(0), 1, msg)
+	getTx, err := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(10), 1, msg)
 	assert.Equal(t, err, nil)
 
 	receipt, err := api.s.chain.ApplyTransaction(getTx, 0, api.s.miner.GetCoinbase(), statedb, api.s.chain.CurrentBlock().Header)
