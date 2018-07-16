@@ -35,6 +35,29 @@ func newTestBlockHeader() *types.BlockHeader {
 	}
 }
 
+func Test_blockchainDatabase_Header_invalid(t *testing.T) {
+	header := newTestBlockHeader()
+	headerHash := header.Hash()
+
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
+
+	// Invaild block height
+	hash1, err1 := bcStore.GetBlockHash(10)
+	assert.Matches(t, err1.Error(), "not found")
+	assert.Equal(t, hash1, common.EmptyHash)
+
+	// Invalid block header hash
+	_, err2 := bcStore.GetBlockHeader(common.StringToHash("heh"))
+	assert.Matches(t, err2.Error(), "not found")
+
+	// Invalid block header hash
+	_, err3 := bcStore.GetBlockTotalDifficulty(common.StringToHash("heh"))
+	assert.Matches(t, err3.Error(), "not found")
+}
+
 func Test_blockchainDatabase_Header(t *testing.T) {
 	header := newTestBlockHeader()
 	headerHash := header.Hash()
@@ -47,11 +70,6 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 	hash, err := bcStore.GetBlockHash(1)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, hash, headerHash)
-
-	// Invaild block height
-	hash1, err1 := bcStore.GetBlockHash(10)
-	assert.Matches(t, err1.Error(), "not found")
-	assert.Equal(t, hash1, common.EmptyHash)
 
 	// PutBlockHash test
 	err2 := bcStore.PutBlockHash(10, headerHash)
@@ -81,17 +99,9 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, storedHeader.Hash(), headerHash)
 
-	// Invalid block header hash
-	_, err6 := bcStore.GetBlockHeader(common.StringToHash("heh"))
-	assert.Matches(t, err6.Error(), "not found")
-
 	td, err := bcStore.GetBlockTotalDifficulty(headerHash)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, td, header.Difficulty)
-
-	// Invalid block header hash
-	_, err7 := bcStore.GetBlockTotalDifficulty(common.StringToHash("heh"))
-	assert.Matches(t, err7.Error(), "not found")
 
 	exist, err = bcStore.HasBlock(headerHash)
 	assert.Equal(t, exist, true)
