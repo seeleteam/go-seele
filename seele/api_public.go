@@ -50,6 +50,13 @@ type GetBlockByHashRequest struct {
 	FullTx  bool
 }
 
+// GetLogsRequest request param for GetLogs api
+type GetLogsRequest struct {
+	Height          int64
+	ContractAddress string
+	Topics          string
+}
+
 // GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
 type GetTxByBlockHeightAndIndexRequest struct {
 	Height int64
@@ -214,6 +221,48 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 	}
 
 	*result = response
+	return nil
+}
+
+// GetLogs Get the logs that satisfies the condition in the block by height and filter
+func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *map[string]interface{}) error {
+	block, err := getBlock(api.s.chain, request.Height)
+	if err != nil {
+		return err
+	}
+
+	store := api.s.chain.GetStore()
+	receipts, err := store.GetReceiptsByBlockHash(block.HeaderHash)
+	if err != nil {
+		return err
+	}
+
+	logs := make([]*map[string]interface{}, 0)
+	for _, receipt := range receipts {
+		for _, log := range receipt.Logs {
+			// Matches contract address
+			if request.ContractAddress != log.Address.ToHex() {
+				continue
+			}
+
+			// Matches topics
+			// Because of the topics is always only one
+			if len(log.Topics) < 1 || request.Topics != log.Topics[0].ToHex() {
+				continue
+			}
+
+			put, err := printableLog(log)
+			if err != nil {
+				return err
+			}
+
+			logs = append(logs, &put)
+		}
+	}
+
+	*result = map[string]interface{}{
+		"logs": logs,
+	}
 	return nil
 }
 
