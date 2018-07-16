@@ -253,13 +253,13 @@ func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]map[string
 	for _, receipt := range receipts {
 		for _, log := range receipt.Logs {
 			// Matches contract address
-			if contractAddress != log.Address {
+			if !contractAddress.Equal(log.Address) {
 				continue
 			}
 
 			// Matches topics
 			// Because of the topics is always only one
-			if len(log.Topics) < 1 || hash != log.Topics[0] {
+			if len(log.Topics) < 1 || !hash.Equal(log.Topics[0]) {
 				continue
 			}
 
