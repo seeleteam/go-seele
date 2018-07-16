@@ -48,26 +48,30 @@ func getDiff(interval uint64, diff *big.Int) *big.Int {
 func Test_ValidateRewardAmount(t *testing.T) {
 	var engine Engine
 	var height uint64
+
 	// block height and reward amount is equal
 	err := engine.ValidateRewardAmount(height, GetReward(height))
 	assert.Equal(t, err, nil)
+
 	// block height and reward amount is equal
 	height = blockNumberPerEra
 	err = engine.ValidateRewardAmount(height, GetReward(height))
 	assert.Equal(t, err, nil)
+
 	// block height and reward amount is not equal
 	height = blockNumberPerEra * 2
 	err = engine.ValidateRewardAmount(height, GetReward(blockNumberPerEra))
 	assert.Equal(t, err.Error(), fmt.Sprintf("invalid reward amount, block height %d, want %s, got %s", height, GetReward(height), GetReward(blockNumberPerEra)))
-
 }
 
 func Test_ValidateHeader(t *testing.T) {
 	var engine Engine
+
 	// block is validated for difficulty is so low
 	header := newTestBlockHeader(t)
 	err := engine.ValidateHeader(header)
 	assert.Equal(t, err, nil)
+
 	// block is not validated for difficulty is so high
 	header.Difficulty = big.NewInt(10000000000)
 	err = engine.ValidateHeader(header)
@@ -92,8 +96,7 @@ func randomAddress(t *testing.T) common.Address {
 	if keyErr != nil {
 		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
 	}
-
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
-
+	
 	return common.HexMustToAddres(hexAddress)
 }
