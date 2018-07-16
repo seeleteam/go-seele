@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 const (
@@ -29,6 +30,39 @@ type TxInfo struct {
 	Fee     *string // transaction fee
 	Payload *string // transaction payload in hex format
 	Nonce   *uint64 // nonce number in transaction or contract
+}
+
+// Call call a transaction via RPC.
+func Call(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*map[string]interface{}, bool) {
+	fromAddr := crypto.GetAddress(&from.PublicKey)
+
+	var tx *types.Transaction
+	var err error
+	switch to.Type() {
+	case common.AddressTypeContract:
+		tx, err = types.NewMessageTransaction(*fromAddr, *to, amount, fee, nonce, payload)
+	default:
+		fmt.Println("unsupported address type:", to.Type())
+		return nil, false
+	}
+
+	if err != nil {
+		fmt.Println("failed to create transaction:", err)
+		return nil, false
+	}
+	tx.Sign(from)
+
+	request := seele.CallRequest{
+		Tx:     tx,
+		Height: -1,
+	}
+	result := make(map[string]interface{})
+	if err = client.Call("seele.Call", &request, &result); err != nil {
+		fmt.Println("failed to call contract:", err.Error())
+		return nil, false
+	}
+
+	return &result, true
 }
 
 // Sendtx sends a transaction via RPC.
