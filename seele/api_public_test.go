@@ -117,7 +117,7 @@ func Test_GetLogs(t *testing.T) {
 	api.s.chain.GetStore().PutReceipts(block.HeaderHash, []*types.Receipt{receipt})
 
 	// Verify the result
-	result := make(map[string]interface{})
+	result := make([]map[string]interface{}, 0)
 	request := GetLogsRequest{
 		Height:          -1,
 		ContractAddress: contractAddress.ToHex(),
@@ -126,16 +126,13 @@ func Test_GetLogs(t *testing.T) {
 
 	err = api.GetLogs(&request, &result)
 	assert.Equal(t, err, nil)
+	assert.Equal(t, len(result), 1)
 
-	logs, ok := result["logs"].([]*map[string]interface{})
-	assert.Equal(t, ok, true)
-	assert.Equal(t, len(logs), 1)
-
-	addr, ok := (*logs[0])["address"].(string)
+	addr, ok := result[0]["address"].(string)
 	assert.Equal(t, ok, true)
 	assert.Equal(t, addr, contractAddress.ToHex())
 
-	name, ok := (*logs[0])["topic"].(string)
+	name, ok := result[0]["topic"].(string)
 	assert.Equal(t, ok, true)
 	assert.Equal(t, name, "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100")
 }
