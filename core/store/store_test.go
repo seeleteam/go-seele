@@ -44,7 +44,7 @@ func Test_blockchainDatabase_Header_invalid(t *testing.T) {
 
 	bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
 
-	// Invaild block height
+	// Invalid block height
 	hash1, err1 := bcStore.GetBlockHash(10)
 	assert.Matches(t, err1.Error(), "not found")
 	assert.Equal(t, hash1, common.EmptyHash)
@@ -164,13 +164,7 @@ func Test_blockchainDatabase_Block(t *testing.T) {
 
 	// Invalid block
 	var block1 *types.Block
-	defer func() {
-		err1 := recover()
-		err1str, ok := err1.(string)
-		assert.Equal(t, ok, true)
-		assert.Matches(t, err1str, "block is nil")
-	}()
-	bcStore.PutBlock(block1, header.Difficulty, true)
+	assert.Panic(t, func() { bcStore.PutBlock(block1, header.Difficulty, true) }, "block is nil")
 }
 
 func Test_blockchainDatabase_Receipt(t *testing.T) {
