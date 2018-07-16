@@ -6,11 +6,15 @@
 package pow
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func Test_GetDifficult(t *testing.T) {
@@ -43,57 +47,53 @@ func getDiff(interval uint64, diff *big.Int) *big.Int {
 
 func Test_ValidateRewardAmount(t *testing.T) {
 	var engine Engine
-	amount := big.NewInt(150000000)
-	var height uint64 = 0
-	err := engine.ValidateRewardAmount(height, amount)
+	var height uint64
+	// block height and reward amount is equal
+	err := engine.ValidateRewardAmount(height, GetReward(height))
 	assert.Equal(t, err, nil)
-
-	height = 1
-	err = engine.ValidateRewardAmount(height, amount)
+	// block height and reward amount is equal
+	height = blockNumberPerEra
+	err = engine.ValidateRewardAmount(height, GetReward(height))
 	assert.Equal(t, err, nil)
+	// block height and reward amount is not equal
+	height = blockNumberPerEra * 2
+	err = engine.ValidateRewardAmount(height, GetReward(blockNumberPerEra))
+	assert.Equal(t, err.Error(), fmt.Sprintf("invalid reward amount, block height %d, want %s, got %s", height, GetReward(height), GetReward(blockNumberPerEra)))
 
-	height = 10000
-	err = engine.ValidateRewardAmount(height, amount)
+}
+
+func Test_ValidateHeader(t *testing.T) {
+	var engine Engine
+	// block is validated for difficulty is so low
+	header := newTestBlockHeader(t)
+	err := engine.ValidateHeader(header)
 	assert.Equal(t, err, nil)
+	// block is not validated for difficulty is so high
+	header.Difficulty = big.NewInt(10000000000)
+	err = engine.ValidateHeader(header)
+	assert.Equal(t, err, errBlockNonceInvalid)
+}
 
-	height = 62999999
-	amount = big.NewInt(150000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
+func newTestBlockHeader(t *testing.T) *types.BlockHeader {
+	return &types.BlockHeader{
+		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
+		Creator:           randomAddress(t),
+		StateHash:         common.StringToHash("StateHash"),
+		TxHash:            common.StringToHash("TxHash"),
+		Difficulty:        big.NewInt(1),
+		Height:            1,
+		CreateTimestamp:   big.NewInt(time.Now().Unix()),
+		Nonce:             1,
+	}
+}
 
-	height = 63000000
-	amount = big.NewInt(100000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
+func randomAddress(t *testing.T) common.Address {
+	privKey, keyErr := crypto.GenerateKey()
+	if keyErr != nil {
+		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
+	}
 
-	height = 63000000 + 10000
-	amount = big.NewInt(100000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
+	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
-	height = 63000000 * 2
-	amount = big.NewInt(40000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
-
-	height = 63000000 * 3
-	amount = big.NewInt(40000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
-
-	height = 63000000 * 4
-	amount = big.NewInt(25000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
-
-	height = 6300000010
-	amount = big.NewInt(25000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
-
-	height = 63000000100
-	amount = big.NewInt(25000000)
-	err = engine.ValidateRewardAmount(height, amount)
-	assert.Equal(t, err, nil)
-
+	return common.HexMustToAddres(hexAddress)
 }
