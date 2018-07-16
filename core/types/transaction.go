@@ -30,7 +30,7 @@ var (
 	ErrAmountNil = errors.New("amount is null")
 
 	// ErrFeeNegative is returned when the transaction fee is negative.
-	ErrFeeNegative = errors.New("failed to create tx, fee is negative")
+	ErrFeeNegative = errors.New("failed to create tx, fee can't be negative or zero")
 
 	// ErrFeeNil is returned when the transaction fee is nil.
 	ErrFeeNil = errors.New("failed to create tx, fee is nil")
@@ -145,7 +145,7 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrFeeNil
 	}
 
-	if tx.Data.Fee.Sign() < 0 {
+	if tx.Data.Fee.Cmp(big.NewInt(0)) <= 0 {
 		return ErrFeeNegative
 	}
 

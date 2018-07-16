@@ -35,7 +35,7 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
 	_, toAddress := randomAccount(t)
 
-	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
+	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(1), nonce)
 	tx.Sign(fromPrivKey)
 
 	return &pooledTx{tx, PENDING}
@@ -126,7 +126,7 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 
 	poolTx1 := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx1.Data.From, 20, 100)
-	poolTx2 := newTestPoolTx(t, 20, 101)
+	poolTx2 := newTestPoolTx(t, 19, 101)
 	chain.addAccount(poolTx2.Data.From, 20, 101)
 
 	err := pool.AddTransaction(poolTx1.Transaction)
@@ -157,7 +157,7 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 	for i, amount := range amounts {
 		_, toAddress := randomAccount(t)
 
-		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonces[i])
+		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(1), nonces[i])
 		tx.Sign(fromPrivKey)
 
 		txs = append(txs, tx)
