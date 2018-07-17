@@ -401,3 +401,17 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 		preBlock = block
 	}
 }
+
+func Benchmark_Blockchain_ValidateTxs(b *testing.B) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	preBlock := bc.genesisBlock
+	block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		types.BatchValidateTxs(block.Transactions[1:])
+	}
+}
