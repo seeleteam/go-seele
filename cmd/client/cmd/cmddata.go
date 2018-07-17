@@ -45,8 +45,8 @@ func NewCmdData() []*Request {
 			Short: "get logs of the block",
 			Long: `get logs of the block
 			For example:
-			  client.exe getlogs -h <block height> -t 0x<contract address> -n 0x<event name hash>
-			  client.exe getlogs -a 127.0.0.1:8027 -h <block height> -t 0x<contract address> -n 0x<event name hash>`,
+			  client.exe getlogs --height <block height> --address 0x<contract address> --topic 0x<event name hash>
+			  client.exe getlogs -a 127.0.0.1:8027 --height <block height> --address 0x<contract address> --topic 0x<event name hash>`,
 			ParamReflectType: "GetLogsRequest",
 			Method:           "seele.GetLogs",
 			UseWebsocket:     false,
