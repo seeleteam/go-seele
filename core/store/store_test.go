@@ -208,3 +208,36 @@ func Test_blockchainDatabase_Receipt(t *testing.T) {
 		assert.Equal(t, receipt.TxHash, txHash)
 	}
 }
+
+func Test_blockchainDatabase_GetTxIndex(t *testing.T) {
+	tx1 := newTestTx()
+	tx2 := newTestTx()
+	tx3 := newTestTx()
+	transactions := []*types.Transaction{tx1, tx2, tx3}
+
+	header := newTestBlockHeader()
+	block := &types.Block{
+		HeaderHash:   header.Hash(),
+		Header:       header,
+		Transactions: transactions,
+	}
+
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	err := bcStore.PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, error(nil))
+
+	for i, tx := range transactions {
+		txIdx, err := bcStore.GetTxIndex(tx.Hash)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, txIdx != nil, true)
+		assert.Equal(t, txIdx.Index, uint(i))
+		assert.Equal(t, txIdx.BlockHash, block.HeaderHash)
+	}
+
+	// tx that doesn't exist
+	txNoExist := newTestTx()
+	_, err = bcStore.GetTxIndex(txNoExist.Hash)
+	assert.Equal(t, err != nil, true)
+}
