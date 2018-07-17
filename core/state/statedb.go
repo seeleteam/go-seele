@@ -146,41 +146,13 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 		return common.EmptyHash, s.dbErr
 	}
 
-	for addr, object := range s.stateObjects {
-		if err := s.commitOne(addr, object, batch); err != nil {
+	for _, object := range s.stateObjects {
+		if err := object.commit(s.db, s.trie, batch); err != nil {
 			return common.EmptyHash, err
 		}
 	}
 
 	return s.trie.Commit(batch), nil
-}
-
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
-	// Commit storage change.
-	if err := obj.commitStorageTrie(s.db, batch); err != nil {
-		return err
-	}
-
-	// Commit code change.
-	if obj.dirtyCode && batch != nil {
-		obj.serializeCode(batch)
-		obj.dirtyCode = false
-	}
-
-	// Commit account info change.
-	if obj.dirtyAccount {
-		data := common.SerializePanic(obj.account)
-		s.trie.Put(addr[:], data)
-		obj.dirtyAccount = false
-	}
-
-	// Remove the account from state DB if suicided.
-	if obj.suicided && !obj.deleted {
-		obj.deleted = true
-		s.trie.Delete(addr.Bytes())
-	}
-
-	return nil
 }
 
 // GetOrNewStateObject gets or creates a state object

@@ -263,3 +263,32 @@ func (s *StateObject) commitStorageTrie(trieDB database.Database, commitBatch da
 
 	return nil
 }
+
+// commit flush dirty data of state object to the specified db and trie if any.
+func (s *StateObject) commit(storageTrieDB database.Database, trie *trie.Trie, batch database.Batch) error {
+	// Commit storage change.
+	if err := s.commitStorageTrie(storageTrieDB, batch); err != nil {
+		return err
+	}
+
+	// Commit code change.
+	if s.dirtyCode && batch != nil {
+		s.serializeCode(batch)
+		s.dirtyCode = false
+	}
+
+	// Commit account info change.
+	if s.dirtyAccount {
+		data := common.SerializePanic(s.account)
+		trie.Put(s.address.Bytes(), data)
+		s.dirtyAccount = false
+	}
+
+	// Remove the account from state DB if suicided.
+	if s.suicided && !s.deleted {
+		s.deleted = true
+		trie.Delete(s.address.Bytes())
+	}
+
+	return nil
+}
