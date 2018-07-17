@@ -43,7 +43,8 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 }
 
 type mockBlockchain struct {
-	statedb *state.Statedb
+	statedb    *state.Statedb
+	chainStore store.BlockchainStore
 }
 
 func newMockBlockchain() *mockBlockchain {
@@ -52,7 +53,9 @@ func newMockBlockchain() *mockBlockchain {
 		panic(err)
 	}
 
-	return &mockBlockchain{statedb}
+	db, _ := leveldb.NewTestDatabase()
+	chainStore := store.NewBlockchainDatabase(db)
+	return &mockBlockchain{statedb, chainStore}
 }
 
 func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
@@ -60,8 +63,7 @@ func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
 }
 
 func (chain mockBlockchain) GetStore() store.BlockchainStore {
-	db, _ := leveldb.NewTestDatabase()
-	return store.NewBlockchainDatabase(db)
+	return chain.chainStore
 }
 
 func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
