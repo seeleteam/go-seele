@@ -149,7 +149,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	statedb.SetState(addr, common.StringToHash("test key"), common.StringToHash("test value"))
 
 	// Get root hash for receipt PostState
-	root1, err := statedb.Commit(nil)
+	root1, err := statedb.Hash()
 	assert.Equal(t, err, nil)
 
 	// Commit to DB
@@ -188,7 +188,7 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 		statedb.SetCode(addr, []byte("hello"))
 		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
 
-		if _, err = statedb.Commit(nil); err != nil {
+		if _, err = statedb.Hash(); err != nil {
 			panic(err)
 		}
 
@@ -245,14 +245,14 @@ func Benchmark_Trie_Hash(b *testing.B) {
 		statedb.SetCode(addr, []byte("hello"))
 		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
 
-		if _, err := statedb.Commit(nil); err != nil {
+		if _, err := statedb.Hash(); err != nil {
 			panic(err)
 		}
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := statedb.Commit(nil); err != nil {
+		if _, err := statedb.Hash(); err != nil {
 			panic(err)
 		}
 	}

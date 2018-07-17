@@ -140,8 +140,29 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-// Commit commits memory state objects to db
+// Hash flush the dirty data into trie and calculates the intermediate root hash.
+func (s *Statedb) Hash() (common.Hash, error) {
+	if s.dbErr != nil {
+		return common.EmptyHash, s.dbErr
+	}
+
+	for addr := range s.curJournal.dirties {
+		if object, found := s.stateObjects[addr]; found {
+			if err := object.commit(s.db, s.trie, nil); err != nil {
+				return common.EmptyHash, err
+			}
+		}
+	}
+
+	return s.trie.Hash(), nil
+}
+
+// Commit persists the trie to the specified batch.
 func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
+	if batch == nil {
+		panic("batch is nil")
+	}
+
 	if s.dbErr != nil {
 		return common.EmptyHash, s.dbErr
 	}
@@ -197,6 +218,7 @@ func (s *Statedb) Prepare(txIndex int) {
 	s.curLogs = nil
 
 	s.curJournal.entries = s.curJournal.entries[:0]
+	s.curJournal.dirties = make(map[common.Address]uint)
 }
 
 // GetCurrentLogs returns the current transaction logs.
