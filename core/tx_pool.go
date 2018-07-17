@@ -35,7 +35,7 @@ const (
 )
 
 const chainHeaderChangeBuffSize = 100
-const overTimeInterval int64 = 60
+const overTimeInterval int64 = 10 * 60
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
