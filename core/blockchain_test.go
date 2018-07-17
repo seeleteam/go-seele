@@ -383,18 +383,6 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
 }
 
-func Benchmark_NewTestBlock(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		newTestBlock(bc, bc.genesisBlock.HeaderHash, bc.genesisBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
-	}
-}
-
 func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
@@ -404,7 +392,9 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		b.StopTimer()
 		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+		b.StartTimer()
 		if err := bc.WriteBlock(block); err != nil {
 			b.Fatalf("failed to write block, %v", err.Error())
 		}

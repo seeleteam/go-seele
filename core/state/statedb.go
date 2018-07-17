@@ -154,6 +154,8 @@ func (s *Statedb) Hash() (common.Hash, error) {
 		}
 	}
 
+	s.clearJournalAndRefund()
+
 	return s.trie.Hash(), nil
 }
 
@@ -217,6 +219,11 @@ func (s *Statedb) Prepare(txIndex int) {
 	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 
+	s.clearJournalAndRefund()
+}
+
+func (s *Statedb) clearJournalAndRefund() {
+	s.refund = 0
 	s.curJournal.entries = s.curJournal.entries[:0]
 	s.curJournal.dirties = make(map[common.Address]uint)
 }
