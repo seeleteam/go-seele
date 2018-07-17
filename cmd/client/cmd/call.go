@@ -60,7 +60,7 @@ var callCmd = &cobra.Command{
 			return
 		}
 
-		result, ok := util.Call(client, key.PrivateKey, &contractAddr, big.NewInt(0), big.NewInt(0), 1, payload)
+		result, ok := util.Call(client, key.PrivateKey, &contractAddr, big.NewInt(0), big.NewInt(1), 1, payload)
 		if ok {
 			fmt.Println("succeeded in calling a contract")
 			str, err := json.MarshalIndent(result, "", "\t")
