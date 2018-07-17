@@ -329,7 +329,7 @@ func (pool *TransactionPool) RemoveTransactions() {
 
 	state, err := pool.chain.GetCurrentState()
 	if err != nil {
-		pool.log.Warn("get current state failed %s", err)
+		pool.log.Warn("failed to get current state, err: %s", err)
 		return
 	}
 	nowTimestamp := time.Now().Unix()
