@@ -35,7 +35,7 @@ type Statedb struct {
 	curLogs    []*types.Log
 
 	// State modifications for current processed tx.
-	curJournal journal
+	curJournal *journal
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -49,7 +49,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		db:           db,
 		trie:         trie,
 		stateObjects: make(map[common.Address]*StateObject),
-		curJournal:   journal{},
+		curJournal:   newJournal(),
 	}, nil
 }
 
