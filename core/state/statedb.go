@@ -35,7 +35,7 @@ type Statedb struct {
 	curLogs    []*types.Log
 
 	// State modifications for current processed tx.
-	curJournal journal
+	curJournal *journal
 }
 
 // NewStatedb constructs and returns a statedb instance
@@ -49,7 +49,7 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		db:           db,
 		trie:         trie,
 		stateObjects: make(map[common.Address]*StateObject),
-		curJournal:   journal{},
+		curJournal:   newJournal(),
 	}, nil
 }
 
@@ -140,47 +140,42 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-// Commit commits memory state objects to db
-func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
+// Hash flush the dirty data into trie and calculates the intermediate root hash.
+func (s *Statedb) Hash() (common.Hash, error) {
 	if s.dbErr != nil {
 		return common.EmptyHash, s.dbErr
 	}
 
-	for addr, object := range s.stateObjects {
-		if err := s.commitOne(addr, object, batch); err != nil {
+	for addr := range s.curJournal.dirties {
+		if object, found := s.stateObjects[addr]; found {
+			if err := object.commit(s.db, s.trie, nil); err != nil {
+				return common.EmptyHash, err
+			}
+		}
+	}
+
+	s.clearJournalAndRefund()
+
+	return s.trie.Hash(), nil
+}
+
+// Commit persists the trie to the specified batch.
+func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
+	if batch == nil {
+		panic("batch is nil")
+	}
+
+	if s.dbErr != nil {
+		return common.EmptyHash, s.dbErr
+	}
+
+	for _, object := range s.stateObjects {
+		if err := object.commit(s.db, s.trie, batch); err != nil {
 			return common.EmptyHash, err
 		}
 	}
 
 	return s.trie.Commit(batch), nil
-}
-
-func (s *Statedb) commitOne(addr common.Address, obj *StateObject, batch database.Batch) error {
-	// Commit storage change.
-	if err := obj.commitStorageTrie(s.db, batch); err != nil {
-		return err
-	}
-
-	// Commit code change.
-	if obj.dirtyCode && batch != nil {
-		obj.serializeCode(batch)
-		obj.dirtyCode = false
-	}
-
-	// Commit account info change.
-	if obj.dirtyAccount {
-		data := common.SerializePanic(obj.account)
-		s.trie.Put(addr[:], data)
-		obj.dirtyAccount = false
-	}
-
-	// Remove the account from state DB if suicided.
-	if obj.suicided && !obj.deleted {
-		obj.deleted = true
-		s.trie.Delete(addr.Bytes())
-	}
-
-	return nil
 }
 
 // GetOrNewStateObject gets or creates a state object
@@ -224,7 +219,13 @@ func (s *Statedb) Prepare(txIndex int) {
 	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 
+	s.clearJournalAndRefund()
+}
+
+func (s *Statedb) clearJournalAndRefund() {
+	s.refund = 0
 	s.curJournal.entries = s.curJournal.entries[:0]
+	s.curJournal.dirties = make(map[common.Address]uint)
 }
 
 // GetCurrentLogs returns the current transaction logs.
