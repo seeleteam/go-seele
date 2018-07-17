@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -34,6 +35,7 @@ const (
 )
 
 const chainHeaderChangeBuffSize = 100
+const overTimeInterval int64 = 60
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -42,7 +44,8 @@ type blockchain interface {
 
 type pooledTx struct {
 	*types.Transaction
-	txStatus byte
+	txStatus  byte
+	Timestamp int64
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -259,7 +262,7 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 }
 
 func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
-	poolTx := &pooledTx{tx, PENDING}
+	poolTx := &pooledTx{tx, PENDING, time.Now().Unix()}
 	pool.hashToTxMap[tx.Hash] = poolTx
 
 	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
@@ -333,9 +336,10 @@ func (pool *TransactionPool) RemoveTransactions() {
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 		nonce := state.GetNonce(poolTx.Data.From)
+		flag := time.Now().Unix() - poolTx.Timestamp
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || flag > overTimeInterval {
 			if txIndex == nil {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),

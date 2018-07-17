@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
@@ -38,7 +39,7 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(0), nonce)
 	tx.Sign(fromPrivKey)
 
-	return &pooledTx{tx, PENDING}
+	return &pooledTx{tx, PENDING, time.Now().Unix()}
 }
 
 type mockBlockchain struct {
@@ -59,7 +60,8 @@ func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
 }
 
 func (chain mockBlockchain) GetStore() store.BlockchainStore {
-	return chain.GetStore()
+	db, _ := leveldb.NewTestDatabase()
+	return store.NewBlockchainDatabase(db)
 }
 
 func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
@@ -245,4 +247,31 @@ func Test_GetRejectTransacton(t *testing.T) {
 
 	_, ok = txs[b2.Transactions[2].Hash]
 	assert.Equal(t, ok, true, "2")
+}
+
+func Test_TransactionPool_RemoveTransactions(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	for _, ptx := range pool.hashToTxMap {
+		ptx.Timestamp = ptx.Timestamp - 10
+	}
+
+	pool.RemoveTransactions()
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	for _, ptx := range pool.hashToTxMap {
+		ptx.Timestamp = ptx.Timestamp - 51
+	}
+
+	pool.RemoveTransactions()
+	assert.Equal(t, len(pool.hashToTxMap), 0)
+	assert.Equal(t, len(pool.accountToTxsMap), 0)
 }
