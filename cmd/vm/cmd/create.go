@@ -85,7 +85,7 @@ func createContract() {
 	}
 
 	// Create a contract
-	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(0), DefaultNonce, bytecode)
+	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), DefaultNonce, bytecode)
 	if err != nil {
 		fmt.Println("Failed to create contract tx,", err.Error())
 		return

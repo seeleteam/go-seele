@@ -73,7 +73,7 @@ func callContract(contractHexAddr string) {
 	}
 
 	// Create a call message transaction
-	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(0), DefaultNonce, msg)
+	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(1), DefaultNonce, msg)
 	if err != nil {
 		fmt.Println("Failed to create message tx,", err.Error())
 		return

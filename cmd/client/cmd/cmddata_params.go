@@ -37,6 +37,26 @@ var (
 		Required:     false,
 	}
 
+	paramContractAddress = &Param{
+		ReflectName:  "ContractAddress",
+		FlagName:     "address",
+		ShortFlag:    "",
+		ParamType:    "*string",
+		DefaultValue: "",
+		Usage:        "the contract address",
+		Required:     true,
+	}
+
+	paramTopic = &Param{
+		ReflectName:  "Topics",
+		FlagName:     "topic",
+		ShortFlag:    "",
+		ParamType:    "*string",
+		DefaultValue: "",
+		Usage:        "event name hash",
+		Required:     true,
+	}
+
 	paramTxIndex = &Param{
 		ReflectName:  "Index",
 		FlagName:     "index",
