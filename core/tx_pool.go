@@ -336,10 +336,10 @@ func (pool *TransactionPool) RemoveTransactions() {
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 		nonce := state.GetNonce(poolTx.Data.From)
-		flag := time.Now().Unix() - poolTx.Timestamp
+		duration := time.Now().Unix() - poolTx.Timestamp
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || flag > overTimeInterval {
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeInterval {
 			if txIndex == nil {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
