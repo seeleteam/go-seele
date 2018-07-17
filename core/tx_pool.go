@@ -45,7 +45,7 @@ type blockchain interface {
 type pooledTx struct {
 	*types.Transaction
 	txStatus  byte
-	Timestamp int64
+	timestamp int64
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -332,11 +332,11 @@ func (pool *TransactionPool) RemoveTransactions() {
 		pool.log.Warn("get current state failed %s", err)
 		return
 	}
-
+	nowTimestamp := time.Now().Unix()
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 		nonce := state.GetNonce(poolTx.Data.From)
-		duration := time.Now().Unix() - poolTx.Timestamp
+		duration := nowTimestamp - poolTx.timestamp
 
 		// Transactions have been processed or are too old need to delete
 		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeInterval {
@@ -344,6 +344,8 @@ func (pool *TransactionPool) RemoveTransactions() {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
 						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
+				} else if duration > overTimeInterval {
+					pool.log.Debug("remove tx %s because not packed for more then one minute")
 				} else {
 					pool.log.Debug("remove tx %s because got error")
 				}
