@@ -288,7 +288,7 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	assert.Equal(t, len(pool.accountToTxsMap), 1)
 
 	for _, ptx := range pool.hashToTxMap {
-		ptx.timestamp = ptx.timestamp - 592
+		ptx.timestamp = ptx.timestamp - overTimeInterval
 	}
 
 	pool.RemoveTransactions()

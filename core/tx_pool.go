@@ -35,7 +35,7 @@ const (
 )
 
 const chainHeaderChangeBuffSize = 100
-const overTimeInterval int64 = 10 * 60
+const overTimeInterval int64 = 3 * 60 * 60
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -345,7 +345,7 @@ func (pool *TransactionPool) RemoveTransactions() {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
 						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
 				} else if duration > overTimeInterval {
-					pool.log.Debug("remove tx %s because not packed for more than ten minutes", txHash.ToHex())
+					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
 				} else {
 					pool.log.Debug("remove tx %s because got error", txHash.ToHex())
 				}
