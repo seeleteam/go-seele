@@ -60,7 +60,7 @@ type GetLogsRequest struct {
 // GetLogsResponse response param for GetLogs api
 type GetLogsResponse struct {
 	Txhash   common.Hash
-	LogIndex int
+	LogIndex uint
 	Log      *types.Log
 }
 
@@ -272,7 +272,7 @@ func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]GetLogsRes
 
 			logs = append(logs, GetLogsResponse{
 				Txhash:   receipt.TxHash,
-				LogIndex: logIndex,
+				LogIndex: uint(logIndex),
 				Log:      log,
 			})
 		}
