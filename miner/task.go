@@ -31,7 +31,7 @@ type Task struct {
 func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
-	reward, err := task.handleMinerRewardTx(seele, statedb)
+	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
 		return err
 	}
@@ -52,14 +52,14 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 }
 
 // handleMinerRewardTx handles the miner reward transaction.
-func (task *Task) handleMinerRewardTx(seele SeeleBackend, statedb *state.Statedb) (*big.Int, error) {
+func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
 	reward := pow.GetReward(task.header.Height)
 	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
-	rewardTxReceipt, err := seele.BlockChain().ApplyRewardTx(rewardTx, statedb)
+	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
 		return nil, err
 	}
