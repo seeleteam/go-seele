@@ -64,7 +64,7 @@ type HTTPServer struct {
 	// HTTPCors is the Cross-Origin Resource Sharing header to send to requesting
 	// clients. Please be aware that CORS is a browser enforced security, it's fully
 	// useless for custom HTTP clients.
-	HTTPCors []string `json:"crosssorigins"`
+	HTTPCors []string `json:"crossorigins"`
 
 	// HTTPHostFilter is the whitelist of hostnames which are allowed on incoming requests.
 	HTTPWhiteHost []string `json:"whiteHost"`
