@@ -477,8 +477,11 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	stateObj := statedb.GetOrNewStateObject(minerRewardTx.Data.To)
-	stateObj.AddAmount(minerRewardTx.Data.Amount)
+	statedb.CreateAccount(minerRewardTx.Data.To)
+	statedb.AddBalance(minerRewardTx.Data.To, minerRewardTx.Data.Amount)
+	if _, err := statedb.Hash(); err != nil {
+		return nil, err
+	}
 
 	receipts := make([]*types.Receipt, len(txs)+1)
 

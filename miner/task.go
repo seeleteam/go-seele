@@ -59,8 +59,11 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 		return nil, err
 	}
 
-	stateObj := statedb.GetOrNewStateObject(task.coinbase)
-	stateObj.AddAmount(reward)
+	statedb.CreateAccount(task.coinbase)
+	statedb.AddBalance(task.coinbase, reward)
+	if _, err = statedb.Hash(); err != nil {
+		return nil, err
+	}
 
 	task.txs = append(task.txs, rewardTx)
 
