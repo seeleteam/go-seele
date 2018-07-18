@@ -142,11 +142,6 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 
 // Hash flush the dirty data into trie and calculates the intermediate root hash.
 func (s *Statedb) Hash() (common.Hash, error) {
-	// @todo temp solution
-	if s.dbErr == nil {
-		return s.Commit(nil)
-	}
-
 	if s.dbErr != nil {
 		return common.EmptyHash, s.dbErr
 	}
@@ -166,10 +161,9 @@ func (s *Statedb) Hash() (common.Hash, error) {
 
 // Commit persists the trie to the specified batch.
 func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
-	// @todo temp solution
-	// if batch == nil {
-	// 	panic("batch is nil")
-	// }
+	if batch == nil {
+		panic("batch is nil")
+	}
 
 	if s.dbErr != nil {
 		return common.EmptyHash, s.dbErr
