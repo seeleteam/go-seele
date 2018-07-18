@@ -332,6 +332,7 @@ func (pool *TransactionPool) RemoveTransactions() {
 		pool.log.Warn("failed to get current state, err: %s", err)
 		return
 	}
+
 	nowTimestamp := time.Now().Unix()
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
