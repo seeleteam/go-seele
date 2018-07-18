@@ -59,13 +59,15 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 		return nil, err
 	}
 
-	stateObj := statedb.GetOrNewStateObject(task.coinbase)
-	stateObj.AddAmount(reward)
+	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
+	if err != nil {
+		return nil, err
+	}
 
 	task.txs = append(task.txs, rewardTx)
 
 	// add the receipt of the reward tx
-	task.receipts = append(task.receipts, types.MakeRewardReceipt(rewardTx))
+	task.receipts = append(task.receipts, rewardTxReceipt)
 
 	return reward, nil
 }
