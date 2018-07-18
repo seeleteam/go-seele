@@ -477,16 +477,15 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	statedb.CreateAccount(minerRewardTx.Data.To)
-	statedb.AddBalance(minerRewardTx.Data.To, minerRewardTx.Data.Amount)
-	if _, err := statedb.Hash(); err != nil {
+	rewardTxReceipt, err := bc.ApplyRewardTx(minerRewardTx, statedb)
+	if err != nil {
 		return nil, err
 	}
 
 	receipts := make([]*types.Receipt, len(txs)+1)
 
 	// add the receipt of the reward tx
-	receipts[0] = types.MakeRewardReceipt(minerRewardTx)
+	receipts[0] = rewardTxReceipt
 
 	if err := types.BatchValidateTxs(txs); err != nil {
 		return nil, err
@@ -507,6 +506,22 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	}
 
 	return receipts, nil
+}
+
+// ApplyRewardTx applies a reward transaction, changes corresponding statedb and generates a receipt.
+func (bc *Blockchain) ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.Receipt, error) {
+	statedb.CreateAccount(rewardTx.Data.To)
+	statedb.AddBalance(rewardTx.Data.To, rewardTx.Data.Amount)
+
+	hash, err := statedb.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	receipt := types.MakeRewardReceipt(rewardTx)
+	receipt.PostState = hash
+
+	return receipt, nil
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
