@@ -53,7 +53,7 @@ var (
 	// ErrSigMissing is returned when the transaction signature is missing.
 	ErrSigMissing = errors.New("signature missing")
 
-	emptyTxRootHash = crypto.MustHash("empty transaction root hash")
+	emptyTxRootHash = common.EmptyHash
 
 	// MaxPayloadSize limits the payload size to prevent malicious transactions.
 	MaxPayloadSize = defaultMaxPayloadSize
@@ -90,7 +90,6 @@ type stateDB interface {
 
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
-// panic if the amount is nil or negative.
 func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
 	return newTx(from, to, amount, fee, nonce, nil)
 }
@@ -145,7 +144,7 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrFeeNil
 	}
 
-	if tx.Data.Fee.Cmp(big.NewInt(0)) <= 0 {
+	if tx.Data.Fee.Sign() <= 0 {
 		return ErrFeeNegative
 	}
 
@@ -158,24 +157,26 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrPayloadEmpty
 	}
 
-	if !signNeeded {
-		return nil
-	}
-
 	// validate shard of from/to address
-	if shardNeeded && common.IsShardEnabled() {
-		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
-			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+	if shardNeeded {
+		if common.IsShardEnabled() {
+			if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
+				return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
+			}
 		}
-	}
 
-	if shardNeeded && !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
-		if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
-			return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
+		if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
+			if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
+				return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
+			}
 		}
 	}
 
 	// vaildate signature
+	if !signNeeded {
+		return nil
+	}
+
 	if len(tx.Signature.Sig) == 0 {
 		return ErrSigMissing
 	}
@@ -249,11 +250,11 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 func (tx *Transaction) ValidateState(statedb stateDB) error {
 	consumed := new(big.Int).Add(tx.Data.Amount, tx.Data.Fee)
 	if balance := statedb.GetBalance(tx.Data.From); consumed.Cmp(balance) > 0 {
-		return fmt.Errorf("balance is not enough, account = %s, balance = %v, amount = %v, fee = %v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
+		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
-		return fmt.Errorf("nonce is too low, acount %s, tx nonce %d, state db nonce:%d", tx.Data.From.ToHex(), tx.Data.AccountNonce, accountNonce)
+		return fmt.Errorf("nonce is too small, acount:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.ToHex(), tx.Data.AccountNonce, accountNonce)
 	}
 
 	return nil
