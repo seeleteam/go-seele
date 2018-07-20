@@ -25,7 +25,7 @@ type PublicSeeleAPI struct {
 	s *SeeleService
 }
 
-const maxSizeLimit = 1000
+const maxSizeLimit = 100
 
 // NewPublicSeeleAPI creates a new PublicSeeleAPI object for rpc service.
 func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
