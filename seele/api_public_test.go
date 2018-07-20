@@ -190,8 +190,8 @@ func getFromAddress(statedb *state.Statedb) common.Address {
 	return from
 }
 
-func Test_GetBlockByRange(t *testing.T) {
-	dbPath := filepath.Join(common.GetTempFolder(), ".GetBlockByHeightPeriod")
+func Test_GetBlocks(t *testing.T) {
+	dbPath := filepath.Join(common.GetTempFolder(), ".GetBlocks")
 	if common.FileOrFolderExists(dbPath) {
 		os.RemoveAll(dbPath)
 	}
@@ -234,33 +234,53 @@ func Test_GetBlockByRange(t *testing.T) {
 	err = api.s.chain.GetStore().PutBlock(block, header.Difficulty, true)
 	assert.Equal(t, err, nil)
 
-	request := &GetBlockByHeightRequest{
-		Height: 0,
+	request := &GetBlocksRequest{
+		Height: 2,
 		FullTx: true,
 		Size:   2,
 	}
-	result := map[string]interface{}{}
-	err = api.GetBlockByRange(request, &result)
+	result := []map[string]interface{}{}
+	err = api.GetBlocks(request, &result)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 2)
 
-	request = &GetBlockByHeightRequest{
+	request = &GetBlocksRequest{
 		Height: -1,
 		FullTx: true,
 		Size:   1,
 	}
-	result = map[string]interface{}{}
-	err = api.GetBlockByRange(request, &result)
+	result = []map[string]interface{}{}
+	err = api.GetBlocks(request, &result)
+	assert.Equal(t, err == nil, true)
+	assert.Equal(t, len(result), 1)
+
+	request = &GetBlocksRequest{
+		Height: 2,
+		FullTx: true,
+		Size:   6,
+	}
+	result = []map[string]interface{}{}
+	err = api.GetBlocks(request, &result)
+	assert.Equal(t, err == nil, true)
+	assert.Equal(t, len(result), 1)
+
+	request = &GetBlocksRequest{
+		Height: 2,
+		FullTx: true,
+		Size:   600,
+	}
+	result = []map[string]interface{}{}
+	err = api.GetBlocks(request, &result)
 	assert.Equal(t, err != nil, true)
 	assert.Equal(t, len(result), 0)
 
-	request = &GetBlockByHeightRequest{
-		Height: 1,
+	request = &GetBlocksRequest{
+		Height: 2,
 		FullTx: true,
-		Size:   -1,
+		Size:   0,
 	}
-	result = map[string]interface{}{}
-	err = api.GetBlockByRange(request, &result)
-	assert.Equal(t, err != nil, true)
+	result = []map[string]interface{}{}
+	err = api.GetBlocks(request, &result)
+	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 0)
 }

@@ -29,7 +29,7 @@ func NewCmdData() []*Request {
 			Short: "get block info by block height",
 			Long: `For example:
   			client.exe getblockbyheight --height -1 [-f=true] [-a 127.0.0.1:8027]`,
-			ParamReflectType: "GetBlockByHeightRequest",
+			ParamReflectType: "GetBlocksRequest",
 			Method:           "seele.GetBlockByHeight",
 			UseWebsocket:     false,
 			Params:           []*Param{paramBlockHeight, paramFullTx},

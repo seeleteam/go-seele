@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/seeleteam/go-seele/common"
@@ -27,6 +26,8 @@ type PublicSeeleAPI struct {
 
 const maxSizeLimit = 100
 
+var ErrRequestSizeLimit = errors.New("the size of the request  is large")
+
 // NewPublicSeeleAPI creates a new PublicSeeleAPI object for rpc service.
 func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
@@ -42,11 +43,11 @@ type MinerInfo struct {
 	MinerThread        int
 }
 
-// GetBlockByHeightRequest request param for GetBlockByHeight api
-type GetBlockByHeightRequest struct {
+// GetBlocksRequest request param for GetBlockByHeight api
+type GetBlocksRequest struct {
 	Height int64
 	FullTx bool
-	Size   int64
+	Size   uint
 }
 
 // GetBlockByHashRequest request param for GetBlockByHash api
@@ -190,7 +191,7 @@ func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) err
 
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlocksRequest, result *map[string]interface{}) error {
 	block, err := getBlock(api.s.chain, request.Height)
 	if err != nil {
 		return err
@@ -205,30 +206,32 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 	return nil
 }
 
-// GetBlockByRange returns the size of requested block. When the blockNr or the size is -1 the error is returned. When fullTx is true all
+// GetBlocks returns the size of requested block. When the blockNr or the size is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByRange(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
-	blocks := make([]types.Block, 0)
-	if request.Size < 0 || request.Height < 0 {
-		return errors.New("the height or size of the request is error")
-	}
+func (api *PublicSeeleAPI) GetBlocks(request *GetBlocksRequest, result *[]map[string]interface{}) error {
 	if request.Size > maxSizeLimit {
-		return errors.New("the size of the request  is large")
-	}
-	for i := int64(0); i < request.Size; i++ {
-		block, err := getBlock(api.s.chain, request.Height + i)
-		if err != nil {
-			return err
-		}
-		blocks = append(blocks, *block)
+		return ErrRequestSizeLimit
 	}
 
+	blocks := make([]types.Block, 0)
+	if request.Height < 0 || request.Height-int64(request.Size) < 0 {
+		block := api.s.chain.CurrentBlock()
+		blocks = append(blocks, *block)
+	} else {
+		for i := request.Size; i > 0; i-- {
+			block, err := getBlock(api.s.chain, request.Height-int64(i))
+			if err != nil {
+				return err
+			}
+			blocks = append(blocks, *block)
+		}
+	}
 	response, err := rpcOutputBlocks(blocks, request.FullTx, api.s.chain.GetStore())
 	if err != nil {
 		return err
 	}
 
-	*result = *response
+	*result = response
 	return nil
 }
 
@@ -343,15 +346,15 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 	return fields, nil
 }
 
-func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) (*map[string]interface{}, error) {
-	fields := map[string]interface{}{}
+func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) ([]map[string]interface{}, error) {
+	fields := make([]map[string]interface{}, 0)
 
 	for i := range b {
 		if field, err := rpcOutputBlock(&b[i], fullTx, store); err == nil {
-			fields[strconv.Itoa(i)] = field
+			fields = append(fields, field)
 		}
 	}
-	return &fields, nil
+	return fields, nil
 }
 
 // PrintableOutputTx converts the given tx to the RPC output
