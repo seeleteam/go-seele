@@ -6,8 +6,10 @@
 package seele
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/seeleteam/go-seele/common"
@@ -42,6 +44,7 @@ type MinerInfo struct {
 type GetBlockByHeightRequest struct {
 	Height int64
 	FullTx bool
+	Size   int64
 }
 
 // GetBlockByHashRequest request param for GetBlockByHash api
@@ -200,6 +203,30 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 	return nil
 }
 
+// GetBlockByRange returns the size + 1 of requested block. When the blockNr or the size is -1 the error is returned. When fullTx is true all
+// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
+func (api *PublicSeeleAPI) GetBlockByRange(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
+	blocks := make([]types.Block, 0)
+	if request.Size < 0 || request.Height < 0 {
+		return errors.New("the request height or size of the block is error")
+	}
+	for i := int64(0); i <= request.Size; i++ {
+		block, err := getBlock(api.s.chain, request.Height+i)
+		if err != nil {
+			return err
+		}
+		blocks = append(blocks, *block)
+	}
+
+	response, err := rpcOutputBlocks(blocks, request.FullTx, api.s.chain.GetStore())
+	if err != nil {
+		return err
+	}
+
+	*result = *response
+	return nil
+}
+
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result *map[string]interface{}) error {
@@ -309,6 +336,17 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 	fields["totalDifficulty"] = totalDifficulty
 
 	return fields, nil
+}
+
+func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) (*map[string]interface{}, error) {
+	fields := map[string]interface{}{}
+
+	for i := range b {
+		if field, err := rpcOutputBlock(&b[i], fullTx, store); err == nil {
+			fields[strconv.Itoa(i)] = field
+		}
+	}
+	return &fields, nil
 }
 
 // PrintableOutputTx converts the given tx to the RPC output

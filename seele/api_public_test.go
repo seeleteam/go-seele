@@ -189,3 +189,76 @@ func getFromAddress(statedb *state.Statedb) common.Address {
 	statedb.SetNonce(from, 0)
 	return from
 }
+
+func Test_GetBlockByRange(t *testing.T) {
+	dbPath := filepath.Join(common.GetTempFolder(), ".GetBlockByHeightPeriod")
+	if common.FileOrFolderExists(dbPath) {
+		os.RemoveAll(dbPath)
+	}
+	api := newTestAPI(t, dbPath)
+	header := &types.BlockHeader{
+		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
+		Creator:           *crypto.MustGenerateRandomAddress(),
+		StateHash:         common.StringToHash("StateHash"),
+		TxHash:            common.StringToHash("TxHash"),
+		Difficulty:        big.NewInt(1),
+		Height:            1,
+		CreateTimestamp:   big.NewInt(1),
+		Nonce:             1,
+		ExtraData:         make([]byte, 0),
+	}
+
+	tx := &types.Transaction{
+		Data: types.TransactionData{
+			From:    *crypto.MustGenerateRandomAddress(),
+			To:      *crypto.MustGenerateRandomAddress(),
+			Amount:  big.NewInt(3),
+			Fee:     big.NewInt(0),
+			Payload: make([]byte, 0),
+		},
+		Signature: crypto.Signature{Sig: []byte("test sig")},
+	}
+
+	tx.Hash = crypto.MustHash(tx.Data)
+
+	block := &types.Block{
+		HeaderHash:   header.Hash(),
+		Header:       header,
+		Transactions: []*types.Transaction{tx},
+	}
+
+	err := api.s.chain.GetStore().PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, nil)
+	err = api.s.chain.GetStore().PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, nil)
+
+	request := &GetBlockByHeightRequest{
+		Height: 0,
+		FullTx: true,
+		Size:   1,
+	}
+	result := map[string]interface{}{}
+	err = api.GetBlockByRange(request, &result)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(result), 2)
+
+	request = &GetBlockByHeightRequest{
+		Height: -1,
+		FullTx: true,
+		Size:   1,
+	}
+	result = map[string]interface{}{}
+	err = api.GetBlockByRange(request, &result)
+	assert.Equal(t, err != nil, true)
+	assert.Equal(t, len(result), 0)
+
+	request = &GetBlockByHeightRequest{
+		Height: 1,
+		FullTx: true,
+		Size:   -1,
+	}
+	result = map[string]interface{}{}
+	err = api.GetBlockByRange(request, &result)
+	assert.Equal(t, err != nil, true)
+	assert.Equal(t, len(result), 0)
+}
