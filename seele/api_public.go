@@ -25,6 +25,8 @@ type PublicSeeleAPI struct {
 	s *SeeleService
 }
 
+const maxSizeLimit = 1000
+
 // NewPublicSeeleAPI creates a new PublicSeeleAPI object for rpc service.
 func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
@@ -203,15 +205,18 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, re
 	return nil
 }
 
-// GetBlockByRange returns the size + 1 of requested block. When the blockNr or the size is -1 the error is returned. When fullTx is true all
+// GetBlockByRange returns the size of requested block. When the blockNr or the size is -1 the error is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByRange(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
 	blocks := make([]types.Block, 0)
 	if request.Size < 0 || request.Height < 0 {
-		return errors.New("the request height or size of the block is error")
+		return errors.New("the height or size of the request is error")
 	}
-	for i := int64(0); i <= request.Size; i++ {
-		block, err := getBlock(api.s.chain, request.Height+i)
+	if request.Size > maxSizeLimit {
+		return errors.New("the size of the request  is large")
+	}
+	for i := int64(0); i < request.Size; i++ {
+		block, err := getBlock(api.s.chain, request.Height + i)
 		if err != nil {
 			return err
 		}

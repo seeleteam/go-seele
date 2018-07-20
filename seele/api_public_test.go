@@ -231,11 +231,13 @@ func Test_GetBlockByRange(t *testing.T) {
 	assert.Equal(t, err, nil)
 	err = api.s.chain.GetStore().PutBlock(block, header.Difficulty, true)
 	assert.Equal(t, err, nil)
+	err = api.s.chain.GetStore().PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, nil)
 
 	request := &GetBlockByHeightRequest{
 		Height: 0,
 		FullTx: true,
-		Size:   1,
+		Size:   2,
 	}
 	result := map[string]interface{}{}
 	err = api.GetBlockByRange(request, &result)
