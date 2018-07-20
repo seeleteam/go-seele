@@ -277,15 +277,15 @@ func Test_GetBlocks(t *testing.T) {
 
 	request = &GetBlocksRequest{
 		GetBlockByHeightRequest: GetBlockByHeightRequest{
-			Height: 3,
+			Height: 2,
 			FullTx: true,
 		},
 		Size: 3,
 	}
 	result = []map[string]interface{}{}
 	err = api.GetBlocks(request, &result)
-	assert.Equal(t, err != nil, true)
-	assert.Equal(t, len(result), 0)
+	assert.Equal(t, err == nil, true)
+	assert.Equal(t, len(result), 3)
 }
 
 func newTestBlock(height uint64) *types.Block {
