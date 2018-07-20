@@ -24,7 +24,7 @@ type PublicSeeleAPI struct {
 	s *SeeleService
 }
 
-const maxSizeLimit = 100
+const maxSizeLimit = 64
 
 var ErrRequestSizeLimit = errors.New("the size of the request  is large")
 
