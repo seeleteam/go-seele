@@ -116,7 +116,7 @@ func Test_GetLogs(t *testing.T) {
 	api.s.chain.GetStore().PutReceipts(block.HeaderHash, []*types.Receipt{receipt})
 
 	// Verify the result
-	result := make([]map[string]interface{}, 0)
+	result := make([]GetLogsResponse, 0)
 	request := GetLogsRequest{
 		Height:          -1,
 		ContractAddress: contractAddress.ToHex(),
@@ -126,14 +126,13 @@ func Test_GetLogs(t *testing.T) {
 	err = api.GetLogs(&request, &result)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 1)
+	assert.Equal(t, result[0].Txhash, receipt.TxHash)
 
-	addr, ok := result[0]["address"].(string)
-	assert.Equal(t, ok, true)
-	assert.Equal(t, addr, contractAddress.ToHex())
+	addr := result[0].Log.Address
+	assert.Equal(t, addr, contractAddress)
 
-	name, ok := result[0]["topic"].(string)
-	assert.Equal(t, ok, true)
-	assert.Equal(t, name, "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100")
+	name := result[0].Log.Topics
+	assert.Equal(t, name[0].ToHex(), "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100")
 }
 
 func newTestAPI(t *testing.T, dbPath string) *PublicSeeleAPI {

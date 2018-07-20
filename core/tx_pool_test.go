@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
@@ -38,11 +39,13 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(1), nonce)
 	tx.Sign(fromPrivKey)
 
-	return &pooledTx{tx, PENDING}
+	return &pooledTx{tx, PENDING, time.Now().Unix()}
 }
 
 type mockBlockchain struct {
-	statedb *state.Statedb
+	statedb    *state.Statedb
+	chainStore store.BlockchainStore
+	dispose    func()
 }
 
 func newMockBlockchain() *mockBlockchain {
@@ -51,7 +54,9 @@ func newMockBlockchain() *mockBlockchain {
 		panic(err)
 	}
 
-	return &mockBlockchain{statedb}
+	db, dispose := leveldb.NewTestDatabase()
+	chainStore := store.NewBlockchainDatabase(db)
+	return &mockBlockchain{statedb, chainStore, dispose}
 }
 
 func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
@@ -59,7 +64,7 @@ func (chain mockBlockchain) GetCurrentState() (*state.Statedb, error) {
 }
 
 func (chain mockBlockchain) GetStore() store.BlockchainStore {
-	return chain.GetStore()
+	return chain.chainStore
 }
 
 func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
@@ -84,6 +89,8 @@ func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint6
 
 func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -95,6 +102,8 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 
 func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -109,6 +118,8 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 
 func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -123,6 +134,7 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	config := DefaultTxPoolConfig()
 	config.Capacity = 1
 	pool, chain := newTestPool(config)
+	defer chain.dispose()
 
 	poolTx1 := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx1.Data.From, 20, 100)
@@ -138,6 +150,8 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -168,6 +182,8 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 
 func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	account1, txs1 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{9, 5, 7})
 	chain.addAccount(account1, 10, 5)
 	account2, txs2 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{7, 9, 5})
@@ -193,6 +209,8 @@ func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 
 func Test_TransactionPool_Remove(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -207,6 +225,8 @@ func Test_TransactionPool_Remove(t *testing.T) {
 
 func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.Data.From, 20, 100)
 
@@ -245,4 +265,33 @@ func Test_GetRejectTransacton(t *testing.T) {
 
 	_, ok = txs[b2.Transactions[2].Hash]
 	assert.Equal(t, ok, true, "2")
+}
+
+func Test_TransactionPool_RemoveTransactions(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	for _, ptx := range pool.hashToTxMap {
+		ptx.timestamp = ptx.timestamp - 10
+	}
+
+	pool.RemoveTransactions()
+	assert.Equal(t, len(pool.hashToTxMap), 1)
+	assert.Equal(t, len(pool.accountToTxsMap), 1)
+
+	for _, ptx := range pool.hashToTxMap {
+		ptx.timestamp = ptx.timestamp - overTimeInterval
+	}
+
+	pool.RemoveTransactions()
+	assert.Equal(t, len(pool.hashToTxMap), 0)
+	assert.Equal(t, len(pool.accountToTxsMap), 0)
 }

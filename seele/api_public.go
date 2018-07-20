@@ -65,6 +65,13 @@ type GetLogsRequest struct {
 	Topics          string
 }
 
+// GetLogsResponse response param for GetLogs api
+type GetLogsResponse struct {
+	Txhash   common.Hash
+	LogIndex uint
+	Log      *types.Log
+}
+
 // GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
 type GetTxByBlockHeightAndIndexRequest struct {
 	Height int64
@@ -268,7 +275,7 @@ func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result
 }
 
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
-func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]GetLogsResponse) error {
 	// Check input parameters
 	contractAddress, err := common.HexToAddress(request.ContractAddress)
 	if err != nil {
@@ -292,9 +299,9 @@ func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]map[string
 		return err
 	}
 
-	logs := make([]map[string]interface{}, 0)
+	logs := make([]GetLogsResponse, 0)
 	for _, receipt := range receipts {
-		for _, log := range receipt.Logs {
+		for logIndex, log := range receipt.Logs {
 			// Matches contract address
 			if !contractAddress.Equal(log.Address) {
 				continue
@@ -306,16 +313,16 @@ func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]map[string
 				continue
 			}
 
-			put, err := printableLog(log)
-			if err != nil {
-				return err
-			}
-
-			logs = append(logs, put)
+			logs = append(logs, GetLogsResponse{
+				Txhash:   receipt.TxHash,
+				LogIndex: uint(logIndex),
+				Log:      log,
+			})
 		}
 	}
 
 	*result = logs
+
 	return nil
 }
 

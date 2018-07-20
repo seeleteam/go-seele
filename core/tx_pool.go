@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -34,6 +35,7 @@ const (
 )
 
 const chainHeaderChangeBuffSize = 100
+const overTimeInterval int64 = 3 * 60 * 60
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -42,7 +44,8 @@ type blockchain interface {
 
 type pooledTx struct {
 	*types.Transaction
-	txStatus byte
+	txStatus  byte
+	timestamp int64
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -259,7 +262,7 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 }
 
 func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
-	poolTx := &pooledTx{tx, PENDING}
+	poolTx := &pooledTx{tx, PENDING, time.Now().Unix()}
 	pool.hashToTxMap[tx.Hash] = poolTx
 
 	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
@@ -326,22 +329,26 @@ func (pool *TransactionPool) RemoveTransactions() {
 
 	state, err := pool.chain.GetCurrentState()
 	if err != nil {
-		pool.log.Warn("get current state failed %s", err)
+		pool.log.Warn("failed to get current state, err: %s", err)
 		return
 	}
 
+	nowTimestamp := time.Now().Unix()
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 		nonce := state.GetNonce(poolTx.Data.From)
+		duration := nowTimestamp - poolTx.timestamp
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 {
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeInterval {
 			if txIndex == nil {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
 						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
+				} else if duration > overTimeInterval {
+					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
 				} else {
-					pool.log.Debug("remove tx %s because got error")
+					pool.log.Debug("remove tx %s because got error", txHash.ToHex())
 				}
 			}
 			pool.removeTransaction(txHash)

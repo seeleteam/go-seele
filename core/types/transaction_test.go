@@ -98,7 +98,7 @@ func Benchmark_Transaction_ValidateWithoutState(b *testing.B) {
 	}
 }
 
-func Benchmark_Transaction_ParallelValidte(b *testing.B) {
+func Benchmark_Transaction_ParallelValidate(b *testing.B) {
 	tx := newTestTx(nil, 100, 2, 38, true)
 
 	b.RunParallel(func(pb *testing.PB) {
@@ -106,6 +106,28 @@ func Benchmark_Transaction_ParallelValidte(b *testing.B) {
 			tx.ValidateWithoutState(true, true)
 		}
 	})
+}
+
+func Benchmark_Transaction_Sign(b *testing.B) {
+	fromPrivKey, fromAddress := randomAccount(nil)
+	toAddress := randomAddress(nil)
+	tx, _ := NewTransaction(fromAddress, toAddress, big.NewInt(1), big.NewInt(2), 1)
+
+	for i := 0; i < b.N; i++ {
+		tx.Sign(fromPrivKey)
+	}
+}
+
+func Benchmark_Transaction_MerkleRootHash(b *testing.B) {
+	txs := []*Transaction{
+		newTestTx(nil, 1, 2, 3, true),
+		newTestTx(nil, 4, 5, 6, true),
+		newTestTx(nil, 7, 8, 9, true),
+	}
+
+	for i := 0; i < b.N; i++ {
+		MerkleRootHash(txs)
+	}
 }
 
 // Validate failed if transaction not signed.
@@ -157,18 +179,14 @@ func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
 	tx := newTestTx(t, 100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 101)
 	err := tx.Validate(statedb)
-	if err == nil {
-		panic("expected error")
-	}
+	assert.Equal(t, err != nil, true)
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
 	tx := newTestTx(t, 100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
-	if err == nil {
-		panic("expected error")
-	}
+	assert.Equal(t, err != nil, true)
 }
 
 func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
@@ -203,14 +221,11 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 	dispose := prepareShardEnv(9)
 	defer dispose()
 
-	from, privKey := crypto.MustGenerateShardKeyPair(1) // invalid shard
+	from, _ := crypto.MustGenerateShardKeyPair(1) // invalid shard
 	to := crypto.MustGenerateShardAddress(9)
-	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-	tx.Sign(privKey)
+	_, err := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
 
-	statedb := newTestStateDB(tx.Data.From, 5, 100)
-
-	err := tx.Validate(statedb)
+	assert.Equal(t, err != nil, true)
 	assert.Equal(t, strings.Contains(err.Error(), "invalid from address"), true)
 }
 
@@ -218,14 +233,11 @@ func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
 	dispose := prepareShardEnv(9)
 	defer dispose()
 
-	from, privKey := crypto.MustGenerateShardKeyPair(9)
+	from, _ := crypto.MustGenerateShardKeyPair(9)
 	to := crypto.MustGenerateShardAddress(1) // invalid shard
-	tx, _ := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-	tx.Sign(privKey)
+	_, err := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
 
-	statedb := newTestStateDB(tx.Data.From, 5, 100)
-
-	err := tx.Validate(statedb)
+	assert.Equal(t, err != nil, true)
 	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
 }
 
@@ -234,16 +246,12 @@ func Test_Transaction_Validate_InvalidContractShard(t *testing.T) {
 	defer dispose()
 
 	// From address in one shard, but contract address in another shard.
-	from, privKey := crypto.MustGenerateShardKeyPair(9)
+	from, _ := crypto.MustGenerateShardKeyPair(9)
 	to := crypto.MustGenerateShardAddress(15)
 	contractAddr := crypto.CreateAddress(*to, 38)
-	tx, err := NewMessageTransaction(*from, contractAddr, big.NewInt(20), big.NewInt(10), 5, []byte("contract message"))
-	assert.Equal(t, err, error(nil))
-	tx.Sign(privKey)
+	_, err := NewMessageTransaction(*from, contractAddr, big.NewInt(20), big.NewInt(10), 5, []byte("contract message"))
 
-	statedb := newTestStateDB(tx.Data.From, 5, 100)
-
-	err = tx.Validate(statedb)
+	assert.Equal(t, err != nil, true)
 	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
 }
 
@@ -254,9 +262,14 @@ func Test_Transaction_InvalidFee(t *testing.T) {
 	// From and contract addresses match the shard number.
 	from := crypto.MustGenerateShardAddress(9)
 	contractAddr := crypto.MustGenerateShardAddress(9)
+
 	tx, err := NewTransaction(*from, *contractAddr, big.NewInt(20), big.NewInt(-1), 5)
 	assert.Equal(t, tx, (*Transaction)(nil))
 	assert.Equal(t, err, ErrFeeNegative)
+
+	tx, err = NewTransaction(*from, *contractAddr, big.NewInt(20), nil, 5)
+	assert.Equal(t, tx, (*Transaction)(nil))
+	assert.Equal(t, err, ErrFeeNil)
 }
 
 func Test_Transaction_EmptyPayloadError(t *testing.T) {
@@ -325,4 +338,15 @@ func Test_Transaction_RlpRewardTx(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	assertTxRlp(t, tx)
+}
+
+func Test_Transaction_InvalidAmount(t *testing.T) {
+	_, fromAddress := randomAccount(t)
+	toAddress := randomAddress(t)
+
+	_, err := NewTransaction(fromAddress, toAddress, nil, new(big.Int).SetInt64(1), 0)
+	assert.Equal(t, err, ErrAmountNil)
+
+	_, err = NewTransaction(fromAddress, toAddress, big.NewInt(-1), new(big.Int).SetInt64(1), 0)
+	assert.Equal(t, err, ErrAmountNegative)
 }

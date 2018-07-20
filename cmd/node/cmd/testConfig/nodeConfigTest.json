@@ -21,7 +21,7 @@
   },
   "httpServer": {
     "address": "127.0.0.1:65027",
-    "crosssorgins": [
+    "crossorigins": [
       "*"
     ],
     "whiteHost": [
