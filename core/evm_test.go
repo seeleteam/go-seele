@@ -177,7 +177,10 @@ func Benchmark_CreateContract(b *testing.B) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	createContractTx, _ := types.NewContractTransaction(address, new(big.Int), new(big.Int), 38, code)
+	amount := big.NewInt(0)
+	fee := big.NewInt(1)
+	nonce := uint64(38)
+	createContractTx, _ := types.NewContractTransaction(address, amount, fee, nonce, code)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
 
@@ -199,7 +202,10 @@ func Benchmark_CallContract(b *testing.B) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	createContractTx, _ := types.NewContractTransaction(address, new(big.Int), new(big.Int), 38, code)
+	amount := big.NewInt(0)
+	fee := big.NewInt(1)
+	nonce := uint64(38)
+	createContractTx, _ := types.NewContractTransaction(address, amount, fee, nonce, code)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
 	receipt, _ := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
@@ -208,7 +214,8 @@ func Benchmark_CallContract(b *testing.B) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.get(), it returns 5 as initialized in constructor.
 	input := mustHexToBytes("0x6d4ce63c")
-	callContractTx, _ := types.NewMessageTransaction(address, contractAddr, new(big.Int), new(big.Int), 1, input)
+	nonce = uint64(1)
+	callContractTx, _ := types.NewMessageTransaction(address, contractAddr, amount, fee, nonce, input)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
 
