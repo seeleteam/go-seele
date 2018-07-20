@@ -3,8 +3,6 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-//+build windows
-
 package utils
 
 import (
