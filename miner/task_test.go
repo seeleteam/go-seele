@@ -8,10 +8,12 @@ package miner
 import (
 	"fmt"
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -47,4 +49,48 @@ func Test_PopBestTx(t *testing.T) {
 
 	tt5 := popBestFeeTx(txs)
 	assert.Equal(t, tt5, (*types.Transaction)(nil), "5")
+}
+
+func Benchmark_chooseTransactions(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		// @todo there is perf issue and cannot use the maximum pool tx number (500K) for benchmark test.
+		txs := prepareTxs(20000, 1)
+		b.StartTimer()
+		highFeeTxs := chooseTxs(txs, core.BlockTransactionNumberLimit)
+		if len(highFeeTxs) != core.BlockTransactionNumberLimit {
+			panic("not enough txs to choose")
+		}
+	}
+}
+
+func prepareTxs(numAccounts, numTxsPerAccount int) map[common.Address][]*types.Transaction {
+	txs := make(map[common.Address][]*types.Transaction)
+
+	for i := 0; i < numAccounts; i++ {
+		from := common.BigToAddress(big.NewInt(int64(i)))
+
+		accountTxs := []*types.Transaction{}
+		for j := 0; j < numTxsPerAccount; j++ {
+			accountTxs = append(accountTxs, &types.Transaction{
+				Data: types.TransactionData{
+					From: from,
+					Fee:  big.NewInt(int64(rand.Intn(1000))),
+				},
+			})
+		}
+
+		txs[from] = accountTxs
+	}
+
+	return txs
+}
+
+func chooseTxs(txs map[common.Address][]*types.Transaction, num int) []*types.Transaction {
+	var result []*types.Transaction
+	for i := 0; i < num; i++ {
+		tx := popBestFeeTx(txs)
+		result = append(result, tx)
+	}
+	return result
 }
