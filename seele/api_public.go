@@ -6,7 +6,6 @@
 package seele
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -26,8 +25,6 @@ type PublicSeeleAPI struct {
 
 const maxSizeLimit = 64
 
-var ErrRequestSizeLimit = errors.New("the size of the request  is large")
-
 // NewPublicSeeleAPI creates a new PublicSeeleAPI object for rpc service.
 func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
@@ -43,11 +40,16 @@ type MinerInfo struct {
 	MinerThread        int
 }
 
-// GetBlocksRequest request param for GetBlockByHeight api
-type GetBlocksRequest struct {
+// GetBlockByHeightRequest request param for GetBlockByHeight api
+type GetBlockByHeightRequest struct {
 	Height int64
 	FullTx bool
-	Size   uint
+}
+
+// GetBlocksRequest request param for GetBlocks api
+type GetBlocksRequest struct {
+	GetBlockByHeightRequest
+	Size uint
 }
 
 // GetBlockByHashRequest request param for GetBlockByHash api
@@ -191,7 +193,7 @@ func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) err
 
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlocksRequest, result *map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
 	block, err := getBlock(api.s.chain, request.Height)
 	if err != nil {
 		return err
@@ -206,19 +208,25 @@ func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlocksRequest, result *m
 	return nil
 }
 
-// GetBlocks returns the size of requested block. When the blockNr or the size is -1 the chain head is returned. When fullTx is true all
-// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
+// GetBlocks returns the size of requested block. When the blockNr is -1 the chain head is returned.
+//When the size is greater than 64, the size will be set to 64.When it's -1 that the blockNr minus size, the blocks in 64 is returned.
+// When fullTx is true all transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlocks(request *GetBlocksRequest, result *[]map[string]interface{}) error {
-	if request.Size > maxSizeLimit {
-		return ErrRequestSizeLimit
-	}
-
 	blocks := make([]types.Block, 0)
-	if request.Height < 0 || request.Height-int64(request.Size) < 0 {
+	if request.Height < 0 {
 		block := api.s.chain.CurrentBlock()
 		blocks = append(blocks, *block)
 	} else {
-		for i := request.Size; i > 0; i-- {
+		if request.Size > maxSizeLimit {
+			request.Size = maxSizeLimit
+		}
+
+		if request.Height+1-int64(request.Size) < 0 {
+			request.Size = uint(request.Height + 1)
+		}
+
+		for i := uint(0); i < request.Size; i++ {
+			var block *types.Block
 			block, err := getBlock(api.s.chain, request.Height-int64(i))
 			if err != nil {
 				return err
