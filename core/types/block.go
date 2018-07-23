@@ -80,6 +80,7 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Blo
 	return block
 }
 
+// GetExcludeRewardTransactions returns all txs of a block except for the reward transaction
 func (block *Block) GetExcludeRewardTransactions() []*Transaction {
 	if len(block.Transactions) == 0 {
 		return block.Transactions
