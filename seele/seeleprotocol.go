@@ -202,11 +202,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 func (sp *SeeleProtocol) syncTransactions(p *peer) {
 	defer sp.wg.Done()
 	sp.wg.Add(1)
-	txs := sp.txPool.GetProcessableTransactions()
-	pending := make([]*types.Transaction, 0)
-	for _, value := range txs {
-		pending = append(pending, value...)
-	}
+	pending := sp.txPool.GetTransactions(false, true)
 
 	sp.log.Debug("syncTransactions peerid:%s pending length:%d", p.peerStrID, len(pending))
 	if len(pending) == 0 {

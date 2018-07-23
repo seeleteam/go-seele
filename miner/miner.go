@@ -297,8 +297,7 @@ func (miner *Miner) prepareNewBlock() error {
 		coinbase:  miner.coinbase,
 	}
 
-	txs := miner.seele.TxPool().GetProcessableTransactions()
-	err = miner.current.applyTransactions(miner.seele, stateDB, txs, miner.log)
+	err = miner.current.applyTransactions(miner.seele, stateDB, miner.log)
 	if err != nil {
 		return fmt.Errorf("apply transaction failed %s", err)
 	}

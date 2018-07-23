@@ -26,16 +26,8 @@ var (
 	errTxNonceUsed  = errors.New("transaction from this address already used its nonce")
 )
 
-// The status of transaction in tx pool
-const (
-	PENDING    byte = 0x01
-	PROCESSING byte = 0x02
-	ERROR      byte = 0x04
-	ALL        byte = PENDING | PROCESSING | ERROR
-)
-
 const chainHeaderChangeBuffSize = 100
-const overTimeInterval int64 = 3 * 60 * 60
+const overTimeInterval = 3 * time.Hour
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -44,8 +36,12 @@ type blockchain interface {
 
 type pooledTx struct {
 	*types.Transaction
-	txStatus  byte
-	timestamp int64
+	heapItem
+	timestamp time.Time
+}
+
+func newPooledTx(tx *types.Transaction) *pooledTx {
+	return &pooledTx{tx, heapItem{0}, time.Now()}
 }
 
 // TransactionPool is a thread-safe container for transactions received
@@ -56,7 +52,8 @@ type TransactionPool struct {
 	config                   TransactionPoolConfig
 	chain                    blockchain
 	hashToTxMap              map[common.Hash]*pooledTx
-	accountToTxsMap          map[common.Address]*txCollection // Account address to tx collection mapping.
+	pendingQueue             *pendingQueue
+	processingTxs            map[common.Hash]struct{}
 	lastHeader               common.Hash
 	chainHeaderChangeChannel chan common.Hash
 	log                      *log.SeeleLog
@@ -70,12 +67,13 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 	}
 
 	pool := &TransactionPool{
-		config:          config,
-		chain:           chain,
-		hashToTxMap:     make(map[common.Hash]*pooledTx),
-		accountToTxsMap: make(map[common.Address]*txCollection),
-		lastHeader:      header,
-		log:             log.GetLogger("txpool", common.LogConfig.PrintLog),
+		config:        config,
+		chain:         chain,
+		hashToTxMap:   make(map[common.Hash]*pooledTx),
+		pendingQueue:  newPendingQueue(),
+		processingTxs: make(map[common.Hash]struct{}),
+		lastHeader:    header,
+		log:           log.GetLogger("txpool", common.LogConfig.PrintLog),
 		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 
@@ -114,7 +112,7 @@ func (pool *TransactionPool) MonitorChainHeaderChange() {
 			}
 
 			pool.lastHeader = newHeader
-			pool.RemoveTransactions()
+			pool.removeTransactions()
 		}
 	}
 }
@@ -238,16 +236,11 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 		return errTxPoolFull
 	}
 
-	if tx.Data.Fee == nil {
-		return errTxFeeNil
-	}
-
-	existTx := pool.findTransaction(tx.Data.From, tx.Data.AccountNonce, PENDING)
-	if existTx != nil {
+	if existTx := pool.pendingQueue.get(tx.Data.From, tx.Data.AccountNonce); existTx != nil {
 		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
 			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
 				tx.Hash.ToHex(), existTx.Hash.ToHex())
-			pool.removeTransaction(existTx.Hash)
+			pool.RemoveTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
 		}
@@ -262,23 +255,9 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 }
 
 func (pool *TransactionPool) addTransaction(tx *types.Transaction) {
-	poolTx := &pooledTx{tx, PENDING, time.Now().Unix()}
+	poolTx := newPooledTx(tx)
 	pool.hashToTxMap[tx.Hash] = poolTx
-
-	if _, ok := pool.accountToTxsMap[tx.Data.From]; !ok {
-		pool.accountToTxsMap[tx.Data.From] = newTxCollection()
-	}
-
-	pool.accountToTxsMap[tx.Data.From].add(pool.hashToTxMap[tx.Hash])
-}
-
-func (pool *TransactionPool) findTransaction(from common.Address, nonce uint64, status byte) *types.Transaction {
-	col, ok := pool.accountToTxsMap[from]
-	if !ok {
-		return nil
-	}
-
-	return col.findTx(nonce, status)
+	pool.pendingQueue.add(poolTx)
 }
 
 // GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
@@ -293,37 +272,17 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
-// UpdateTransactionStatus updates the pool transaction status
-func (pool *TransactionPool) UpdateTransactionStatus(txHash common.Hash, status byte) {
-	pool.mutex.Lock()
-	defer pool.mutex.Unlock()
-
-	poolTx := pool.hashToTxMap[txHash]
-	if poolTx == nil {
-		return
+// RemoveTransaction removes a transaction from pool.
+func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
+	if tx := pool.hashToTxMap[txHash]; tx != nil {
+		pool.pendingQueue.remove(tx.Data.From, tx.Data.AccountNonce)
+		delete(pool.processingTxs, txHash)
+		delete(pool.hashToTxMap, txHash)
 	}
-	poolTx.txStatus = status
 }
 
-func (pool *TransactionPool) removeTransaction(txHash common.Hash) {
-	tx := pool.hashToTxMap[txHash]
-	if tx == nil {
-		return
-	}
-
-	collection := pool.accountToTxsMap[tx.Data.From]
-	if collection != nil {
-		collection.remove(tx.Data.AccountNonce)
-		if collection.count(ALL) == 0 {
-			delete(pool.accountToTxsMap, tx.Data.From)
-		}
-	}
-
-	delete(pool.hashToTxMap, txHash)
-}
-
-// RemoveTransactions removes finalized and old transactions in hashToTxMap
-func (pool *TransactionPool) RemoveTransactions() {
+// removeTransactions removes finalized and old transactions in hashToTxMap
+func (pool *TransactionPool) removeTransactions() {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -333,76 +292,69 @@ func (pool *TransactionPool) RemoveTransactions() {
 		return
 	}
 
-	nowTimestamp := time.Now().Unix()
+	nowTimestamp := time.Now()
 	for txHash, poolTx := range pool.hashToTxMap {
 		txIndex, _ := pool.chain.GetStore().GetTxIndex(txHash)
 		nonce := state.GetNonce(poolTx.Data.From)
-		duration := nowTimestamp - poolTx.timestamp
+		duration := nowTimestamp.Sub(poolTx.timestamp)
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeInterval {
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || duration > overTimeInterval {
 			if txIndex == nil {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
 						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
 				} else if duration > overTimeInterval {
 					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
-				} else {
-					pool.log.Debug("remove tx %s because got error", txHash.ToHex())
 				}
 			}
-			pool.removeTransaction(txHash)
+			pool.RemoveTransaction(txHash)
 		}
 	}
 }
 
-// GetProcessableTransactions retrieves all processable transactions. The returned transactions
-// are grouped by original account addresses and sorted by nonce ASC.
-func (pool *TransactionPool) GetProcessableTransactions() map[common.Address][]*types.Transaction {
+// GetProcessableTransactions retrieves processable transactions from pool.
+func (pool *TransactionPool) GetProcessableTransactions(num int) []*types.Transaction {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	allAccountTxs := make(map[common.Address][]*types.Transaction)
-
-	for account, txs := range pool.accountToTxsMap {
-		processableTxs := txs.getTxsOrderByNonceAsc(PENDING)
-		if len(processableTxs) != 0 {
-			allAccountTxs[account] = processableTxs
-		}
+	txs := pool.pendingQueue.popN(num)
+	for _, tx := range txs {
+		pool.processingTxs[tx.Hash] = struct{}{}
 	}
 
-	return allAccountTxs
+	return txs
 }
 
-// GetProcessableTransactionsCount return the total number of all processable transactions contained within the transaction pool
-func (pool *TransactionPool) GetProcessableTransactionsCount() int {
+// GetPendingTxCount return the total number of pending transactions in the transaction pool.
+func (pool *TransactionPool) GetPendingTxCount() int {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	status := 0
-	for _, collection := range pool.accountToTxsMap {
-		if collection != nil {
-			status += collection.count(PENDING)
-		}
-	}
-	return status
+	return pool.pendingQueue.count()
 }
 
-// GetTransactionsByStatus get transactions by given status
-func (pool *TransactionPool) GetTransactionsByStatus(status byte) map[common.Address][]*types.Transaction {
+// GetTransactions return the transactions in the transaction pool.
+func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.Transaction {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	allAccountTxs := make(map[common.Address][]*types.Transaction)
+	var txs []*types.Transaction
 
-	for account, txs := range pool.accountToTxsMap {
-		processableTxs := txs.getTxsOrderByNonceAsc(status)
-		if len(processableTxs) != 0 {
-			allAccountTxs[account] = processableTxs
+	if processing {
+		for hash := range pool.processingTxs {
+			if tx := pool.hashToTxMap[hash]; tx != nil {
+				txs = append(txs, tx.Transaction)
+			}
 		}
 	}
 
-	return allAccountTxs
+	if pending {
+		pendingTxs := pool.pendingQueue.list()
+		txs = append(txs, pendingTxs...)
+	}
+
+	return txs
 }
 
 // Stop terminates the transaction pool.

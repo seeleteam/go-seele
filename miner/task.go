@@ -28,8 +28,7 @@ type Task struct {
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
-	txs map[common.Address][]*types.Transaction, log *log.SeeleLog) error {
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
@@ -37,7 +36,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 	}
 
 	// choose transactions from the given txs
-	task.chooseTransactions(seele, statedb, txs, log)
+	task.chooseTransactions(seele, statedb, log)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", task.header.Height, reward, len(task.txs))
 
@@ -72,59 +71,33 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 	return reward, nil
 }
 
-func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs map[common.Address][]*types.Transaction, log *log.SeeleLog) {
-	log.Debug("choose transaction from %d transactions in tx pool", len(txs))
-
+func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
 	for i := 0; i < core.BlockTransactionNumberLimit-1; {
-		tx := popBestFeeTx(txs)
-
-		if tx == nil {
+		txs := seele.TxPool().GetProcessableTransactions(core.BlockTransactionNumberLimit - 1 - i)
+		if len(txs) == 0 {
 			break
 		}
 
-		seele.TxPool().UpdateTransactionStatus(tx.Hash, core.PROCESSING)
-
-		err := tx.Validate(statedb)
-		if err != nil {
-			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
-			log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
-			continue
-		}
-
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
-		if err != nil {
-			seele.TxPool().UpdateTransactionStatus(tx.Hash, core.ERROR)
-			log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
-			continue
-		}
-
-		task.txs = append(task.txs, tx)
-		task.receipts = append(task.receipts, receipt)
-
-		i++
-	}
-}
-
-// get best fee transaction and remove it in the map
-// return best transaction if txs is empty, it will return nil
-func popBestFeeTx(txs map[common.Address][]*types.Transaction) *types.Transaction {
-	bestFee := big.NewInt(-1)
-	var bestTx *types.Transaction
-	for _, txSlice := range txs {
-		if len(txSlice) > 0 {
-			if txSlice[0].Data.Fee.Cmp(bestFee) > 0 {
-				bestTx = txSlice[0]
-				bestFee.Set(txSlice[0].Data.Fee)
+		for _, tx := range txs {
+			if err := tx.Validate(statedb); err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
+				continue
 			}
+
+			receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
+			if err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
+				continue
+			}
+
+			task.txs = append(task.txs, tx)
+			task.receipts = append(task.receipts, receipt)
+
+			i++
 		}
 	}
-
-	if bestTx != nil {
-		txSlice := txs[bestTx.Data.From]
-		txs[bestTx.Data.From] = append(txSlice[:0], txSlice[1:]...)
-	}
-
-	return bestTx
 }
 
 // generateBlock builds a block from task

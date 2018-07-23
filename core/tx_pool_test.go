@@ -39,7 +39,7 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(1), nonce)
 	tx.Sign(fromPrivKey)
 
-	return &pooledTx{tx, PENDING, time.Now().Unix()}
+	return newPooledTx(tx)
 }
 
 type mockBlockchain struct {
@@ -70,12 +70,12 @@ func (chain mockBlockchain) GetStore() store.BlockchainStore {
 func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
 	chain := newMockBlockchain()
 	pool := &TransactionPool{
-		config:          *config,
-		chain:           chain,
-		hashToTxMap:     make(map[common.Hash]*pooledTx),
-		accountToTxsMap: make(map[common.Address]*txCollection),
-		lastHeader:      common.EmptyHash,
-		log:             log.GetLogger("test", true),
+		config:       *config,
+		chain:        chain,
+		hashToTxMap:  make(map[common.Hash]*pooledTx),
+		pendingQueue: newPendingQueue(),
+		lastHeader:   common.EmptyHash,
+		log:          log.GetLogger("test", true),
 	}
 
 	return pool, chain
@@ -180,33 +180,6 @@ func newTestAccountTxs(t *testing.T, amounts []int64, nonces []uint64) (common.A
 	return fromAddress, txs
 }
 
-func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
-	pool, chain := newTestPool(DefaultTxPoolConfig())
-	defer chain.dispose()
-
-	account1, txs1 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{9, 5, 7})
-	chain.addAccount(account1, 10, 5)
-	account2, txs2 := newTestAccountTxs(t, []int64{1, 2, 3}, []uint64{7, 9, 5})
-	chain.addAccount(account2, 10, 5)
-
-	for _, tx := range append(txs1, txs2...) {
-		pool.AddTransaction(tx)
-	}
-
-	processableTxs := pool.GetProcessableTransactions()
-	assert.Equal(t, len(processableTxs), 2)
-
-	assert.Equal(t, len(processableTxs[account1]), 3)
-	assert.Equal(t, processableTxs[account1][0], txs1[1])
-	assert.Equal(t, processableTxs[account1][1], txs1[2])
-	assert.Equal(t, processableTxs[account1][2], txs1[0])
-
-	assert.Equal(t, len(processableTxs[account2]), 3)
-	assert.Equal(t, processableTxs[account2][0], txs2[2])
-	assert.Equal(t, processableTxs[account2][1], txs2[0])
-	assert.Equal(t, processableTxs[account2][2], txs2[1])
-}
-
 func Test_TransactionPool_Remove(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
 	defer chain.dispose()
@@ -217,27 +190,10 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, len(pool.accountToTxsMap), 1)
+	assert.Equal(t, pool.pendingQueue.count(), 1)
 
-	pool.removeTransaction(poolTx.Hash)
-	assert.Equal(t, len(pool.accountToTxsMap), 0)
-}
-
-func Test_TransactionPool_UpdateTransactionStatus(t *testing.T) {
-	pool, chain := newTestPool(DefaultTxPoolConfig())
-	defer chain.dispose()
-
-	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
-
-	err := pool.AddTransaction(poolTx.Transaction)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, len(pool.accountToTxsMap), 1)
-
-	pool.UpdateTransactionStatus(poolTx.Hash, PROCESSING)
-	assert.Equal(t, pool.hashToTxMap[poolTx.Hash].txStatus, PROCESSING)
-	assert.Equal(t, pool.accountToTxsMap[poolTx.Data.From].nonceToTxMap[100].txStatus, PROCESSING)
+	pool.RemoveTransaction(poolTx.Hash)
+	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
 
 func Test_GetRejectTransacton(t *testing.T) {
@@ -277,21 +233,21 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, len(pool.accountToTxsMap), 1)
+	assert.Equal(t, pool.pendingQueue.count(), 1)
 
 	for _, ptx := range pool.hashToTxMap {
-		ptx.timestamp = ptx.timestamp - 10
+		ptx.timestamp = ptx.timestamp.Add(-10 * time.Second)
 	}
 
-	pool.RemoveTransactions()
+	pool.removeTransactions()
 	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, len(pool.accountToTxsMap), 1)
+	assert.Equal(t, pool.pendingQueue.count(), 1)
 
 	for _, ptx := range pool.hashToTxMap {
-		ptx.timestamp = ptx.timestamp - overTimeInterval
+		ptx.timestamp = ptx.timestamp.Add(-overTimeInterval)
 	}
 
-	pool.RemoveTransactions()
+	pool.removeTransactions()
 	assert.Equal(t, len(pool.hashToTxMap), 0)
-	assert.Equal(t, len(pool.accountToTxsMap), 0)
+	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
