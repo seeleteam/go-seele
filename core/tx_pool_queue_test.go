@@ -47,8 +47,10 @@ func Test_PendingQueue_add(t *testing.T) {
 func Test_PendingQueue_get(t *testing.T) {
 	q := newPendingQueue()
 
-	q.add(newMockPooledTx(1, 2, 5))
-	assert.Equal(t, q.get(uintToAddress(1), 5), newMockPooledTx(1, 2, 5))
+	tx := newMockPooledTx(1, 2, 5)
+	q.add(tx)
+
+	assert.Equal(t, q.get(uintToAddress(1), 5), tx)
 	assert.Equal(t, q.get(uintToAddress(2), 5) == nil, true)
 	assert.Equal(t, q.get(uintToAddress(1), 6) == nil, true)
 }
