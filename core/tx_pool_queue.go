@@ -124,19 +124,28 @@ func (q *pendingQueue) popN(n int) []*types.Transaction {
 	var txs []*types.Transaction
 
 	for i := 0; i < n && q.feeHeap.Len() > 0; i++ {
-		collection := q.peek()
-		tx := collection.pop().Transaction
-		txs = append(txs, tx)
-
-		if collection.len() == 0 {
-			delete(q.txs, tx.Data.From)
-			heap.Remove(&q.feeHeap, collection.heapIndex)
-		} else {
-			heap.Fix(&q.feeHeap, collection.heapIndex)
-		}
+		txs = append(txs, q.pop())
 	}
 
 	return txs
+}
+
+func (q *pendingQueue) pop() *types.Transaction {
+	if q.feeHeap.Len() == 0 {
+		return nil
+	}
+
+	collection := q.peek()
+	tx := collection.pop().Transaction
+
+	if collection.len() == 0 {
+		delete(q.txs, tx.Data.From)
+		heap.Remove(&q.feeHeap, collection.heapIndex)
+	} else {
+		heap.Fix(&q.feeHeap, collection.heapIndex)
+	}
+
+	return tx
 }
 
 func (q *pendingQueue) list() []*types.Transaction {

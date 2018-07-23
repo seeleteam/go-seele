@@ -28,8 +28,7 @@ type Task struct {
 }
 
 // applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
-	txs []*types.Transaction, log *log.SeeleLog) error {
+func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
@@ -37,7 +36,7 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb,
 	}
 
 	// choose transactions from the given txs
-	task.chooseTransactions(seele, statedb, txs, log)
+	task.chooseTransactions(seele, statedb, log)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", task.header.Height, reward, len(task.txs))
 
@@ -72,27 +71,32 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 	return reward, nil
 }
 
-func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, txs []*types.Transaction, log *log.SeeleLog) {
-	log.Debug("choose transaction from %d transactions in tx pool", len(txs))
-
-	for i, tx := range txs {
-		if err := tx.Validate(statedb); err != nil {
-			seele.TxPool().RemoveTransaction(tx.Hash)
-			log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
-			continue
+func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
+	for i := 0; i < core.BlockTransactionNumberLimit-1; {
+		txs := seele.TxPool().GetProcessableTransactions(core.BlockTransactionNumberLimit - 1 - i)
+		if len(txs) == 0 {
+			break
 		}
 
-		receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
-		if err != nil {
-			seele.TxPool().RemoveTransaction(tx.Hash)
-			log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
-			continue
+		for _, tx := range txs {
+			if err := tx.Validate(statedb); err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
+				continue
+			}
+
+			receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
+			if err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
+				continue
+			}
+
+			task.txs = append(task.txs, tx)
+			task.receipts = append(task.receipts, receipt)
+
+			i++
 		}
-
-		task.txs = append(task.txs, tx)
-		task.receipts = append(task.receipts, receipt)
-
-		i++
 	}
 }
 

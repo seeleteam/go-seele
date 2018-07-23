@@ -67,12 +67,13 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 	}
 
 	pool := &TransactionPool{
-		config:       config,
-		chain:        chain,
-		hashToTxMap:  make(map[common.Hash]*pooledTx),
-		pendingQueue: newPendingQueue(),
-		lastHeader:   header,
-		log:          log.GetLogger("txpool", common.LogConfig.PrintLog),
+		config:        config,
+		chain:         chain,
+		hashToTxMap:   make(map[common.Hash]*pooledTx),
+		pendingQueue:  newPendingQueue(),
+		processingTxs: make(map[common.Hash]struct{}),
+		lastHeader:    header,
+		log:           log.GetLogger("txpool", common.LogConfig.PrintLog),
 		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 
@@ -312,15 +313,12 @@ func (pool *TransactionPool) removeTransactions() {
 	}
 }
 
-// GetProcessableTransactions retrieves all processable transactions.
-func (pool *TransactionPool) GetProcessableTransactions() []*types.Transaction {
+// GetProcessableTransactions retrieves processable transactions from pool.
+func (pool *TransactionPool) GetProcessableTransactions(num int) []*types.Transaction {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	pool.processingTxs = make(map[common.Hash]struct{})
-
-	// exclude the reward tx
-	txs := pool.pendingQueue.popN(BlockTransactionNumberLimit - 1)
+	txs := pool.pendingQueue.popN(num)
 	for _, tx := range txs {
 		pool.processingTxs[tx.Hash] = struct{}{}
 	}
