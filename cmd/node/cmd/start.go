@@ -126,7 +126,7 @@ func init() {
 	startCmd.MarkFlagRequired("config")
 
 	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
-	startCmd.Flags().BoolVarP(&metricsEnableFlag,"metrics", "t", false, "start metrics")
+	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 }
