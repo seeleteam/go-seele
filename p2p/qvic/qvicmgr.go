@@ -159,7 +159,11 @@ func (mgr *QvicMgr) Accept() (net.Conn, error) {
 		mgr.log.Info("qvic Accept, but received quit message")
 		return nil, errQVICMgrFinished
 	case acc := <-mgr.acceptChan:
-		mgr.log.Info("qvic Accepted. err=%s", acc.err)
+		if acc.err == nil {
+			mgr.log.Info("qvic Accepted OK")
+		} else {
+			mgr.log.Info("qvic Accepted, err=%s", acc.err)
+		}
 		return acc.conn, acc.err
 	}
 }
