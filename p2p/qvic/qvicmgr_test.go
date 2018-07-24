@@ -19,7 +19,7 @@ func CreateServer() (qmgr *QvicMgr, err error) {
 	return
 }
 
-//Test_fechelper_mem create random string in memory; simulate packet loss, and try recover by fec
+//Test_qvicmgr tests QvicMgr's core functions
 func Test_qvicmgr(t *testing.T) {
 	qmgr, err := CreateServer()
 	if qmgr == nil {
