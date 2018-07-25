@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	errAlreadyInited   = errors.New("QvicMgr already inited")
+	errAlreadyInited   = errors.New("QvicMgr already initialized")
 	errInvalidProtocol = errors.New("Invalid connection prototol, must be tcp or qvic")
 	errQVICMgrFinished = errors.New("QVIC module has finished")
 	errUnknownError    = errors.New("Unknown error")
@@ -174,11 +174,9 @@ func (mgr *QvicMgr) Close() {
 	close(mgr.quit)
 	if mgr.tcpListenner != nil {
 		mgr.tcpListenner.Close()
-		mgr.tcpListenner = nil
 	}
 	if mgr.udpfd != nil {
 		mgr.udpfd.Close()
-		mgr.udpfd = nil
 	}
 	mgr.loopWG.Wait()
 	close(mgr.acceptChan)
