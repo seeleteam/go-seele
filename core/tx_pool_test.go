@@ -33,10 +33,19 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 }
 
 func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
+	return newTestPoolTxWithNonce(t, amount, nonce, 1)
+}
+
+func newTestPoolTxWithNonce(t *testing.T, amount int64, nonce uint64, fee int64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
+
+	return newTestPoolEx(t, fromPrivKey, fromAddress, amount, nonce, 1)
+}
+
+func newTestPoolEx(t *testing.T, fromPrivKey *ecdsa.PrivateKey, fromAddress common.Address, amount int64, nonce uint64, fee int64) *pooledTx {
 	_, toAddress := randomAccount(t)
 
-	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(1), nonce)
+	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(fee), nonce)
 	tx.Sign(fromPrivKey)
 
 	return newPooledTx(tx)
@@ -114,6 +123,10 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	if err == nil {
 		t.Fatal("The error is nil when add invalid tx to pool.")
 	}
+
+	// add nil tx
+	err = pool.AddTransaction(nil)
+	assert.Equal(t, err, error(nil))
 }
 
 func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
@@ -146,6 +159,23 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 
 	err = pool.AddTransaction(poolTx2.Transaction)
 	assert.Equal(t, err, errTxPoolFull)
+}
+
+func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
+	fromPrivKey, fromAddress := randomAccount(t)
+	var nonce uint64 = 100
+	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 10)
+	chain.addAccount(poolTx.Data.From, 20, 10)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, error(nil))
+
+	poolTx = newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 8)
+	err = pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, errTxNonceUsed)
 }
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
