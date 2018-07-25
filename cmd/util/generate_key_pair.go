@@ -33,7 +33,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 			} else if *shard == 0 {
 				publicKey, privateKey, err = crypto.GenerateKeyPair()
 				if err != nil {
-					fmt.Printf("generating the key pair failed: %s\n", err.Error())
+					fmt.Printf("failed to generate the key pair: %s\n", err.Error())
 				}
 			} else {
 				publicKey, privateKey = crypto.MustGenerateShardKeyPair(*shard)

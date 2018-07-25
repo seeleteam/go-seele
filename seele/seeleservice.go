@@ -94,7 +94,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
-		log.Error("NewSeeleService init chain failed. %s", err)
+		log.Error("failed to init chain in NewSeeleService. %s", err)
 		return nil, err
 	}
 
@@ -102,7 +102,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
-		log.Error("NewSeeleService create transaction pool failed, %s", err)
+		log.Error("failed to create transaction pool in NewSeeleService, %s", err)
 		return nil, err
 	}
 
@@ -110,7 +110,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
-		log.Error("NewSeeleService create seeleProtocol err. %s", err)
+		log.Error("failed to create seeleProtocol in NewSeeleService, %s", err)
 		return nil, err
 	}
 

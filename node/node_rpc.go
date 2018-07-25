@@ -76,7 +76,7 @@ func (n *Node) startPRC(apis []rpc.API) error {
 					return
 				}
 				// Not closed, just some error; report and continue
-				n.log.Error("RPC accept failed. err %s", err)
+				n.log.Error("failed to accept RPC. err %s", err)
 				continue
 			}
 			go handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)

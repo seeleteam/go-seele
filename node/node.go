@@ -25,8 +25,8 @@ var (
 	ErrLogIsNull          = errors.New("SeeleLog is null")
 	ErrNodeRunning        = errors.New("node is already running")
 	ErrNodeStopped        = errors.New("node is not started")
-	ErrServiceStartFailed = errors.New("node service starting failed")
-	ErrServiceStopFailed  = errors.New("node service stopping failed")
+	ErrServiceStartFailed = errors.New("failed to start node service")
+	ErrServiceStopFailed  = errors.New("failed to stop node service")
 )
 
 // StopError represents an error which is returned when a node fails to stop any registered service

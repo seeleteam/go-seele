@@ -98,7 +98,7 @@ MetricsLoop:
 			for idx, counter := range parts[3:] {
 				value, err := strconv.ParseFloat(strings.TrimSpace(counter), 64)
 				if err != nil {
-					log.Error("Compaction entry parsing failed", "err", err)
+					log.Error("failed to compacte entry parsing ", "err", err)
 					break MetricsLoop
 				}
 				compactions[i%2][idx] += value

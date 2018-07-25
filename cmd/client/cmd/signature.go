@@ -37,7 +37,7 @@ var signCmd = &cobra.Command{
 
 		key, err := crypto.LoadECDSAFromString(*privateKey)
 		if err != nil {
-			fmt.Printf("load key failed %s\n", err)
+			fmt.Printf("failed to load key %s\n", err)
 			return
 		}
 
@@ -52,7 +52,7 @@ var signCmd = &cobra.Command{
 
 		databytes, err := json.MarshalIndent(tx, "\t", "")
 		if err != nil {
-			fmt.Printf("json marshl failed: %s\n", err.Error())
+			fmt.Printf("Failed to marshal transaction: %s\n", err.Error())
 			return
 		}
 

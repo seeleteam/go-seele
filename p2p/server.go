@@ -168,7 +168,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	//TODO UDPPort==> TCPPort
 	addr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("%s:%d", node.IP.String(), node.UDPPort))
 	if err != nil {
-		srv.log.Error("resolve tpc address failed %s", err)
+		srv.log.Error("failed to resolve tpc address %s", err)
 		return
 	}
 
@@ -184,7 +184,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Info("add new node failed. err=%s", err)
+		srv.log.Info("failed to add new node. err=%s", err)
 	}
 }
 
@@ -339,7 +339,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
-		srv.log.Info("do handshake failed with peer %s, err info %s", dialDest, err)
+		srv.log.Info("failed to do handshake with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}

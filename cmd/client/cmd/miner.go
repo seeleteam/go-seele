@@ -40,10 +40,10 @@ var minerCmd = &cobra.Command{
 		if start {
 			err = client.Call("miner.Start", &threadsNum, &result)
 			if err != nil {
-				fmt.Printf("miner start failed: %s\n", err.Error())
+				fmt.Printf("failed to start miner: %s\n", err.Error())
 				return
 			}
-			fmt.Println("miner start succeed")
+			fmt.Println("succeed to start miner")
 		} else if status {
 			err = client.Call("miner.Status", &input, &result)
 			if err != nil {
@@ -54,10 +54,10 @@ var minerCmd = &cobra.Command{
 		} else if stop {
 			err = client.Call("miner.Stop", &input, &result)
 			if err != nil {
-				fmt.Printf("miner stop failed: %s\n", err.Error())
+				fmt.Printf("failed to stop miner: %s\n", err.Error())
 				return
 			}
-			fmt.Println("miner stop succeed")
+			fmt.Println("succeed to stop miner")
 		} else if gethashrate {
 			var hashrate uint64
 			err = client.Call("miner.Hashrate", &input, &hashrate)

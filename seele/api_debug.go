@@ -100,7 +100,7 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	for height := block.Header.Height - 1; height > 0; height-- {
 		current, err := chain.GetStore().GetBlockByHeight(height)
 		if err != nil {
-			return fmt.Errorf("get block failed, error:%s, block height:%d", err, height)
+			return fmt.Errorf("failed to get block, error:%s, block height:%d", err, height)
 		}
 
 		count += uint64(len(current.Transactions) - 1)
