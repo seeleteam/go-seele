@@ -10,15 +10,13 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"net/http"
-	netrpc "net/rpc"
 	"reflect"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/rpc"
+	rpc "github.com/seeleteam/go-seele/rpc2"
 )
 
 // error infos
@@ -48,10 +46,19 @@ type Node struct {
 	server   *p2p.Server
 	services []Service
 
-	rpcAPIs []rpc.API
-
 	log  *log.SeeleLog
 	lock sync.RWMutex
+
+	rpcListener net.Listener // IPC RPC listener socket to serve API requests
+	rpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
+
+	httpEndpoint string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	httpListener net.Listener // HTTP RPC listener socket to server API requests
+	httpHandler  *rpc.Server  // HTTP RPC request handler to process the API requests
+
+	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
+	wsListener net.Listener // Websocket RPC listener socket to server API requests
+	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
 }
 
 // New creates a new P2P node.
@@ -138,7 +145,7 @@ func (n *Node) Start() error {
 	}
 
 	// Start RPC server
-	if err := n.startRPC(n.services, n.config); err != nil {
+	if err := n.startRPC(n.services); err != nil {
 		for _, service := range n.services {
 			service.Stop()
 		}
@@ -150,113 +157,6 @@ func (n *Node) Start() error {
 	}
 
 	n.server = p2pSever
-
-	return nil
-}
-
-// startRPC starts all RPCs
-func (n *Node) startRPC(services []Service, conf *Config) error {
-	apis := []rpc.API{}
-	for _, service := range services {
-		apis = append(apis, service.APIs()...)
-	}
-
-	if err := n.startJSONRPC(apis); err != nil {
-		n.log.Error("starting json rpc failed", err)
-		return err
-	}
-
-	if err := n.startHTTPRPC(apis, conf.HTTPServer.HTTPWhiteHost, conf.HTTPServer.HTTPCors); err != nil {
-		n.log.Error("starting http rpc failed", err)
-		return err
-	}
-
-	if err := n.startWSRPC(apis); err != nil {
-		n.log.Error("start websocket err", err)
-		return err
-	}
-
-	return nil
-}
-
-// startJSONRPC starts the json rpc server
-func (n *Node) startJSONRPC(apis []rpc.API) error {
-	handler := rpc.NewServer()
-	for _, api := range apis {
-		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
-			return err
-		}
-
-		n.log.Info("registered service namespace: %s in json rpc successful", api.Namespace)
-	}
-
-	var (
-		listerner net.Listener
-		err       error
-	)
-
-	if listerner, err = net.Listen("tcp", n.config.BasicConfig.RPCAddr); err != nil {
-		n.log.Error("Listening failed", "err", err)
-		return err
-	}
-
-	n.log.Info("json rpc listen address %s", listerner.Addr())
-	go func() {
-		for {
-			conn, err := listerner.Accept()
-			if err != nil {
-				n.log.Error("RPC accepting failed", "err", err)
-				continue
-			}
-			go handler.ServeCodec(rpc.NewJSONCodec(conn, nil))
-		}
-	}()
-
-	return nil
-}
-
-// startHTTPRPC starts the http rpc server
-func (n *Node) startHTTPRPC(apis []rpc.API, whitehosts []string, corsList []string) error {
-	httpServer, httpHandler := rpc.NewHTTPServer(whitehosts, corsList)
-	rpcServer := httpServer.GetRPCServer()
-	for _, api := range apis {
-		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Api registration failed", "service", api.Service, "namespace", api.Namespace)
-			return err
-		}
-
-		n.log.Info("registered service namespace: %s in http rpc successful", api.Namespace)
-	}
-
-	var (
-		listerner net.Listener
-		err       error
-	)
-	rpcServer.HandleHTTP(netrpc.DefaultRPCPath, netrpc.DefaultDebugPath)
-	if listerner, err = net.Listen("tcp", n.config.HTTPServer.HTTPAddr); err != nil {
-		n.log.Error("HTTP listening failed", "err", err)
-		return err
-	}
-
-	n.log.Info("http listen address %s", listerner.Addr())
-	go http.Serve(listerner, httpHandler)
-
-	return nil
-}
-
-// startWSRPC starts websocket rpc server
-func (n *Node) startWSRPC(apis []rpc.API) error {
-	handler := rpc.NewWsRPCServer()
-	rpcServer := handler.GetWsRPCServer()
-	for _, api := range apis {
-		if err := rpcServer.RegisterName(api.Namespace, api.Service); err != nil {
-			n.log.Error("Websocket registration failed", "service", api.Service, "namespace", api.Namespace)
-			return err
-		}
-	}
-	http.HandleFunc(n.config.WSServerConfig.WSPattern, handler.ServeWS)
-	go http.ListenAndServe(n.config.WSServerConfig.WSAddr, nil)
 
 	return nil
 }
