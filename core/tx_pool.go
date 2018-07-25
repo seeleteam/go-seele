@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/seeleteam/go-seele/common"
+
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -314,15 +316,42 @@ func (pool *TransactionPool) removeTransactions() {
 }
 
 // GetProcessableTransactions retrieves processable transactions from pool.
-func (pool *TransactionPool) GetProcessableTransactions(num int) []*types.Transaction {
+func (pool *TransactionPool) GetProcessableTransactions() []*types.Transaction {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	txs := pool.pendingQueue.popN(num)
-	for _, tx := range txs {
-		pool.processingTxs[tx.Hash] = struct{}{}
-	}
+	size := BlockTransanctionSizeType(0)
+	var txs []*types.Transaction
+Outer:
+	for {
+		result := pool.pendingQueue.popN(1)
+		if len(result) == 0 {
+			break
+		}
+		for _, tx := range result {
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Data.AccountNonce))
+			if tx.Data.Amount != nil {
+				size = size + BlockTransanctionSizeType(unsafe.Sizeof(*tx.Data.Amount))
+			}
+			if tx.Data.Fee != nil {
+				size = size + BlockTransanctionSizeType(unsafe.Sizeof(*tx.Data.Fee))
+			}
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Data.From))
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Data.Payload))
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Data.Timestamp))
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Data.To))
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Hash))
+			size = size + BlockTransanctionSizeType(unsafe.Sizeof(tx.Signature))
 
+			if size > BlockTransactionSizeLimit {
+				break Outer
+			}
+
+			txs = append(txs, tx)
+			pool.processingTxs[tx.Hash] = struct{}{}
+		}
+
+	}
 	return txs
 }
 

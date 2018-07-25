@@ -72,31 +72,27 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
-	for i := 0; i < core.BlockTransactionNumberLimit-1; {
-		txs := seele.TxPool().GetProcessableTransactions(core.BlockTransactionNumberLimit - 1 - i)
-		if len(txs) == 0 {
-			break
+
+	txs := seele.TxPool().GetProcessableTransactions()
+	count := 0
+	for _, tx := range txs {
+		if err := tx.Validate(statedb); err != nil {
+			seele.TxPool().RemoveTransaction(tx.Hash)
+			log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
+			continue
 		}
 
-		for _, tx := range txs {
-			if err := tx.Validate(statedb); err != nil {
-				seele.TxPool().RemoveTransaction(tx.Hash)
-				log.Error("validate tx %s failed, for %s", tx.Hash.ToHex(), err)
-				continue
-			}
-
-			receipt, err := seele.BlockChain().ApplyTransaction(tx, i+1, task.coinbase, statedb, task.header)
-			if err != nil {
-				seele.TxPool().RemoveTransaction(tx.Hash)
-				log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
-				continue
-			}
-
-			task.txs = append(task.txs, tx)
-			task.receipts = append(task.receipts, receipt)
-
-			i++
+		receipt, err := seele.BlockChain().ApplyTransaction(tx, count+1, task.coinbase, statedb, task.header)
+		if err != nil {
+			seele.TxPool().RemoveTransaction(tx.Hash)
+			log.Error("apply tx %s failed, %s", tx.Hash.ToHex(), err)
+			continue
 		}
+
+		task.txs = append(task.txs, tx)
+		task.receipts = append(task.receipts, receipt)
+
+		count++
 	}
 }
 
