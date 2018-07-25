@@ -23,7 +23,7 @@ var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
 	errTxFeeNil     = errors.New("fee can't be nil")
-	errTxNonceUsed  = errors.New("transaction nonce already been used")
+	errTxNonceUsed  = errors.New("transaction from this address already used its nonce")
 )
 
 // The status of transaction in tx pool
@@ -35,7 +35,7 @@ const (
 )
 
 const chainHeaderChangeBuffSize = 100
-const overTimeIntervalInSec int64 = 3 * 60 * 60
+const overTimeInterval int64 = 3 * 60 * 60
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -50,7 +50,7 @@ type pooledTx struct {
 
 // TransactionPool is a thread-safe container for transactions received
 // from the network or submitted locally. A transaction will be removed from
-// the pool once included in a blockchain or pending time too long (> overTimeIntervalInSec).
+// the pool once included in a blockchain.
 type TransactionPool struct {
 	mutex                    sync.RWMutex
 	config                   TransactionPoolConfig
@@ -66,7 +66,7 @@ type TransactionPool struct {
 func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*TransactionPool, error) {
 	header, err := chain.GetStore().GetHeadBlockHash()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get chain header, %s", err)
+		return nil, fmt.Errorf("get chain header failed, %s", err)
 	}
 
 	pool := &TransactionPool{
@@ -340,12 +340,12 @@ func (pool *TransactionPool) RemoveTransactions() {
 		duration := nowTimestamp - poolTx.timestamp
 
 		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeIntervalInSec {
+		if txIndex != nil || poolTx.Data.AccountNonce < nonce || poolTx.txStatus&ERROR != 0 || duration > overTimeInterval {
 			if txIndex == nil {
 				if poolTx.Data.AccountNonce < nonce {
 					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", txHash.ToHex(),
 						poolTx.Data.From.ToHex(), poolTx.Data.AccountNonce, nonce)
-				} else if duration > overTimeIntervalInSec {
+				} else if duration > overTimeInterval {
 					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
 				} else {
 					pool.log.Debug("remove tx %s because got error", txHash.ToHex())
