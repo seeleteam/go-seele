@@ -23,7 +23,7 @@ var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
 	errTxFeeNil     = errors.New("fee can't be nil")
-	errTxNonceUsed  = errors.New("transaction from this address already used its nonce")
+	errTxNonceUsed  = errors.New("transaction nonce alread been used")
 )
 
 const chainHeaderChangeBuffSize = 100
@@ -46,7 +46,7 @@ func newPooledTx(tx *types.Transaction) *pooledTx {
 
 // TransactionPool is a thread-safe container for transactions received
 // from the network or submitted locally. A transaction will be removed from
-// the pool once included in a blockchain.
+// the pool once included in a blockchain or pending time too long (> overTimeInterval).
 type TransactionPool struct {
 	mutex                    sync.RWMutex
 	config                   TransactionPoolConfig
@@ -63,7 +63,7 @@ type TransactionPool struct {
 func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*TransactionPool, error) {
 	header, err := chain.GetStore().GetHeadBlockHash()
 	if err != nil {
-		return nil, fmt.Errorf("get chain header failed, %s", err)
+		return nil, fmt.Errorf("failed to get chain header, %s", err)
 	}
 
 	pool := &TransactionPool{

@@ -96,7 +96,7 @@ func Test_PendingQueue_peek(t *testing.T) {
 	q.add(tx2)
 	assert.Equal(t, q.peek().peek(), tx1)
 
-	// insert tx with less fee 6
+	// insert tx with more fee 6
 	tx3 := newMockPooledTx(3, 6, 1)
 	q.add(tx3)
 	assert.Equal(t, q.peek().peek(), tx3)
