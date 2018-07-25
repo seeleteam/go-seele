@@ -27,7 +27,9 @@
   },
   "wsserver": {
     "address": "127.0.0.1:8047",
-    "pattern": "/ws"
+    "crossorigins": [
+      "*"
+    ]
   },
   "metrics": {
     "address": "127.0.0.1:8087",
