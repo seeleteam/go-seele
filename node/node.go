@@ -49,14 +49,12 @@ type Node struct {
 	log  *log.SeeleLog
 	lock sync.RWMutex
 
-	rpcAPIs     []rpc.API
 	rpcListener net.Listener // IPC RPC listener socket to serve API requests
 	rpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
 
-	httpEndpoint  string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	httpWhitelist []string     // HTTP RPC modules to allow through this endpoint
-	httpListener  net.Listener // HTTP RPC listener socket to server API requests
-	httpHandler   *rpc.Server  // HTTP RPC request handler to process the API requests
+	httpEndpoint string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
+	httpListener net.Listener // HTTP RPC listener socket to server API requests
+	httpHandler  *rpc.Server  // HTTP RPC request handler to process the API requests
 
 	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 	wsListener net.Listener // Websocket RPC listener socket to server API requests

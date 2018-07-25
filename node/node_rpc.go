@@ -33,8 +33,6 @@ func (n *Node) startRPC(services []Service) error {
 		return err
 	}
 
-	// All API endpoints started successfully
-	n.rpcAPIs = apis
 	return nil
 }
 
