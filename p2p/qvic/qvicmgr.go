@@ -57,7 +57,7 @@ func (mgr *QvicMgr) DialTimeout(network, addr string, timeout time.Duration) (ne
 	if network == "tcp" {
 		conn, err := net.DialTimeout("tcp", addr, timeout)
 		if err != nil {
-			mgr.log.Error("connect to a new node err: %s", err)
+			mgr.log.Error("qvic failed to connect: %s", err)
 			if conn != nil {
 				conn.Close()
 			}
