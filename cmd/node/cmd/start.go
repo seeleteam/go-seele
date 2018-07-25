@@ -22,10 +22,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var seeleNodeConfigFile *string
-var miner *string
-var metricsEnableFlag *bool
+var seeleNodeConfigFile string
+var miner string
+var metricsEnableFlag bool
 var accountsConfig string
+var threads int
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -37,7 +38,7 @@ var startCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(*seeleNodeConfigFile, accountsConfig)
+		nCfg, err := LoadConfigFromFile(seeleNodeConfigFile, accountsConfig)
 		if err != nil {
 			fmt.Printf("reading the config file failed: %s\n", err.Error())
 			return
@@ -65,6 +66,8 @@ var startCmd = &cobra.Command{
 			return
 		}
 
+		seeleService.Miner().SetThreads(threads)
+
 		// monitor service
 		monitorService, err := monitor.NewMonitorService(seeleService, seeleNode, nCfg, slog, "Test monitor")
 		if err != nil {
@@ -86,7 +89,7 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		minerInfo := strings.ToLower(*miner)
+		minerInfo := strings.ToLower(miner)
 		if minerInfo == "start" {
 			err = seeleService.Miner().Start()
 			if err != nil && err != miner2.ErrMinerIsRunning {
@@ -100,7 +103,7 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		if *metricsEnableFlag {
+		if metricsEnableFlag {
 			metrics.StartMetricsWithConfig(
 				nCfg.MetricsConfig,
 				slog,
@@ -119,12 +122,11 @@ var startCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(startCmd)
 
-	seeleNodeConfigFile = startCmd.Flags().StringP("config", "c", "", "seele node config file (required)")
+	startCmd.Flags().StringVarP(&seeleNodeConfigFile, "config", "c", "", "seele node config file (required)")
 	startCmd.MarkFlagRequired("config")
 
-	miner = startCmd.Flags().StringP("miner", "m", "start", "miner start or not, [start, stop]")
-
-	metricsEnableFlag = startCmd.Flags().BoolP("metrics", "t", false, "start metrics")
-
+	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
+	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
+	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 }

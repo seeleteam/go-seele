@@ -57,15 +57,12 @@ func (api *PrivateDebugAPI) PrintBlock(height *int64, result *types.Block) error
 // GetTxPoolContent returns the transactions contained within the transaction pool
 func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[string][]map[string]interface{}) error {
 	txPool := api.s.TxPool()
-	data := txPool.GetProcessableTransactions()
+	data := txPool.GetTransactions(false, true)
 
 	content := make(map[string][]map[string]interface{})
-	for adress, txs := range data {
-		trans := make([]map[string]interface{}, len(txs))
-		for i, tran := range txs {
-			trans[i] = PrintableOutputTx(tran)
-		}
-		content[adress.ToHex()] = trans
+	for _, tx := range data {
+		key := tx.Data.From.ToHex()
+		content[key] = append(content[key], PrintableOutputTx(tx))
 	}
 	*result = content
 
@@ -75,7 +72,7 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 // GetTxPoolTxCount returns the number of transaction in the pool
 func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
 	txPool := api.s.TxPool()
-	*result = uint64(txPool.GetProcessableTransactionsCount())
+	*result = uint64(txPool.GetPendingTxCount())
 	return nil
 }
 

@@ -102,7 +102,6 @@ func (miner *Miner) SetThreads(threads int) {
 
 // GetThreads gets the number of mining threads.
 func (miner *Miner) GetThreads() int {
-
 	return miner.threads
 }
 
@@ -129,6 +128,7 @@ func (miner *Miner) Start() error {
 		return nil
 	}
 
+	miner.log.Info("miner start with %d threads", miner.threads)
 	miner.stopChan = make(chan struct{})
 
 	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
@@ -297,8 +297,7 @@ func (miner *Miner) prepareNewBlock() error {
 		coinbase:  miner.coinbase,
 	}
 
-	txs := miner.seele.TxPool().GetProcessableTransactions()
-	err = miner.current.applyTransactions(miner.seele, stateDB, txs, miner.log)
+	err = miner.current.applyTransactions(miner.seele, stateDB, miner.log)
 	if err != nil {
 		return fmt.Errorf("apply transaction failed %s", err)
 	}
