@@ -79,12 +79,13 @@ func (chain mockBlockchain) GetStore() store.BlockchainStore {
 func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockchain) {
 	chain := newMockBlockchain()
 	pool := &TransactionPool{
-		config:       *config,
-		chain:        chain,
-		hashToTxMap:  make(map[common.Hash]*pooledTx),
-		pendingQueue: newPendingQueue(),
-		lastHeader:   common.EmptyHash,
-		log:          log.GetLogger("test", true),
+		config:        *config,
+		chain:         chain,
+		hashToTxMap:   make(map[common.Hash]*pooledTx),
+		pendingQueue:  newPendingQueue(),
+		processingTxs: make(map[common.Hash]struct{}),
+		lastHeader:    common.EmptyHash,
+		log:           log.GetLogger("test", true),
 	}
 
 	return pool, chain
@@ -280,4 +281,83 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	pool.removeTransactions()
 	assert.Equal(t, len(pool.hashToTxMap), 0)
 	assert.Equal(t, pool.pendingQueue.count(), 0)
+}
+
+func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
+	assert.Equal(t, pool.GetPendingTxCount(), 0)
+
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, pool.GetPendingTxCount(), 1)
+
+	txs := pool.GetProcessableTransactions(1)
+	assert.Equal(t, len(txs), 1)
+
+	assert.Equal(t, pool.GetPendingTxCount(), 0)
+}
+
+func Test_TransactionPool_GetTransactions(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	pool.AddTransaction(poolTx.Transaction)
+
+	txs := pool.GetTransactions(true, false)
+	assert.Equal(t, len(txs), 0)
+
+	txs = pool.GetTransactions(false, true)
+	assert.Equal(t, len(txs), 1)
+
+	txs = pool.GetProcessableTransactions(1)
+	assert.Equal(t, len(txs), 1)
+
+	txs = pool.GetTransactions(true, false)
+	assert.Equal(t, len(txs), 1)
+
+	txs = pool.GetTransactions(false, true)
+	assert.Equal(t, len(txs), 0)
+}
+
+func Test_transactionPool_GetProcessableTransactions(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+
+	txs := pool.GetProcessableTransactions(1)
+	assert.Equal(t, len(txs), 0)
+
+	poolTx := newTestPoolTx(t, 10, 100)
+	chain.addAccount(poolTx.Data.From, 20, 100)
+
+	err := pool.AddTransaction(poolTx.Transaction)
+	assert.Equal(t, err, nil)
+
+	poolTx1 := newTestPoolTx(t, 100, 100)
+	chain.addAccount(poolTx1.Data.From, 200, 100)
+
+	err = pool.AddTransaction(poolTx1.Transaction)
+	assert.Equal(t, err, nil)
+
+	poolTx2 := newTestPoolTx(t, 20, 20)
+	chain.addAccount(poolTx2.Data.From, 200, 20)
+
+	err = pool.AddTransaction(poolTx2.Transaction)
+	assert.Equal(t, err, nil)
+
+	txs = pool.GetProcessableTransactions(2)
+	assert.Equal(t, len(txs), 2)
+
+	txs = pool.GetProcessableTransactions(2)
+	assert.Equal(t, len(txs), 1)
+
+	txs = pool.GetProcessableTransactions(2)
+	assert.Equal(t, len(txs), 0)
 }
