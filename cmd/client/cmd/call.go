@@ -65,7 +65,7 @@ var callCmd = &cobra.Command{
 		nonce := uint64(1)
 		result, ok := util.Call(client, key.PrivateKey, &contractAddr, amount, fee, nonce, payload)
 		if ok {
-			fmt.Println("succeeded in calling a contract")
+			fmt.Println("contract called successfully")
 			str, err := json.MarshalIndent(result, "", "\t")
 			if err != nil {
 				fmt.Printf("failed to marshal receipt: %s\n", err.Error())

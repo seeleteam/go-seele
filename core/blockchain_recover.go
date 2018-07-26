@@ -64,7 +64,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 		}
 
 		rp.PreviousHeadBlockHash = common.EmptyHash
-		rpLog.Info("succeeded in recovering HEAD block hash.")
+		rpLog.Info("HEAD block hash recovered successfully")
 	}
 
 	// recover the previous block hash in canonical chain.
@@ -75,7 +75,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 		}
 
 		rp.PreviousCanonicalBlockHash = common.EmptyHash
-		rpLog.Info("succeeded in recovering the block hash by height in canonical chain.")
+		rpLog.Info("the block hash by height in canonical chain recovered successfully")
 	}
 
 	// delete the crashed block.
@@ -87,7 +87,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 
 		rp.WritingBlockHash = common.EmptyHash
 		saved = false
-		rpLog.Info("succeeded in deleting the crashed block.")
+		rpLog.Info("the crashed block deleted successfully")
 	}
 
 	// go on to delete larger height blocks from canonical chain.
@@ -97,7 +97,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 			return err
 		}
 
-		rpLog.Info("succeeded in deleting the larger height blocks in canonical chain.")
+		rpLog.Info("the larger height blocks in canonical chain deleted successfully")
 	}
 
 	rp.LargerHeight = 0
@@ -109,7 +109,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 			return err
 		}
 
-		rpLog.Info("succeeded in overwriting stale blocks in canonical chain.")
+		rpLog.Info("stale blocks in canonical chain overwrited successfully")
 	}
 
 	rp.StaleHash = common.EmptyHash

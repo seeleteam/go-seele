@@ -87,7 +87,7 @@ func callContract(contractHexAddr string) {
 
 	// Print the result
 	fmt.Println()
-	fmt.Println("succeeded in calling contract!")
+	fmt.Println("contract called successfully")
 
 	if len(receipt.Result) > 0 {
 		fmt.Println("Result (raw):", receipt.Result)

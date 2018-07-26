@@ -54,7 +54,7 @@ var sendtxCmd = &cobra.Command{
 
 		tx, ok := util.Sendtx(client, key.PrivateKey, &txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 		if ok {
-			fmt.Println("succeeded in adding the tx")
+			fmt.Println("tx added successfully")
 			printTx := seele.PrintableOutputTx(tx)
 			str, err := json.MarshalIndent(printTx, "", "\t")
 			if err != nil {
