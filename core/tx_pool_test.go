@@ -83,7 +83,6 @@ func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockcha
 		chain:         chain,
 		hashToTxMap:   make(map[common.Hash]*pooledTx),
 		pendingQueue:  newPendingQueue(),
-		processingTxs: make(map[common.Hash]struct{}),
 		lastHeader:    common.EmptyHash,
 		log:           log.GetLogger("test", true),
 	}
@@ -283,6 +282,7 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
 
+
 func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
 	defer chain.dispose()
@@ -360,4 +360,28 @@ func Test_transactionPool_GetProcessableTransactions(t *testing.T) {
 
 	txs = pool.GetProcessableTransactions(2)
 	assert.Equal(t, len(txs), 0)
+}
+
+
+func newTx(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
+	var txs []*types.Transaction
+
+	for i := int64(0); i < number; i++ {
+		fromPrivKey, fromAddress := randomAccount(t)
+		_, toAddress := randomAccount(t)
+		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(fee), uint64(nonce))
+		tx.Sign(fromPrivKey)
+		chain.addAccount(fromAddress, 1000000000, 1)
+		txs = append(txs, tx)
+	}
+	return txs
+}
+
+func Test_GetProcessableTransactions(t *testing.T) {
+	pool, chain := newTestPool(DefaultTxPoolConfig())
+	defer chain.dispose()
+	txs := newTx(t, 10, 10, 1, 10, chain)
+	pool.addTransactions(txs)
+	assert.Equal(t, 7, len(pool.GetProcessableTransactions(7)))
+	assert.Equal(t, 3, len(pool.GetProcessableTransactions(35)))
 }
