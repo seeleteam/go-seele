@@ -192,7 +192,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	sp.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
-			sp.log.Warn("send chain head info failed %s", err)
+			sp.log.Warn("failed to send chain head info %s", err)
 		}
 		return true
 	})
@@ -255,7 +255,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	p.peerSet.ForEach(shardId, func(peer *peer) bool {
 		if err := peer.sendTransactionHash(tx.Hash); err != nil {
-			p.log.Warn("send transaction to %s failed %s", peer.Node.GetUDPAddr(), err)
+			p.log.Warn("failed to send transaction to %s, %s", peer.Node.GetUDPAddr(), err)
 		}
 		return true
 	})
@@ -267,7 +267,7 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	p.peerSet.ForEach(common.LocalShardNumber, func(peer *peer) bool {
 		err := peer.SendBlockHash(block.HeaderHash)
 		if err != nil {
-			p.log.Warn("send mined block hash failed %s", err.Error())
+			p.log.Warn("failed to send mined block hash %s", err.Error())
 		}
 		return true
 	})
@@ -324,7 +324,7 @@ func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) 
 		if !peer.knownTxs.Contains(tx.Hash) {
 			err := peer.sendTransaction(tx)
 			if err != nil {
-				p.log.Warn("send transaction to peer %s failed, tx hash %s", peer.Node, tx.Hash)
+				p.log.Warn("failed to send transaction to peer %s, tx hash %s", peer.Node, tx.Hash)
 				return true
 			}
 
@@ -366,7 +366,7 @@ handler:
 			var txHash common.Hash
 			err := common.Deserialize(msg.Payload, &txHash)
 			if err != nil {
-				p.log.Warn("deserialize transaction hash msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize transaction hash msg, %s", err.Error())
 				continue
 			}
 
@@ -378,7 +378,7 @@ handler:
 				peer.knownTxs.Add(txHash, nil) //update peer known transaction
 				err := peer.sendTransactionRequest(txHash)
 				if err != nil {
-					p.log.Warn("send transaction request msg failed %s", err.Error())
+					p.log.Warn("failed to send transaction request msg, %s", err.Error())
 					break handler
 				}
 			} else {
@@ -391,7 +391,7 @@ handler:
 			var txHash common.Hash
 			err := common.Deserialize(msg.Payload, &txHash)
 			if err != nil {
-				p.log.Warn("deserialize transaction request msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize transaction request msg %s", err.Error())
 				continue
 			}
 
@@ -407,7 +407,7 @@ handler:
 
 			err = peer.sendTransaction(tx)
 			if err != nil {
-				p.log.Warn("send transaction msg failed %s", err.Error())
+				p.log.Warn("failed to send transaction msg %s", err.Error())
 				break handler
 			}
 
@@ -415,7 +415,7 @@ handler:
 			var txs []*types.Transaction
 			err := common.Deserialize(msg.Payload, &txs)
 			if err != nil {
-				p.log.Warn("deserialize transaction msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize transaction msg %s", err.Error())
 				break
 			}
 
@@ -438,7 +438,7 @@ handler:
 			var blockHash common.Hash
 			err := common.Deserialize(msg.Payload, &blockHash)
 			if err != nil {
-				p.log.Warn("deserialize block hash msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize block hash msg %s", err.Error())
 				continue
 			}
 
@@ -448,7 +448,7 @@ handler:
 				peer.knownBlocks.Add(blockHash, nil)
 				err := peer.SendBlockRequest(blockHash)
 				if err != nil {
-					p.log.Warn("send block request msg failed %s", err.Error())
+					p.log.Warn("failed to send block request msg %s", err.Error())
 					break handler
 				}
 			}
@@ -457,7 +457,7 @@ handler:
 			var blockHash common.Hash
 			err := common.Deserialize(msg.Payload, &blockHash)
 			if err != nil {
-				p.log.Warn("deserialize block request msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize block request msg %s", err.Error())
 				continue
 			}
 
@@ -470,14 +470,14 @@ handler:
 
 			err = peer.SendBlock(block)
 			if err != nil {
-				p.log.Warn("send block msg failed %s", err.Error())
+				p.log.Warn("failed to send block msg %s", err.Error())
 			}
 
 		case blockMsgCode:
 			var block types.Block
 			err := common.Deserialize(msg.Payload, &block)
 			if err != nil {
-				p.log.Warn("deserialize block msg failed %s", err.Error())
+				p.log.Warn("failed to deserialize block msg %s", err.Error())
 				continue
 			}
 
@@ -492,7 +492,7 @@ handler:
 			var query blockHeadersQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				p.log.Error("deserialize downloader.GetBlockHeadersMsg failed, quit! %s", err.Error())
+				p.log.Error("failed to deserialize downloader.GetBlockHeadersMsg, quit! %s", err.Error())
 				break
 			}
 			var headList []*types.BlockHeader
@@ -544,7 +544,7 @@ handler:
 			var query blocksQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				p.log.Error("deserialize downloader.GetBlocksMsg failed, quit! %s", err.Error())
+				p.log.Error("failed to deserialize downloader.GetBlocksMsg, quit! %s", err.Error())
 				break
 			}
 
@@ -568,7 +568,7 @@ handler:
 				curNum := orgNum + cnt
 				hash, err := p.chain.GetStore().GetBlockHash(curNum)
 				if err != nil {
-					p.log.Warn("get block with height %d failed, err %s", curNum, err)
+					p.log.Warn("failed to get block with height %d, err %s", curNum, err)
 					break
 				}
 
@@ -607,7 +607,7 @@ handler:
 			var status chainHeadStatus
 			err := common.Deserialize(msg.Payload, &status)
 			if err != nil {
-				p.log.Error("deserialize statusChainHeadMsgCode failed, quit! %s", err.Error())
+				p.log.Error("failed to deserialize statusChainHeadMsgCode, quit! %s", err.Error())
 				break
 			}
 

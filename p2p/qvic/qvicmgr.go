@@ -57,7 +57,7 @@ func (mgr *QvicMgr) DialTimeout(network, addr string, timeout time.Duration) (ne
 	if network == "tcp" {
 		conn, err := net.DialTimeout("tcp", addr, timeout)
 		if err != nil {
-			mgr.log.Error("qvic failed to connect: %s", err)
+			mgr.log.Error("failed to connect qvic: %s", err)
 			if conn != nil {
 				conn.Close()
 			}
@@ -129,7 +129,7 @@ needQuit:
 		data := make([]byte, 2048)
 		n, remoteAddr, err := mgr.udpfd.ReadFromUDP(data)
 		if err != nil {
-			mgr.log.Warn("qvicRun read udp failed. %s", err)
+			mgr.log.Warn("failed to read udp in qvicRun. %s", err)
 			select {
 			case <-mgr.quit:
 				break needQuit

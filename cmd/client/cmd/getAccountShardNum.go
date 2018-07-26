@@ -28,7 +28,7 @@ var getaccountshardnumCmd = &cobra.Command{
 		if len(*privatekey) > 0 {
 			key, err := crypto.LoadECDSAFromString(*privatekey)
 			if err != nil {
-				fmt.Printf("loading the private key failed: %s\n", err.Error())
+				fmt.Printf("failed to load the private key: %s\n", err.Error())
 				return
 			}
 

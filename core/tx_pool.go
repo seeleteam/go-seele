@@ -23,7 +23,7 @@ var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
 	errTxFeeNil     = errors.New("fee can't be nil")
-	errTxNonceUsed  = errors.New("transaction nonce alread been used")
+	errTxNonceUsed  = errors.New("transaction nonce already been used")
 )
 
 const chainHeaderChangeBuffSize = 100

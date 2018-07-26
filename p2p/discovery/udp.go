@@ -85,7 +85,7 @@ func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
 	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
 	conn, err := getUDPConn(addr)
 	if err != nil {
-		panic(fmt.Sprintf("listen addr %s failed", addr.String()))
+		panic(fmt.Sprintf("failed to listen addr %s ", addr.String()))
 	}
 
 	transport := &udp{
@@ -128,12 +128,12 @@ func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *n
 func (u *udp) sendConnMsg(buff []byte, conn *net.UDPConn, to *net.UDPAddr) bool {
 	n, err := conn.WriteToUDP(buff, to)
 	if err != nil {
-		u.log.Warn("discovery send msg to %s failed:%s", to, err)
+		u.log.Warn("failed to discover send msg to %s:%s", to, err)
 		return false
 	}
 
 	if n != len(buff) {
-		u.log.Warn("discovery send msg failed to %s, expected length: %d, actual length: %d", to, len(buff), n)
+		u.log.Warn("failed to discover sending msg to %s, expected length: %d, actual length: %d", to, len(buff), n)
 		return false
 	}
 
@@ -262,7 +262,7 @@ func (u *udp) readLoop() {
 		data := make([]byte, 1472)
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
-			u.log.Warn("discovery read from udp failed. %s", err)
+			u.log.Warn("failed to discover reading from udp %s", err)
 			continue
 		}
 
@@ -507,14 +507,14 @@ func (u *udp) loadNodes(nodeDir string) {
 
 	data, err := ioutil.ReadFile(fileFullPath)
 	if err != nil {
-		u.log.Error("read nodes info backup file failed for:[%s]", err)
+		u.log.Error("failed to read nodes info backup file for:[%s]", err)
 		return
 	}
 
 	var nodes []string
 	err = json.Unmarshal(data, &nodes)
 	if err != nil {
-		u.log.Error("nodes unmarshal failed for:[%s]", err)
+		u.log.Error("failed to unmarshal nodes for:[%s]", err)
 		return
 	}
 

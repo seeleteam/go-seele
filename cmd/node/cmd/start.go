@@ -40,7 +40,7 @@ var startCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		nCfg, err := LoadConfigFromFile(seeleNodeConfigFile, accountsConfig)
 		if err != nil {
-			fmt.Printf("reading the config file failed: %s\n", err.Error())
+			fmt.Printf("failed to reading the config file: %s\n", err.Error())
 			return
 		}
 
@@ -93,7 +93,7 @@ var startCmd = &cobra.Command{
 		if minerInfo == "start" {
 			err = seeleService.Miner().Start()
 			if err != nil && err != miner2.ErrMinerIsRunning {
-				fmt.Println("Starting the miner failed: ", err)
+				fmt.Println("failed to start the miner : ", err)
 				return
 			}
 		} else if minerInfo == "stop" {

@@ -73,7 +73,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 
 	if !common.FileOrFolderExists(fileFullPath) {
 		if err := os.MkdirAll(nodeDir, os.ModePerm); err != nil {
-			db.log.Error("filePath:[%s] create folder failed, for:[%s]", nodeDir, err.Error())
+			db.log.Error("filePath:[%s], failed to create folder, for:[%s]", nodeDir, err.Error())
 			return
 		}
 	}

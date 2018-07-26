@@ -99,7 +99,7 @@ func createContract() {
 
 	// Print the contract Address
 	fmt.Println()
-	fmt.Println("Succeed to create contract!")
+	fmt.Println("contract created successfully")
 	fmt.Println("Contract address:", hexutil.BytesToHex(receipt.ContractAddress))
 
 	// Save contract info

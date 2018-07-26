@@ -172,23 +172,23 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	api := createTestAPI(t)
 	if api == nil {
-		t.Fatal("create api failed")
+		t.Fatal("failed to create api")
 	}
 
 	_, err := api.NodeInfo()
 	if err != nil {
-		t.Fatalf("get nodeInfo failed: %v", err)
+		t.Fatalf("failed to get nodeInfo: %v", err)
 	}
 
 	if _, err := api.NodeStats(); err != nil {
-		t.Fatalf("get nodeStats failed: %v", err)
+		t.Fatalf("failed to get nodeInfo: %v", err)
 	}
 }
 
 func Test_PublicMonitorAPI_Err(t *testing.T) {
 	api := createTestAPIErr(1)
 	if api == nil {
-		t.Fatal("create api failed")
+		t.Fatal("failed to create api")
 	}
 	if _, err := api.NodeStats(); err == nil {
 		t.Fatalf("error branch is not covered")
