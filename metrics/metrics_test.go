@@ -97,22 +97,22 @@ func Test_StartMetrics(t *testing.T) {
 	wg.Wait()
 
 	if !strings.Contains(*result, "test.Gauge") {
-		t.Fatal("get test.Gauge failed")
+		t.Fatal("failed to get test.Gauge")
 	}
 	if !strings.Contains(*result, "test.Counter") {
-		t.Fatal("get test.Counter failed")
+		t.Fatal("failed to get test.Counter")
 	}
 	if !strings.Contains(*result, "test.Meter") {
-		t.Fatal("get test.Meter failed")
+		t.Fatal("failed to get test.Meter")
 	}
 	if !strings.Contains(*result, "test.GaugeFloat64") {
-		t.Fatal("get test.GaugeFloat64 failed")
+		t.Fatal("failed to get test.GaugeFloat64")
 	}
 	if !strings.Contains(*result, "test.Histogram") {
-		t.Fatal("get test.Histogram failed")
+		t.Fatal("failed to get test.Histogram")
 	}
 	if !strings.Contains(*result, "test.Timer") {
-		t.Fatal("get test.Timer failed")
+		t.Fatal("failed to get test.Timer")
 	}
 	if strings.Contains(*result, "not exsit") {
 		t.Fatal("get a value of not exsit")

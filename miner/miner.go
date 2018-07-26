@@ -241,11 +241,11 @@ out:
 				miner.log.Info("found a new mined block, block height:%d, hash:%s", result.block.Header.Height, result.block.HeaderHash.ToHex())
 				ret := miner.saveBlock(result)
 				if ret != nil {
-					miner.log.Error("saving the block failed, for %s", ret.Error())
+					miner.log.Error("failed to save the block, for %s", ret.Error())
 					break
 				}
 
-				miner.log.Info("saving block succeeded and notify p2p")
+				miner.log.Info("block and notify p2p saved successfully")
 				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 				break
 			}
@@ -266,7 +266,7 @@ func (miner *Miner) prepareNewBlock() error {
 	timestamp := time.Now().Unix()
 	parent, stateDB, err := miner.seele.BlockChain().GetCurrentInfo()
 	if err != nil {
-		return fmt.Errorf("get current info failed, %s", err)
+		return fmt.Errorf("failed to get current info, %s", err)
 	}
 
 	if parent.Header.CreateTimestamp.Cmp(new(big.Int).SetInt64(timestamp)) >= 0 {
@@ -299,7 +299,7 @@ func (miner *Miner) prepareNewBlock() error {
 
 	err = miner.current.applyTransactions(miner.seele, stateDB, miner.log)
 	if err != nil {
-		return fmt.Errorf("apply transaction failed %s", err)
+		return fmt.Errorf("failed to apply transaction %s", err)
 	}
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)

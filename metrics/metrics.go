@@ -29,7 +29,7 @@ type Config struct {
 // StartMetricsWithConfig start recording metrics with configure
 func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
 	if conf == nil {
-		log.Error("Starting the metrics failed: the config of metrics is null")
+		log.Error("failed to start the metrics: the config of metrics is null")
 		return
 	}
 

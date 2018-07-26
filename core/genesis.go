@@ -106,12 +106,12 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 	storedGenesis, err := bcStore.GetBlock(storedGenesisHash)
 	if err != nil {
-		return errors.New(fmt.Sprintf("get genesis block failed. %s", err))
+		return errors.New(fmt.Sprintf("failed to get genesis block. %s", err))
 	}
 
 	data, err := getGenesisExtraData(storedGenesis)
 	if err != nil {
-		return errors.New(fmt.Sprintf("get genesis extra data failed. %s", err))
+		return errors.New(fmt.Sprintf("failed to get genesis extra data. %s", err))
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {

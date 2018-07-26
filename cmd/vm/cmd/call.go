@@ -42,7 +42,7 @@ var callCmd = &cobra.Command{
 func callContract(contractHexAddr string) {
 	db, statedb, bcStore, dispose, err := preprocessContract()
 	if err != nil {
-		fmt.Println("Failed to prepare the simulator environment,", err.Error())
+		fmt.Println("failed to prepare the simulator environment,", err.Error())
 		return
 	}
 	defer dispose()
@@ -75,19 +75,19 @@ func callContract(contractHexAddr string) {
 	// Create a call message transaction
 	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(1), DefaultNonce, msg)
 	if err != nil {
-		fmt.Println("Failed to create message tx,", err.Error())
+		fmt.Println("failed to create message tx,", err.Error())
 		return
 	}
 
 	receipt, err := processContract(statedb, bcStore, callContractTx)
 	if err != nil {
-		fmt.Println("Failed to call contract,", err.Error())
+		fmt.Println("failed to call contract,", err.Error())
 		return
 	}
 
 	// Print the result
 	fmt.Println()
-	fmt.Println("Succeed to call contract!")
+	fmt.Println("contract called successfully")
 
 	if len(receipt.Result) > 0 {
 		fmt.Println("Result (raw):", receipt.Result)

@@ -57,7 +57,7 @@ func init() {
 			amount := big.NewInt(0)
 			err := client.Call("seele.GetBalance", &address, amount)
 			if err != nil {
-				fmt.Printf("getting the balance failed: %s\n", err)
+				fmt.Printf("failed to get the balance: %s\n", err)
 				return
 			}
 

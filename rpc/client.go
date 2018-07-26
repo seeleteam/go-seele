@@ -204,7 +204,7 @@ func (c *clientCodec) ReadResponseBody(x interface{}) error {
 	}
 	if err := json.Unmarshal(*c.resp.Result, x); err != nil {
 		e := NewError(errInternal.Code, err.Error())
-		e.Data = NewError(errInternal.Code, "some other Call failed to unmarshal Reply")
+		e.Data = NewError(errInternal.Code, "failed to unmarshal Reply when some other Call")
 		return e
 	}
 	return nil

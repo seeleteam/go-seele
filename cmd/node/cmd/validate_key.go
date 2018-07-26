@@ -25,7 +25,7 @@ var validatekeyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		key, err := crypto.LoadECDSAFromString(*privateKey)
 		if err != nil {
-			fmt.Printf("loading the private key failed: %s\n", err.Error())
+			fmt.Printf("failed to load the private key: %s\n", err.Error())
 			return
 		}
 

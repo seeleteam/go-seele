@@ -26,6 +26,6 @@ var dbCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("Succeed to init db:", defaultDir)
+		fmt.Println("db initiated successfully:", defaultDir)
 	},
 }
