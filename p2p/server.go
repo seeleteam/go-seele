@@ -19,13 +19,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seeleteam/go-seele/p2p/qvic"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/p2p/qvic"
 )
 
 const (
