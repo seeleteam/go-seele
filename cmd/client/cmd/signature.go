@@ -52,7 +52,7 @@ var signCmd = &cobra.Command{
 
 		databytes, err := json.MarshalIndent(tx, "\t", "")
 		if err != nil {
-			fmt.Printf("Failed to marshal transaction: %s\n", err.Error())
+			fmt.Printf("failed to marshal transaction: %s\n", err.Error())
 			return
 		}
 

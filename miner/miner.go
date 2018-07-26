@@ -245,7 +245,7 @@ out:
 					break
 				}
 
-				miner.log.Info("succeed to save block and notify p2p")
+				miner.log.Info("succeeded in saving block and notify p2p")
 				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
 				break
 			}

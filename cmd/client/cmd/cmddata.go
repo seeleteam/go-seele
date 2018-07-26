@@ -198,7 +198,7 @@ func NewCmdData() []*Request {
 					Required:     true,
 				},
 			},
-			Handler: func(interface{}) { fmt.Println("succeed to set miner thread number") },
+			Handler: func(interface{}) { fmt.Println("succeeded in setting miner thread number") },
 		},
 		&Request{
 			Use:   "setcoinbase",
@@ -219,7 +219,7 @@ func NewCmdData() []*Request {
 					Required:     true,
 				},
 			},
-			Handler: func(interface{}) { fmt.Println("succeed to set miner coinbase") },
+			Handler: func(interface{}) { fmt.Println("succeeded in setting miner coinbase") },
 		},
 		&Request{
 			Use:              "getdownloadstatus",
@@ -308,7 +308,7 @@ func NewCmdData() []*Request {
 					Required:     false,
 				},
 			},
-			Handler: func(interface{}) { fmt.Println("succeed to dump heap.") },
+			Handler: func(interface{}) { fmt.Println("succeeded in dumping heap.") },
 		},
 	}
 }
