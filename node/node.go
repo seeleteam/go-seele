@@ -125,20 +125,22 @@ func (n *Node) Start() error {
 		protocols = append(protocols, service.Protocols()...)
 	}
 
-	p2pSever := p2p.NewServer(n.config.SeeleConfig.GenesisConfig, n.config.P2PConfig, protocols)
-	if err := p2pSever.Start(n.config.BasicConfig.DataDir, n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
+	p2pServer := p2p.NewServer(n.config.SeeleConfig.GenesisConfig, n.config.P2PConfig, protocols)
+	if err := p2pServer.Start(n.config.BasicConfig.DataDir, n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
 		return ErrServiceStartFailed
 	}
 
 	// Start services
 	for i, service := range n.services {
-		if err := service.Start(p2pSever); err != nil {
+		if err := service.Start(p2pServer); err != nil {
+			n.log.Error("got error when start service %s", err)
+
 			for j := 0; j < i; j++ {
 				n.services[j].Stop()
 			}
 
 			// stop the p2p server
-			p2pSever.Stop()
+			p2pServer.Stop()
 
 			return err
 		}
@@ -146,17 +148,19 @@ func (n *Node) Start() error {
 
 	// Start RPC server
 	if err := n.startRPC(n.services); err != nil {
+		n.log.Error("got error when start rpc %s", err)
+
 		for _, service := range n.services {
 			service.Stop()
 		}
 
 		// stop the p2p server
-		p2pSever.Stop()
+		p2pServer.Stop()
 
 		return err
 	}
 
-	n.server = p2pSever
+	n.server = p2pServer
 
 	return nil
 }

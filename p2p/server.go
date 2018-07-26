@@ -268,8 +268,6 @@ func (srv *Server) startListening() error {
 		return err
 	}
 
-	laddr := listener.Addr().(*net.TCPAddr)
-	srv.Config.ListenAddr = laddr.String()
 	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()
