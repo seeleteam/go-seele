@@ -264,7 +264,7 @@ func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 	addrStr := hash.ToHex()
 	err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
 	if err != nil {
-		fmt.Println("get tx failed ", err, " tx hash ", hash.ToHex())
+		fmt.Println("failed to get tx ", err, " tx hash ", hash.ToHex())
 		return result
 	}
 
@@ -326,7 +326,7 @@ func getRandClient() *rpc.Client {
 func initAccount(threads int) []*balance {
 	keys, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		panic(fmt.Sprintf("read key file failed %s", err))
+		panic(fmt.Sprintf("failed to read key file %s", err))
 	}
 
 	keyList := strings.Split(string(keys), "\r\n")
@@ -368,7 +368,7 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 
 		key, err := crypto.LoadECDSAFromString(hex)
 		if err != nil {
-			panic(fmt.Sprintf("load key failed %s", err))
+			panic(fmt.Sprintf("failed to load key %s", err))
 		}
 
 		addr := crypto.GetAddress(&key.PublicKey)
@@ -405,7 +405,7 @@ func getBalance(address common.Address) (int, bool) {
 	amount := big.NewInt(0)
 	err := client.Call("seele.GetBalance", &address, amount)
 	if err != nil {
-		panic(fmt.Sprintf("getting the balance failed: %s\n", err.Error()))
+		panic(fmt.Sprintf("failed to get the balance: %s\n", err.Error()))
 	}
 
 	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
@@ -431,8 +431,7 @@ func getShard(client *rpc.Client) uint {
 	var info seele.MinerInfo
 	err := client.Call("seele.GetInfo", nil, &info)
 	if err != nil {
-		panic(fmt.Sprintf("getting the balance failed: %s\n", err.Error()))
-		return 0
+		panic(fmt.Sprintf("failed to get the balance: %s\n", err.Error()))
 	}
 
 	return info.Coinbase.Shard() // @TODO need refine this code, get shard info straight

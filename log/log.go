@@ -95,7 +95,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	} else {
 		err := os.MkdirAll(LogFolder, os.ModePerm)
 		if err != nil {
-			panic(fmt.Sprintf("creating log dir failed: %s", err.Error()))
+			panic(fmt.Sprintf("failed to create log dir: %s", err.Error()))
 		}
 		logFullPath := filepath.Join(LogFolder, common.LogFileName)
 
@@ -107,7 +107,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		)
 
 		if err != nil {
-			panic(fmt.Sprintf("creating log file failed: %s", err))
+			panic(fmt.Sprintf("failed to create log file: %s", err))
 		}
 
 		log.Out = writer

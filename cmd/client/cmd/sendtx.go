@@ -37,7 +37,7 @@ var sendtxCmd = &cobra.Command{
 
 		pass, err := common.GetPassword()
 		if err != nil {
-			fmt.Printf("get password failed %s\n", err.Error())
+			fmt.Printf("failed to get password %s\n", err.Error())
 			return
 		}
 
@@ -54,11 +54,11 @@ var sendtxCmd = &cobra.Command{
 
 		tx, ok := util.Sendtx(client, key.PrivateKey, &txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 		if ok {
-			fmt.Println("adding the tx succeeded.")
+			fmt.Println("tx added successfully")
 			printTx := seele.PrintableOutputTx(tx)
 			str, err := json.MarshalIndent(printTx, "", "\t")
 			if err != nil {
-				fmt.Println("marshal transaction failed ", err)
+				fmt.Println("failed to marshal transaction ", err)
 				return
 			}
 

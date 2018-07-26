@@ -94,7 +94,7 @@ func Sendtx(client *rpc.Client, from *ecdsa.PrivateKey, to *common.Address, amou
 	var result bool
 	err = client.Call("seele.AddTx", &tx, &result)
 	if !result || err != nil {
-		fmt.Printf("adding the tx failed: %s\n", err.Error())
+		fmt.Printf("failed to add the tx: %s\n", err.Error())
 		return nil, false
 	}
 
@@ -105,7 +105,7 @@ func GetNonce(client *rpc.Client, address common.Address) uint64 {
 	var nonce uint64
 	err := client.Call("seele.GetAccountNonce", address, &nonce)
 	if err != nil {
-		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+		fmt.Printf("failed to get the sender account nonce: %s\n", err.Error())
 		return 0
 	}
 
@@ -146,7 +146,7 @@ func CheckParameter(parameter TxInfo, publicKey *ecdsa.PublicKey, client *rpc.Cl
 	var nonce uint64
 	err = client.Call("seele.GetAccountNonce", fromAddr, &nonce)
 	if err != nil {
-		fmt.Printf("getting the sender account nonce failed: %s\n", err.Error())
+		fmt.Printf("failed to get the sender account nonce: %s\n", err.Error())
 		return info, false
 	}
 	if *parameter.Nonce == nonce || *parameter.Nonce == DefaultNonce {

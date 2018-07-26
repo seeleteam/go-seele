@@ -168,7 +168,7 @@ func getRandBuff(n int) []byte {
 	mainBuff := make([]byte, n)
 	_, err := io.ReadFull(rand.Reader, mainBuff)
 	if err != nil {
-		panic("reading from crypto/rand failed: " + err.Error())
+		panic("failed to read from crypto/rand: " + err.Error())
 	}
 
 	return mainBuff

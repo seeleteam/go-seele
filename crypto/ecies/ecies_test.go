@@ -221,7 +221,7 @@ func TestMarshalPrivate(t *testing.T) {
 	}
 
 	if !cmpPrivate(prv, prv2) {
-		fmt.Println("ecdh: private key import failed")
+		fmt.Println("ecdh: failed to import private key")
 		t.FailNow()
 	}
 }
@@ -250,7 +250,7 @@ func TestPrivatePEM(t *testing.T) {
 		fmt.Println(err.Error())
 		t.FailNow()
 	} else if !cmpPrivate(prv, prv2) {
-		fmt.Println("ecdh: import from PEM failed")
+		fmt.Println("ecdh: failed to import from PEM ")
 		t.FailNow()
 	}
 }
@@ -279,7 +279,7 @@ func TestPublicPEM(t *testing.T) {
 		fmt.Println(err.Error())
 		t.FailNow()
 	} else if !cmpPublic(prv.PublicKey, *pub2) {
-		fmt.Println("ecdh: import from PEM failed")
+		fmt.Println("ecdh: failed to import from PEM")
 		t.FailNow()
 	}
 }

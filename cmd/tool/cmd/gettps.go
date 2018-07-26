@@ -27,7 +27,7 @@ var gettps = &cobra.Command{
 				var tps seele.TpsInfo
 				err := client.Call("debug.GetTPS", nil, &tps)
 				if err != nil {
-					fmt.Println("get tps failed ", err)
+					fmt.Println("failed to get tps ", err)
 					return
 				}
 
