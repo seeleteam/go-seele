@@ -8,10 +8,10 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/seeleteam/go-seele/common"
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -314,16 +314,31 @@ func (pool *TransactionPool) removeTransactions() {
 }
 
 // GetProcessableTransactions retrieves processable transactions from pool.
-func (pool *TransactionPool) GetProcessableTransactions(num int) []*types.Transaction {
+func (pool *TransactionPool) GetProcessableTransactions(size uint64) ([]*types.Transaction, uint64) {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	txs := pool.pendingQueue.popN(num)
-	for _, tx := range txs {
+	count := uint64(0)
+	var txs []*types.Transaction
+
+	for {
+		tx := pool.pendingQueue.pop()
+		if tx == nil {
+			break
+		}
+
+		tmpSize := count + uint64(TransactionPreSize+len(tx.Data.Payload))
+		if tmpSize > size {
+			pool.addTransaction(tx)
+			break
+		}
+
+		count = tmpSize
+		txs = append(txs, tx)
 		pool.processingTxs[tx.Hash] = struct{}{}
 	}
 
-	return txs
+	return txs, count
 }
 
 // GetPendingTxCount return the total number of pending transactions in the transaction pool.
