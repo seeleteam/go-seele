@@ -91,8 +91,17 @@ type stateDB interface {
 	GetNonce(common.Address) uint64
 }
 
-// GetTransactionPreSize return the transaction size excluding payload
-func (tx *Transaction) GetTransactionPreSize() int {
+// GetTransactionsSize return the transaction size
+func GetTransactionsSize(txs []*Transaction) int {
+	size := 0
+	for _, tx := range txs {
+		size += tx.GetTransactionSize()
+	}
+	return size
+}
+
+// GetTransactionSize return the transaction size
+func (tx *Transaction) GetTransactionSize() int {
 	return TransactionPreSize + len(tx.Data.Payload)
 }
 

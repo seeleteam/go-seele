@@ -366,7 +366,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return ErrBlockHashMismatch
 	}
 
-	if len(block.Transactions) > BlockTransactionNumberLimit {
+	if types.GetTransactionsSize(block.Transactions) > BlockSizeLimit {
 		return ErrBlockTooManyTxs
 	}
 
