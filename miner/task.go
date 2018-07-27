@@ -72,7 +72,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
-	size := core.BlockSizeLimit
+	size := core.BlockByteLimit
 	count := 0
 	for size > 0 {
 		txs, txsSize := seele.TxPool().GetProcessableTransactions(size)

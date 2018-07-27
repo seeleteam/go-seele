@@ -296,7 +296,7 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, pool.GetPendingTxCount(), 1)
 
-	txs, size := pool.GetProcessableTransactions(BlockSizeLimit)
+	txs, size := pool.GetProcessableTransactions(BlockByteLimit)
 	assert.Equal(t, len(txs), 1)
 	assert.Equal(t, size, types.TransactionPreSize)
 
@@ -318,7 +318,7 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	txs = pool.GetTransactions(false, true)
 	assert.Equal(t, len(txs), 1)
 
-	txs, size := pool.GetProcessableTransactions(BlockSizeLimit)
+	txs, size := pool.GetProcessableTransactions(BlockByteLimit)
 	assert.Equal(t, len(txs), 1)
 	assert.Equal(t, size, types.TransactionPreSize)
 

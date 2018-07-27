@@ -33,8 +33,8 @@ const (
 	// If for block size as 100KB, it could contains about 5k transactions
 	BlockTransactionNumberLimit = 5000
 
-	// BlockSizeLimit is the limit of size in bytes
-	BlockSizeLimit = 1024 * 1024
+	// BlockByteLimit is the limit of size in bytes
+	BlockByteLimit = 1024 * 1024
 )
 
 var (
@@ -366,7 +366,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return ErrBlockHashMismatch
 	}
 
-	if types.GetTransactionsSize(block.Transactions) > BlockSizeLimit {
+	if types.GetTransactionsSize(block.Transactions) > BlockByteLimit {
 		return ErrBlockTooManyTxs
 	}
 
