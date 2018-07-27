@@ -143,6 +143,49 @@ func Test_PendingQueue_popN(t *testing.T) {
 	assert.Equal(t, q.popN(1) == nil, true)
 }
 
+func Test_pendingQueue_pop(t *testing.T) {
+	q := newPendingQueue()
+
+	ptx1 := newMockPooledTx(1, 3, 5)
+	q.add(ptx1)
+
+	ptx2 := newMockPooledTx(2, 2, 1)
+	q.add(ptx2)
+
+	ptx3 := newMockPooledTx(2, 5, 6)
+	q.add(ptx3)
+
+	ptx4 := newMockPooledTx(2, 1, 2)
+	q.add(ptx4)
+
+	assert.Equal(t, q.pop(), ptx1.Transaction)
+	assert.Equal(t, q.pop(), ptx2.Transaction)
+	assert.Equal(t, q.pop(), ptx4.Transaction)
+	assert.Equal(t, q.pop(), ptx3.Transaction)
+}
+
+func Test_pendingQueue_list(t *testing.T) {
+	q := newPendingQueue()
+
+	ptx1 := newMockPooledTx(1, 3, 5)
+	q.add(ptx1)
+
+	ptx2 := newMockPooledTx(2, 2, 1)
+	q.add(ptx2)
+
+	ptx3 := newMockPooledTx(2, 5, 6)
+	q.add(ptx3)
+
+	ptx4 := newMockPooledTx(2, 1, 2)
+	q.add(ptx4)
+
+	txs := q.list()
+	assert.Equal(t, txs[0], ptx1.Transaction)
+	assert.Equal(t, txs[1], ptx2.Transaction)
+	assert.Equal(t, txs[2], ptx4.Transaction)
+	assert.Equal(t, txs[3], ptx3.Transaction)
+}
+
 func Benchmark_PendingQueue_popN(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()

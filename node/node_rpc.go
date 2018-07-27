@@ -1,3 +1,8 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package node
 
 import (
@@ -50,7 +55,7 @@ func (n *Node) startPRC(apis []rpc.API) error {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
 		}
-		n.log.Debug("registered RPC service %s namespace %s", api.Service, api.Namespace)
+		n.log.Debug("registered RPC service namespace %s", api.Namespace)
 	}
 
 	// All APIs registered, start the IPC listener
@@ -122,7 +127,7 @@ func (n *Node) startHTTP(apis []rpc.API) error {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
-			n.log.Debug("HTTP registered service %s namespace %s", api.Service, api.Namespace)
+			n.log.Debug("HTTP registered service namespace %s", api.Namespace)
 		}
 	}
 
@@ -177,7 +182,7 @@ func (n *Node) startWS(apis []rpc.API) error {
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
-			n.log.Debug("WebSocket registered. service %s namespace %s", api.Service, api.Namespace)
+			n.log.Debug("WebSocket registered. service namespace %s", api.Namespace)
 		}
 	}
 
