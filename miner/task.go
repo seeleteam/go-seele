@@ -8,7 +8,6 @@ package miner
 import (
 	"math/big"
 	"time"
-	"unsafe"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -73,67 +72,44 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 // getDataSize gets the transactions size
-func getDataSize(data *types.Transaction) uint64 {
-	size := uint64(0)
-	var boolvalue bool
-	boolSize := uint64(unsafe.Sizeof(boolvalue))
-	hashSize := uint64(len(data.Hash))
-	signSize := uint64(len(data.Signature.Sig))
-	fromSize := uint64(len(data.Data.From))
-	toSize := uint64(len(data.Data.To))
-	amountSize := uint64(len(data.Data.Amount.Bits())) + boolSize
-	nonceSize := uint64(unsafe.Sizeof(data.Data.AccountNonce))
-	feeSize := uint64(len(data.Data.Fee.Bits())) + boolSize
-	timestampSize := uint64(unsafe.Sizeof(data.Data.Timestamp))
-	payloadSize := uint64(len(data.Data.Payload))
+func (task *Task) getDataSize(data *types.Transaction) uint64 {
 
-	size = size + hashSize + signSize + fromSize + toSize + amountSize + nonceSize + feeSize + timestampSize + payloadSize
-
-	return size
-}
-
-// addTransanction add one to task
-func addTransanction(task *Task, seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, count int, tx *types.Transaction) bool {
-	if err := tx.Validate(statedb); err != nil {
-		seele.TxPool().RemoveTransaction(tx.Hash)
-		log.Error("failed to validate tx %s, for %s", tx.Hash.ToHex(), err)
-		return false
-	}
-
-	receipt, err := seele.BlockChain().ApplyTransaction(tx, count+1, task.coinbase, statedb, task.header)
-	if err != nil {
-		seele.TxPool().RemoveTransaction(tx.Hash)
-		log.Error("failed to apply tx %s, %s", tx.Hash.ToHex(), err)
-		return false
-	}
-
-	task.txs = append(task.txs, tx)
-	task.receipts = append(task.receipts, receipt)
-	return true
+	return uint64(core.TransactionPreSize + len(data.Data.Payload))
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
-	size := uint64(0)
+	size := core.BlockSizeLimit
 	count := 0
-
+	getted := uint64(0)
 	for {
-		txs := seele.TxPool().GetProcessableTransactions(1)
+		txs, txsSize := seele.TxPool().GetProcessableTransactions(size)
 		if len(txs) == 0 {
 			break
 		}
 
-		tx := txs[0]
-		txSize := getDataSize(tx)
-		tmpSize := txSize + size
-		if tmpSize > core.TransactionSizeLimit {
-			addTransanction(task, seele, statedb, log, count, tx)
-			break
+		for _, tx := range txs {
+			if err := tx.Validate(statedb); err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("failed to validate tx %s, for %s", tx.Hash.ToHex(), err)
+				txsSize = txsSize - task.getDataSize(tx)
+				continue
+			}
+
+			receipt, err := seele.BlockChain().ApplyTransaction(tx, count+1, task.coinbase, statedb, task.header)
+			if err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("failed to apply tx %s, %s", tx.Hash.ToHex(), err)
+				txsSize = txsSize - task.getDataSize(tx)
+				continue
+			}
+
+			task.txs = append(task.txs, tx)
+			task.receipts = append(task.receipts, receipt)
+			count++
 		}
 
-		if addTransanction(task, seele, statedb, log, count, tx) {
-			count++
-			size = tmpSize
-		}
+		getted = getted + txsSize
+		size = core.BlockSizeLimit - getted
 	}
 }
 

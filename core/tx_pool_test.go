@@ -296,7 +296,7 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, pool.GetPendingTxCount(), 1)
 
-	txs := pool.GetProcessableTransactions(1)
+	txs, _ := pool.GetProcessableTransactions(BlockSizeLimit)
 	assert.Equal(t, len(txs), 1)
 
 	assert.Equal(t, pool.GetPendingTxCount(), 0)
@@ -317,7 +317,7 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	txs = pool.GetTransactions(false, true)
 	assert.Equal(t, len(txs), 1)
 
-	txs = pool.GetProcessableTransactions(1)
+	txs, _ = pool.GetProcessableTransactions(BlockSizeLimit)
 	assert.Equal(t, len(txs), 1)
 
 	txs = pool.GetTransactions(true, false)
@@ -331,7 +331,7 @@ func Test_transactionPool_GetProcessableTransactions(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
 	defer chain.dispose()
 
-	txs := pool.GetProcessableTransactions(1)
+	txs, _ := pool.GetProcessableTransactions(BlockSizeLimit)
 	assert.Equal(t, len(txs), 0)
 
 	poolTx := newTestPoolTx(t, 10, 100)
@@ -352,17 +352,14 @@ func Test_transactionPool_GetProcessableTransactions(t *testing.T) {
 	err = pool.AddTransaction(poolTx2.Transaction)
 	assert.Equal(t, err, nil)
 
-	txs = pool.GetProcessableTransactions(2)
-	assert.Equal(t, len(txs), 2)
+	txs, _ = pool.GetProcessableTransactions(BlockSizeLimit)
+	assert.Equal(t, len(txs), 3)
 
-	txs = pool.GetProcessableTransactions(2)
-	assert.Equal(t, len(txs), 1)
-
-	txs = pool.GetProcessableTransactions(2)
+	txs, _ = pool.GetProcessableTransactions(BlockSizeLimit)
 	assert.Equal(t, len(txs), 0)
 }
 
-func newTx(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
+func newTxs(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
 	var txs []*types.Transaction
 
 	for i := int64(0); i < number; i++ {
@@ -379,8 +376,27 @@ func newTx(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain
 func Test_GetProcessableTransactions(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
 	defer chain.dispose()
-	txs := newTx(t, 10, 10, 1, 10, chain)
+
+	txs := newTxs(t, 10, 10, 1, 10, chain)
 	pool.addTransactions(txs)
-	assert.Equal(t, 7, len(pool.GetProcessableTransactions(7)))
-	assert.Equal(t, 3, len(pool.GetProcessableTransactions(35)))
+
+	txs, size := pool.GetProcessableTransactions(0)
+	assert.Equal(t, len(txs), 0)
+	assert.Equal(t, size, uint64(0))
+
+	txs, size = pool.GetProcessableTransactions(TransactionPreSize)
+	assert.Equal(t, len(txs), 1)
+	assert.Equal(t, size, uint64(TransactionPreSize))
+
+	txs, size = pool.GetProcessableTransactions(TransactionPreSize * 2)
+	assert.Equal(t, len(txs), 2)
+	assert.Equal(t, size, uint64(2*TransactionPreSize))
+
+	txs, size = pool.GetProcessableTransactions(TransactionPreSize * 10)
+	assert.Equal(t, len(txs), 7)
+	assert.Equal(t, size, uint64(7*TransactionPreSize))
+
+	txs, size = pool.GetProcessableTransactions(TransactionPreSize * 10)
+	assert.Equal(t, len(txs), 0)
+	assert.Equal(t, size, uint64(0))
 }
