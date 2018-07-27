@@ -71,16 +71,10 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 	return reward, nil
 }
 
-// getDataSize gets the transactions size
-func (task *Task) getDataSize(data *types.Transaction) uint64 {
-
-	return uint64(core.TransactionPreSize + len(data.Data.Payload))
-}
-
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
 	size := core.BlockSizeLimit
 	count := 0
-	getted := uint64(0)
+	getted := 0
 	for {
 		txs, txsSize := seele.TxPool().GetProcessableTransactions(size)
 		if len(txs) == 0 {
@@ -91,7 +85,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			if err := tx.Validate(statedb); err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
 				log.Error("failed to validate tx %s, for %s", tx.Hash.ToHex(), err)
-				txsSize = txsSize - task.getDataSize(tx)
+				txsSize = txsSize - tx.GetTransactionPreSize()
 				continue
 			}
 
@@ -99,7 +93,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			if err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
 				log.Error("failed to apply tx %s, %s", tx.Hash.ToHex(), err)
-				txsSize = txsSize - task.getDataSize(tx)
+				txsSize = txsSize - tx.GetTransactionPreSize()
 				continue
 			}
 

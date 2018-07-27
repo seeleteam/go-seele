@@ -34,10 +34,7 @@ const (
 	BlockTransactionNumberLimit = 5000
 
 	// BlockSizeLimit is the limit of size in bytes
-	BlockSizeLimit uint64 = 1024 * 1024
-
-	// TransactionPreSize is the transaction size excluding payload size
-	TransactionPreSize = 169
+	BlockSizeLimit = 1024 * 1024
 )
 
 var (
