@@ -394,11 +394,18 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 
 // PrintableReceipt converts the given Receipt to the RPC output
 func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
+	result := ""
+	if re.Failed {
+		result = string(re.Result)
+	} else {
+		result = hexutil.BytesToHex(re.Result)
+	}
 	outMap := map[string]interface{}{
-		"result":    hexutil.BytesToHex(re.Result),
+		"result":    result,
 		"poststate": re.PostState.ToHex(),
 		"txhash":    re.TxHash.ToHex(),
 		"contract":  "0x",
+		"failed":    re.Failed,
 	}
 
 	if len(re.ContractAddress) > 0 {
