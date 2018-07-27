@@ -118,14 +118,7 @@ func Test_GetLogs(t *testing.T) {
 	api.s.chain.GetStore().PutReceipts(block.HeaderHash, []*types.Receipt{receipt})
 
 	// Verify the result
-	result := make([]GetLogsResponse, 0)
-	request := GetLogsRequest{
-		Height:          -1,
-		ContractAddress: contractAddress.ToHex(),
-		Topics:          "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100",
-	}
-
-	err = api.GetLogs(&request, &result)
+	result, err := api.GetLogs(-1, contractAddress.ToHex(), "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100")
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 1)
 	assert.Equal(t, result[0].Txhash, receipt.TxHash)
@@ -207,17 +200,8 @@ func Test_GetBlocks(t *testing.T) {
 	block2 := newTestBlock(2)
 	err = api.s.chain.GetStore().PutBlock(block2, block2.Header.Difficulty, true)
 	assert.Equal(t, err, nil)
-	requestbyHeight := GetBlockByHeightRequest{
-		Height: 2,
-		FullTx: true,
-	}
 
-	request := &GetBlocksRequest{
-		GetBlockByHeightRequest: requestbyHeight,
-		Size: 2,
-	}
-	result := []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err := api.GetBlocks(2, true, 2)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 2)
 	assert.Equal(t, result[0]["height"].(uint64), uint64(2))
@@ -225,66 +209,27 @@ func Test_GetBlocks(t *testing.T) {
 	assert.Equal(t, result[1]["height"].(uint64), uint64(1))
 	assert.Equal(t, result[1]["hash"].(string), block1.Header.Hash().ToHex())
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: GetBlockByHeightRequest{
-			Height: -1,
-			FullTx: true,
-		},
-		Size: 1,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(-1, true, 1)
 	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 1)
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: requestbyHeight,
-		Size: 6,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(2, true, 6)
 	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 3)
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: requestbyHeight,
-		Size: 600,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(2, true, 600)
 	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 3)
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: requestbyHeight,
-		Size: 0,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(2, true, 0)
 	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 0)
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: GetBlockByHeightRequest{
-			Height: 4,
-			FullTx: true,
-		},
-		Size: 2,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(4, true, 2)
 	assert.Equal(t, err != nil, true)
 	assert.Equal(t, len(result), 0)
 
-	request = &GetBlocksRequest{
-		GetBlockByHeightRequest: GetBlockByHeightRequest{
-			Height: 2,
-			FullTx: true,
-		},
-		Size: 3,
-	}
-	result = []map[string]interface{}{}
-	err = api.GetBlocks(request, &result)
+	result, err = api.GetBlocks(2, true, 3)
 	assert.Equal(t, err == nil, true)
 	assert.Equal(t, len(result), 3)
 }

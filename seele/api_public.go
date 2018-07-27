@@ -186,112 +186,93 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, erro
 }
 
 // GetBlockHeight get the block height of the chain head
-func (api *PublicSeeleAPI) GetBlockHeight(input interface{}, height *uint64) error {
+func (api *PublicSeeleAPI) GetBlockHeight() (uint64, error) {
 	block := api.s.chain.CurrentBlock()
-	*height = block.Header.Height
-
-	return nil
+	return block.Header.Height, nil
 }
 
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(request *GetBlockByHeightRequest, result *map[string]interface{}) error {
-	block, err := getBlock(api.s.chain, request.Height)
+func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	response, err := rpcOutputBlock(block, request.FullTx, api.s.chain.GetStore())
-	if err != nil {
-		return err
-	}
-
-	*result = response
-	return nil
+	return rpcOutputBlock(block, fulltx, api.s.chain.GetStore())
 }
 
 // GetBlocks returns the size of requested block. When the blockNr is -1 the chain head is returned.
 //When the size is greater than 64, the size will be set to 64.When it's -1 that the blockNr minus size, the blocks in 64 is returned.
 // When fullTx is true all transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlocks(request *GetBlocksRequest, result *[]map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]map[string]interface{}, error) {
 	blocks := make([]types.Block, 0)
-	if request.Height < 0 {
+	if height < 0 {
 		block := api.s.chain.CurrentBlock()
 		blocks = append(blocks, *block)
 	} else {
-		if request.Size > maxSizeLimit {
-			request.Size = maxSizeLimit
+		if size > maxSizeLimit {
+			size = maxSizeLimit
 		}
 
-		if request.Height+1-int64(request.Size) < 0 {
-			request.Size = uint(request.Height + 1)
+		if height+1-int64(size) < 0 {
+			size = uint(height + 1)
 		}
 
-		for i := uint(0); i < request.Size; i++ {
+		for i := uint(0); i < size; i++ {
 			var block *types.Block
-			block, err := getBlock(api.s.chain, request.Height-int64(i))
+			block, err := getBlock(api.s.chain, height-int64(i))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			blocks = append(blocks, *block)
 		}
 	}
-	response, err := rpcOutputBlocks(blocks, request.FullTx, api.s.chain.GetStore())
-	if err != nil {
-		return err
-	}
 
-	*result = response
-	return nil
+	return rpcOutputBlocks(blocks, fulltx, api.s.chain.GetStore())
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHash(request *GetBlockByHashRequest, result *map[string]interface{}) error {
+func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(request.HashHex)
+	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hash := common.BytesToHash(hashByte)
 	block, err := store.GetBlock(hash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	response, err := rpcOutputBlock(block, request.FullTx, store)
-	if err != nil {
-		return err
-	}
-
-	*result = response
-	return nil
+	return rpcOutputBlock(block, fulltx, store)
 }
 
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
-func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]GetLogsResponse) error {
+func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]GetLogsResponse, error) {
 	// Check input parameters
-	contractAddress, err := common.HexToAddress(request.ContractAddress)
+	contractAddress, err := common.HexToAddress(contract)
 	if err != nil {
-		return fmt.Errorf("Invalid contract address, %s", err)
+		return nil, fmt.Errorf("Invalid contract address, %s", err)
 	}
 
-	hash, err := common.HexToHash(request.Topics)
+	hash, err := common.HexToHash(topics)
 	if err != nil {
-		return fmt.Errorf("Invalid topic, %s", err)
+		return nil, fmt.Errorf("Invalid topic, %s", err)
 	}
 
 	// Do filter
-	block, err := getBlock(api.s.chain, request.Height)
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	store := api.s.chain.GetStore()
 	receipts, err := store.GetReceiptsByBlockHash(block.HeaderHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logs := make([]GetLogsResponse, 0)
@@ -316,9 +297,7 @@ func (api *PublicSeeleAPI) GetLogs(request *GetLogsRequest, result *[]GetLogsRes
 		}
 	}
 
-	*result = logs
-
-	return nil
+	return logs, nil
 }
 
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx
