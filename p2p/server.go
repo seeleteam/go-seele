@@ -24,6 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/seeleteam/go-seele/p2p/qvic"
 )
 
 const (
@@ -74,8 +75,9 @@ type Server struct {
 	lock    sync.Mutex // protects running
 	running bool
 
-	kadDB    *discovery.Database
-	listener net.Listener
+	kadDB *discovery.Database
+
+	qvicMgr *qvic.QvicMgr
 
 	quit chan struct{}
 
@@ -113,6 +115,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
 		genesis:         genesis,
+		qvicMgr:         qvic.NewQvicMgr(),
 	}
 }
 
@@ -172,7 +175,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
-	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
+	conn, err := srv.qvicMgr.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
 		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
@@ -263,14 +266,10 @@ running:
 
 func (srv *Server) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.Config.ListenAddr)
-	if err != nil {
+	if err := srv.qvicMgr.Listen(srv.Config.ListenAddr, ""); err != nil {
 		return err
 	}
 
-	laddr := listener.Addr().(*net.TCPAddr)
-	srv.Config.ListenAddr = laddr.String()
-	srv.listener = listener
 	srv.loopWG.Add(1)
 	go srv.listenLoop()
 	return nil
@@ -306,7 +305,7 @@ func (srv *Server) listenLoop() {
 			err error
 		)
 		for {
-			fd, err = srv.listener.Accept()
+			fd, err = srv.qvicMgr.Accept()
 			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
 				continue
 			} else if err != nil {
@@ -571,10 +570,7 @@ func (srv *Server) Stop() {
 	}
 	srv.running = false
 
-	if srv.listener != nil {
-		srv.listener.Close()
-	}
-
+	srv.qvicMgr.Close()
 	close(srv.quit)
 	srv.Wait()
 }
