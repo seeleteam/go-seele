@@ -52,7 +52,8 @@ func Test_PublicSeeleAPI(t *testing.T) {
 
 	api := NewPublicSeeleAPI(ss)
 	var info MinerInfo
-	api.GetInfo(nil, &info)
+	info, err = api.GetInfo()
+	assert.Equal(t, err, nil)
 
 	if !bytes.Equal(conf.SeeleConfig.Coinbase[0:], info.Coinbase[0:]) {
 		t.Fail()
@@ -80,7 +81,8 @@ func Test_Call(t *testing.T) {
 		Tx:     getTx,
 		Height: -1,
 	}
-	err = api.Call(&request, &result)
+
+	result, err = api.Call(&request)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000017")
 

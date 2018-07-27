@@ -31,8 +31,8 @@ func NewPublicMonitorAPI(s *MonitorService) *PublicMonitorAPI {
 }
 
 // NodeInfo returns the NodeInfo struct of the local node
-func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
-	*result = NodeInfo{
+func (api *PublicMonitorAPI) NodeInfo() (NodeInfo, error) {
+	return NodeInfo{
 		Name:       api.s.name,
 		Node:       api.s.node,
 		Port:       0, //api.s.p2pServer.ListenAddr,
@@ -44,33 +44,29 @@ func (api *PublicMonitorAPI) NodeInfo(arg int, result *NodeInfo) error {
 		Client:     api.s.version,
 		History:    true,
 		Shard:      common.LocalShardNumber,
-	}
-
-	return nil
+	}, nil
 }
 
 // NodeStats returns the information about the local node.
-func (api *PublicMonitorAPI) NodeStats(arg int, result *NodeStats) error {
+func (api *PublicMonitorAPI) NodeStats() (*NodeStats, error) {
 	if api.s.p2pServer == nil {
-		return ErrP2PServerInfoFailed
+		return nil, ErrP2PServerInfoFailed
 	}
 
 	if api.s.seeleNode == nil {
-		return ErrNodeInfoFailed
+		return nil, ErrNodeInfoFailed
 	}
 
 	if api.s.seele.Miner() == nil {
-		return ErrMinerInfoFailed
+		return nil, ErrMinerInfoFailed
 	}
 
 	mining := api.s.seele.Miner().IsMining()
 
-	*result = NodeStats{
+	return &NodeStats{
 		Active:  true,
 		Syncing: true,
 		Mining:  mining,
 		Peers:   api.s.p2pServer.PeerCount(),
-	}
-
-	return nil
+	}, nil
 }

@@ -174,14 +174,14 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
-	nodeInfo := NodeInfo{}
-	if err := api.NodeInfo(0, &nodeInfo); err != nil {
+
+	_, err := api.NodeInfo()
+	if err != nil {
 		t.Fatalf("failed to get nodeInfo: %v", err)
 	}
 
-	nodeStats := NodeStats{}
-	if err := api.NodeStats(0, &nodeStats); err != nil {
-		t.Fatalf("failed to get nodeStats: %v", err)
+	if _, err := api.NodeStats(); err != nil {
+		t.Fatalf("failed to get nodeInfo: %v", err)
 	}
 }
 
@@ -190,8 +190,7 @@ func Test_PublicMonitorAPI_Err(t *testing.T) {
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
-	nodeStats := NodeStats{}
-	if err := api.NodeStats(0, &nodeStats); err == nil {
+	if _, err := api.NodeStats(); err == nil {
 		t.Fatalf("error branch is not covered")
 	}
 }
