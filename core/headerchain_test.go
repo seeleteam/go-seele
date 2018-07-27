@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
@@ -32,6 +33,21 @@ func newTestHeaderChain(db database.Database) *HeaderChain {
 	return hc
 }
 
+func Test_HeaderChain_NewHeaderChain(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bcStore := store.NewBlockchainDatabase(db)
+	_, err := NewHeaderChain(bcStore)
+	assert.Equal(t, err != nil, true)
+
+	genesis := GetGenesis(GenesisInfo{})
+	genesis.InitializeAndValidate(bcStore, db)
+	hc, err := NewHeaderChain(bcStore)
+	assert.Equal(t, err == nil, true)
+	assert.Equal(t, hc != nil, true)
+}
+
 func Test_HeaderChain_WriteHeader(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
@@ -48,4 +64,8 @@ func Test_HeaderChain_WriteHeader(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, hc.currentHeaderHash, newHeader.Hash())
 	assert.Equal(t, hc.currentHeader, newHeader)
+
+	// ensure header is cloned
+	newHeader.PreviousBlockHash = common.StringToHash("newHash")
+	assert.Equal(t, hc.currentHeader != newHeader, true)
 }
