@@ -84,13 +84,22 @@ func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.T
 	return tx
 }
 
-func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, txNum, startNonce uint64) *types.Block {
+func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.data.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
-	for i := uint64(0); i < txNum; i++ {
-		txs = append(txs, newTestBlockTx(0, 1, 1, startNonce+i))
+	totalSize := rewardTx.Size()
+	for i := uint64(0); ; i++ {
+		tx := newTestBlockTx(0, 1, 1, startNonce+i)
+		tmp := tx.Size() + totalSize
+		if tmp > size {
+			break
+		}
+
+		txs = append(txs, tx)
+		totalSize = tmp
+
 	}
 
 	header := &types.BlockHeader{
@@ -393,7 +402,7 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, 0, BlockByteLimit)
 		b.StartTimer()
 		if err := bc.WriteBlock(block); err != nil {
 			b.Fatalf("failed to write block, %v", err.Error())
@@ -408,7 +417,7 @@ func Benchmark_Blockchain_ValidateTxs(b *testing.B) {
 
 	bc := newTestBlockchain(db)
 	preBlock := bc.genesisBlock
-	block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, BlockTransactionNumberLimit-1, 0)
+	block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, 0, BlockByteLimit)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
