@@ -21,7 +21,7 @@ type EventManager struct {
 func (h *EventManager) Fire(e Event) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	
+
 	for _, l := range h.listeners {
 		if l.IsAsyncListener {
 			go l.Callable(e)
@@ -53,7 +53,7 @@ func (h *EventManager) AddOnceListener(callback EventHandleMethod) {
 	h.addEventListener(listener)
 }
 
-// AddOnceListener registers a listener which only runs once and async
+// AddAsyncOnceListener registers a listener which only runs once and async
 func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:        callback,
@@ -64,7 +64,7 @@ func (h *EventManager) AddAsyncOnceListener(callback EventHandleMethod) {
 	h.addEventListener(listener)
 }
 
-// AddOnceListener registers a listener which runs async
+// AddAsyncListener registers a listener which runs async
 func (h *EventManager) AddAsyncListener(callback EventHandleMethod) {
 	listener := eventListener{
 		Callable:        callback,
@@ -99,7 +99,7 @@ func (h *EventManager) RemoveListener(callback EventHandleMethod) {
 }
 
 // removeOnceListener removes all listeners which run only once
-func (h *EventManager) removeOnceListener() {	
+func (h *EventManager) removeOnceListener() {
 	listeners := make([]eventListener, 0, len(h.listeners))
 	for _, l := range h.listeners {
 		if !l.IsOnceListener {
