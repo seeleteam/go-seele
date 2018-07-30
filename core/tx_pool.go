@@ -323,7 +323,7 @@ func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Tran
 
 	for pool.pendingQueue.feeHeap.Len() > 0 {
 		tx := pool.pendingQueue.peek().peek().Transaction
-		tmpSize := totalSize + tx.GetTransactionSize()
+		tmpSize := totalSize + tx.Size()
 		if tmpSize > size {
 			break
 		}

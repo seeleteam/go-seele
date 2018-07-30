@@ -95,13 +95,13 @@ type stateDB interface {
 func GetTransactionsSize(txs []*Transaction) int {
 	size := 0
 	for _, tx := range txs {
-		size += tx.GetTransactionSize()
+		size += tx.Size()
 	}
 	return size
 }
 
-// GetTransactionSize return the transaction size
-func (tx *Transaction) GetTransactionSize() int {
+// Size return the transaction size
+func (tx *Transaction) Size() int {
 	return TransactionPreSize + len(tx.Data.Payload)
 }
 
