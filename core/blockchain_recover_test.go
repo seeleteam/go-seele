@@ -73,24 +73,25 @@ func Test_RecoveryPoint_Serialization(t *testing.T) {
 	rp.LargerHeight = 6
 	rp.StaleHash = common.StringToHash("stale block hash")
 	rp.serialize()
+
 	rp2, _ := loadRecoveryPoint(rpFile)
 	assert.Equal(t, *rp, *rp2)
 
 	// after put block
 	rp.onPutBlockEnd()
 	rp2, _ = loadRecoveryPoint(rpFile)
-	assert.Equal(t, *rp, recoveryPoint{LargerHeight: 6, StaleHash: common.StringToHash("stale block hash"), file: rpFile})
+	assert.Equal(t, *rp2, recoveryPoint{LargerHeight: 6, StaleHash: common.StringToHash("stale block hash"), file: rpFile})
 
 	//delete larger height blocks
 	rp.onDeleteLargerHeightBlocks(9)
 	rp2, _ = loadRecoveryPoint(rpFile)
-	assert.Equal(t, *rp, recoveryPoint{LargerHeight: 9, StaleHash: common.StringToHash("stale block hash"), file: rpFile})
+	assert.Equal(t, *rp2, recoveryPoint{LargerHeight: 9, StaleHash: common.StringToHash("stale block hash"), file: rpFile})
 
 	// overwrite stale blocks in canonical chain
 	rp.onDeleteLargerHeightBlocks(0)
 	rp.onOverwriteStaleBlocks(common.StringToHash("stale block hash 2"))
 	rp2, _ = loadRecoveryPoint(rpFile)
-	assert.Equal(t, *rp, recoveryPoint{StaleHash: common.StringToHash("stale block hash 2"), file: rpFile})
+	assert.Equal(t, *rp2, recoveryPoint{StaleHash: common.StringToHash("stale block hash 2"), file: rpFile})
 }
 
 func Test_RecoveryPoint_PutBlockCorrupted(t *testing.T) {

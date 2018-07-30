@@ -20,6 +20,9 @@ import (
 
 const (
 	defaultMaxPayloadSize = 32 * 1024
+
+	// TransactionPreSize is the transaction size excluding payload size
+	TransactionPreSize = 169
 )
 
 var (
@@ -86,6 +89,20 @@ type TxIndex struct {
 type stateDB interface {
 	GetBalance(common.Address) *big.Int
 	GetNonce(common.Address) uint64
+}
+
+// GetTransactionsSize return the transaction size
+func GetTransactionsSize(txs []*Transaction) int {
+	size := 0
+	for _, tx := range txs {
+		size += tx.Size()
+	}
+	return size
+}
+
+// Size return the transaction size
+func (tx *Transaction) Size() int {
+	return TransactionPreSize + len(tx.Data.Payload)
 }
 
 // NewTransaction creates a new transaction to transfer asset.

@@ -296,8 +296,9 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, pool.GetPendingTxCount(), 1)
 
-	txs := pool.GetProcessableTransactions(1)
+	txs, size := pool.GetProcessableTransactions(BlockByteLimit)
 	assert.Equal(t, len(txs), 1)
+	assert.Equal(t, size, types.TransactionPreSize)
 
 	assert.Equal(t, pool.GetPendingTxCount(), 0)
 }
@@ -317,8 +318,9 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	txs = pool.GetTransactions(false, true)
 	assert.Equal(t, len(txs), 1)
 
-	txs = pool.GetProcessableTransactions(1)
+	txs, size := pool.GetProcessableTransactions(BlockByteLimit)
 	assert.Equal(t, len(txs), 1)
+	assert.Equal(t, size, types.TransactionPreSize)
 
 	txs = pool.GetTransactions(true, false)
 	assert.Equal(t, len(txs), 1)
@@ -327,37 +329,44 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	assert.Equal(t, len(txs), 0)
 }
 
-func Test_transactionPool_GetProcessableTransactions(t *testing.T) {
+func newTxs(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
+	var txs []*types.Transaction
+
+	for i := int64(0); i < number; i++ {
+		fromPrivKey, fromAddress := randomAccount(t)
+		_, toAddress := randomAccount(t)
+		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(fee), uint64(nonce))
+		tx.Sign(fromPrivKey)
+		chain.addAccount(fromAddress, 1000000000, 1)
+		txs = append(txs, tx)
+	}
+	return txs
+}
+
+func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 	pool, chain := newTestPool(DefaultTxPoolConfig())
 	defer chain.dispose()
 
-	txs := pool.GetProcessableTransactions(1)
+	txs := newTxs(t, 10, 10, 1, 10, chain)
+	pool.addTransactions(txs)
+
+	txs, size := pool.GetProcessableTransactions(0)
 	assert.Equal(t, len(txs), 0)
+	assert.Equal(t, size, 0)
 
-	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
-
-	err := pool.AddTransaction(poolTx.Transaction)
-	assert.Equal(t, err, nil)
-
-	poolTx1 := newTestPoolTx(t, 100, 100)
-	chain.addAccount(poolTx1.Data.From, 200, 100)
-
-	err = pool.AddTransaction(poolTx1.Transaction)
-	assert.Equal(t, err, nil)
-
-	poolTx2 := newTestPoolTx(t, 20, 20)
-	chain.addAccount(poolTx2.Data.From, 200, 20)
-
-	err = pool.AddTransaction(poolTx2.Transaction)
-	assert.Equal(t, err, nil)
-
-	txs = pool.GetProcessableTransactions(2)
-	assert.Equal(t, len(txs), 2)
-
-	txs = pool.GetProcessableTransactions(2)
+	txs, size = pool.GetProcessableTransactions(types.TransactionPreSize)
 	assert.Equal(t, len(txs), 1)
+	assert.Equal(t, size, types.TransactionPreSize)
 
-	txs = pool.GetProcessableTransactions(2)
+	txs, size = pool.GetProcessableTransactions(types.TransactionPreSize * 2)
+	assert.Equal(t, len(txs), 2)
+	assert.Equal(t, size, types.TransactionPreSize*2)
+
+	txs, size = pool.GetProcessableTransactions(types.TransactionPreSize * 10)
+	assert.Equal(t, len(txs), 7)
+	assert.Equal(t, size, types.TransactionPreSize*7)
+
+	txs, size = pool.GetProcessableTransactions(types.TransactionPreSize * 10)
 	assert.Equal(t, len(txs), 0)
+	assert.Equal(t, size, 0)
 }
