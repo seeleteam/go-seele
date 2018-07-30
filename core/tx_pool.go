@@ -314,16 +314,27 @@ func (pool *TransactionPool) removeTransactions() {
 }
 
 // GetProcessableTransactions retrieves processable transactions from pool.
-func (pool *TransactionPool) GetProcessableTransactions(num int) []*types.Transaction {
+func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Transaction, int) {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	txs := pool.pendingQueue.popN(num)
-	for _, tx := range txs {
+	totalSize := 0
+	var txs []*types.Transaction
+
+	for pool.pendingQueue.feeHeap.Len() > 0 {
+		tx := pool.pendingQueue.peek().peek().Transaction
+		tmpSize := totalSize + tx.Size()
+		if tmpSize > size {
+			break
+		}
+
+		tx = pool.pendingQueue.pop()
+		totalSize = tmpSize
+		txs = append(txs, tx)
 		pool.processingTxs[tx.Hash] = struct{}{}
 	}
 
-	return txs
+	return txs, totalSize
 }
 
 // GetPendingTxCount return the total number of pending transactions in the transaction pool.
