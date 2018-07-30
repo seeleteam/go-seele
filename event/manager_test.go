@@ -28,13 +28,30 @@ func Test_EventManager(t *testing.T) {
 	manager.AddListener(testfun1)
 	assert.Equal(t, len(manager.listeners), 2)
 
-	manager.AddListener(testfun0) //test duplicate add
+	// duplicate add
+	manager.AddListener(testfun0)
+	assert.Equal(t, len(manager.listeners), 2)
+	manager.AddListener(testfun1)
+	assert.Equal(t, len(manager.listeners), 2)
+
 	event := EmptyEvent
 	manager.Fire(event)
-	assert.Equal(t, len(manager.listeners), 2)
 	assert.Equal(t, count, 2)
 
 	manager.RemoveListener(testfun1)
+	assert.Equal(t, len(manager.listeners), 1)
+
+	manager.Fire(event)
+	assert.Equal(t, count, 3)
+
+	// duplicate deletion
+	manager.RemoveListener(testfun1)
+	assert.Equal(t, len(manager.listeners), 1)
+	manager.RemoveListener(testfun0)
+	assert.Equal(t, len(manager.listeners), 0)
+	manager.RemoveListener(testfun0)
+	assert.Equal(t, len(manager.listeners), 0)
+
 	manager.Fire(event)
 	assert.Equal(t, count, 3)
 }
@@ -57,6 +74,8 @@ func Test_ExecuteOnce(t *testing.T) {
 
 	manager.Fire(EmptyEvent)
 	assert.Equal(t, count, 3)
+	assert.Equal(t, len(manager.listeners), 0)
+
 	manager.Fire(EmptyEvent)
 	assert.Equal(t, count, 3)
 	assert.Equal(t, len(manager.listeners), 0)
@@ -67,7 +86,7 @@ func Test_EventAsync(t *testing.T) {
 	count := 0
 	manager.AddAsyncListener(func(e Event) {
 		time.Sleep(1 * time.Second)
-		count += 1
+		count++
 	})
 
 	manager.Fire(EmptyEvent)
@@ -95,12 +114,13 @@ func Test_EventOnceAndAsync(t *testing.T) {
 	count := 0
 	manager.AddAsyncOnceListener(func(e Event) {
 		time.Sleep(1 * time.Second)
-		count += 1
+		count++
 	})
 
 	assert.Equal(t, len(manager.listeners), 1)
 
 	manager.Fire(EmptyEvent)
+	assert.Equal(t, len(manager.listeners), 0)
 	// async listener is sleeping
 	assert.Equal(t, count, 0)
 

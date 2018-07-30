@@ -18,9 +18,8 @@ func NewPrivateNetworkAPI(s *SeeleService) *PrivateNetworkAPI {
 }
 
 // GetPeersInfo returns all the information of peers at the protocol granularity.
-func (n *PrivateNetworkAPI) GetPeersInfo(input interface{}, result *[]p2p.PeerInfo) error {
-	*result = *n.s.p2pServer.PeersInfo()
-	return nil
+func (n *PrivateNetworkAPI) GetPeersInfo() ([]p2p.PeerInfo, error) {
+	return n.s.p2pServer.PeersInfo(), nil
 }
 
 // GetPeerCount returns the count of peers

@@ -28,97 +28,91 @@ func NewPrivateTransactionPoolAPI(s *SeeleService) *PrivateTransactionPoolAPI {
 }
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
-func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height *int64, result *int) error {
-	block, err := getBlock(api.s.chain, *height)
+func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	*result = len(block.Transactions)
-	return nil
+
+	return len(block.Transactions), nil
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
-func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash *string, result *int) error {
+func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(*blockHash)
+	hashByte, err := hexutil.HexToBytes(blockHash)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	hash := common.BytesToHash(hashByte)
 	block, err := store.GetBlock(hash)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	*result = len(block.Transactions)
-	return nil
+
+	return len(block.Transactions), nil
 }
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
-func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(request *GetTxByBlockHeightAndIndexRequest, result *map[string]interface{}) error {
-	block, err := getBlock(api.s.chain, request.Height)
+func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	txs := block.Transactions
-	if request.Index >= uint(len(txs)) {
-		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
+	if index >= uint(len(txs)) {
+		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
 
-	*result = PrintableOutputTx(txs[request.Index])
-	return nil
+	return PrintableOutputTx(txs[index]), nil
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
-func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(request *GetTxByBlockHashAndIndexRequest, result *map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(request.HashHex)
+	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hash := common.BytesToHash(hashByte)
 	block, err := store.GetBlock(hash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	txs := block.Transactions
-	if request.Index >= uint(len(txs)) {
-		return errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
+	if index >= uint(len(txs)) {
+		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
 	}
-	*result = PrintableOutputTx(txs[request.Index])
-	return nil
+
+	return PrintableOutputTx(txs[index]), nil
 }
 
 // GetReceiptByTxHash get receipt by transaction hash
-func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash *string, result *map[string]interface{}) error {
-	hashByte, err := hexutil.HexToBytes(*txHash)
+func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]interface{}, error) {
+	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	hash := common.BytesToHash(hashByte)
 
 	store := api.s.chain.GetStore()
 	receipt, err := store.GetReceiptByTxHash(hash)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	out, err := PrintableReceipt(receipt)
-	if err != nil {
-		return err
-	}
-	*result = out
-	return nil
+	return PrintableReceipt(receipt)
 }
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
-func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, result *map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
 	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(*txHash)
+	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	hash := common.BytesToHash(hashByte)
 
@@ -127,38 +121,38 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash *string, resul
 	if tx != nil {
 		output := PrintableOutputTx(tx)
 		output["status"] = "pool"
-		*result = output
-		return nil
+
+		return output, nil
 	}
 
 	// Try to get finalized transaction
 	txIndex, err := store.GetTxIndex(hash)
 	if err != nil {
 		api.s.log.Info(err.Error())
-		return errTransactionNotFound
+		return nil, errTransactionNotFound
 	}
 
 	if txIndex != nil {
 		block, err := store.GetBlock(txIndex.BlockHash)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		output := PrintableOutputTx(block.Transactions[txIndex.Index])
 		output["status"] = "block"
-		*result = output
-		return nil
+
+		return output, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // GetPendingTransactions returns all pending transactions
-func (api *PrivateTransactionPoolAPI) GetPendingTransactions(input interface{}, result *[]map[string]interface{}) error {
+func (api *PrivateTransactionPoolAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
 	pendingTxs := api.s.TxPool().GetTransactions(true, true)
 	var transactions []map[string]interface{}
 	for _, tx := range pendingTxs {
 		transactions = append(transactions, PrintableOutputTx(tx))
 	}
-	*result = transactions
-	return nil
+
+	return transactions, nil
 }

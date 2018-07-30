@@ -585,7 +585,7 @@ func (p PeerInfos) Less(i, j int) bool { return p[i].ID < p[j].ID }
 func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 // PeersInfo returns an array of metadata objects describing connected peers.
-func (srv *Server) PeersInfo() *[]PeerInfo {
+func (srv *Server) PeersInfo() []PeerInfo {
 	infos := make([]PeerInfo, 0, srv.PeerCount())
 	srv.peerSet.foreach(func(peer *Peer) {
 		if peer != nil {
@@ -595,5 +595,5 @@ func (srv *Server) PeersInfo() *[]PeerInfo {
 	})
 
 	sort.Sort(PeerInfos(infos))
-	return &infos
+	return infos
 }

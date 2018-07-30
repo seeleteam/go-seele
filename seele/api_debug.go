@@ -28,34 +28,32 @@ func NewPrivateDebugAPI(s *SeeleService) *PrivateDebugAPI {
 }
 
 // GetBlockRlp retrieves the RLP encoded for of a single block, when height is -1 the chain head is returned
-func (api *PrivateDebugAPI) GetBlockRlp(height *int64, result *string) error {
-	block, err := getBlock(api.s.chain, *height)
+func (api *PrivateDebugAPI) GetBlockRlp(height int64) (string, error) {
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	blockRlp, err := common.Serialize(block)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	*result = hexutil.BytesToHex(blockRlp)
-	return nil
+	return hexutil.BytesToHex(blockRlp), nil
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form, when height is -1 the chain head is returned
-func (api *PrivateDebugAPI) PrintBlock(height *int64, result *types.Block) error {
-	block, err := getBlock(api.s.chain, *height)
+func (api *PrivateDebugAPI) PrintBlock(height int64) (*types.Block, error) {
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	*result = *block
-	return nil
+	return block, nil
 }
 
 // GetTxPoolContent returns the transactions contained within the transaction pool
-func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[string][]map[string]interface{}) error {
+func (api *PrivateDebugAPI) GetTxPoolContent() (map[string][]map[string]interface{}, error) {
 	txPool := api.s.TxPool()
 	data := txPool.GetTransactions(false, true)
 
@@ -64,16 +62,14 @@ func (api *PrivateDebugAPI) GetTxPoolContent(input interface{}, result *map[stri
 		key := tx.Data.From.ToHex()
 		content[key] = append(content[key], PrintableOutputTx(tx))
 	}
-	*result = content
 
-	return nil
+	return content, nil
 }
 
 // GetTxPoolTxCount returns the number of transaction in the pool
-func (api *PrivateDebugAPI) GetTxPoolTxCount(input interface{}, result *uint64) error {
+func (api *PrivateDebugAPI) GetTxPoolTxCount() (uint64, error) {
 	txPool := api.s.TxPool()
-	*result = uint64(txPool.GetPendingTxCount())
-	return nil
+	return uint64(txPool.GetPendingTxCount()), nil
 }
 
 // TpsInfo tps detail info
@@ -85,12 +81,12 @@ type TpsInfo struct {
 }
 
 // GetTPS get tps info
-func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
+func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 	chain := api.s.BlockChain()
 	block := chain.CurrentBlock()
 	timeInterval := uint64(150)
 	if block.Header.Height == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var count = uint64(len(block.Transactions) - 1)
@@ -100,7 +96,7 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 	for height := block.Header.Height - 1; height > 0; height-- {
 		current, err := chain.GetStore().GetBlockByHeight(height)
 		if err != nil {
-			return fmt.Errorf("failed to get block, error:%s, block height:%d", err, height)
+			return nil, fmt.Errorf("failed to get block, error:%s, block height:%d", err, height)
 		}
 
 		count += uint64(len(current.Transactions) - 1)
@@ -112,14 +108,12 @@ func (api *PrivateDebugAPI) GetTPS(input interface{}, result *TpsInfo) error {
 		}
 	}
 
-	*result = TpsInfo{
+	return &TpsInfo{
 		StartHeight: endHeight,
 		EndHeight:   block.Header.Height,
 		Count:       count,
 		Duration:    duration,
-	}
-
-	return nil
+	}, nil
 }
 
 // DumpHeapRequest represents the heamp dump request.
@@ -129,21 +123,19 @@ type DumpHeapRequest struct {
 }
 
 // DumpHeap dumps the heap usage.
-func (api *PrivateDebugAPI) DumpHeap(request *DumpHeapRequest, result *interface{}) error {
-	filename := "heap.dump"
-
-	if len(request.Filename) > 0 {
-		filename = request.Filename
+func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (bool, error) {
+	if len(fileName) == 0 {
+		fileName = "heap.dump"
 	}
 
-	if request.GCBeforeDump {
+	if gcBeforeDump {
 		runtime.GC()
 	}
 
-	f, err := os.Create(filepath.Join(common.GetDefaultDataFolder(), filename))
+	f, err := os.Create(filepath.Join(common.GetDefaultDataFolder(), fileName))
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return pprof.WriteHeapProfile(f)
+	return true, pprof.WriteHeapProfile(f)
 }
