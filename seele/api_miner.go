@@ -24,87 +24,77 @@ func NewPrivateMinerAPI(s *SeeleService) *PrivateMinerAPI {
 }
 
 // Start API is used to start the miner with the given number of threads.
-func (api *PrivateMinerAPI) Start(threads *int, result *string) error {
-	if threads == nil {
-		threads = new(int)
-	}
-	api.s.miner.SetThreads(*threads)
+func (api *PrivateMinerAPI) Start(threads int) (bool, error) {
+	api.s.miner.SetThreads(threads)
 
 	if api.s.miner.IsMining() {
-		return miner.ErrMinerIsRunning
+		return true, miner.ErrMinerIsRunning
 	}
 
-	return api.s.miner.Start()
+	return true, api.s.miner.Start()
 }
 
 // Status API is used to view the miner's status.
-func (api *PrivateMinerAPI) Status(input *string, result *string) error {
+func (api *PrivateMinerAPI) Status() (string, error) {
 	if api.s.miner.IsMining() {
-		*result = "Running"
+		return "Running", nil
 	} else {
-		*result = "Stopped"
+		return "Stopped", nil
 	}
-
-	return nil
 }
 
 // Stop API is used to stop the miner.
-func (api *PrivateMinerAPI) Stop(input *string, result *string) error {
+func (api *PrivateMinerAPI) Stop() (bool, error) {
 	if !api.s.miner.IsMining() {
-		return miner.ErrMinerIsStopped
+		return true, miner.ErrMinerIsStopped
 	}
 	api.s.miner.Stop()
 
-	return nil
+	return true, nil
 }
 
 // Hashrate returns the POW hashrate.
-func (api *PrivateMinerAPI) Hashrate(input *string, hashrate *uint64) error {
+func (api *PrivateMinerAPI) Hashrate() (uint64, error) {
 	if !api.s.miner.IsMining() {
-		return miner.ErrMinerIsStopped
+		return 0, miner.ErrMinerIsStopped
 	}
 
-	*hashrate = uint64(api.s.miner.Hashrate())
-
-	return nil
+	return uint64(api.s.miner.Hashrate()), nil
 }
 
 // SetThreads  API is used to set the number of threads.
-func (api *PrivateMinerAPI) SetThreads(threads *int, result *interface{}) error {
-	if *threads < 0 {
-		return errors.New("threads should be greater than zero.")
+func (api *PrivateMinerAPI) SetThreads(threads int) (bool, error) {
+	if threads < 0 {
+		return false, errors.New("threads should be greater than zero.")
 	}
-	api.s.miner.SetThreads(*threads)
 
-	return nil
+	api.s.miner.SetThreads(threads)
+	return true, nil
 }
 
 // GetThreads  API is used to get the number of threads.
-func (api *PrivateMinerAPI) GetThreads(threads *int, result *int) error {
-	*result = api.s.miner.GetThreads()
-	return nil
+func (api *PrivateMinerAPI) GetThreads() (int, error) {
+	return api.s.miner.GetThreads(), nil
 }
 
 // SetCoinbase API is used to set the coinbase.
-func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr *string, result *interface{}) error {
-	coinbase, err := common.HexToAddress(*coinbaseStr)
+func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr string) (bool, error) {
+	coinbase, err := common.HexToAddress(coinbaseStr)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !common.IsShardEnabled() {
-		return fmt.Errorf("local shard number is invalid:[%v], it must greater than %v, less than %v", common.LocalShardNumber, common.UndefinedShardNumber, common.ShardCount)
+		return false, fmt.Errorf("local shard number is invalid:[%v], it must greater than %v, less than %v", common.LocalShardNumber, common.UndefinedShardNumber, common.ShardCount)
 	}
 	if coinbase.Shard() != common.LocalShardNumber {
-		return fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v]", coinbase.Shard(), common.LocalShardNumber)
+		return false, fmt.Errorf("invalid shard number: coinbase shard number is [%v], but local shard number is [%v]", coinbase.Shard(), common.LocalShardNumber)
 	}
 	api.s.miner.SetCoinbase(coinbase)
 
-	return nil
+	return true, nil
 }
 
 // GetCoinbase API is used to get the coinbase.
-func (api *PrivateMinerAPI) GetCoinbase(input interface{}, result *common.Address) error {
-	*result = api.s.miner.GetCoinbase()
-
-	return nil
+func (api *PrivateMinerAPI) GetCoinbase() (common.Address, error) {
+	return api.s.miner.GetCoinbase(), nil
 }
