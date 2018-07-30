@@ -227,7 +227,7 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
 
-func Test_GetRejectTransacton(t *testing.T) {
+func Test_GetReinjectTransaction(t *testing.T) {
 	log := log.GetLogger("test", true)
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
