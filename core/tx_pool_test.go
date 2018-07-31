@@ -370,3 +370,18 @@ func Test_TransactionPool_GetProcessableTransactions(t *testing.T) {
 	assert.Equal(t, len(txs), 0)
 	assert.Equal(t, size, 0)
 }
+
+func Test_TransactionPool_NewTransactionPool(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 10*types.TransactionPreSize)
+	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 2, 0, 10*types.TransactionPreSize)
+	pool, err := NewTransactionPool(*(DefaultTxPoolConfig()), bc)
+
+	assert.Equal(t, err, nil)
+
+	pool.chainHeaderChanged(block.HeaderHash)
+
+}
