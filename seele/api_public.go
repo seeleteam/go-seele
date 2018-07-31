@@ -92,9 +92,9 @@ type CallRequest struct {
 
 // Call is to execute a given transaction on a statedb of a given block height.
 // It does not affect this statedb and blockchain and is useful for executing and retrieve values.
-func (api *PublicSeeleAPI) Call(request *CallRequest) (map[string]interface{}, error) {
+func (api *PublicSeeleAPI) Call(tx *types.Transaction, height int64) (map[string]interface{}, error) {
 	// Get the block by block height, if the height is less than zero, get the current block.
-	block, err := getBlock(api.s.chain, request.Height)
+	block, err := getBlock(api.s.chain, height)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (api *PublicSeeleAPI) Call(request *CallRequest) (map[string]interface{}, e
 	}
 
 	// Get the transaction receipt, and the fee give to the miner coinbase
-	receipt, err := api.s.chain.ApplyTransaction(request.Tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
+	receipt, err := api.s.chain.ApplyTransaction(tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
 	if err != nil {
 		return nil, err
 	}
