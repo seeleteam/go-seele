@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -99,8 +100,9 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		}
 		logFullPath := filepath.Join(LogFolder, common.LogFileName)
 
+		ext := filepath.Ext(logFullPath)
 		writer, err := rotatelogs.New(
-			logFullPath+".%Y%m%d",
+			logFullPath[:strings.Index(logFullPath, ext)]+".%Y%m%d"+ext,
 			rotatelogs.WithClock(rotatelogs.Local),
 			rotatelogs.WithMaxAge(24*7*time.Hour),
 			rotatelogs.WithRotationTime(24*time.Hour),

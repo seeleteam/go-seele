@@ -7,6 +7,7 @@ package log
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,7 +39,9 @@ func Test_LogFile(t *testing.T) {
 	log.Info("folder is:", LogFolder)
 
 	now := time.Now().Format(".20060102")
-	logPath := filepath.Join(LogFolder, common.LogFileName) + now
+	logPath := filepath.Join(LogFolder, common.LogFileName)
+	ext := filepath.Ext(logPath)
+	logPath = logPath[:strings.Index(logPath, ext)] + now + ext
 	log.Info("log file is:%s", logPath)
 
 	exist := common.FileOrFolderExists(logPath)

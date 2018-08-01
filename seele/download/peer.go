@@ -21,8 +21,8 @@ import (
 const MsgWaitTimeout = time.Second * 120
 
 var (
-	errRecvedQuitMsg = errors.New("Recved quit msg")
-	errPeerQuit      = errors.New("Peer quit")
+	errReceivedQuitMsg = errors.New("Received quit msg")
+	errPeerQuit        = errors.New("Peer quit")
 )
 
 type Peer interface {
@@ -67,7 +67,7 @@ Again:
 	case <-p.quitCh:
 		err = errPeerQuit
 	case <-cancelCh:
-		err = errRecvedQuitMsg
+		err = errReceivedQuitMsg
 	case msg := <-rcvCh:
 		switch msgCode {
 		case BlockHeadersMsg:

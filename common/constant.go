@@ -39,7 +39,7 @@ var (
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 
 	// LogFileName default log file name
-	LogFileName = "log.txt"
+	LogFileName = "log"
 )
 
 func init() {

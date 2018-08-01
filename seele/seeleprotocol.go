@@ -611,7 +611,7 @@ handler:
 				break
 			}
 
-			p.log.Debug("Recved statusChainHeadMsgCode")
+			p.log.Debug("Received statusChainHeadMsgCode")
 			peer.SetHead(status.CurrentBlock, status.TD)
 			p.syncCh <- struct{}{}
 
