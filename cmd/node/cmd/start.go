@@ -26,7 +26,7 @@ var seeleNodeConfigFile string
 var miner string
 var metricsEnableFlag bool
 var accountsConfig string
-var threads int
+var threads uint
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -128,5 +128,5 @@ func init() {
 	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
 	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
-	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
+	startCmd.Flags().UintVarP(&threads, "threads", "", 1, "miner thread value")
 }

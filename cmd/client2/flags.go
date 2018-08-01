@@ -106,8 +106,8 @@ var (
 		Destination: &topicValue,
 	}
 
-	threadsValue int
-	threadsFlag  = cli.IntFlag{
+	threadsValue uint
+	threadsFlag  = cli.UintFlag{
 		Name:        "threads",
 		Usage:       "miner threads",
 		Destination: &threadsValue,
@@ -123,7 +123,7 @@ var (
 	indexValue uint
 	indexFlag  = cli.UintFlag{
 		Name:        "index",
-		Usage:       "block index, start with 0",
+		Usage:       "transaction index, start with 0",
 		Value:       0,
 		Destination: &indexValue,
 	}

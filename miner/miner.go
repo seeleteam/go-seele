@@ -92,12 +92,12 @@ func (miner *Miner) GetCoinbase() common.Address {
 }
 
 // SetThreads sets the number of mining threads.
-func (miner *Miner) SetThreads(threads int) {
+func (miner *Miner) SetThreads(threads uint) {
 	if threads <= 0 {
-		threads = runtime.NumCPU()
+		miner.threads = runtime.NumCPU()
 	}
 
-	miner.threads = threads
+	miner.threads = int(threads)
 }
 
 // GetThreads gets the number of mining threads.
