@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -45,7 +44,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// print some config infos
-		fmt.Printf("log file: %s\n", filepath.Join(log.LogFolder, common.LogFileName))
+		fmt.Printf("log folder: %s\n", log.LogFolder)
 		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
 
 		seeleNode, err := node.New(nCfg)
