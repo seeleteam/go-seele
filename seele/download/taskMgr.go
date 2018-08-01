@@ -235,7 +235,7 @@ func (t *taskMgr) onPeerQuit(peerID string) {
 	}
 }
 
-// deliverHeaderMsg recved header msg from peer.
+// deliverHeaderMsg received header msg from peer.
 func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -274,14 +274,14 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 	return nil
 }
 
-// deliverBlockMsg recved blocks msg from peer.
+// deliverBlockMsg received blocks msg from peer.
 func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for _, b := range blocks {
 		headInfo := t.downloadInfoList[int(b.Header.Height-t.fromNo)]
 		if headInfo.peerID != peerID {
-			t.log.Info("Recved block from different peer, discard this block. peerID=%s", peerID)
+			t.log.Info("Received block from different peer, discard this block. peerID=%s", peerID)
 			continue
 		}
 

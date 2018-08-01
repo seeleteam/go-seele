@@ -25,7 +25,7 @@ type VPacket struct {
 	createTick         uint16
 	data               []byte
 	dataLen            uint
-	isRecovered        int // 1: ok; 0: others. for client, 1: recved ack; for server, 1: ack sent.
+	isRecovered        int // 1: ok; 0: others. for client, 1: received ack; for server, 1: ack sent.
 	isSendedToTun      int // only avalible for recovering. 0: no; 1: already write to tun
 	isSendedToPeer     bool
 	sendTimes          int
@@ -47,7 +47,7 @@ func (v *VPacket) MarshalData() {
 	copy(b[VPacketHeadLen:], v.data)
 }
 
-// ParseData parse data from dataNet. packData contains udp-package recved from net
+// ParseData parse data from dataNet. packData contains udp-package received from net
 func (v *VPacket) ParseData(packData []byte) {
 	b := v.dataNet[0:]
 	copy(b, packData)

@@ -233,7 +233,7 @@ func (srv *Server) deletePeer(id common.Address) {
 	if p != nil {
 		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
-		srv.log.Info("server.run delPeerChan recved. peer match. remove peer. peers num=%d", srv.PeerCount())
+		srv.log.Info("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
 
 		metricsDeletePeerMeter.Mark(1)
 		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
@@ -518,7 +518,7 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	return wrapMsg, nil
 }
 
-// unPackWrapHSMsg verify recved msg, and recover the handshake msg
+// unPackWrapHSMsg verify received msg, and recover the handshake msg
 func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
 	size := uint32(len(recvWrapMsg.Payload))
 	if size < extraDataLen+4 {

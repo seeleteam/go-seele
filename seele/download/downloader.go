@@ -61,13 +61,13 @@ var (
 )
 
 var (
-	errHashNotMatch        = errors.New("Hash not match")
-	errInvalidAncestor     = errors.New("Ancestor is invalid")
-	errInvalidPacketRecved = errors.New("Invalid packet received")
-	ErrIsSynchronising     = errors.New("Is synchronising")
-	errMaxForkAncestor     = errors.New("Can not find ancestor when reached MaxForkAncestry")
-	errPeerNotFound        = errors.New("Peer not found")
-	errSyncErr             = errors.New("Err occurs when syncing")
+	errHashNotMatch          = errors.New("Hash not match")
+	errInvalidAncestor       = errors.New("Ancestor is invalid")
+	errInvalidPacketReceived = errors.New("Invalid packet received")
+	ErrIsSynchronising       = errors.New("Is synchronising")
+	errMaxForkAncestor       = errors.New("Can not find ancestor when reached MaxForkAncestry")
+	errPeerNotFound          = errors.New("Peer not found")
+	errSyncErr               = errors.New("Err occurs when syncing")
 )
 
 // Downloader sync block chain with remote peer
@@ -236,7 +236,7 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 
 	headers := msg.([]*types.BlockHeader)
 	if len(headers) != 1 {
-		return nil, errInvalidPacketRecved
+		return nil, errInvalidPacketReceived
 	}
 	if headers[0].Hash() != head {
 		return nil, errHashNotMatch
@@ -333,7 +333,7 @@ func (d *Downloader) UnRegisterPeer(peerID string) {
 	}
 }
 
-// DeliverMsg called by seeleprotocol to deliver recved msg from network
+// DeliverMsg called by seeleprotocol to deliver received msg from network
 func (d *Downloader) DeliverMsg(peerID string, msg *p2p.Message) {
 	d.lock.Lock()
 	peerConn, ok := d.peers[peerID]
