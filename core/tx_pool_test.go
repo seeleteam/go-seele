@@ -227,16 +227,16 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
 
-func Test_GetRejectTransacton(t *testing.T) {
+func Test_GetReinjectTransaction(t *testing.T) {
 	log := log.GetLogger("test", true)
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
-	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)
 	bc.WriteBlock(b1)
 
-	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 2, 0)
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 3*types.TransactionPreSize)
 	bc.WriteBlock(b2)
 
 	reinject := getReinjectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
