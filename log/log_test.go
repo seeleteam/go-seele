@@ -22,6 +22,9 @@ func Test_Log(t *testing.T) {
 	lg.Warn("warn msg")
 	lg.Error("error msg")
 	lg.Info("folder is: %s", LogFolder)
+
+	newLg := GetLogger("test", true)
+	assert.Equal(t, lg, newLg)
 }
 
 func Test_LogFile(t *testing.T) {
@@ -48,5 +51,19 @@ func Test_LogLevels(t *testing.T) {
 	log.Debug("debug can be done")
 	log.Info("Info can be done")
 	log.Warn("Warn can be done")
+	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
+
+	// Default is DebugLevel due to common.LogConfig.IsDebug is true
+	log = GetLogger("test4", true)
+	assert.Equal(t, logrus.DebugLevel, log.GetLevel())
+
+	// Set common.LogConfig.IsDebug as false
+	isDebug := common.LogConfig.IsDebug
+	defer func() {
+		common.LogConfig.IsDebug = isDebug
+	}()
+
+	common.LogConfig.IsDebug = false
+	log = GetLogger("test5", true)
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }
