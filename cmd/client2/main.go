@@ -15,7 +15,98 @@ import (
 func main() {
 	app := cli.NewApp()
 
+	minerCommands := cli.Command{
+		Name:  "miner",
+		Usage: "miner command",
+		Subcommands: []cli.Command{
+			{
+				Name:  "start",
+				Usage: "start miner",
+				Flags: []cli.Flag{
+					addressFlag,
+					threadsFlag,
+				},
+				Action: RPCAction(StartMinerAction),
+			},
+			{
+				Name:  "stop",
+				Usage: "stop miner",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(StopMinerAction),
+			},
+			{
+				Name:  "hashrate",
+				Usage: "get miner hashrate",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetMinerHashrateAction),
+			},
+			{
+				Name:  "getthreads",
+				Usage: "get miner thread number",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetMinerThreadsAction),
+			},
+			{
+				Name:  "setthreads",
+				Usage: "set miner thread number",
+				Flags: []cli.Flag{
+					addressFlag,
+					threadsFlag,
+				},
+				Action: RPCAction(SetMinerThreadsAction),
+			},
+			{
+				Name:  "setcoinbase",
+				Usage: "set miner coinbase",
+				Flags: []cli.Flag{
+					addressFlag,
+					coinbaseFlag,
+				},
+				Action: RPCAction(SetMinerCoinbaseAction),
+			},
+			{
+				Name:  "getcoinbase",
+				Usage: "get miner coinbase",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetMinerCoinbaseAction),
+			},
+			{
+				Name:  "status",
+				Usage: "get miner status",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetMinerStatusAction),
+			},
+		},
+	}
+
+	p2pCommands := cli.Command{
+		Name:  "p2p",
+		Usage: "p2p commands",
+		Subcommands: []cli.Command{
+			{
+				Name:  "peers",
+				Usage: "get p2p peer connections",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetPeerCountAction),
+			},
+		},
+	}
+
 	app.Commands = []cli.Command{
+		minerCommands,
+		p2pCommands,
 		{
 			Name:  "getinfo",
 			Usage: "get miner info",
@@ -65,24 +156,15 @@ func main() {
 			Action: RPCAction(GetBlockHeightAction),
 		},
 		{
-			Name:  "getblockbyheight",
-			Usage: "get block by height",
+			Name:  "getblock",
+			Usage: "get block by height or hash",
 			Flags: []cli.Flag{
 				addressFlag,
 				heightFlag,
-				fulltxFlag,
-			},
-			Action: RPCAction(GetBlockByHeightAction),
-		},
-		{
-			Name:  "getblockbyhash",
-			Usage: "get block by hash",
-			Flags: []cli.Flag{
-				addressFlag,
 				hashFlag,
 				fulltxFlag,
 			},
-			Action: RPCAction(GetBlockByHashAction),
+			Action: RPCAction(GetBlockAction),
 		},
 		{
 			Name:  "getlogs",
@@ -94,6 +176,69 @@ func main() {
 				topicFlag,
 			},
 			Action: RPCAction(GetLogsAction),
+		},
+		{
+			Name:  "gettxpoolcontent",
+			Usage: "get transaction pool contents",
+			Flags: []cli.Flag{
+				addressFlag,
+			},
+			Action: RPCAction(GetTxPoolContentAction),
+		},
+		{
+			Name:  "gettxpoolcount",
+			Usage: "get transaction pool transaction count",
+			Flags: []cli.Flag{
+				addressFlag,
+			},
+			Action: RPCAction(GetTxPoolTxCountAction),
+		},
+		{
+			Name:  "getblocktxcount",
+			Usage: "get block transaction count by block height or block hash",
+			Flags: []cli.Flag{
+				addressFlag,
+				heightFlag,
+				hashFlag,
+			},
+			Action: RPCAction(GetBlockTransactionCountAction),
+		},
+		{
+			Name:  "gettxinblock",
+			Usage: "get transaction by block height or block hash with index of the transaction in the block",
+			Flags: []cli.Flag{
+				addressFlag,
+				heightFlag,
+				hashFlag,
+				indexFlag,
+			},
+			Action: RPCAction(GetTransactionAction),
+		},
+		{
+			Name:  "gettxbyhash",
+			Usage: "get transaction by transaction hash",
+			Flags: []cli.Flag{
+				addressFlag,
+				hashFlag,
+			},
+			Action: RPCAction(GetTransactionByHashAction),
+		},
+		{
+			Name:  "getreceipt",
+			Usage: "get receipt by transaction hash",
+			Flags: []cli.Flag{
+				addressFlag,
+				hashFlag,
+			},
+			Action: RPCAction(GetReceiptByTxHashAction),
+		},
+		{
+			Name:  "getpendingtxs",
+			Usage: "get pending transactions",
+			Flags: []cli.Flag{
+				addressFlag,
+			},
+			Action: RPCAction(GetPendingTransactionsAction),
 		},
 	}
 

@@ -105,4 +105,26 @@ var (
 		Usage:       "topic",
 		Destination: &topicValue,
 	}
+
+	threadsValue int
+	threadsFlag  = cli.IntFlag{
+		Name:        "threads",
+		Usage:       "miner threads",
+		Destination: &threadsValue,
+	}
+
+	coinbaseValue string
+	coinbaseFlag  = cli.StringFlag{
+		Name:        "coinbase",
+		Usage:       "miner coinbase in hex",
+		Destination: &coinbaseValue,
+	}
+
+	indexValue uint
+	indexFlag  = cli.UintFlag{
+		Name:        "index",
+		Usage:       "block index, start with 0",
+		Value:       0,
+		Destination: &indexValue,
+	}
 )

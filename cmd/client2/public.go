@@ -79,16 +79,15 @@ func GetBlockHeightAction(client *rpc.Client) (interface{}, error) {
 	return result, err
 }
 
-func GetBlockByHeightAction(client *rpc.Client) (interface{}, error) {
+func GetBlockAction(client *rpc.Client) (interface{}, error) {
 	var result map[string]interface{}
-	err := client.Call(&result, "seele_getBlockByHeight", heightValue, fulltxValue)
+	var err error
 
-	return result, err
-}
-
-func GetBlockByHashAction(client *rpc.Client) (interface{}, error) {
-	var result map[string]interface{}
-	err := client.Call(&result, "seele_getBlockByHash", hashValue, fulltxValue)
+	if hashValue != "" {
+		err = client.Call(&result, "seele_getBlockByHash", hashValue, fulltxValue)
+	} else {
+		err = client.Call(&result, "seele_getBlockByHeight", heightValue, fulltxValue)
+	}
 
 	return result, err
 }
