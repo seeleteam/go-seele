@@ -89,15 +89,15 @@ errLoop:
 			err = fmt.Errorf("disconnection error received, %s", reason)
 			break errLoop
 		case err = <-p.protocolErr:
-			p.log.Warn("p2p peer got protocol err %s", err.Error())
+			if err != nil {
+				p.log.Warn("p2p peer got protocol err %s", err.Error())
+			}
 			break errLoop
 		}
 	}
-
 	p.close()
 	p.wg.Wait()
 	p.log.Info("p2p.peer.run quit. err=%s", err)
-
 	return err
 }
 
@@ -227,9 +227,7 @@ func (p *Peer) Disconnect(reason string) {
 	defer p.lock.Unlock()
 
 	if p.disconnection != nil {
-		go func(reason string) {
-			p.disconnection <- reason
-		}(reason)
+		p.disconnection <- reason
 	}
 }
 
