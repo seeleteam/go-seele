@@ -43,7 +43,9 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 func Test_peer_Info(t *testing.T) {
 	addr := "0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84"
 	newPeer, err := newTestPeer(addr, 1)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	info := newPeer.Info()
 
@@ -53,14 +55,18 @@ func Test_peer_Info(t *testing.T) {
 
 func Test_peer_RunAndClose(t *testing.T) {
 	p1, err := newTestPeer("0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84", 1)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Equal(t, p1 != nil, true)
 	assert.Equal(t, p1.getShardNumber(), uint(1))
 
 	p1.close()
 
 	p2, err := newTestPeer("0xc31b35a3600eb13ebbc9f504924e747d854c1421", 1)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	go func() {
 		err := p2.run()
