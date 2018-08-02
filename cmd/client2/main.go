@@ -271,7 +271,7 @@ func main() {
 		},
 		{
 			Name:  "sign",
-			Usage: "get a transaction with signed and print it out",
+			Usage: "generate a signed transaction and print it out",
 			Flags: []cli.Flag{
 				addressFlag,
 				privateKeyFlag,
