@@ -127,4 +127,25 @@ var (
 		Value:       0,
 		Destination: &indexValue,
 	}
+
+	privateKeyValue string
+	privateKeyFlag  = cli.StringFlag{
+		Name:        "privatekey",
+		Usage:       "private key for account",
+		Destination: &privateKeyValue,
+	}
+
+	fileNameValue string
+	fileNameFlag  = cli.StringFlag{
+		Name:        "file",
+		Usage:       "key store file name",
+		Destination: &fileNameValue,
+	}
+
+	shardValue uint
+	shardFlag  = cli.UintFlag{
+		Name:        "shard",
+		Usage:       "shard number",
+		Destination: &shardValue,
+	}
 )

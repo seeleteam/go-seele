@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/seeleteam/go-seele/common"
+	hexutil2 "github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
@@ -97,6 +98,34 @@ func GetLogsAction(client *rpc.Client) (interface{}, error) {
 	err := client.Call(&result, "seele_getLogs", heightValue, contractValue, topicValue)
 
 	return result, err
+}
+
+func CallAction(client *rpc.Client) (interface{}, error) {
+	pass, err := common.GetPassword()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get password: %s", err)
+	}
+
+	key, err := keystore.GetKey(fromValue, pass)
+	if err != nil {
+		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
+	}
+
+	contractAddr, err := common.HexToAddress(toValue)
+	if err != nil {
+		return nil, fmt.Errorf("invalid contract address: %s", err)
+	}
+
+	payload, err := hexutil2.HexToBytes(paloadValue)
+	if err != nil {
+		return nil, fmt.Errorf("invalid payload, %s", err)
+	}
+
+	amount := big.NewInt(0)
+	fee := big.NewInt(1)
+	nonce := uint64(1)
+
+	return Call(client, key.PrivateKey, &contractAddr, amount, fee, nonce, payload)
 }
 
 func AddTxAction(client *rpc.Client) (interface{}, error) {
