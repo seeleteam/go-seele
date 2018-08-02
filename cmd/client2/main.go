@@ -148,6 +148,17 @@ func main() {
 			Action: RPCAction(GetAccountNonceAction),
 		},
 		{
+			Name:  "call",
+			Usage: "call contract",
+			Flags: []cli.Flag{
+				addressFlag,
+				fromFlag,
+				toFlag,
+				paloadFlag,
+			},
+			Action: RPCAction(CallAction),
+		},
+		{
 			Name:  "getblockheight",
 			Usage: "get block height",
 			Flags: []cli.Flag{
@@ -239,6 +250,46 @@ func main() {
 				addressFlag,
 			},
 			Action: RPCAction(GetPendingTransactionsAction),
+		},
+		{
+			Name:  "getshardnum",
+			Usage: "get account shard number",
+			Flags: []cli.Flag{
+				accountFlag,
+				privateKeyFlag,
+			},
+			Action: GetAccountShardNumAction,
+		},
+		{
+			Name:  "savekey",
+			Usage: "save private key to a keystore file",
+			Flags: []cli.Flag{
+				privateKeyFlag,
+				fileNameFlag,
+			},
+			Action: SaveKeyAction,
+		},
+		{
+			Name:  "sign",
+			Usage: "generate a signed transaction and print it out",
+			Flags: []cli.Flag{
+				addressFlag,
+				privateKeyFlag,
+				toFlag,
+				amountFlag,
+				feeFlag,
+				paloadFlag,
+				nonceFlag,
+			},
+			Action: SignTxAction,
+		},
+		{
+			Name:  "key",
+			Usage: "generate key with or without shard number",
+			Flags: []cli.Flag{
+				shardFlag,
+			},
+			Action: GenerateKeyAction,
 		},
 	}
 
