@@ -30,6 +30,11 @@ func Test_PeerSet(t *testing.T) {
 
 	p2 := set.find(id)
 	assert.Equal(t, p1, p2)
+	assert.Equal(t, set.count(), 1)
+
+	id1 := *crypto.MustGenerateRandomAddress()
+	p3 := set.find(id1)
+	assert.Equal(t, p3, (*Peer)(nil))
 
 	set.delete(p1)
 	assert.Equal(t, set.count(), 0)

@@ -35,6 +35,7 @@ type Peer struct {
 	lock sync.Mutex
 }
 
+// NewPeer creates and returns a new peer.
 func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
 	closed := make(chan struct{})
 	offset := baseProtoCode
@@ -104,6 +105,7 @@ func (p *Peer) close() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	close(p.protocolErr)
 	close(p.closed)
 	close(p.disconnection)
 	p.disconnection = nil
@@ -225,7 +227,9 @@ func (p *Peer) Disconnect(reason string) {
 	defer p.lock.Unlock()
 
 	if p.disconnection != nil {
-		p.disconnection <- reason
+		go func(reason string) {
+			p.disconnection <- reason
+		}(reason)
 	}
 }
 
@@ -258,11 +262,6 @@ func (rw *protocolRW) ReadMsg() (Message, error) {
 	}
 }
 
-// ProtocolMap returns cap => protocol read write wrapper
-func (p *Peer) ProtocolMap() map[string]protocolRW {
-	return p.protocolMap
-}
-
 // RemoteAddr returns the remote address of the network connection.
 func (p *Peer) RemoteAddr() net.Addr {
 	return p.rw.fd.RemoteAddr()
@@ -290,7 +289,7 @@ func (p *Peer) Info() *PeerInfo {
 	var caps []string
 	protocols := make(map[string]interface{})
 
-	for cap, protocol := range p.ProtocolMap() {
+	for cap, protocol := range p.protocolMap {
 		caps = append(caps, cap)
 
 		protoInfo := interface{}("unknown")

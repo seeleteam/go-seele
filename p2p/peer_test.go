@@ -19,15 +19,13 @@ func Test_peer_Info(t *testing.T) {
 	node := discovery.NewNode(myAddr, nil, 0, 1)
 
 	ln, err := net.Listen("tcp4", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, err, nil)
+
 	defer ln.Close()
 
 	c, err := net.Dial(ln.Addr().Network(), ln.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Equal(t, err, nil)
+
 	defer c.Close()
 
 	newPeer := NewPeer(&connection{fd: c}, nil, nil, node)
