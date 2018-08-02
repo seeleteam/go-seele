@@ -23,19 +23,16 @@ func (n *PrivateNetworkAPI) GetPeersInfo() ([]p2p.PeerInfo, error) {
 }
 
 // GetPeerCount returns the count of peers
-func (n *PrivateNetworkAPI) GetPeerCount(input interface{}, result *int) error {
-	*result = n.s.p2pServer.PeerCount()
-	return nil
+func (n *PrivateNetworkAPI) GetPeerCount() (int, error) {
+	return n.s.p2pServer.PeerCount(), nil
 }
 
 // GetNetworkVersion returns the network version
-func (n *PrivateNetworkAPI) GetNetworkVersion(input interface{}, result *uint64) error {
-	*result = n.s.NetVersion()
-	return nil
+func (n *PrivateNetworkAPI) GetNetworkVersion() (uint64, error) {
+	return n.s.NetVersion(), nil
 }
 
 // GetProtocolVersion returns the current seele protocol version this node supports
-func (n *PrivateNetworkAPI) GetProtocolVersion(input interface{}, result *uint) error {
-	*result = n.s.seeleProtocol.Protocol.Version
-	return nil
+func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
+	return n.s.seeleProtocol.Protocol.Version, nil
 }
