@@ -62,6 +62,12 @@ func Test_peer_RunAndClose(t *testing.T) {
 	assert.Equal(t, p1.getShardNumber(), uint(1))
 
 	p1.close()
+	_, ok := <-p1.closed
+	_, ok1 := <-p1.protocolErr
+
+	assert.Equal(t, p1.disconnection, (chan string)(nil))
+	assert.Equal(t, ok, false)
+	assert.Equal(t, ok1, false)
 
 	p2, err := newTestPeer("0xc31b35a3600eb13ebbc9f504924e747d854c1421", 1)
 	if err != nil {
@@ -70,9 +76,17 @@ func Test_peer_RunAndClose(t *testing.T) {
 
 	go func() {
 		err := p2.run()
+		assert.Equal(t, p2.disconnection != nil, false)
 		assert.Equal(t, strings.Contains(err.Error(), "123"), true)
 	}()
 
 	p2.Disconnect("123")
+	assert.Equal(t, p2.disconnection != nil, true)
 	p2.wg.Wait()
+
+	_, ok2 := <-p2.closed
+	_, ok3 := <-p2.protocolErr
+
+	assert.Equal(t, ok2, false)
+	assert.Equal(t, ok3, false)
 }
