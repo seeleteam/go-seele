@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	errNoContent = errors.New("can not construct the tree with no content.")
+	errNoContent = errors.New("can not construct the tree with no content")
 )
 
 // Content represents the data that is stored and verified by the tree. A type that

@@ -76,6 +76,11 @@ func Test_NewTree(t *testing.T) {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
 		}
 	}
+
+	_, err := NewTree(nil)
+	if err != errNoContent {
+		t.Fatalf("error: unexpected error: %s", errNoContent)
+	}
 }
 
 func Test_MerkleTree_MerkleRoot(t *testing.T) {
@@ -190,6 +195,36 @@ func Test_MerkleTree_String(t *testing.T) {
 		if tree.String() == "" {
 			t.Error("error: expected not empty string")
 		}
+	}
+}
+
+func Benchmark_MerkleTree_calculateHashRecursively(b *testing.B) {
+	var tree *MerkleTree
+	for i := 0; i < len(table); i++ {
+		tree, _ = NewTree(table[i].contents)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		tree.Root.calculateHashRecursively()
+	}
+}
+
+func Benchmark_MerkleTree_buildWithContent(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		buildWithContent(table[0].contents)
+	}
+}
+func Benchmark_MerkleTree_RebuildTree(b *testing.B) {
+	tree, _ := NewTree(table[0].contents)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StartTimer()
+		tree.RebuildTree()
 	}
 }
 
