@@ -66,7 +66,6 @@ func GetBalanceAction(client *rpc.Client) (interface{}, error) {
 }
 
 func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
-
 	account, err := MakeAddress(accountValue)
 	if err != nil {
 		return nil, err
