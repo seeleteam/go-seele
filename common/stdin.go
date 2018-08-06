@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/howeyc/gopass"
+	"github.com/seeleteam/go-seele/common/errors"
 )
 
 // GetPassword ask user for password interactively
@@ -38,7 +39,7 @@ func SetPassword() (string, error) {
 	}
 
 	if !bytes.Equal(pass, passRepeat) {
-		return "", fmt.Errorf("repeat password is not equal to orignal one")
+		return "", errors.Get(errors.ErrPasswordRepeatMismatch)
 	}
 
 	return string(pass), nil

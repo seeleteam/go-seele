@@ -10,9 +10,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
@@ -44,7 +44,7 @@ type Address [addressLen]byte
 func NewAddress(b []byte) (Address, error) {
 	// Validate length
 	if len(b) != addressLen {
-		return EmptyAddress, fmt.Errorf("invalid address length %v, expected length is %v", len(b), addressLen)
+		return EmptyAddress, errors.Create(errors.ErrAddressLenInvalid, len(b), addressLen)
 	}
 
 	var id Address

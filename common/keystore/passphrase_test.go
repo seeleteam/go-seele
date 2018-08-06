@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
@@ -35,11 +36,11 @@ func Test_PassPhrase(t *testing.T) {
 	assert.Equal(t, key.PrivateKey, decryptKey.PrivateKey)
 
 	_, err = DecryptKey(result, "badpass")
-	assert.Equal(t, err, ErrDecrypt)
+	assert.Equal(t, err, errors.Get(errors.ErrDecrypt))
 
 	// Empty password
 	_, err = EncryptKey(key, "")
-	assert.Equal(t, err, ErrEmptyAuthKey)
+	assert.Equal(t, err, errors.Get(errors.ErrEmptyAuthKey))
 
 	// Version not match
 	var encKey encryptedKey
