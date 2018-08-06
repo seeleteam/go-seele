@@ -35,7 +35,7 @@ func (err *seeleError) Error() string {
 func Get(code ErrorCode) error {
 	err, found := constErrors[code]
 	if !found {
-		panic(fmt.Errorf("cannot find error code %v", code))
+		return fmt.Errorf("system internal error, cannot find the error code %v", code)
 	}
 
 	return err
@@ -45,7 +45,7 @@ func Get(code ErrorCode) error {
 func Create(code ErrorCode, args ...interface{}) error {
 	errFormat, found := parameterizedErrors[code]
 	if !found {
-		panic(fmt.Errorf("cannot find error code %v", code))
+		return fmt.Errorf("system internal error, cannot find the error code %v", code)
 	}
 
 	return &seeleParameterizedError{
