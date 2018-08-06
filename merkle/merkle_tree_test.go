@@ -7,6 +7,7 @@ package merkle
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -57,6 +58,19 @@ var table = []struct {
 func CreateContent(strs []string) []Content {
 	contents := make([]Content, len(strs))
 	for i, s := range strs {
+		contents[i] = TestContent{
+			x: s,
+		}
+	}
+
+	return contents
+}
+
+func createRandomContent(size int) []Content {
+	contents := make([]Content, size)
+
+	for i := 0; i < size; i++ {
+		s := fmt.Sprintf("%32d", i)
 		contents[i] = TestContent{
 			x: s,
 		}
@@ -198,32 +212,39 @@ func Test_MerkleTree_String(t *testing.T) {
 	}
 }
 
+func Benchmark_MerkleTree_NewTree(b *testing.B) {
+	contents := createRandomContent(10000)
+
+	for i := 0; i < b.N; i++ {
+		NewTree(contents)
+	}
+}
+
 func Benchmark_MerkleTree_calculateHashRecursively(b *testing.B) {
 	var tree *MerkleTree
-	for i := 0; i < len(table); i++ {
-		tree, _ = NewTree(table[i].contents)
-	}
+	contents := createRandomContent(10000)
+	tree, _ = NewTree(contents)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StartTimer()
 		tree.Root.calculateHashRecursively()
 	}
 }
 
 func Benchmark_MerkleTree_buildWithContent(b *testing.B) {
-	b.ResetTimer()
+	contents := createRandomContent(10000)
+
 	for i := 0; i < b.N; i++ {
-		b.StartTimer()
-		buildWithContent(table[0].contents)
+		buildWithContent(contents)
 	}
 }
+
 func Benchmark_MerkleTree_RebuildTree(b *testing.B) {
-	tree, _ := NewTree(table[0].contents)
+	contents := createRandomContent(10000)
+	tree, _ := NewTree(contents)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StartTimer()
 		tree.RebuildTree()
 	}
 }
