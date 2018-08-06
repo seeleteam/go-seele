@@ -6,6 +6,10 @@
 package p2p
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io"
+	"io/ioutil"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -16,11 +20,15 @@ const (
 	ctlMsgDiscCode       uint16 = 4
 	ctlMsgPingCode       uint16 = 3
 	ctlMsgPongCode       uint16 = 4
+	ctlMsgZipCode        uint16 = 5
 )
+
+const zipLimit int = 1024
 
 // Message exposed for high level layer to receive
 type Message struct {
 	Code       uint16 // message code, defined in each protocol
+	ZipCode    uint16
 	Payload    []byte
 	ReceivedAt time.Time
 }
@@ -32,6 +40,50 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 	}
 
 	return write.WriteMsg(msg)
+}
+
+// ZipMessage zip message when the length of payload is greater than zipLimit
+func (m *Message) ZipMessage() error {
+	if len(m.Payload) > zipLimit {
+		buf := new(bytes.Buffer)
+
+		w := gzip.NewWriter(buf)
+		defer w.Close()
+		_, err := w.Write(m.Payload)
+		if err != nil {
+			return err
+		}
+		err = w.Flush()
+		if err != nil {
+			return err
+		}
+		m.Payload = buf.Bytes()
+		m.ZipCode = ctlMsgZipCode
+	}
+	return nil
+}
+
+// UZipMessage uzip message when m.ZipCode equal ctlMsgZipCode
+func (m *Message) UZipMessage() error {
+	if m.ZipCode != ctlMsgZipCode {
+		return nil
+	}
+	buf := new(bytes.Buffer)
+	_, err := buf.Write(m.Payload)
+	if err != nil {
+		return err
+	}
+	r, err := gzip.NewReader(buf)
+	defer r.Close()
+	if err != nil {
+		return err
+	}
+	b, err := ioutil.ReadAll(r)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return err
+	}
+	m.Payload = b
+	return nil
 }
 
 // ProtoHandShake handshake message for two peer to exchage base information
