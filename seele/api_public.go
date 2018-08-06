@@ -177,6 +177,10 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction) (bool, error) {
 
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
+	if account.Equal(common.EmptyAddress) {
+		account = api.s.Miner().GetCoinbase()
+	}
+
 	state, err := api.s.chain.GetCurrentState()
 	if err != nil {
 		return 0, err
