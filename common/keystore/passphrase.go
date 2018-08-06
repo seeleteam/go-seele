@@ -11,12 +11,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/crypto"
 	"golang.org/x/crypto/scrypt"
 )
@@ -27,14 +26,6 @@ const (
 	ScryptP     = 1
 	scryptR     = 8
 	scryptDKLen = 32
-)
-
-var (
-	// ErrDecrypt error when the passphrase is not right
-	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
-
-	// ErrEmptyAuthKey error when the auth key is empty
-	ErrEmptyAuthKey = errors.New("encryption auth key could not be empty")
 )
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
@@ -99,7 +90,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 
 func doDecrypt(keyProtected *encryptedKey, auth string) ([]byte, error) {
 	if keyProtected.Version != Version {
-		return nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
+		return nil, errors.Create(errors.ErrKeyVersionMismatch, keyProtected.Version)
 	}
 
 	mac, err := common.HexToHash(keyProtected.Crypto.MAC)
@@ -129,7 +120,7 @@ func doDecrypt(keyProtected *encryptedKey, auth string) ([]byte, error) {
 
 	calculatedMAC := crypto.HashBytes(scyptKey[16:32], cipherText)
 	if !calculatedMAC.Equal(mac) {
-		return nil, ErrDecrypt
+		return nil, errors.Get(errors.ErrDecrypt)
 	}
 
 	plainText, err := aesCTRXOR(scyptKey[:16], cipherText, iv)
@@ -143,7 +134,7 @@ func doDecrypt(keyProtected *encryptedKey, auth string) ([]byte, error) {
 // use scrypt to calculate auth key
 func getScryptKey(salt []byte, auth string) ([]byte, error) {
 	if len(auth) < 1 {
-		return nil, ErrEmptyAuthKey
+		return nil, errors.Get(errors.ErrEmptyAuthKey)
 	}
 
 	authArray := []byte(auth)
