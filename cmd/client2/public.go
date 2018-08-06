@@ -154,7 +154,7 @@ func MakeTransaction(client *rpc.Client) (*types.Transaction, error) {
 		return nil, fmt.Errorf("failed to get password %s\n", err)
 	}
 
-	key, err := keystore.GetKey(fromValue, pass)
+	key, err := keystore.GetKey(fromFile, pass)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s\n", err)
 	}

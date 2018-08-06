@@ -48,6 +48,13 @@ var (
 		Destination: &hashValue,
 	}
 
+	fromFile string
+	fileFlag = cli.StringFlag{
+		Name:        "from",
+		Usage:       "key file of the sender",
+		Destination: &fromFile,
+	}
+
 	fromValue string
 	fromFlag  = cli.StringFlag{
 		Name:        "from",

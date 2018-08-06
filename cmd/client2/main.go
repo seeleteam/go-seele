@@ -129,7 +129,7 @@ func main() {
 			Usage: "send transaction to node",
 			Flags: []cli.Flag{
 				addressFlag,
-				fromFlag,
+				fileFlag,
 				toFlag,
 				amountFlag,
 				feeFlag,
