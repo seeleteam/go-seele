@@ -7,6 +7,7 @@ package merkle
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -65,6 +66,19 @@ func CreateContent(strs []string) []Content {
 	return contents
 }
 
+func createRandomContent(size int) []Content {
+	contents := make([]Content, size)
+
+	for i := 0; i < size; i++ {
+		s := fmt.Sprintf("%32d", i)
+		contents[i] = TestContent{
+			x: s,
+		}
+	}
+
+	return contents
+}
+
 func Test_NewTree(t *testing.T) {
 	for i := 0; i < len(table); i++ {
 		tree, err := NewTree(table[i].contents)
@@ -75,6 +89,11 @@ func Test_NewTree(t *testing.T) {
 		if bytes.Compare(tree.MerkleRoot().Bytes(), table[i].expectedHash) != 0 {
 			t.Errorf("error: expected hash equal to %v got %v", table[i].expectedHash, tree.MerkleRoot())
 		}
+	}
+
+	_, err := NewTree(nil)
+	if err != errNoContent {
+		t.Fatalf("error: unexpected error: %s", errNoContent)
 	}
 }
 
@@ -190,6 +209,43 @@ func Test_MerkleTree_String(t *testing.T) {
 		if tree.String() == "" {
 			t.Error("error: expected not empty string")
 		}
+	}
+}
+
+func Benchmark_MerkleTree_NewTree(b *testing.B) {
+	contents := createRandomContent(10000)
+
+	for i := 0; i < b.N; i++ {
+		NewTree(contents)
+	}
+}
+
+func Benchmark_MerkleTree_calculateHashRecursively(b *testing.B) {
+	var tree *MerkleTree
+	contents := createRandomContent(10000)
+	tree, _ = NewTree(contents)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tree.Root.calculateHashRecursively()
+	}
+}
+
+func Benchmark_MerkleTree_buildWithContent(b *testing.B) {
+	contents := createRandomContent(10000)
+
+	for i := 0; i < b.N; i++ {
+		buildWithContent(contents)
+	}
+}
+
+func Benchmark_MerkleTree_RebuildTree(b *testing.B) {
+	contents := createRandomContent(10000)
+	tree, _ := NewTree(contents)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tree.RebuildTree()
 	}
 }
 
