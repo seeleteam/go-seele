@@ -143,7 +143,7 @@ func (api *PublicSeeleAPI) GetInfo() (MinerInfo, error) {
 
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) {
-	if account.Equal(common.Address{}) {
+	if account.Equal(common.EmptyAddress) {
 		account = api.s.Miner().GetCoinbase()
 	}
 
