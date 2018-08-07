@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/core"
 )
 
 func newMessage(payLoad string) *Message {
@@ -51,34 +52,31 @@ func Test_message(t *testing.T) {
 }
 
 func Benchmark_message_Zip(b *testing.B) {
-	b.ResetTimer()
+	randStr := getRandomString(core.BlockByteLimit)
+
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		randStr := getRandomString(zipBytesLimit + 50)
 		msg := newMessage(randStr)
 
 		b.StartTimer()
-		err := msg.Zip()
-		if err != nil {
+		if err := msg.Zip(); err != nil {
 			b.Fatalf("failed to zip message, %v", err.Error())
 		}
 	}
 }
 
 func Benchmark_message_UnZip(b *testing.B) {
-	b.ResetTimer()
+	randStr := getRandomString(core.BlockByteLimit)
+
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		randStr := getRandomString(zipBytesLimit + 50)
 		msg := newMessage(randStr)
-		err := msg.Zip()
-		if err != nil {
+		if err := msg.Zip(); err != nil {
 			b.Fatalf("failed to zip message, %v", err.Error())
 		}
 
 		b.StartTimer()
-		err = msg.UnZip()
-		if err != nil {
+		if err := msg.UnZip(); err != nil {
 			b.Fatalf("failed to unzip message, %v", err.Error())
 		}
 	}
