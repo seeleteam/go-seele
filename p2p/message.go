@@ -21,7 +21,7 @@ const (
 	ctlMsgPongCode       uint16 = 4
 )
 
-const zipBytesLimit = 1024 * 1024
+const zipBytesLimit = 100 * 1024
 
 // Message exposed for high level layer to receive
 type Message struct {
