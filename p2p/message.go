@@ -23,7 +23,7 @@ const (
 	ctlMsgZipCode        uint16 = 5
 )
 
-const zipLimit int = 1024
+const zipBytesLimit int = 1024
 
 // Message exposed for high level layer to receive
 type Message struct {
@@ -42,35 +42,37 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 	return write.WriteMsg(msg)
 }
 
-// ZipMessage zip message when the length of payload is greater than zipLimit
-func (m *Message) ZipMessage() error {
-	if len(m.Payload) > zipLimit {
-		buf := new(bytes.Buffer)
-
-		w := gzip.NewWriter(buf)
-		defer w.Close()
-		_, err := w.Write(m.Payload)
-		if err != nil {
-			return err
-		}
-		err = w.Flush()
-		if err != nil {
-			return err
-		}
-		m.Payload = buf.Bytes()
-		m.ZipCode = ctlMsgZipCode
+// Zip zip message when the length of payload is greater than zipLimit
+func (m *Message) Zip() error {
+	if len(m.Payload) <= zipBytesLimit {
+		return nil
 	}
+	buf := new(bytes.Buffer)
+
+	w := gzip.NewWriter(buf)
+	defer w.Close()
+
+	if _, err := w.Write(m.Payload); err != nil {
+		return err
+	}
+
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	m.Payload = buf.Bytes()
+	m.ZipCode = ctlMsgZipCode
+
 	return nil
 }
 
-// UZipMessage uzip message when m.ZipCode equal ctlMsgZipCode
-func (m *Message) UZipMessage() error {
+// UZip uzip message when m.ZipCode equal ctlMsgZipCode
+func (m *Message) UZip() error {
 	if m.ZipCode != ctlMsgZipCode {
 		return nil
 	}
 	buf := new(bytes.Buffer)
-	_, err := buf.Write(m.Payload)
-	if err != nil {
+
+	if _, err := buf.Write(m.Payload); err != nil {
 		return err
 	}
 	r, err := gzip.NewReader(buf)

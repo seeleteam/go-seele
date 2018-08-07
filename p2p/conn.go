@@ -106,8 +106,8 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 		if err = c.readFull(msgRecv.Payload); err != nil {
 			return Message{}, err
 		}
-		err = msgRecv.UZipMessage()
-		if err != nil {
+
+		if err = msgRecv.UZip(); err != nil {
 			return Message{}, err
 		}
 	}
@@ -125,20 +125,17 @@ func (c *connection) WriteMsg(msg Message) error {
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
 
-	err := msg.ZipMessage()
-	if err != nil {
+	if err := msg.Zip(); err != nil {
 		return err
 	}
 	binary.BigEndian.PutUint16(b[headBuffZipStart:headBuffZipEnd], msg.ZipCode)
 
-	err = c.writeFull(b)
-	if err != nil {
+	if err := c.writeFull(b); err != nil {
 		return err
 	}
 
 	if len(msg.Payload) > 0 {
-		err = c.writeFull(msg.Payload)
-		if err != nil {
+		if err := c.writeFull(msg.Payload); err != nil {
 			return err
 		}
 	}
