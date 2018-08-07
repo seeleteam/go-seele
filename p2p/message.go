@@ -45,6 +45,9 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 // Zip zip message when the length of payload is greater than zipLimit
 func (m *Message) Zip() error {
 	if len(m.Payload) <= zipBytesLimit {
+		if len(m.Payload) == 0 {
+			return nil
+		}
 		m.Payload = append(m.Payload, byte(0))
 		return nil
 	}
