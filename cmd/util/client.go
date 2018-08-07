@@ -46,10 +46,6 @@ func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee 
 	var tx *types.Transaction
 	var err error
 	if to.IsEmpty() {
-		if len(payload) == 0 {
-			return nil, fmt.Errorf("payload is empty,please set it for a contract")
-		}
-
 		tx, err = types.NewContractTransaction(*fromAddr, amount, fee, nonce, payload)
 	} else {
 		switch to.Type() {
