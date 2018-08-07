@@ -18,7 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
-func newTestBlockHeader(t *testing.T) *types.BlockHeader {
+func newTestBlockHeader() *types.BlockHeader {
 	return &types.BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
 		Creator:           common.BytesToAddress([]byte{1}),
@@ -36,15 +36,15 @@ func Test_handleMinerRewardTx(t *testing.T) {
 	db, remove := leveldb.NewTestDatabase()
 	defer remove()
 
-	statedb, err := state.NewStatedb(common.Hash{}, db)
+	statedb, err := state.NewStatedb(common.EmptyHash, db)
 	if err != nil {
 		panic(err)
 	}
 
 	task := getTask(10)
-	task.header = newTestBlockHeader(t)
+	task.header = newTestBlockHeader()
 	reward, err := task.handleMinerRewardTx(statedb)
 
-	assert.Equal(t, err == nil, true)
+	assert.Equal(t, err, nil)
 	assert.Equal(t, reward, pow.GetReward(task.header.Height))
 }

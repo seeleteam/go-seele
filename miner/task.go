@@ -73,7 +73,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
 	size := core.BlockByteLimit
-	count := 1 // the first tx is miner reward
+	txIndex := 1 // the first tx is miner reward
 
 	for size > 0 {
 		txs, txsSize := seele.TxPool().GetProcessableTransactions(size)
@@ -89,7 +89,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				continue
 			}
 
-			receipt, err := seele.BlockChain().ApplyTransaction(tx, count, task.coinbase, statedb, task.header)
+			receipt, err := seele.BlockChain().ApplyTransaction(tx, txIndex, task.coinbase, statedb, task.header)
 			if err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
 				log.Error("failed to apply tx %s, %s", tx.Hash.ToHex(), err)
@@ -99,7 +99,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 			task.txs = append(task.txs, tx)
 			task.receipts = append(task.receipts, receipt)
-			count++
+			txIndex++
 		}
 
 		size -= txsSize
