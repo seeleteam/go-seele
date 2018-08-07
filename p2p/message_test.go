@@ -27,25 +27,25 @@ func getRandomString(l int) string {
 }
 
 func Test_message(t *testing.T) {
-	pl1 := getRandomString(zipBytesLimit - 50)
-	m1 := newMessage(pl1)
+	randStr1 := getRandomString(zipBytesLimit - 50)
+	msg1 := newMessage(randStr1)
 
-	err := m1.Zip()
+	err := msg1.Zip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, string(m1.Payload), pl1)
+	assert.Equal(t, string(msg1.Payload), randStr1)
 
-	err = m1.UnZip()
+	err = msg1.UnZip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, string(m1.Payload), pl1)
+	assert.Equal(t, string(msg1.Payload), randStr1)
 
-	pl2 := getRandomString(zipBytesLimit + 50)
-	m2 := newMessage(pl2)
+	randStr2 := getRandomString(zipBytesLimit + 50)
+	msg2 := newMessage(randStr2)
 
-	err = m2.Zip()
+	err = msg2.Zip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, len(m2.Payload) < len([]byte(pl2)), true)
+	assert.Equal(t, len(msg2.Payload) < len([]byte(randStr2)), true)
 
-	err = m2.UnZip()
+	err = msg2.UnZip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, string(m2.Payload), pl2)
+	assert.Equal(t, string(msg2.Payload), randStr2)
 }

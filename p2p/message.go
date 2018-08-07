@@ -40,46 +40,46 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 }
 
 // Zip compress message when the length of payload is greater than zipBytesLimit
-func (m *Message) Zip() error {
-	if len(m.Payload) <= zipBytesLimit {
+func (msg *Message) Zip() error {
+	if len(msg.Payload) <= zipBytesLimit {
 		return nil
 	}
 
 	buf := new(bytes.Buffer)
 
-	w := gzip.NewWriter(buf)
-	_, err := w.Write(m.Payload)
-	w.Close()
+	writer := gzip.NewWriter(buf)
+	_, err := writer.Write(msg.Payload)
+	writer.Close()
 	if err != nil {
 		return err
 	}
-	m.Payload = buf.Bytes()
+	msg.Payload = buf.Bytes()
 
 	return nil
 }
 
 // UnZip the message whether it is compressed or not.
-func (m *Message) UnZip() error {
-	if len(m.Payload) == 0 {
+func (msg *Message) UnZip() error {
+	if len(msg.Payload) == 0 {
 		return nil
 	}
 
-	pl := bytes.NewReader(m.Payload)
-	r, err := gzip.NewReader(pl)
+	reader := bytes.NewReader(msg.Payload)
+	gzipReader, err := gzip.NewReader(reader)
 	if err == gzip.ErrHeader || err == gzip.ErrChecksum {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer gzipReader.Close()
 
-	b, err := ioutil.ReadAll(r)
+	arrayByte, err := ioutil.ReadAll(gzipReader)
 	if err != nil {
 		return err
 	}
 
-	m.Payload = b
+	msg.Payload = arrayByte
 	return nil
 }
 
