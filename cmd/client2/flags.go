@@ -51,7 +51,7 @@ var (
 	fromValue string
 	fromFlag  = cli.StringFlag{
 		Name:        "from",
-		Usage:       "from address",
+		Usage:       "key file of the sender",
 		Destination: &fromValue,
 	}
 
