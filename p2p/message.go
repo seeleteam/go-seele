@@ -8,7 +8,6 @@ package p2p
 import (
 	"bytes"
 	"compress/gzip"
-	"io"
 	"io/ioutil"
 	"time"
 
@@ -20,15 +19,16 @@ const (
 	ctlMsgDiscCode       uint16 = 4
 	ctlMsgPingCode       uint16 = 3
 	ctlMsgPongCode       uint16 = 4
-	ctlMsgZipCode        uint16 = 5
 )
 
-const zipBytesLimit int = 1024
+const (
+	gzipCode      byte = 1
+	zipBytesLimit int  = 1024
+)
 
 // Message exposed for high level layer to receive
 type Message struct {
 	Code       uint16 // message code, defined in each protocol
-	ZipCode    uint16
 	Payload    []byte
 	ReceivedAt time.Time
 }
@@ -45,43 +45,40 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 // Zip zip message when the length of payload is greater than zipLimit
 func (m *Message) Zip() error {
 	if len(m.Payload) <= zipBytesLimit {
+		m.Payload = append(m.Payload, byte(0))
 		return nil
 	}
 	buf := new(bytes.Buffer)
 
 	w := gzip.NewWriter(buf)
-	defer w.Close()
-
 	if _, err := w.Write(m.Payload); err != nil {
 		return err
 	}
-
-	if err := w.Flush(); err != nil {
-		return err
-	}
-	m.Payload = buf.Bytes()
-	m.ZipCode = ctlMsgZipCode
+	w.Close()
+	m.Payload = append(buf.Bytes(), gzipCode)
 
 	return nil
 }
 
-// UZip uzip message when m.ZipCode equal ctlMsgZipCode
-func (m *Message) UZip() error {
-	if m.ZipCode != ctlMsgZipCode {
+// UnZip UnZip message when m.ZipCode equal ctlMsgZipCode
+func (m *Message) UnZip() error {
+	if len(m.Payload) == 0 {
 		return nil
 	}
-	buf := new(bytes.Buffer)
-
-	if _, err := buf.Write(m.Payload); err != nil {
-		return err
+	zipFlag := m.Payload[len(m.Payload)-1:][0]
+	m.Payload = m.Payload[:len(m.Payload)-1]
+	if zipFlag != gzipCode {
+		return nil
 	}
-	r, err := gzip.NewReader(buf)
+	pl := bytes.NewReader(m.Payload)
+
+	r, err := gzip.NewReader(pl)
 	defer r.Close()
 	if err != nil {
 		return err
 	}
 	b, err := ioutil.ReadAll(r)
-	if err != nil && err != io.ErrUnexpectedEOF {
+	if err != nil {
 		return err
 	}
 	m.Payload = b

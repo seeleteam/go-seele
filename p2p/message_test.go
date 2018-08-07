@@ -32,10 +32,9 @@ func Test_message(t *testing.T) {
 
 	err := m1.Zip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, m1.ZipCode, uint16(0))
-	assert.Equal(t, string(m1.Payload), pl1)
+	assert.Equal(t, string(m1.Payload[:len(m1.Payload)-1]), pl1)
 
-	err = m1.UZip()
+	err = m1.UnZip()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, string(m1.Payload), pl1)
 
@@ -44,10 +43,9 @@ func Test_message(t *testing.T) {
 
 	err = m2.Zip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, m2.ZipCode, ctlMsgZipCode)
-	assert.Equal(t, len(m2.Payload) < len([]byte(pl2)), true)
+	assert.Equal(t, len(m2.Payload[:len(m2.Payload)-1]) < len([]byte(pl2)), true)
 
-	err = m2.UZip()
+	err = m2.UnZip()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, string(m2.Payload), pl2)
 }

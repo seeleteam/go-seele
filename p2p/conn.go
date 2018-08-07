@@ -14,13 +14,11 @@ import (
 )
 
 const (
-	headBuffLength    = 8
+	headBuffLength    = 6
 	headBuffSizeStart = 0
 	headBuffSizeEnd   = 4
 	headBuffCodeStart = 4
 	headBuffCodeEnd   = 6
-	headBuffZipStart  = 6
-	headBuffZipEnd    = 8
 )
 
 var (
@@ -96,8 +94,7 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 	}
 
 	msgRecv = Message{
-		Code:    binary.BigEndian.Uint16(headbuff[headBuffCodeStart:headBuffCodeEnd]),
-		ZipCode: binary.BigEndian.Uint16(headbuff[headBuffZipStart:headBuffZipEnd]),
+		Code: binary.BigEndian.Uint16(headbuff[headBuffCodeStart:headBuffCodeEnd]),
 	}
 
 	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
@@ -107,7 +104,7 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 			return Message{}, err
 		}
 
-		if err = msgRecv.UZip(); err != nil {
+		if err = msgRecv.UnZip(); err != nil {
 			return Message{}, err
 		}
 	}
@@ -128,7 +125,6 @@ func (c *connection) WriteMsg(msg Message) error {
 	if err := msg.Zip(); err != nil {
 		return err
 	}
-	binary.BigEndian.PutUint16(b[headBuffZipStart:headBuffZipEnd], msg.ZipCode)
 
 	if err := c.writeFull(b); err != nil {
 		return err
