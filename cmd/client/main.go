@@ -109,7 +109,7 @@ func main() {
 		p2pCommands,
 		{
 			Name:  "getinfo",
-			Usage: "get miner info",
+			Usage: "get node info",
 			Flags: []cli.Flag{
 				addressFlag,
 			},
