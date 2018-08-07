@@ -59,9 +59,7 @@ func Benchmark_message_Zip(b *testing.B) {
 		msg := newMessage(randStr)
 
 		b.StartTimer()
-		if err := msg.Zip(); err != nil {
-			b.Fatalf("failed to zip message, %v", err.Error())
-		}
+		msg.Zip()
 	}
 }
 
@@ -71,13 +69,9 @@ func Benchmark_message_UnZip(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		msg := newMessage(randStr)
-		if err := msg.Zip(); err != nil {
-			b.Fatalf("failed to zip message, %v", err.Error())
-		}
+		msg.Zip()
 
 		b.StartTimer()
-		if err := msg.UnZip(); err != nil {
-			b.Fatalf("failed to unzip message, %v", err.Error())
-		}
+		msg.UnZip()
 	}
 }
