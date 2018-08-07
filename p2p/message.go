@@ -6,6 +6,9 @@
 package p2p
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -17,6 +20,8 @@ const (
 	ctlMsgPingCode       uint16 = 3
 	ctlMsgPongCode       uint16 = 4
 )
+
+const zipBytesLimit = 100 * 1024
 
 // Message exposed for high level layer to receive
 type Message struct {
@@ -34,7 +39,51 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 	return write.WriteMsg(msg)
 }
 
-// ProtoHandShake handshake message for two peer to exchage base information
+// Zip compress message when the length of payload is greater than zipBytesLimit
+func (msg *Message) Zip() error {
+	if len(msg.Payload) <= zipBytesLimit {
+		return nil
+	}
+
+	buf := new(bytes.Buffer)
+
+	writer := gzip.NewWriter(buf)
+	_, err := writer.Write(msg.Payload)
+	writer.Close()
+	if err != nil {
+		return err
+	}
+	msg.Payload = buf.Bytes()
+
+	return nil
+}
+
+// UnZip the message whether it is compressed or not.
+func (msg *Message) UnZip() error {
+	if len(msg.Payload) == 0 {
+		return nil
+	}
+
+	reader := bytes.NewReader(msg.Payload)
+	gzipReader, err := gzip.NewReader(reader)
+	if err == gzip.ErrHeader || err == gzip.ErrChecksum {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer gzipReader.Close()
+
+	arrayByte, err := ioutil.ReadAll(gzipReader)
+	if err != nil {
+		return err
+	}
+
+	msg.Payload = arrayByte
+	return nil
+}
+
+// ProtoHandShake handshake message for two peer to exchange base information
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {
 	Caps      []Cap

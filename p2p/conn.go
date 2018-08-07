@@ -103,6 +103,10 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 		if err = c.readFull(msgRecv.Payload); err != nil {
 			return Message{}, err
 		}
+
+		if err = msgRecv.UnZip(); err != nil {
+			return Message{}, err
+		}
 	}
 	metricsReceiveMessageCountMeter.Mark(1)
 	metricsReceivePortSpeedMeter.Mark(headBuffLength + int64(size))
@@ -118,14 +122,16 @@ func (c *connection) WriteMsg(msg Message) error {
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
 
-	err := c.writeFull(b)
-	if err != nil {
+	if err := msg.Zip(); err != nil {
+		return err
+	}
+
+	if err := c.writeFull(b); err != nil {
 		return err
 	}
 
 	if len(msg.Payload) > 0 {
-		err = c.writeFull(msg.Payload)
-		if err != nil {
+		if err := c.writeFull(msg.Payload); err != nil {
 			return err
 		}
 	}
