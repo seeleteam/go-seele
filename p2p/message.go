@@ -48,16 +48,17 @@ func (m *Message) Zip() error {
 	buf := new(bytes.Buffer)
 
 	w := gzip.NewWriter(buf)
-	if _, err := w.Write(m.Payload); err != nil {
+	_, err := w.Write(m.Payload)
+	w.Close()
+	if err != nil {
 		return err
 	}
-	w.Close()
 	m.Payload = buf.Bytes()
 
 	return nil
 }
 
-// UnZip regardless of whether the message is compressed to be decompress
+// UnZip the message whether it is compressed or not.
 func (m *Message) UnZip() error {
 	if len(m.Payload) == 0 {
 		return nil
