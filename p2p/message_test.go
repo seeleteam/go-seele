@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/core"
 )
 
 func newMessage(payLoad string) *Message {
@@ -48,4 +49,29 @@ func Test_message(t *testing.T) {
 	err = msg2.UnZip()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, string(msg2.Payload), randStr2)
+}
+
+func Benchmark_message_Zip(b *testing.B) {
+	randStr := getRandomString(core.BlockByteLimit)
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		msg := newMessage(randStr)
+
+		b.StartTimer()
+		msg.Zip()
+	}
+}
+
+func Benchmark_message_UnZip(b *testing.B) {
+	randStr := getRandomString(core.BlockByteLimit)
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		msg := newMessage(randStr)
+		msg.Zip()
+
+		b.StartTimer()
+		msg.UnZip()
+	}
 }
