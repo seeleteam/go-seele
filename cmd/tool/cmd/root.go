@@ -6,11 +6,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc2"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +47,7 @@ func initClient() {
 	clientList = make(map[uint]*rpc.Client, 0)
 
 	for _, addr := range addrs {
-		client, err := rpc.Dial("tcp", addr)
+		client, err := rpc.DialTCP(context.Background(), addr)
 		if err != nil {
 			panic(fmt.Sprintf("dial failed %s for server %s", err, addr))
 		}

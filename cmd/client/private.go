@@ -6,6 +6,7 @@
 package main
 
 import (
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/rpc2"
 )
@@ -103,9 +104,7 @@ func GetReceiptByTxHashAction(client *rpc.Client) (interface{}, error) {
 }
 
 func GetTransactionByHashAction(client *rpc.Client) (interface{}, error) {
-	var result map[string]interface{}
-	err := client.Call(&result, "txpool_getTransactionByHash", hashValue)
-	return result, err
+	return util.GetTransactionByHash(client, hashValue)
 }
 
 func GetPendingTransactionsAction(client *rpc.Client) (interface{}, error) {
