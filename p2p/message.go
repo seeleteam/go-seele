@@ -21,10 +21,7 @@ const (
 	ctlMsgPongCode       uint16 = 4
 )
 
-const (
-	gzipCode      byte = 1
-	zipBytesLimit int  = 1024
-)
+const zipBytesLimit = 1024 * 1024
 
 // Message exposed for high level layer to receive
 type Message struct {
@@ -42,15 +39,12 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 	return write.WriteMsg(msg)
 }
 
-// Zip zip message when the length of payload is greater than zipLimit
+// Zip zip message when the length of payload is greater than zipBytesLimit
 func (m *Message) Zip() error {
 	if len(m.Payload) <= zipBytesLimit {
-		if len(m.Payload) == 0 {
-			return nil
-		}
-		m.Payload = append(m.Payload, byte(0))
 		return nil
 	}
+
 	buf := new(bytes.Buffer)
 
 	w := gzip.NewWriter(buf)
@@ -58,37 +52,37 @@ func (m *Message) Zip() error {
 		return err
 	}
 	w.Close()
-	m.Payload = append(buf.Bytes(), gzipCode)
+	m.Payload = buf.Bytes()
 
 	return nil
 }
 
-// UnZip UnZip message when m.ZipCode equal ctlMsgZipCode
+// UnZip UnZip message whether the message is compressed or not
 func (m *Message) UnZip() error {
 	if len(m.Payload) == 0 {
 		return nil
 	}
-	zipFlag := m.Payload[len(m.Payload)-1:][0]
-	m.Payload = m.Payload[:len(m.Payload)-1]
-	if zipFlag != gzipCode {
+
+	pl := bytes.NewReader(m.Payload)
+	r, err := gzip.NewReader(pl)
+	if err == gzip.ErrHeader {
 		return nil
 	}
-	pl := bytes.NewReader(m.Payload)
-
-	r, err := gzip.NewReader(pl)
-	defer r.Close()
 	if err != nil {
 		return err
 	}
+	defer r.Close()
+
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
+
 	m.Payload = b
 	return nil
 }
 
-// ProtoHandShake handshake message for two peer to exchage base information
+// ProtoHandShake handshake message for two peer to exchange base information
 // TODO add public key or other information for encryption?
 type ProtoHandShake struct {
 	Caps      []Cap
