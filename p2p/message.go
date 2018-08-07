@@ -39,7 +39,7 @@ func SendMessage(write MsgWriter, code uint16, payload []byte) error {
 	return write.WriteMsg(msg)
 }
 
-// Zip zip message when the length of payload is greater than zipBytesLimit
+// Zip compress message when the length of payload is greater than zipBytesLimit
 func (m *Message) Zip() error {
 	if len(m.Payload) <= zipBytesLimit {
 		return nil
@@ -57,7 +57,7 @@ func (m *Message) Zip() error {
 	return nil
 }
 
-// UnZip UnZip message whether the message is compressed or not
+// UnZip regardless of whether the message is compressed to be decompress
 func (m *Message) UnZip() error {
 	if len(m.Payload) == 0 {
 		return nil
@@ -65,7 +65,7 @@ func (m *Message) UnZip() error {
 
 	pl := bytes.NewReader(m.Payload)
 	r, err := gzip.NewReader(pl)
-	if err == gzip.ErrHeader {
+	if err == gzip.ErrHeader || err == gzip.ErrChecksum {
 		return nil
 	}
 	if err != nil {
