@@ -18,8 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/seele"
+	"github.com/seeleteam/go-seele/rpc2"
 	"github.com/spf13/cobra"
 )
 
@@ -260,9 +259,8 @@ func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) 
 
 func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 	client := getClient(address)
-	var result map[string]interface{}
-	addrStr := hash.ToHex()
-	err := client.Call("txpool.GetTransactionByHash", &addrStr, &result)
+
+	result, err := util.GetTransactionByHash(client, hash.ToHex())
 	if err != nil {
 		fmt.Println("failed to get tx ", err, " tx hash ", hash.ToHex())
 		return result
@@ -293,13 +291,20 @@ func send(b *balance) *balance {
 	value.Mul(value, common.SeeleToFan)
 
 	client := getRandClient()
-	tx, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
-	if ok {
-		// update balance by transaction amount and update nonce
-		b.nonce++
-		b.amount -= amount
-		newBalance.tx = &tx.Hash
+	tx, err := util.GenerateTx(b.privateKey, *addr, value, big.NewInt(1), b.nonce, nil)
+	if err != nil {
+		return newBalance
 	}
+
+	ok, err := util.SendTx(client, tx)
+	if !ok || err != nil {
+		return newBalance
+	}
+
+	// update balance by transaction amount and update nonce
+	b.nonce++
+	b.amount -= amount
+	newBalance.tx = &tx.Hash
 
 	return newBalance
 }
@@ -402,10 +407,9 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 func getBalance(address common.Address) (int, bool) {
 	client := getClient(address)
 
-	amount := big.NewInt(0)
-	err := client.Call("seele.GetBalance", &address, amount)
+	amount, err := util.GetBalance(client, address)
 	if err != nil {
-		panic(fmt.Sprintf("failed to get the balance: %s\n", err.Error()))
+		panic(fmt.Sprintf("failed to get the balance: %s\n", err))
 	}
 
 	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
@@ -424,12 +428,16 @@ func getClient(address common.Address) *rpc.Client {
 func getNonce(address common.Address) uint64 {
 	client := getClient(address)
 
-	return util.GetNonce(client, address)
+	nonce, err := util.GetAccountNonce(client, address)
+	if err != nil {
+		panic(err)
+	}
+
+	return nonce
 }
 
 func getShard(client *rpc.Client) uint {
-	var info seele.MinerInfo
-	err := client.Call("seele.GetInfo", nil, &info)
+	info, err := util.GetInfo(client)
 	if err != nil {
 		panic(fmt.Sprintf("failed to get the balance: %s\n", err.Error()))
 	}

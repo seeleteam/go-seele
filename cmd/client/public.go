@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
-	hexutil2 "github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
@@ -47,10 +47,7 @@ func RPCAction(handler func(client *rpc.Client) (interface{}, error)) func(c *cl
 }
 
 func GetInfoAction(client *rpc.Client) (interface{}, error) {
-	var info seele.MinerInfo
-	err := client.Call(&info, "seele_getInfo")
-
-	return info, err
+	return util.GetInfo(client)
 }
 
 func GetBalanceAction(client *rpc.Client) (interface{}, error) {
@@ -59,10 +56,7 @@ func GetBalanceAction(client *rpc.Client) (interface{}, error) {
 		return nil, err
 	}
 
-	var result hexutil.Big
-	err = client.Call(&result, "seele_getBalance", account)
-
-	return (*big.Int)(&result), err
+	return util.GetBalance(client, account)
 }
 
 func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
@@ -71,7 +65,7 @@ func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
 		return nil, err
 	}
 
-	return GetAccountNonce(client, account)
+	return util.GetAccountNonce(client, account)
 }
 
 func GetBlockHeightAction(client *rpc.Client) (interface{}, error) {
@@ -116,7 +110,7 @@ func CallAction(client *rpc.Client) (interface{}, error) {
 		return nil, fmt.Errorf("invalid contract address: %s", err)
 	}
 
-	payload, err := hexutil2.HexToBytes(paloadValue)
+	payload, err := hexutil.HexToBytes(paloadValue)
 	if err != nil {
 		return nil, fmt.Errorf("invalid payload, %s", err)
 	}
@@ -125,7 +119,7 @@ func CallAction(client *rpc.Client) (interface{}, error) {
 	fee := big.NewInt(1)
 	nonce := uint64(1)
 
-	return Call(client, key.PrivateKey, &contractAddr, amount, fee, nonce, payload)
+	return util.Call(client, key.PrivateKey, &contractAddr, amount, fee, nonce, payload)
 }
 
 func AddTxAction(client *rpc.Client) (interface{}, error) {
@@ -164,5 +158,5 @@ func MakeTransaction(client *rpc.Client) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	return generateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	return util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 }
