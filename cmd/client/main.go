@@ -101,6 +101,14 @@ func main() {
 				},
 				Action: RPCAction(GetPeerCountAction),
 			},
+			{
+				Name:  "peersinfo",
+				Usage: "get p2p peers information",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetPeersInfo),
+			},
 		},
 	}
 
