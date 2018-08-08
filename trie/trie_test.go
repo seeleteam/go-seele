@@ -15,13 +15,21 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func Test_trie_Update(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
-	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
+func newTestTrie() (database.Database, *Trie, func()) {
+	db, dispose := leveldb.NewTestDatabase()
+	trie, err := NewTrie(common.EmptyHash, []byte("trietest"), db)
 	if err != nil {
+		dispose()
 		panic(err)
 	}
+
+	return db, trie, dispose
+}
+
+func Test_trie_Update(t *testing.T) {
+	db, trie, remove := newTestTrie()
+	defer remove()
+
 	trie.Put([]byte("12345678"), []byte("test"))
 	trie.Put([]byte("12345678"), []byte("testnew"))
 	trie.Put([]byte("12345557"), []byte("test1"))
@@ -57,19 +65,13 @@ func Test_trie_Update(t *testing.T) {
 	assert.Equal(t, string(value), "test7")
 	batch := db.NewBatch()
 	trie.Commit(batch)
-	assert.Equal(t, err, nil)
-	err = batch.Commit()
-	assert.Equal(t, err, nil)
-
+	assert.Equal(t, batch.Commit(), nil)
 }
 
 func Test_trie_Delete(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	_, trie, remove := newTestTrie()
 	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
-	if err != nil {
-		panic(err)
-	}
+
 	trie.Put([]byte("12345678123"), []byte("test"))
 	trie.Put([]byte("12345557"), []byte("test1"))
 	trie.Put([]byte("12375879321"), []byte("test2"))
@@ -115,12 +117,9 @@ func Test_trie_Delete(t *testing.T) {
 }
 
 func Test_trie_Commit(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	db, trie, remove := newTestTrie()
 	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
-	if err != nil {
-		panic(err)
-	}
+
 	trie.Put([]byte("12345678"), []byte("test"))
 	trie.Put([]byte("12345557"), []byte("test1"))
 	trie.Put([]byte("12375879"), []byte("test2"))
@@ -137,6 +136,7 @@ func Test_trie_Commit(t *testing.T) {
 
 	fmt.Println(string("----------------------------------"))
 	trienew, err := NewTrie(hash, []byte("trietest"), db)
+	assert.Equal(t, err, nil)
 
 	trienew.Delete([]byte("24355879"))
 	trienew.Put([]byte("243558790"), []byte("test8"))
@@ -181,13 +181,8 @@ func Test_trie_Commit(t *testing.T) {
 }
 
 func Test_trie_CommitOneByOne(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	db, trie, remove := newTestTrie()
 	defer remove()
-
-	trie, err := NewTrie(common.Hash{}, []byte("qb"), db)
-	if err != nil {
-		panic(err)
-	}
 
 	trie.Put([]byte{1, 2, 3}, []byte{1, 2, 3})
 	trie.Hash()
@@ -198,7 +193,7 @@ func Test_trie_CommitOneByOne(t *testing.T) {
 	hash := trie.Commit(batch)
 	batch.Commit()
 
-	trienew, err := NewTrie(hash, []byte("qb"), db)
+	trienew, err := NewTrie(hash, []byte("trietest"), db)
 	if err != nil {
 		panic(err)
 	}
@@ -222,26 +217,19 @@ func init() {
 	}
 }
 
-func constructTrie(db database.Database) *Trie {
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
+func prepareData(trie *Trie) {
 	for _, addr := range addrList {
-		if err = trie.Put(addr, code); err != nil {
+		if err := trie.Put(addr, code); err != nil {
 			panic(err)
 		}
 	}
-
-	return trie
 }
 
 func Benchmark_Trie_Get(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie := constructTrie(db)
+	prepareData(trie)
 	key := addrList[len(addrList)/2]
 	b.ResetTimer()
 
@@ -253,26 +241,21 @@ func Benchmark_Trie_Get(b *testing.B) {
 }
 
 func Benchmark_Trie_Put(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
 	for i, addrLen := 0, len(addrList); i < b.N; i++ {
-		if err = trie.Put(addrList[i%addrLen], code); err != nil {
+		if err := trie.Put(addrList[i%addrLen], code); err != nil {
 			panic(err)
 		}
 	}
 }
 
 func Benchmark_Trie_Commit(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie := constructTrie(db)
+	prepareData(trie)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
