@@ -14,18 +14,15 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
-// StateCacheCapacity is the capacity of state cache
-const StateCacheCapacity = 1000
-
 var (
+	trieDbPrefix  = []byte("S")
 	stateBalance0 = big.NewInt(0)
 )
 
 // Statedb is used to store accounts into the MPT tree
 type Statedb struct {
-	db           database.Database
 	trie         *trie.Trie
-	stateObjects map[common.Address]*StateObject
+	stateObjects map[common.Address]*stateObject
 
 	dbErr  error  // dbErr is used for record the database error.
 	refund uint64 // The refund counter, also used by state transitioning.
@@ -40,23 +37,22 @@ type Statedb struct {
 
 // NewStatedb constructs and returns a statedb instance
 func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
-	trie, err := trie.NewTrie(root, []byte("S"), db)
+	trie, err := trie.NewTrie(root, trieDbPrefix, db)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Statedb{
-		db:           db,
 		trie:         trie,
-		stateObjects: make(map[common.Address]*StateObject),
+		stateObjects: make(map[common.Address]*stateObject),
 		curJournal:   newJournal(),
 	}, nil
 }
 
 // GetCopy is a memory copy of state db.
 func (s *Statedb) GetCopy() (*Statedb, error) {
-	copyObjecsFunc := func(src map[common.Address]*StateObject) map[common.Address]*StateObject {
-		dest := make(map[common.Address]*StateObject)
+	copyObjecsFunc := func(src map[common.Address]*stateObject) map[common.Address]*stateObject {
+		dest := make(map[common.Address]*stateObject)
 		for k, v := range src {
 			dest[k] = v
 		}
@@ -69,7 +65,6 @@ func (s *Statedb) GetCopy() (*Statedb, error) {
 	}
 
 	return &Statedb{
-		db:           s.db,
 		trie:         cpyTrie,
 		stateObjects: copyObjecsFunc(s.stateObjects),
 
@@ -90,53 +85,54 @@ func (s *Statedb) setError(err error) {
 func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	object := s.getStateObject(addr)
 	if object != nil {
-		return object.GetAmount()
+		return object.getAmount()
 	}
 	return stateBalance0
 }
 
-// SetBalance sets the balance of the specified account
+// SetBalance sets the balance of the specified account if exists.
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
-		object.SetAmount(balance)
+		s.curJournal.append(balanceChange{&addr, object.getAmount()})
+		object.setAmount(balance)
 	}
 }
 
-// AddBalance adds the specified amount to the balance for the specified account
+// AddBalance adds the specified amount to the balance for the specified account if exists.
 func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
-		object.AddAmount(amount)
+		s.curJournal.append(balanceChange{&addr, object.getAmount()})
+		object.addAmount(amount)
 	}
 }
 
-// SubBalance substracts the specified amount from the balance for the specified account
+// SubBalance substracts the specified amount from the balance for the specified account if exists.
 func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		s.curJournal.append(balanceChange{&addr, object.GetAmount()})
-		object.SubAmount(amount)
+		s.curJournal.append(balanceChange{&addr, object.getAmount()})
+		object.subAmount(amount)
 	}
 }
 
-// GetNonce gets the nonce of the specified account
+// GetNonce gets the nonce of the specified account if exists.
+// Otherwise, return 0.
 func (s *Statedb) GetNonce(addr common.Address) uint64 {
 	object := s.getStateObject(addr)
 	if object != nil {
-		return object.GetNonce()
+		return object.getNonce()
 	}
 	return 0
 }
 
-// SetNonce sets the nonce of the specified account
+// SetNonce sets the nonce of the specified account if exists.
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	object := s.getStateObject(addr)
 	if object != nil {
-		s.curJournal.append(nonceChange{&addr, object.GetNonce()})
-		object.SetNonce(nonce)
+		s.curJournal.append(nonceChange{&addr, object.getNonce()})
+		object.setNonce(nonce)
 	}
 }
 
@@ -148,7 +144,7 @@ func (s *Statedb) Hash() (common.Hash, error) {
 
 	for addr := range s.curJournal.dirties {
 		if object, found := s.stateObjects[addr]; found {
-			if err := object.commit(s.db, s.trie, nil); err != nil {
+			if err := object.flush(s.trie); err != nil {
 				return common.EmptyHash, err
 			}
 		}
@@ -170,7 +166,7 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 	}
 
 	for _, object := range s.stateObjects {
-		if err := object.commit(s.db, s.trie, batch); err != nil {
+		if err := object.flush(s.trie); err != nil {
 			return common.EmptyHash, err
 		}
 	}
@@ -178,19 +174,8 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 	return s.trie.Commit(batch), nil
 }
 
-// GetOrNewStateObject gets or creates a state object
-func (s *Statedb) GetOrNewStateObject(addr common.Address) *StateObject {
-	object := s.getStateObject(addr)
-	if object == nil {
-		object = newStateObject(addr)
-		object.SetNonce(0)
-		s.stateObjects[addr] = object
-	}
-
-	return object
-}
-
-func (s *Statedb) getStateObject(addr common.Address) *StateObject {
+func (s *Statedb) getStateObject(addr common.Address) *stateObject {
+	// get from cache
 	if object, ok := s.stateObjects[addr]; ok {
 		if !object.deleted {
 			return object
@@ -200,17 +185,15 @@ func (s *Statedb) getStateObject(addr common.Address) *StateObject {
 		return nil
 	}
 
+	// load from trie
 	object := newStateObject(addr)
-	val, _ := s.trie.Get(addr[:])
-	if len(val) == 0 {
+	if ok, err := object.loadAccount(s.trie); !ok || err != nil {
 		return nil
 	}
 
-	if err := common.Deserialize(val, &object.account); err != nil {
-		return nil
-	}
-
+	// add in cache
 	s.stateObjects[addr] = object
+
 	return object
 }
 

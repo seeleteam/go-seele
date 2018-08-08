@@ -57,12 +57,12 @@ func teststatedbaddbalance(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
+		statedb.CreateAccount(BytesToAddressForTest([]byte{i}))
 		statedb.AddBalance(BytesToAddressForTest([]byte{i}), big.NewInt(4*int64(i)))
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), 1)
 	}
 
-	hash, statedb := commitAndNewStateDB(statedb)
+	hash, statedb := commitAndNewStateDB(db, statedb)
 
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
@@ -83,13 +83,13 @@ func teststatedbsubbalance(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		stateobject := statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
-		nonce := stateobject.GetNonce()
+		statedb.CreateAccount(BytesToAddressForTest([]byte{i}))
+		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		statedb.SubBalance(BytesToAddressForTest([]byte{i}), big.NewInt(2*int64(i)))
-		stateobject.SetNonce(nonce + 1)
+		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
 
-	hash, statedb := commitAndNewStateDB(statedb)
+	hash, statedb := commitAndNewStateDB(db, statedb)
 
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
@@ -110,13 +110,13 @@ func teststatedbsetbalance(root common.Hash, db database.Database) common.Hash {
 		panic(err)
 	}
 	for i := byte(0); i < 255; i++ {
-		statedb.GetOrNewStateObject(BytesToAddressForTest([]byte{i}))
+		statedb.CreateAccount(BytesToAddressForTest([]byte{i}))
 		nonce := statedb.GetNonce(BytesToAddressForTest([]byte{i}))
 		statedb.SetBalance(BytesToAddressForTest([]byte{i}), big.NewInt(4*int64(i)))
 		statedb.SetNonce(BytesToAddressForTest([]byte{i}), nonce+1)
 	}
 
-	hash, statedb := commitAndNewStateDB(statedb)
+	hash, statedb := commitAndNewStateDB(db, statedb)
 
 	for i := byte(0); i < 255; i++ {
 		balance := statedb.GetBalance(BytesToAddressForTest([]byte{i}))
@@ -162,9 +162,9 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	stateObj := statedb.getStateObject(addr)
 
 	// Validate state trie of created account
-	trie, err := trie.NewTrie(common.BytesToHash(stateObj.account.StorageRootHash), dbPrefixStorage, db)
+	trie, err := trie.NewTrie(root1, trieDbPrefix, db)
 	assert.Equal(t, err, nil)
-	storageKey := stateObj.getStorageKey(common.StringToHash("test key"))
+	storageKey := stateObj.dataKey(dataTypeStorage, common.StringToHash("test key").Bytes()...)
 	storageValue, found := trie.Get(storageKey)
 	assert.Equal(t, found, true)
 	assert.Equal(t, storageValue, common.StringToHash("test value").Bytes())

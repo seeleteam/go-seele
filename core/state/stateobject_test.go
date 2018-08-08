@@ -5,11 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/seeleteam/go-seele/trie"
-
 	"github.com/magiconair/properties/assert"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
 
@@ -31,7 +28,7 @@ func Test_StateObjectClone(t *testing.T) {
 	so1 := newTestStateObject()
 
 	// Function works well
-	so2 := so1.GetCopy()
+	so2 := so1.clone()
 	assert.Equal(t, so1, so2)
 
 	// The change in src value cannot change the value of dest
@@ -44,16 +41,15 @@ func Test_StateObjectClone(t *testing.T) {
 	assert.Equal(t, so1 != so2, true)
 }
 
-func newTestAccount() Account {
+func newTestAccount() account {
 	a1 := newAccount()
 	a1.Amount = big.NewInt(100)
 	a1.Nonce = 1
 	a1.CodeHash = []byte("contract address")
-	a1.StorageRootHash = []byte("root hash")
 	return a1
 }
 
-func newTestStateObject() *StateObject {
+func newTestStateObject() *stateObject {
 	addr := *crypto.MustGenerateRandomAddress()
 	so1 := newStateObject(addr)
 	so1.account = newTestAccount()
@@ -62,10 +58,6 @@ func newTestStateObject() *StateObject {
 	so1.suicided = true
 	so1.deleted = true
 
-	db, remove := leveldb.NewTestDatabase()
-	defer remove()
-	so1.storageTrie, _ = trie.NewTrie(common.EmptyHash, []byte("dbprefix"), db)
-	so1.cachedStorage[common.BytesToHash(so1.account.StorageRootHash)] = common.BytesToHash(so1.account.StorageRootHash)
 	return so1
 }
 
@@ -75,19 +67,19 @@ func Test_StateObject_AmountDirty(t *testing.T) {
 	// Nonce
 	so.dirtyAccount = false
 	nonce := uint64(101)
-	so.SetNonce(nonce)
-	assert.Equal(t, so.GetNonce(), nonce)
+	so.setNonce(nonce)
+	assert.Equal(t, so.getNonce(), nonce)
 	assert.Equal(t, so.dirtyAccount, true)
 
 	// Ammount
 	so.dirtyAccount = false
 	ammount := big.NewInt(101)
-	so.SetAmount(ammount)
-	assert.Equal(t, so.GetAmount(), ammount)
+	so.setAmount(ammount)
+	assert.Equal(t, so.getAmount(), ammount)
 	assert.Equal(t, so.dirtyAccount, true)
 
 	so.dirtyAccount = false
-	so.SubAmount(ammount)
-	assert.Equal(t, so.GetAmount(), big.NewInt(0))
+	so.subAmount(ammount)
+	assert.Equal(t, so.getAmount(), big.NewInt(0))
 	assert.Equal(t, so.dirtyAccount, true)
 }
