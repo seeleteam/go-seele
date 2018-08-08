@@ -262,3 +262,124 @@ func Benchmark_Trie_Commit(b *testing.B) {
 		trie.Commit(nil)
 	}
 }
+
+func Test_Trie_Delete_SingleRoot(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// insert a leaf node as root
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("value")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.Delete([]byte{1, 2}), false)       // less keys
+	assert.Equal(t, trie.Delete([]byte{1, 2, 4}), false)    // same keys with invalid value
+	assert.Equal(t, trie.Delete([]byte{1, 2, 3, 4}), false) // more keys
+
+	// key match
+	assert.Equal(t, trie.Delete([]byte{1, 2, 3}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_Delete_ExtNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// ext node with key 1,2
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+
+	// cannot delete with prefix 1,2
+	assert.Equal(t, trie.Delete([]byte{1, 2}), false)
+}
+
+func Test_Trie_Delete_Branch(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// insert nodes to construct a branch node
+	assert.Equal(t, trie.Put([]byte{1, 2, 0x36}, []byte("1")), nil) // branch.children[3]
+	assert.Equal(t, trie.Put([]byte{1, 2, 0x68}, []byte("2")), nil) // branch.children[6]
+	assert.Equal(t, trie.Put([]byte{1, 2}, []byte("3")), nil)       // branch.children[16] (terminate)
+
+	// key mismatch
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x46}), false) // branch.children[4]
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x35}), false) // branch.children[3] but with invalid value
+
+	// key match
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x36}), true)
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x68}), true)
+	assert.Equal(t, trie.Delete([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_EmptyKey(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+
+	assert.Equal(t, trie.DeletePrefix(nil), false)
+	assert.Equal(t, trie.DeletePrefix([]byte{}), false)
+}
+
+func Test_Trie_DeletePrefix_LeafNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// leaf node with key 1,2,3
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3, 4}), false) // more keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 4}), false)    // same keys with invalid value
+	assert.Equal(t, trie.DeletePrefix([]byte{2}), false)          // less keys with invalid value
+
+	// exact keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3}), true)
+	assert.Equal(t, trie.root, nil)
+
+	// less keys
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_ExtNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// ext node with key 1,2
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 3}), false) // same keys with invalid value
+	assert.Equal(t, trie.DeletePrefix([]byte{2}), false)    // less keys with invalid value
+
+	// exact keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+
+	// less keys
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+	assert.Equal(t, trie.DeletePrefix([]byte{1}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_BranchNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// branch node
+	assert.Equal(t, trie.Put([]byte{1, 2, 3, 5}, []byte("1")), nil) // branch.children[3]
+	assert.Equal(t, trie.Put([]byte{1, 2, 4, 6}, []byte("2")), nil) // branch.children[4]
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 5}), false) // branch.children[5]
+
+	// key match
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3}), true) // branch.children[3]
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 4}), true) // leaf node
+	assert.Equal(t, trie.root, nil)
+}

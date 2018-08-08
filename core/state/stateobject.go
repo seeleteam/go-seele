@@ -231,9 +231,7 @@ func (s *stateObject) flush(trie *trie.Trie) error {
 
 	// Remove the account from state DB if suicided.
 	if s.suicided && !s.deleted {
-		// @todo delete the account subtree, including all key-value states.
-		trie.Delete(s.dataKey(dataTypeAccount))
-		trie.Delete(s.dataKey(dataTypeCode))
+		trie.DeletePrefix(s.address.Bytes())
 		s.deleted = true
 	}
 

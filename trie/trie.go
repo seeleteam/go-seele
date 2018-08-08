@@ -78,13 +78,32 @@ func (t *Trie) Put(key, value []byte) error {
 func (t *Trie) Delete(key []byte) bool {
 	if t.root != nil {
 		key = keybytesToHex(key)
-		match, newnode, err := t.delete(t.root, key)
+		match, newnode, err := t.delete(t.root, key, false)
 		if err == nil && match {
 			t.root = newnode
 		}
 		return match
 	}
 	return false
+}
+
+// DeletePrefix deletes nodes with specified prefix in the trie.
+// Return true if any node deleted, otherwise false.
+// Note, no node deleted if the prefix is nil or empty.
+func (t *Trie) DeletePrefix(prefix []byte) bool {
+	if len(prefix) == 0 || t.root == nil {
+		return false
+	}
+
+	key := keybytesToHex(prefix)
+	key = key[0 : len(key)-1] // exclude the terminate key.
+
+	match, newNode, err := t.delete(t.root, key, true)
+	if err == nil && match {
+		t.root = newNode
+	}
+
+	return match
 }
 
 // Get get the value by key
@@ -305,18 +324,23 @@ func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, node
 	}, nil
 }
 
-func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
+func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, error) {
 	switch n := node.(type) {
 	case *LeafNode:
 		matchlen := matchkeyLen(key, n.Key)
-		if matchlen == len(n.Key) {
+		if matchlen == len(n.Key) || matchlen == len(key) {
 			return true, nil, nil
 		}
+
 		return false, n, nil
 	case *ExtensionNode:
 		matchlen := matchkeyLen(key, n.Key)
+		if descendant && matchlen == len(key) {
+			return true, nil, nil
+		}
+
 		if matchlen == len(n.Key) {
-			match, newnode, err := t.delete(n.NextNode, key[matchlen:])
+			match, newnode, err := t.delete(n.NextNode, key[matchlen:], descendant)
 			if err == nil && match {
 				n.status = nodeStatusDirty
 				n.NextNode = newnode
@@ -328,13 +352,24 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 		}
 		return false, n, nil
 	case *BranchNode:
-		match, newnode, err := t.delete(n.Children[key[0]], key[1:])
-		if err == nil {
-			n.Children[key[0]] = newnode
+		if descendant && len(key) == 1 {
+			if n.Children[key[0]] == nil {
+				return false, n, nil
+			}
+
+			n.Children[key[0]] = nil
+		} else {
+			match, newnode, err := t.delete(n.Children[key[0]], key[1:], descendant)
+			if err == nil {
+				n.Children[key[0]] = newnode
+			}
+			if !match {
+				return false, n, nil
+			}
 		}
-		if match {
-			n.status = nodeStatusDirty
-		}
+
+		n.status = nodeStatusDirty
+
 		pos := -1
 		count := 0
 		for i, child := range n.Children {
@@ -343,6 +378,7 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 				count++
 			}
 		}
+
 		if count == 1 {
 			var childnode noder
 			var err error
@@ -350,7 +386,7 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 			if hashnode, ok := childnode.(hashNode); ok {
 				childnode, err = t.loadNode(hashnode)
 				if err != nil {
-					return match, nil, err
+					return true, nil, err
 				}
 			}
 			switch childnode := childnode.(type) {
@@ -376,13 +412,13 @@ func (t *Trie) delete(node noder, key []byte) (bool, noder, error) {
 				return true, newnode, nil
 			}
 		}
-		return match, n, nil
+		return true, n, nil
 	case hashNode:
 		loadnode, err := t.loadNode(n)
 		if err != nil {
 			return false, nil, err
 		}
-		match, newnode, err := t.delete(loadnode, key)
+		match, newnode, err := t.delete(loadnode, key, descendant)
 		if err != nil {
 			return false, loadnode, err
 		}

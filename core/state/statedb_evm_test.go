@@ -162,6 +162,9 @@ func Test_Suicide(t *testing.T) {
 	defer dispose()
 
 	addr := stateObj.address
+	statedb.SetCode(addr, []byte("hello,world"))
+	statedb.SetState(addr, common.StringToHash("k1"), common.StringToHash("v1"))
+	statedb.SetState(addr, common.StringToHash("k2"), common.StringToHash("v2"))
 
 	assert.Equal(t, statedb.Exist(addr), true)
 	assert.Equal(t, statedb.HasSuicided(addr), false)
@@ -173,8 +176,10 @@ func Test_Suicide(t *testing.T) {
 	// Commit the state change
 	_, statedb2 := commitAndNewStateDB(db, statedb)
 
-	// Ensure the account does not exist.
-	assert.Equal(t, statedb2.Exist(addr), false)
+	assert.Equal(t, statedb2.Exist(addr), false)                                          // account not exists
+	assert.Equal(t, statedb2.GetCode(addr), []byte(nil))                                  // code not exists
+	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k1")), common.EmptyHash) // k1 not exists
+	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k2")), common.EmptyHash) // k2 not exists
 }
 
 func Test_Log(t *testing.T) {
