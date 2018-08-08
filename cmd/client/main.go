@@ -109,6 +109,22 @@ func main() {
 				},
 				Action: RPCAction(GetPeersInfo),
 			},
+			{
+				Name:  "networkversion",
+				Usage: "get current network version",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetNetworkVersion),
+			},
+			{
+				Name:  "protocolversion",
+				Usage: "get seele protocol version",
+				Flags: []cli.Flag{
+					addressFlag,
+				},
+				Action: RPCAction(GetProtocolVersion),
+			},
 		},
 	}
 

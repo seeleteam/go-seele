@@ -126,3 +126,17 @@ func GetPeersInfo(client *rpc.Client) (interface{}, error) {
 	err := client.Call(&result, "network_getPeersInfo")
 	return result, err
 }
+
+// GetNetworkVersion get current network version
+func GetNetworkVersion(client *rpc.Client) (interface{}, error) {
+	var result uint64
+	err := client.Call(&result, "network_getNetworkVersion")
+	return result, err
+}
+
+// GetProtocolVersion get seele protocol version
+func GetProtocolVersion(client *rpc.Client) (interface{}, error) {
+	var result uint
+	err := client.Call(&result, "network_getProtocolVersion")
+	return result, err
+}
