@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc2"
 )
 
@@ -116,5 +117,12 @@ func GetPendingTransactionsAction(client *rpc.Client) (interface{}, error) {
 func GetPeerCountAction(client *rpc.Client) (interface{}, error) {
 	var result int
 	err := client.Call(&result, "network_getPeerCount")
+	return result, err
+}
+
+// GetPeersInfo get peers information
+func GetPeersInfo(client *rpc.Client) (interface{}, error) {
+	var result []p2p.PeerInfo
+	err := client.Call(&result, "network_getPeersInfo")
 	return result, err
 }
