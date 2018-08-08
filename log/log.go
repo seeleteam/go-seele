@@ -101,6 +101,9 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		logFullPath := filepath.Join(LogFolder, common.LogFileName)
 
 		ext := filepath.Ext(logFullPath)
+		// when running a node, the value of common.LogFileName is modified to filename
+		// and the orginal value of common.LogFileName is used as filename extension
+		// so when not running a node, for example running unit test, ext is empty
 		if len(ext) == 0 {
 			logFullPath = fmt.Sprintf("%s%s.%s", LogFolder, string(os.PathSeparator), common.LogFileName)
 			ext = filepath.Ext(logFullPath)
