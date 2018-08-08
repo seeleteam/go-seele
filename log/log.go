@@ -101,6 +101,11 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		logFullPath := filepath.Join(LogFolder, common.LogFileName)
 
 		ext := filepath.Ext(logFullPath)
+		if len(ext) == 0 {
+			logFullPath = fmt.Sprintf("%s%s.%s", LogFolder, string(os.PathSeparator), common.LogFileName)
+			ext = filepath.Ext(logFullPath)
+		}
+
 		writer, err := rotatelogs.New(
 			logFullPath[:strings.Index(logFullPath, ext)]+".%Y%m%d"+ext,
 			rotatelogs.WithClock(rotatelogs.Local),
