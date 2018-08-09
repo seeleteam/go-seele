@@ -6,6 +6,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -39,7 +40,7 @@ var (
 	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
 
 	// LogFileName default log file name
-	LogFileName = "log"
+	LogFileName string
 )
 
 func init() {
@@ -50,6 +51,8 @@ func init() {
 		panic(err)
 	}
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
+
+	LogFileName = fmt.Sprintf("%s.%s", comm.LogPrefix, comm.LogExtension)
 }
 
 // GetTempFolder uses a getter to implement readonly

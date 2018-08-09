@@ -5,6 +5,14 @@
 
 package comm
 
+var (
+	// LogExtension default log file extension
+	LogExtension = "log"
+
+	// LogPrefix default log file prefix
+	LogPrefix = "seele"
+)
+
 // LogConfig is the Configuration of log
 type LogConfig struct {
 	// If IsDebug is true, the log level will be DebugLevel, otherwise it is InfoLevel

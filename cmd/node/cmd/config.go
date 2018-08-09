@@ -80,7 +80,7 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	common.LogConfig.PrintLog = config.LogConfig.PrintLog
 	common.LogConfig.IsDebug = config.LogConfig.IsDebug
-	common.LogFileName = fmt.Sprintf("%s.%s", config.BasicConfig.DataDir, common.LogFileName)
+	common.LogFileName = fmt.Sprintf("%s.%s", config.BasicConfig.DataDir, comm.LogExtension)
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
 }

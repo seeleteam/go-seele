@@ -6,8 +6,6 @@
 package log
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,10 +41,6 @@ func Test_LogFile(t *testing.T) {
 	now := time.Now().Format(".20060102")
 	logPath := filepath.Join(LogFolder, common.LogFileName)
 	ext := filepath.Ext(logPath)
-	if len(ext) == 0 {
-		logPath = fmt.Sprintf("%s%s.%s", LogFolder, string(os.PathSeparator), common.LogFileName)
-		ext = filepath.Ext(logPath)
-	}
 	logPath = logPath[:strings.Index(logPath, ext)] + now + ext
 	log.Info("log file is:%s", logPath)
 
