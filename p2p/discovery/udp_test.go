@@ -28,7 +28,7 @@ func newTestUdp() *udp {
 		panic(err)
 	}
 
-	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
+	log := log.GetLogger("discovery")
 	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 	return &udp{
 		trustNodes: []*Node{node1, node2},

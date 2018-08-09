@@ -106,7 +106,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	return &Server{
 		Config:          config,
 		running:         false,
-		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
+		log:             log.GetLogger("p2p"),
 		MaxPeers:        defaultMaxPeers,
 		quit:            make(chan struct{}),
 		peerSet:         NewPeerSet(),

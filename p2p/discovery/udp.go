@@ -82,7 +82,7 @@ type reply struct {
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
-	log := log.GetLogger("discovery", common.LogConfig.PrintLog)
+	log := log.GetLogger("discovery")
 	conn, err := getUDPConn(addr)
 	if err != nil {
 		panic(fmt.Sprintf("failed to listen addr %s ", addr.String()))

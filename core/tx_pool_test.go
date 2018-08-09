@@ -85,7 +85,7 @@ func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockcha
 		pendingQueue:  newPendingQueue(),
 		processingTxs: make(map[common.Hash]struct{}),
 		lastHeader:    common.EmptyHash,
-		log:           log.GetLogger("test", true),
+		log:           log.GetLogger("test"),
 	}
 
 	return pool, chain
@@ -228,7 +228,7 @@ func Test_TransactionPool_Remove(t *testing.T) {
 }
 
 func Test_GetReinjectTransaction(t *testing.T) {
-	log := log.GetLogger("test", true)
+	log := log.GetLogger("test")
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 

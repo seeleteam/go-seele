@@ -73,7 +73,7 @@ func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 		seele:                seele,
 		wg:                   sync.WaitGroup{},
 		recv:                 make(chan *Result, 1),
-		log:                  log.GetLogger("miner", common.LogConfig.PrintLog),
+		log:                  log.GetLogger("miner"),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		threads:              1,

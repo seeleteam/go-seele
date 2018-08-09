@@ -73,7 +73,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 		pendingQueue:  newPendingQueue(),
 		processingTxs: make(map[common.Hash]struct{}),
 		lastHeader:    header,
-		log:           log.GetLogger("txpool", common.LogConfig.PrintLog),
+		log:           log.GetLogger("txpool"),
 		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 

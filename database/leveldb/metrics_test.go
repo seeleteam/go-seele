@@ -20,7 +20,7 @@ func Test_StartMetrics(t *testing.T) {
 	db := newDbInstance(dir)
 	defer db.Close()
 
-	StartMetrics(db, "testdb", log.GetLogger("test", true))
+	StartMetrics(db, "testdb", log.GetLogger("test"))
 
 	select {
 	case <-time.After(2 * time.Second):

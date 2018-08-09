@@ -9,14 +9,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/file-rotatelogs"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/sirupsen/logrus"
 )
+
+// logExtension default log file extension
+const logExtension = ".log"
 
 var (
 	// LogFolder the default folder to write logs
@@ -75,15 +78,15 @@ func (p *SeeleLog) GetLevel() logrus.Level {
 	return p.log.Level
 }
 
-// GetLogger gets logrus.Logger object according to logName
+// GetLogger gets logrus.Logger object according to module name
 // each module can have its own logger
-func GetLogger(logName string, bConsole bool) *SeeleLog {
+func GetLogger(module string) *SeeleLog {
 	getLogMutex.Lock()
 	defer getLogMutex.Unlock()
 	if logMap == nil {
 		logMap = make(map[string]*SeeleLog)
 	}
-	curLog, ok := logMap[logName]
+	curLog, ok := logMap[module]
 	if ok {
 		return curLog
 	}
@@ -91,18 +94,18 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	logrus.SetFormatter(&logrus.TextFormatter{})
 	log := logrus.New()
 
-	if bConsole {
+	if comm.LogConfiguration.PrintLog {
 		log.Out = os.Stdout
 	} else {
-		err := os.MkdirAll(LogFolder, os.ModePerm)
+		logDir := filepath.Join(LogFolder, comm.LogConfiguration.DataDir)
+		err := os.MkdirAll(logDir, os.ModePerm)
 		if err != nil {
 			panic(fmt.Sprintf("failed to create log dir: %s", err.Error()))
 		}
-		logFullPath := filepath.Join(LogFolder, common.LogFileName)
+		logFileName := fmt.Sprintf("%s%s", "%Y%m%d", logExtension)
 
-		ext := filepath.Ext(logFullPath)
 		writer, err := rotatelogs.New(
-			logFullPath[:strings.Index(logFullPath, ext)]+".%Y%m%d"+ext,
+			filepath.Join(logDir, logFileName),
 			rotatelogs.WithClock(rotatelogs.Local),
 			rotatelogs.WithMaxAge(24*7*time.Hour),
 			rotatelogs.WithRotationTime(24*time.Hour),
@@ -115,16 +118,16 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.Out = writer
 	}
 
-	if common.LogConfig.IsDebug {
+	if comm.LogConfiguration.IsDebug {
 		log.SetLevel(logrus.DebugLevel)
 	} else {
 		log.SetLevel(logrus.InfoLevel)
 	}
 
-	log.AddHook(&CallerHook{module: logName}) // add caller hook to print caller's file and line number
+	log.AddHook(&CallerHook{module: module}) // add caller hook to print caller's file and line number
 	curLog = &SeeleLog{
 		log: log,
 	}
-	logMap[logName] = curLog
+	logMap[module] = curLog
 	return curLog
 }

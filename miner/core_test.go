@@ -18,7 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/miner/pow"
 )
 
-var logger = log.GetLogger("test", true)
+var logger = log.GetLogger("test")
 
 func getTask(difficult int64) *Task {
 	return &Task{

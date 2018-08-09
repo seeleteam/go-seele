@@ -36,7 +36,7 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 		return nil, err
 	}
 
-	newPeer := NewPeer(&connection{fd: c}, nil, log.GetLogger("peer", common.LogConfig.PrintLog), node)
+	newPeer := NewPeer(&connection{fd: c}, nil, log.GetLogger("peer"), node)
 	return newPeer, nil
 }
 

@@ -126,7 +126,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
 		engine:         &pow.Engine{},
-		log:            log.GetLogger("blockchain", common.LogConfig.PrintLog),
+		log:            log.GetLogger("blockchain"),
 	}
 
 	var err error

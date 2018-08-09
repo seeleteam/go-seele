@@ -10,8 +10,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"time"
-
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 const (
@@ -34,12 +32,6 @@ var (
 
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
-
-	// LogConfig is the Configuration of log
-	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
-
-	// LogFileName default log file name
-	LogFileName = "log"
 )
 
 func init() {

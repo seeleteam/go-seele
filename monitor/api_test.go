@@ -63,7 +63,7 @@ func createTestAPI(t *testing.T) *PublicMonitorAPI {
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 	dataDir := ctx.Value("ServiceContext").(seele.ServiceContext).DataDir
 	defer os.RemoveAll(dataDir)
-	log := log.GetLogger("seele", true)
+	log := log.GetLogger("seele")
 
 	seeleNode, err := node.New(&testConf)
 	if err != nil {
@@ -139,7 +139,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 	dataDir := ctx.Value("ServiceContext").(seele.ServiceContext).DataDir
 	defer os.RemoveAll(dataDir)
-	log := log.GetLogger("seele", true)
+	log := log.GetLogger("seele")
 
 	seeleNode, err := node.New(&testConf)
 	if err != nil {
