@@ -30,11 +30,11 @@ func Test_Log(t *testing.T) {
 }
 
 func Test_LogFile(t *testing.T) {
-	originPrintLog := comm.Config.PrintLog
+	originPrintLog := comm.LogConfiguration.PrintLog
 	defer func() {
-		comm.Config.PrintLog = originPrintLog
+		comm.LogConfiguration.PrintLog = originPrintLog
 	}()
-	comm.Config.PrintLog = false
+	comm.LogConfiguration.PrintLog = false
 	log := GetLogger("test2")
 
 	log.Debug("debug")
@@ -45,8 +45,8 @@ func Test_LogFile(t *testing.T) {
 	log.Info("folder is:", LogFolder)
 
 	now := time.Now().Format("20060102")
-	logFileName := fmt.Sprintf("%s.%s%s", comm.Config.LogFilePrefix, now, logExtension)
-	logPath := filepath.Join(LogFolder, logFileName)
+	logFileName := fmt.Sprintf("%s%s", now, logExtension)
+	logPath := filepath.Join(LogFolder, comm.LogConfiguration.DataDir, logFileName)
 
 	log.Info("log file is:%s", logPath)
 
@@ -62,17 +62,17 @@ func Test_LogLevels(t *testing.T) {
 	log.Warn("Warn can be done")
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 
-	// Default is DebugLevel due to comm.Config.IsDebug is true
+	// Default is DebugLevel due to comm.LogConfiguration.IsDebug is true
 	log = GetLogger("test4")
 	assert.Equal(t, logrus.DebugLevel, log.GetLevel())
 
-	// Set ccomm.Config.IsDebug as false
-	isDebug := comm.Config.IsDebug
+	// Set ccomm.LogConfiguration.IsDebug as false
+	isDebug := comm.LogConfiguration.IsDebug
 	defer func() {
-		comm.Config.IsDebug = isDebug
+		comm.LogConfiguration.IsDebug = isDebug
 	}()
 
-	comm.Config.IsDebug = false
+	comm.LogConfiguration.IsDebug = false
 	log = GetLogger("test5")
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }

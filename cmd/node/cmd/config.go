@@ -77,9 +77,9 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
 	config.SeeleConfig.TxConf = *core.DefaultTxPoolConfig()
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
-	comm.Config.PrintLog = config.LogConfig.PrintLog
-	comm.Config.IsDebug = config.LogConfig.IsDebug
-	comm.Config.LogFilePrefix = config.LogConfig.LogFilePrefix
+	comm.LogConfiguration.PrintLog = config.LogConfig.PrintLog
+	comm.LogConfiguration.IsDebug = config.LogConfig.IsDebug
+	comm.LogConfiguration.DataDir = config.BasicConfig.DataDir
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
 }

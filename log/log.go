@@ -94,17 +94,18 @@ func GetLogger(module string) *SeeleLog {
 	logrus.SetFormatter(&logrus.TextFormatter{})
 	log := logrus.New()
 
-	if comm.Config.PrintLog {
+	if comm.LogConfiguration.PrintLog {
 		log.Out = os.Stdout
 	} else {
-		err := os.MkdirAll(LogFolder, os.ModePerm)
+		logDir := filepath.Join(LogFolder, comm.LogConfiguration.DataDir)
+		err := os.MkdirAll(logDir, os.ModePerm)
 		if err != nil {
 			panic(fmt.Sprintf("failed to create log dir: %s", err.Error()))
 		}
-		logFileName := fmt.Sprintf("%s.%s%s", comm.Config.LogFilePrefix, "%Y%m%d", logExtension)
+		logFileName := fmt.Sprintf("%s%s", "%Y%m%d", logExtension)
 
 		writer, err := rotatelogs.New(
-			filepath.Join(LogFolder, logFileName),
+			filepath.Join(logDir, logFileName),
 			rotatelogs.WithClock(rotatelogs.Local),
 			rotatelogs.WithMaxAge(24*7*time.Hour),
 			rotatelogs.WithRotationTime(24*time.Hour),
@@ -117,7 +118,7 @@ func GetLogger(module string) *SeeleLog {
 		log.Out = writer
 	}
 
-	if comm.Config.IsDebug {
+	if comm.LogConfiguration.IsDebug {
 		log.SetLevel(logrus.DebugLevel)
 	} else {
 		log.SetLevel(logrus.InfoLevel)
