@@ -315,6 +315,16 @@ func main() {
 			},
 			Action: GenerateKeyAction,
 		},
+		{
+			Name:  "dumpheap",
+			Usage: "dump heap for profiling, return the file path",
+			Flags: []cli.Flag{
+				addressFlag,
+				gcBeforeDumpFlag,
+				dumpFileFlag,
+			},
+			Action: RPCAction(GetDumpHeap),
+		},
 	}
 
 	err := app.Run(os.Args)
