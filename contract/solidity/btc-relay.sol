@@ -25,7 +25,7 @@ contract BTCRelay {
     uint256 preBlockHash;
     mapping(uint256 => bytes) public blocks;
     uint256 FEE = 1;
-    
+
     event StoreHeader(uint256 blockHash, uint256 returnCode);
     event GetHeader(bytes blockHeaderBytes, uint256 returnCode);
     event VerifyTransaction(uint256 txHash, uint256 returnCode);
@@ -39,20 +39,20 @@ contract BTCRelay {
             emit Error("verifyTx", 0, "ERR_MONEY_ISNOT_ENOUGH");
             return 0;
         }
-        
+
         if (txBytes.length != 64) {
             emit Error("VerifyTransaction", 0, "ERR_TX_64BYTE");
             return 0;
         }
         uint256 txHash = sha256(txBytes);
-        
+
         returnCode = verify(txHash, txIndex, sibling, txBlockHash, msg.value);
         emit VerifyTransaction(txHash, returnCode);
 
         if (returnCode == 1) {
             return txHash;
         }
-            
+
         return returnCode;
     }
 
@@ -66,7 +66,7 @@ contract BTCRelay {
             emit RelayTransaction(txHash, returnCode);
             return(returnCode);
         }
-    
+
         emit Error("RelayTransaction", returnCode, "ERR_RELAY_VERIFY");
         return returnCode;
     }
@@ -79,7 +79,7 @@ contract BTCRelay {
             emit Error("storeBlockHeader", 0, "ERR_BLOCK_ALREADY_EXISTS");
             return returnCode;
         }
-        
+
         // TODO Check the blockHash by Difficulty and preBlockHash
         if (true) {
             returnCode = 1;
@@ -87,7 +87,7 @@ contract BTCRelay {
             preBlockHash = blockHash;
             emit StoreHeader(blockHash, 1);
         }
-        
+
         return returnCode;
     }
 
@@ -99,7 +99,7 @@ contract BTCRelay {
             return "0";
         }
         returnCode = 1;
-        
+
         bytes memory blockHeaderBytes = blocks[blockHash];
         emit GetHeader(blockHeaderBytes, returnCode);
         return blockHeaderBytes;
@@ -109,7 +109,7 @@ contract BTCRelay {
         /*  TODO
             Check if tx has 6 confirmations
             Check if the blockHash is in the main chain
-            
+
             merkle = computeMerkle(txHash, txIndex, sibling)
             realMerkleRoot = getMerkleRoot(txBlockHash)
             bool = merkle == realMerkleRoot
@@ -117,7 +117,7 @@ contract BTCRelay {
         if (true) {
             return 1;
         }
-                
+
         return 0;
     }
 
