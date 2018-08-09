@@ -93,8 +93,9 @@ func (miner *Miner) GetCoinbase() common.Address {
 
 // SetThreads sets the number of mining threads.
 func (miner *Miner) SetThreads(threads uint) {
-	if threads <= 0 {
+	if threads == 0 {
 		miner.threads = runtime.NumCPU()
+		return
 	}
 
 	miner.threads = int(threads)
@@ -329,7 +330,7 @@ func (miner *Miner) commitTask(task *Task) {
 		step = math.MaxUint64 / uint64(threads)
 	}
 
-	var isNonceFound int32 = 0
+	var isNonceFound int32
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < threads; i++ {
 		if threads == 1 {
