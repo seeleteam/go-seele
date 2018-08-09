@@ -151,9 +151,9 @@ var (
 	}
 
 	gcBeforeDump     bool
-	gcBeforeDumpFlag = cli.BoolTFlag{
+	gcBeforeDumpFlag = cli.BoolFlag{
 		Name:        "gc",
-		Usage:       "GC before heap dump, defualt true",
+		Usage:       "GC before heap dump, defualt false",
 		Destination: &gcBeforeDump,
 	}
 
