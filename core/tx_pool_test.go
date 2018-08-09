@@ -92,9 +92,9 @@ func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockcha
 }
 
 func (chain mockBlockchain) addAccount(addr common.Address, balance, nonce uint64) {
-	stateObj := chain.statedb.GetOrNewStateObject(addr)
-	stateObj.SetAmount(new(big.Int).SetUint64(balance))
-	stateObj.SetNonce(nonce)
+	chain.statedb.CreateAccount(addr)
+	chain.statedb.SetBalance(addr, new(big.Int).SetUint64(balance))
+	chain.statedb.SetNonce(addr, nonce)
 }
 
 func Test_TransactionPool_Add_ValidTx(t *testing.T) {

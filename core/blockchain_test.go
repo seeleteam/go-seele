@@ -24,7 +24,8 @@ import (
 type testAccount struct {
 	addr    common.Address
 	privKey *ecdsa.PrivateKey
-	data    state.Account
+	amount  *big.Int
+	nonce   uint64
 }
 
 var testGenesisAccounts = []*testAccount{
@@ -42,17 +43,15 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 	return &testAccount{
 		addr:    *addr,
 		privKey: privKey,
-		data: state.Account{
-			Amount: amount,
-			Nonce:  nonce,
-		},
+		amount:  new(big.Int).Set(amount),
+		nonce:   nonce,
 	}
 }
 
 func newTestGenesis() *Genesis {
 	accounts := make(map[common.Address]*big.Int)
 	for _, account := range testGenesisAccounts {
-		accounts[account.addr] = account.data.Amount
+		accounts[account.addr] = account.amount
 	}
 
 	return GetGenesis(GenesisInfo{accounts, 1, 0})
@@ -86,7 +85,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.T
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
 	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.data.Amount, uint64(1))
+	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 	totalSize := rewardTx.Size()

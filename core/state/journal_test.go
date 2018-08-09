@@ -15,7 +15,7 @@ import (
 )
 
 func Test_Journal_CreateAccount(t *testing.T) {
-	statedb, _, dispose := newTestEVMStateDB()
+	_, statedb, _, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	snapshot := statedb.Snapshot()
@@ -25,48 +25,48 @@ func Test_Journal_CreateAccount(t *testing.T) {
 	assert.Equal(t, statedb.getStateObject(newAddr), newStateObject(newAddr))
 
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, statedb.getStateObject(newAddr), (*StateObject)(nil))
+	assert.Equal(t, statedb.getStateObject(newAddr), (*stateObject)(nil))
 }
 
 func Test_Journal_Balance(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
-	stateObj.SetAmount(big.NewInt(100))
+	stateObj.setAmount(big.NewInt(100))
 
 	// Sub balance
 	snapshot := statedb.Snapshot()
 	statedb.SubBalance(stateObj.address, big.NewInt(38))
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, stateObj.GetAmount(), big.NewInt(100))
+	assert.Equal(t, stateObj.getAmount(), big.NewInt(100))
 
 	// Add balance
 	snapshot = statedb.Snapshot()
 	statedb.AddBalance(stateObj.address, big.NewInt(38))
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, stateObj.GetAmount(), big.NewInt(100))
+	assert.Equal(t, stateObj.getAmount(), big.NewInt(100))
 
 	// Set balance
 	snapshot = statedb.Snapshot()
 	statedb.SetBalance(stateObj.address, big.NewInt(38))
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, stateObj.GetAmount(), big.NewInt(100))
+	assert.Equal(t, stateObj.getAmount(), big.NewInt(100))
 }
 
 func Test_Journal_Nonce(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
-	stateObj.SetNonce(100)
+	stateObj.setNonce(100)
 
 	snapshot := statedb.Snapshot()
 	statedb.SetNonce(stateObj.address, 38)
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, stateObj.GetNonce(), uint64(100))
+	assert.Equal(t, stateObj.getNonce(), uint64(100))
 }
 
 func Test_Journal_Code(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	snapshot := statedb.Snapshot()
@@ -76,7 +76,7 @@ func Test_Journal_Code(t *testing.T) {
 }
 
 func Test_Journal_Refund(t *testing.T) {
-	statedb, _, dispose := newTestEVMStateDB()
+	_, statedb, _, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	statedb.refund = 100
@@ -88,7 +88,7 @@ func Test_Journal_Refund(t *testing.T) {
 }
 
 func Test_Journal_State(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	key := common.StringToHash("key")
@@ -102,10 +102,10 @@ func Test_Journal_State(t *testing.T) {
 }
 
 func Test_Journal_Suicide(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
-	stateObj.SetAmount(big.NewInt(100))
+	stateObj.setAmount(big.NewInt(100))
 
 	snapshot := statedb.Snapshot()
 	statedb.Suicide(stateObj.address)
@@ -123,8 +123,10 @@ func Test_Journal_Suicide(t *testing.T) {
 }
 
 func Test_Journal_MultipleSnapshot(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
+
+	statedb.clearJournalAndRefund()
 
 	// Snapshot 1: 2 changes
 	snapshot1 := statedb.Snapshot()

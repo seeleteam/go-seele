@@ -12,10 +12,11 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
+func newTestEVMStateDB() (database.Database, *Statedb, *stateObject, func()) {
 	db, dispose := leveldb.NewTestDatabase()
 
 	statedb, err := NewStatedb(common.EmptyHash, db)
@@ -25,7 +26,7 @@ func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
 	}
 
 	testAddr := *crypto.MustGenerateRandomAddress()
-	statedb.GetOrNewStateObject(testAddr)
+	statedb.CreateAccount(testAddr)
 
 	stateObj := statedb.getStateObject(testAddr)
 	if stateObj == nil {
@@ -38,11 +39,11 @@ func newTestEVMStateDB() (*Statedb, *StateObject, func()) {
 		panic("the address of state object is invalid.")
 	}
 
-	return statedb, stateObj, dispose
+	return db, statedb, stateObj, dispose
 }
 
-func commitAndNewStateDB(statedb *Statedb) (common.Hash, *Statedb) {
-	batch := statedb.db.NewBatch()
+func commitAndNewStateDB(db database.Database, statedb *Statedb) (common.Hash, *Statedb) {
+	batch := db.NewBatch()
 	rootHash, err := statedb.Commit(batch)
 	if err != nil {
 		panic(err)
@@ -52,7 +53,7 @@ func commitAndNewStateDB(statedb *Statedb) (common.Hash, *Statedb) {
 		panic(err)
 	}
 
-	newStatedb, err := NewStatedb(rootHash, statedb.db)
+	newStatedb, err := NewStatedb(rootHash, db)
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +62,7 @@ func commitAndNewStateDB(statedb *Statedb) (common.Hash, *Statedb) {
 }
 
 func Test_CreateAccount(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	// Assert the no code for a new created account.
@@ -72,7 +73,7 @@ func Test_CreateAccount(t *testing.T) {
 }
 
 func Test_Code(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	db, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	addr := stateObj.address
@@ -89,7 +90,7 @@ func Test_Code(t *testing.T) {
 	assert.Equal(t, stateObj.dirtyCode, true)
 
 	// Commit the account code change and create another state DB with the same root hash.
-	_, statedb2 := commitAndNewStateDB(statedb)
+	_, statedb2 := commitAndNewStateDB(db, statedb)
 	assert.Equal(t, stateObj.dirtyCode, false)
 
 	// Ensure the account code is valid.
@@ -115,7 +116,7 @@ func Test_Code(t *testing.T) {
 }
 
 func Test_Refund(t *testing.T) {
-	statedb, _, dispose := newTestEVMStateDB()
+	_, statedb, _, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	assert.Equal(t, statedb.refund, uint64(0))
@@ -128,7 +129,7 @@ func Test_Refund(t *testing.T) {
 }
 
 func Test_State(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	db, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	addr := stateObj.address
@@ -149,7 +150,7 @@ func Test_State(t *testing.T) {
 	assert.Equal(t, statedb.GetState(addr, k2), v2)
 
 	// Commit the state change
-	_, statedb2 := commitAndNewStateDB(statedb)
+	_, statedb2 := commitAndNewStateDB(db, statedb)
 
 	// Ensure the state is valid.
 	assert.Equal(t, statedb2.GetState(addr, k1), v1)
@@ -157,10 +158,13 @@ func Test_State(t *testing.T) {
 }
 
 func Test_Suicide(t *testing.T) {
-	statedb, stateObj, dispose := newTestEVMStateDB()
+	db, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	addr := stateObj.address
+	statedb.SetCode(addr, []byte("hello,world"))
+	statedb.SetState(addr, common.StringToHash("k1"), common.StringToHash("v1"))
+	statedb.SetState(addr, common.StringToHash("k2"), common.StringToHash("v2"))
 
 	assert.Equal(t, statedb.Exist(addr), true)
 	assert.Equal(t, statedb.HasSuicided(addr), false)
@@ -170,14 +174,16 @@ func Test_Suicide(t *testing.T) {
 	assert.Equal(t, statedb.HasSuicided(addr), true)
 
 	// Commit the state change
-	_, statedb2 := commitAndNewStateDB(statedb)
+	_, statedb2 := commitAndNewStateDB(db, statedb)
 
-	// Ensure the account does not exist.
-	assert.Equal(t, statedb2.Exist(addr), false)
+	assert.Equal(t, statedb2.Exist(addr), false)                                          // account not exists
+	assert.Equal(t, statedb2.GetCode(addr), []byte(nil))                                  // code not exists
+	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k1")), common.EmptyHash) // k1 not exists
+	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k2")), common.EmptyHash) // k2 not exists
 }
 
 func Test_Log(t *testing.T) {
-	statedb, _, dispose := newTestEVMStateDB()
+	_, statedb, _, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	statedb.Prepare(38)

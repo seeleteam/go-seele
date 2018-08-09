@@ -55,9 +55,9 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 	}
 
 	for _, tx := range txs {
-		stateObj := statedb.GetOrNewStateObject(tx.Data.From)
-		stateObj.SetAmount(big.NewInt(10))
-		stateObj.SetNonce(nonce)
+		statedb.CreateAccount(tx.Data.From)
+		statedb.SetBalance(tx.Data.From, big.NewInt(10))
+		statedb.SetNonce(tx.Data.From, nonce)
 	}
 
 	batch := db.NewBatch()

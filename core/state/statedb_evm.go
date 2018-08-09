@@ -43,13 +43,7 @@ func (s *Statedb) GetCode(address common.Address) []byte {
 		return nil
 	}
 
-	code, err := stateObj.loadCode(s.db)
-	if err != nil {
-		s.setError(err)
-		return nil
-	}
-
-	return code
+	return stateObj.loadCode(s.trie)
 }
 
 // SetCode sets the contract code of the specified address if exists.
@@ -61,14 +55,8 @@ func (s *Statedb) SetCode(address common.Address, code []byte) {
 		return
 	}
 
-	prevCode, err := stateObj.loadCode(s.db)
-	if err != nil {
-		s.setError(err)
-		return
-	}
-
+	prevCode := stateObj.loadCode(s.trie)
 	s.curJournal.append(codeChange{&address, prevCode})
-
 	stateObj.setCode(code)
 }
 
@@ -98,13 +86,7 @@ func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash 
 		return common.EmptyHash
 	}
 
-	value, err := stateObj.getState(s.db, key)
-	if err != nil {
-		s.setError(err)
-		return common.EmptyHash
-	}
-
-	return value
+	return stateObj.getState(s.trie, key)
 }
 
 // SetState adds or updates the specified key-value pair in account storage.
@@ -114,14 +96,8 @@ func (s *Statedb) SetState(address common.Address, key common.Hash, value common
 		return
 	}
 
-	prevValue, err := stateObj.getState(s.db, key)
-	if err != nil {
-		s.setError(err)
-		return
-	}
-
+	prevValue := stateObj.getState(s.trie, key)
 	s.curJournal.append(storageChange{&address, key, prevValue})
-
 	stateObj.setState(key, value)
 }
 
@@ -134,9 +110,9 @@ func (s *Statedb) Suicide(address common.Address) bool {
 		return false
 	}
 
-	s.curJournal.append(suicideChange{&address, stateObj.suicided, stateObj.GetAmount()})
+	s.curJournal.append(suicideChange{&address, stateObj.suicided, stateObj.getAmount()})
 
-	stateObj.SetAmount(new(big.Int))
+	stateObj.setAmount(new(big.Int))
 	stateObj.suicided = true
 
 	return true

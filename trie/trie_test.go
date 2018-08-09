@@ -15,13 +15,21 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
-func Test_trie_Update(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
-	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
+func newTestTrie() (database.Database, *Trie, func()) {
+	db, dispose := leveldb.NewTestDatabase()
+	trie, err := NewTrie(common.EmptyHash, []byte("trietest"), db)
 	if err != nil {
+		dispose()
 		panic(err)
 	}
+
+	return db, trie, dispose
+}
+
+func Test_trie_Update(t *testing.T) {
+	db, trie, remove := newTestTrie()
+	defer remove()
+
 	trie.Put([]byte("12345678"), []byte("test"))
 	trie.Put([]byte("12345678"), []byte("testnew"))
 	trie.Put([]byte("12345557"), []byte("test1"))
@@ -57,19 +65,13 @@ func Test_trie_Update(t *testing.T) {
 	assert.Equal(t, string(value), "test7")
 	batch := db.NewBatch()
 	trie.Commit(batch)
-	assert.Equal(t, err, nil)
-	err = batch.Commit()
-	assert.Equal(t, err, nil)
-
+	assert.Equal(t, batch.Commit(), nil)
 }
 
 func Test_trie_Delete(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	_, trie, remove := newTestTrie()
 	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
-	if err != nil {
-		panic(err)
-	}
+
 	trie.Put([]byte("12345678123"), []byte("test"))
 	trie.Put([]byte("12345557"), []byte("test1"))
 	trie.Put([]byte("12375879321"), []byte("test2"))
@@ -115,12 +117,9 @@ func Test_trie_Delete(t *testing.T) {
 }
 
 func Test_trie_Commit(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	db, trie, remove := newTestTrie()
 	defer remove()
-	trie, err := NewTrie(common.Hash{}, []byte("trietest"), db)
-	if err != nil {
-		panic(err)
-	}
+
 	trie.Put([]byte("12345678"), []byte("test"))
 	trie.Put([]byte("12345557"), []byte("test1"))
 	trie.Put([]byte("12375879"), []byte("test2"))
@@ -137,6 +136,7 @@ func Test_trie_Commit(t *testing.T) {
 
 	fmt.Println(string("----------------------------------"))
 	trienew, err := NewTrie(hash, []byte("trietest"), db)
+	assert.Equal(t, err, nil)
 
 	trienew.Delete([]byte("24355879"))
 	trienew.Put([]byte("243558790"), []byte("test8"))
@@ -181,13 +181,8 @@ func Test_trie_Commit(t *testing.T) {
 }
 
 func Test_trie_CommitOneByOne(t *testing.T) {
-	db, remove := leveldb.NewTestDatabase()
+	db, trie, remove := newTestTrie()
 	defer remove()
-
-	trie, err := NewTrie(common.Hash{}, []byte("qb"), db)
-	if err != nil {
-		panic(err)
-	}
 
 	trie.Put([]byte{1, 2, 3}, []byte{1, 2, 3})
 	trie.Hash()
@@ -198,7 +193,7 @@ func Test_trie_CommitOneByOne(t *testing.T) {
 	hash := trie.Commit(batch)
 	batch.Commit()
 
-	trienew, err := NewTrie(hash, []byte("qb"), db)
+	trienew, err := NewTrie(hash, []byte("trietest"), db)
 	if err != nil {
 		panic(err)
 	}
@@ -222,26 +217,19 @@ func init() {
 	}
 }
 
-func constructTrie(db database.Database) *Trie {
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
+func prepareData(trie *Trie) {
 	for _, addr := range addrList {
-		if err = trie.Put(addr, code); err != nil {
+		if err := trie.Put(addr, code); err != nil {
 			panic(err)
 		}
 	}
-
-	return trie
 }
 
 func Benchmark_Trie_Get(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie := constructTrie(db)
+	prepareData(trie)
 	key := addrList[len(addrList)/2]
 	b.ResetTimer()
 
@@ -253,29 +241,145 @@ func Benchmark_Trie_Get(b *testing.B) {
 }
 
 func Benchmark_Trie_Put(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie, err := NewTrie(common.EmptyHash, []byte("q"), db)
-	if err != nil {
-		panic(err)
-	}
-
 	for i, addrLen := 0, len(addrList); i < b.N; i++ {
-		if err = trie.Put(addrList[i%addrLen], code); err != nil {
+		if err := trie.Put(addrList[i%addrLen], code); err != nil {
 			panic(err)
 		}
 	}
 }
 
 func Benchmark_Trie_Commit(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
+	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	trie := constructTrie(db)
+	prepareData(trie)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		trie.Commit(nil)
 	}
+}
+
+func Test_Trie_Delete_SingleRoot(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// insert a leaf node as root
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("value")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.Delete([]byte{1, 2}), false)       // less keys
+	assert.Equal(t, trie.Delete([]byte{1, 2, 4}), false)    // same keys with invalid value
+	assert.Equal(t, trie.Delete([]byte{1, 2, 3, 4}), false) // more keys
+
+	// key match
+	assert.Equal(t, trie.Delete([]byte{1, 2, 3}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_Delete_ExtNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// ext node with key 1,2
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+
+	// cannot delete with prefix 1,2
+	assert.Equal(t, trie.Delete([]byte{1, 2}), false)
+}
+
+func Test_Trie_Delete_Branch(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// insert nodes to construct a branch node
+	assert.Equal(t, trie.Put([]byte{1, 2, 0x36}, []byte("1")), nil) // branch.children[3]
+	assert.Equal(t, trie.Put([]byte{1, 2, 0x68}, []byte("2")), nil) // branch.children[6]
+	assert.Equal(t, trie.Put([]byte{1, 2}, []byte("3")), nil)       // branch.children[16] (terminate)
+
+	// key mismatch
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x46}), false) // branch.children[4]
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x35}), false) // branch.children[3] but with invalid value
+
+	// key match
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x36}), true)
+	assert.Equal(t, trie.Delete([]byte{1, 2, 0x68}), true)
+	assert.Equal(t, trie.Delete([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_EmptyKey(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+
+	assert.Equal(t, trie.DeletePrefix(nil), false)
+	assert.Equal(t, trie.DeletePrefix([]byte{}), false)
+}
+
+func Test_Trie_DeletePrefix_LeafNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// leaf node with key 1,2,3
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3, 4}), false) // more keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 4}), false)    // same keys with invalid value
+	assert.Equal(t, trie.DeletePrefix([]byte{2}), false)          // less keys with invalid value
+
+	// exact keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3}), true)
+	assert.Equal(t, trie.root, nil)
+
+	// less keys
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("v")), nil)
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_ExtNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// ext node with key 1,2
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 3}), false) // same keys with invalid value
+	assert.Equal(t, trie.DeletePrefix([]byte{2}), false)    // less keys with invalid value
+
+	// exact keys
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2}), true)
+	assert.Equal(t, trie.root, nil)
+
+	// less keys
+	assert.Equal(t, trie.Put([]byte{1, 2, 3}, []byte("1")), nil)
+	assert.Equal(t, trie.Put([]byte{1, 2, 4}, []byte("2")), nil)
+	assert.Equal(t, trie.DeletePrefix([]byte{1}), true)
+	assert.Equal(t, trie.root, nil)
+}
+
+func Test_Trie_DeletePrefix_BranchNode(t *testing.T) {
+	_, trie, remove := newTestTrie()
+	defer remove()
+
+	// branch node
+	assert.Equal(t, trie.Put([]byte{1, 2, 3, 5}, []byte("1")), nil) // branch.children[3]
+	assert.Equal(t, trie.Put([]byte{1, 2, 4, 6}, []byte("2")), nil) // branch.children[4]
+
+	// key mismatch
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 5}), false) // branch.children[5]
+
+	// key match
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 3}), true) // branch.children[3]
+	assert.Equal(t, trie.DeletePrefix([]byte{1, 2, 4}), true) // leaf node
+	assert.Equal(t, trie.root, nil)
 }
