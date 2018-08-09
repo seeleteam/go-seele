@@ -16,7 +16,8 @@
   },
   "log": {
     "isDebug": false,
-    "printLog": true
+    "printLog": true,
+    "logFilePrefix":"node3"
   },
   "httpServer": {
     "address": "127.0.0.1:8039",

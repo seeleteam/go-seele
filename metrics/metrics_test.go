@@ -10,9 +10,9 @@ import (
 	"time"
 
 	metrics "github.com/rcrowley/go-metrics"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/log/comm"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 
 var (
 	TestCoinbase = crypto.MustGenerateShardAddress(1)
-	slog         = log.GetLogger("seele", common.LogConfig.PrintLog)
+	slog         = log.GetLogger("seele", comm.Config.PrintLog)
 	address      = "127.0.0.1:8086"
 	result       = new(string)
 )

@@ -23,6 +23,7 @@ import (
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
@@ -106,7 +107,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	return &Server{
 		Config:          config,
 		running:         false,
-		log:             log.GetLogger("p2p", common.LogConfig.PrintLog),
+		log:             log.GetLogger("p2p", comm.Config.PrintLog),
 		MaxPeers:        defaultMaxPeers,
 		quit:            make(chan struct{}),
 		peerSet:         NewPeerSet(),

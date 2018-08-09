@@ -6,13 +6,14 @@
 package log
 
 import (
+	"fmt"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,10 +39,10 @@ func Test_LogFile(t *testing.T) {
 	log.Error("error msg")
 	log.Info("folder is:", LogFolder)
 
-	now := time.Now().Format(".20060102")
-	logPath := filepath.Join(LogFolder, common.LogFileName)
-	ext := filepath.Ext(logPath)
-	logPath = logPath[:strings.Index(logPath, ext)] + now + ext
+	now := time.Now().Format("20060102")
+	logFileName := fmt.Sprintf("%s.%s%s", comm.Config.LogFilePrefix, now, logExtension)
+	logPath := filepath.Join(LogFolder, logFileName)
+
 	log.Info("log file is:%s", logPath)
 
 	exist := common.FileOrFolderExists(logPath)
@@ -56,17 +57,17 @@ func Test_LogLevels(t *testing.T) {
 	log.Warn("Warn can be done")
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 
-	// Default is DebugLevel due to common.LogConfig.IsDebug is true
+	// Default is DebugLevel due to comm.Config.IsDebug is true
 	log = GetLogger("test4", true)
 	assert.Equal(t, logrus.DebugLevel, log.GetLevel())
 
-	// Set common.LogConfig.IsDebug as false
-	isDebug := common.LogConfig.IsDebug
+	// Set ccomm.Config.IsDebug as false
+	isDebug := comm.Config.IsDebug
 	defer func() {
-		common.LogConfig.IsDebug = isDebug
+		comm.Config.IsDebug = isDebug
 	}()
 
-	common.LogConfig.IsDebug = false
+	comm.Config.IsDebug = false
 	log = GetLogger("test5", true)
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }

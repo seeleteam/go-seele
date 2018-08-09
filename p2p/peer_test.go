@@ -13,6 +13,7 @@ import (
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
@@ -36,7 +37,7 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 		return nil, err
 	}
 
-	newPeer := NewPeer(&connection{fd: c}, nil, log.GetLogger("peer", common.LogConfig.PrintLog), node)
+	newPeer := NewPeer(&connection{fd: c}, nil, log.GetLogger("peer", comm.Config.PrintLog), node)
 	return newPeer, nil
 }
 

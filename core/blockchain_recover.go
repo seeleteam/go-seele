@@ -14,9 +14,10 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/log/comm"
 )
 
-var rpLog = log.GetLogger("recoveryPoint", common.LogConfig.PrintLog)
+var rpLog = log.GetLogger("recoveryPoint", comm.Config.PrintLog)
 
 // recoveryPoint is used for blockchain recovery in case of program crashed when write a block.
 type recoveryPoint struct {

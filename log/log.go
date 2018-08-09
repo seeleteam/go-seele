@@ -9,18 +9,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/file-rotatelogs"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	// LogFolder the default folder to write logs
 	LogFolder = filepath.Join(common.GetTempFolder(), "log")
+
+	// logExtension default log file extension
+	logExtension = ".log"
 )
 
 // SeeleLog wraps log class
@@ -98,11 +101,10 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		if err != nil {
 			panic(fmt.Sprintf("failed to create log dir: %s", err.Error()))
 		}
-		logFullPath := filepath.Join(LogFolder, common.LogFileName)
+		logFileName := fmt.Sprintf("%s.%s%s", comm.Config.LogFilePrefix, "%Y%m%d", logExtension)
 
-		ext := filepath.Ext(logFullPath)
 		writer, err := rotatelogs.New(
-			logFullPath[:strings.Index(logFullPath, ext)]+".%Y%m%d"+ext,
+			filepath.Join(LogFolder, logFileName),
 			rotatelogs.WithClock(rotatelogs.Local),
 			rotatelogs.WithMaxAge(24*7*time.Hour),
 			rotatelogs.WithRotationTime(24*time.Hour),
@@ -115,7 +117,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.Out = writer
 	}
 
-	if common.LogConfig.IsDebug {
+	if comm.Config.IsDebug {
 		log.SetLevel(logrus.DebugLevel)
 	} else {
 		log.SetLevel(logrus.InfoLevel)

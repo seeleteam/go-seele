@@ -6,13 +6,10 @@
 package common
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"time"
-
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 const (
@@ -35,12 +32,6 @@ var (
 
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
-
-	// LogConfig is the Configuration of log
-	LogConfig = &comm.LogConfig{PrintLog: true, IsDebug: true}
-
-	// LogFileName default log file name
-	LogFileName string
 )
 
 func init() {
@@ -51,8 +42,6 @@ func init() {
 		panic(err)
 	}
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
-
-	LogFileName = fmt.Sprintf("%s.%s", comm.LogPrefix, comm.LogExtension)
 }
 
 // GetTempFolder uses a getter to implement readonly

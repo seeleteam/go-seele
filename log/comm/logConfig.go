@@ -5,13 +5,8 @@
 
 package comm
 
-var (
-	// LogExtension default log file extension
-	LogExtension = "log"
-
-	// LogPrefix default log file prefix
-	LogPrefix = "seele"
-)
+// Config is the Configuration of log
+var Config = &LogConfig{PrintLog: true, IsDebug: true, LogFilePrefix: "seele"}
 
 // LogConfig is the Configuration of log
 type LogConfig struct {
@@ -20,4 +15,7 @@ type LogConfig struct {
 
 	// If PrintLog is true, all logs will be printed in the console, otherwise they will be stored in the file.
 	PrintLog bool `json:"printLog"`
+
+	// LogPrefix default log file prefix
+	LogFilePrefix string `json:"logFilePrefix"`
 }
