@@ -149,4 +149,19 @@ var (
 		Usage:       "shard number",
 		Destination: &shardValue,
 	}
+
+	gcBeforeDump     bool
+	gcBeforeDumpFlag = cli.BoolTFlag{
+		Name:        "gc",
+		Usage:       "GC before heap dump, defualt true",
+		Destination: &gcBeforeDump,
+	}
+
+	dumpFileValue string
+	dumpFileFlag  = cli.StringFlag{
+		Name:        "file",
+		Value:       "heap.dump",
+		Usage:       "heap dump file name, defualt heap.dump",
+		Destination: &dumpFileValue,
+	}
 )

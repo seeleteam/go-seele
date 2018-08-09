@@ -123,7 +123,7 @@ type DumpHeapRequest struct {
 }
 
 // DumpHeap dumps the heap usage.
-func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (bool, error) {
+func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (string, error) {
 	if len(fileName) == 0 {
 		fileName = "heap.dump"
 	}
@@ -132,10 +132,11 @@ func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (bool, 
 		runtime.GC()
 	}
 
-	f, err := os.Create(filepath.Join(common.GetDefaultDataFolder(), fileName))
+	flie := filepath.Join(common.GetDefaultDataFolder(), fileName)
+	f, err := os.Create(flie)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return true, pprof.WriteHeapProfile(f)
+	return flie, pprof.WriteHeapProfile(f)
 }

@@ -140,3 +140,10 @@ func GetProtocolVersion(client *rpc.Client) (interface{}, error) {
 	err := client.Call(&result, "network_getProtocolVersion")
 	return result, err
 }
+
+// GetDumpHeap dump heap for profiling
+func GetDumpHeap(client *rpc.Client) (interface{}, error) {
+	var result string
+	err := client.Call(&result, "debug_dumpHeap", dumpFileValue, gcBeforeDump)
+	return result, err
+}
