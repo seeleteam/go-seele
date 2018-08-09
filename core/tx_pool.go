@@ -17,7 +17,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 var (
@@ -74,7 +73,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*Transa
 		pendingQueue:  newPendingQueue(),
 		processingTxs: make(map[common.Hash]struct{}),
 		lastHeader:    header,
-		log:           log.GetLogger("txpool", comm.Config.PrintLog),
+		log:           log.GetLogger("txpool"),
 		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 

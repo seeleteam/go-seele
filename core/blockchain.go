@@ -21,7 +21,6 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
@@ -127,7 +126,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
 		engine:         &pow.Engine{},
-		log:            log.GetLogger("blockchain", comm.Config.PrintLog),
+		log:            log.GetLogger("blockchain"),
 	}
 
 	var err error

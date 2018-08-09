@@ -20,7 +20,7 @@ func Test_peer_Info(t *testing.T) {
 	// prepare some variables
 	myAddr := common.HexMustToAddres("0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84")
 	node1 := discovery.NewNode(myAddr, nil, 0, 0)
-	log := log2.GetLogger("test", true)
+	log := log2.GetLogger("test")
 	p2pPeer := &p2p.Peer{
 		Node: node1,
 	}

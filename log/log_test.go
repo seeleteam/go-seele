@@ -18,19 +18,24 @@ import (
 )
 
 func Test_Log(t *testing.T) {
-	lg := GetLogger("test", true)
+	lg := GetLogger("test")
 	lg.Debug("debug msg")
 	lg.Info("info msg")
 	lg.Warn("warn msg")
 	lg.Error("error msg")
 	lg.Info("folder is: %s", LogFolder)
 
-	newLg := GetLogger("test", true)
+	newLg := GetLogger("test")
 	assert.Equal(t, lg, newLg)
 }
 
 func Test_LogFile(t *testing.T) {
-	log := GetLogger("test2", false)
+	originPrintLog := comm.Config.PrintLog
+	defer func() {
+		comm.Config.PrintLog = originPrintLog
+	}()
+	comm.Config.PrintLog = false
+	log := GetLogger("test2")
 
 	log.Debug("debug")
 	log.Info("info msg")
@@ -50,7 +55,7 @@ func Test_LogFile(t *testing.T) {
 }
 
 func Test_LogLevels(t *testing.T) {
-	log := GetLogger("test3", true)
+	log := GetLogger("test3")
 	log.SetLevel(logrus.InfoLevel)
 	log.Debug("debug can be done")
 	log.Info("Info can be done")
@@ -58,7 +63,7 @@ func Test_LogLevels(t *testing.T) {
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 
 	// Default is DebugLevel due to comm.Config.IsDebug is true
-	log = GetLogger("test4", true)
+	log = GetLogger("test4")
 	assert.Equal(t, logrus.DebugLevel, log.GetLevel())
 
 	// Set ccomm.Config.IsDebug as false
@@ -68,6 +73,6 @@ func Test_LogLevels(t *testing.T) {
 	}()
 
 	comm.Config.IsDebug = false
-	log = GetLogger("test5", true)
+	log = GetLogger("test5")
 	assert.Equal(t, logrus.InfoLevel, log.GetLevel())
 }

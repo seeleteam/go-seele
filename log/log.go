@@ -18,12 +18,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// logExtension default log file extension
+const logExtension = ".log"
+
 var (
 	// LogFolder the default folder to write logs
 	LogFolder = filepath.Join(common.GetTempFolder(), "log")
-
-	// logExtension default log file extension
-	logExtension = ".log"
 )
 
 // SeeleLog wraps log class
@@ -78,15 +78,15 @@ func (p *SeeleLog) GetLevel() logrus.Level {
 	return p.log.Level
 }
 
-// GetLogger gets logrus.Logger object according to logName
+// GetLogger gets logrus.Logger object according to module name
 // each module can have its own logger
-func GetLogger(logName string, bConsole bool) *SeeleLog {
+func GetLogger(module string) *SeeleLog {
 	getLogMutex.Lock()
 	defer getLogMutex.Unlock()
 	if logMap == nil {
 		logMap = make(map[string]*SeeleLog)
 	}
-	curLog, ok := logMap[logName]
+	curLog, ok := logMap[module]
 	if ok {
 		return curLog
 	}
@@ -94,7 +94,7 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 	logrus.SetFormatter(&logrus.TextFormatter{})
 	log := logrus.New()
 
-	if bConsole {
+	if comm.Config.PrintLog {
 		log.Out = os.Stdout
 	} else {
 		err := os.MkdirAll(LogFolder, os.ModePerm)
@@ -123,10 +123,10 @@ func GetLogger(logName string, bConsole bool) *SeeleLog {
 		log.SetLevel(logrus.InfoLevel)
 	}
 
-	log.AddHook(&CallerHook{module: logName}) // add caller hook to print caller's file and line number
+	log.AddHook(&CallerHook{module: module}) // add caller hook to print caller's file and line number
 	curLog = &SeeleLog{
 		log: log,
 	}
-	logMap[logName] = curLog
+	logMap[module] = curLog
 	return curLog
 }

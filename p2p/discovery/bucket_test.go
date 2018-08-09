@@ -16,7 +16,7 @@ import (
 )
 
 func getBuckets() *bucket {
-	log := log2.GetLogger("test", true)
+	log := log2.GetLogger("test")
 	return newBuckets(log)
 }
 

@@ -14,7 +14,7 @@
   },
   "log": {
     "isDebug": false,
-    "printLog": false,
+    "printLog": true,
     "logFilePrefix":"node1"
   },
   "httpServer": {

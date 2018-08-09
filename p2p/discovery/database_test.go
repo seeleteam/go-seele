@@ -8,7 +8,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +19,7 @@ func Test_SaveNodes(t *testing.T) {
 	key2 := common.StringToHash(str2)
 
 	node1, err := NewNodeFromIP("127.0.0.1:6666")
-	log := log.GetLogger("discovery", comm.Config.PrintLog)
+	log := log.GetLogger("discovery")
 
 	m := map[common.Hash]*Node{
 		key1: node1,

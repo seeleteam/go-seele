@@ -65,7 +65,7 @@ type Node struct {
 func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
-	nlog := log.GetLogger("node", conf.LogConfig.PrintLog)
+	nlog := log.GetLogger("node")
 
 	return &Node{
 		config:   conf,

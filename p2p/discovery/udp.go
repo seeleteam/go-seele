@@ -19,7 +19,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 const (
@@ -83,7 +82,7 @@ type reply struct {
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
-	log := log.GetLogger("discovery", comm.Config.PrintLog)
+	log := log.GetLogger("discovery")
 	conn, err := getUDPConn(addr)
 	if err != nil {
 		panic(fmt.Sprintf("failed to listen addr %s ", addr.String()))

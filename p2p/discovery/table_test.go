@@ -9,7 +9,6 @@ import (
 	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 func newTestTable() *Table {
@@ -19,7 +18,7 @@ func newTestTable() *Table {
 		panic(err)
 	}
 
-	log := log.GetLogger("discovery", comm.Config.PrintLog)
+	log := log.GetLogger("discovery")
 	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 	return newTable(self.ID, addr, 1, log)
 }

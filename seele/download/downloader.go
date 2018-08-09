@@ -18,7 +18,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
 )
 
@@ -105,7 +104,7 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		chain:      chain,
 		syncStatus: statusNone,
 	}
-	d.log = log.GetLogger("download", comm.Config.PrintLog)
+	d.log = log.GetLogger("download")
 	return d
 }
 

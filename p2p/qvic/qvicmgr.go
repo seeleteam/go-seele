@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/log/comm"
 )
 
 var (
@@ -45,7 +44,7 @@ func NewQvicMgr() *QvicMgr {
 	q := &QvicMgr{
 		quit:       make(chan struct{}),
 		acceptChan: make(chan *acceptInfo),
-		log:        log.GetLogger("qvic", comm.Config.PrintLog),
+		log:        log.GetLogger("qvic"),
 	}
 	q.log.Info("QVIC module started!")
 	return q

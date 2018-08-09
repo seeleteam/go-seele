@@ -44,7 +44,7 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
 	defer os.RemoveAll(dataDir)
-	log := log.GetLogger("seele", true)
+	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
 	if err != nil {
 		t.Fatal()
@@ -136,7 +136,7 @@ func newTestAPI(t *testing.T, dbPath string) *PublicSeeleAPI {
 	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
 	defer os.RemoveAll(dataDir)
 
-	log := log.GetLogger("seele", true)
+	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
 	assert.Equal(t, err, nil)
 
