@@ -42,7 +42,8 @@ func (a account) clone() account {
 
 // stateObject is the state object for statedb
 type stateObject struct {
-	address common.Address
+	address  common.Address
+	addrHash common.Hash
 
 	account      account
 	dirtyAccount bool
@@ -63,6 +64,7 @@ type stateObject struct {
 func newStateObject(address common.Address) *stateObject {
 	return &stateObject{
 		address:       address,
+		addrHash:      crypto.MustHash(address),
 		account:       newAccount(),
 		dirtyAccount:  true,
 		cachedStorage: make(map[common.Hash]common.Hash),
@@ -126,7 +128,7 @@ func (s *stateObject) subAmount(amount *big.Int) {
 }
 
 func (s *stateObject) dataKey(dataType byte, prefix ...byte) []byte {
-	key := append(s.address.Bytes(), dataType)
+	key := append(s.addrHash.Bytes(), dataType)
 	return append(key, prefix...)
 }
 
@@ -193,7 +195,7 @@ func (s *stateObject) getState(trie *trie.Trie, key common.Hash) common.Hash {
 		return value
 	}
 
-	if value, ok := trie.Get(s.dataKey(dataTypeStorage, key.Bytes()...)); ok {
+	if value, ok := trie.Get(s.dataKey(dataTypeStorage, crypto.MustHash(key).Bytes()...)); ok {
 		return common.BytesToHash(value)
 	}
 
@@ -205,7 +207,7 @@ func (s *stateObject) flush(trie *trie.Trie) error {
 	// Flush storage change.
 	if len(s.dirtyStorage) > 0 {
 		for k, v := range s.dirtyStorage {
-			if err := trie.Put(s.dataKey(dataTypeStorage, k.Bytes()...), v.Bytes()); err != nil {
+			if err := trie.Put(s.dataKey(dataTypeStorage, crypto.MustHash(k).Bytes()...), v.Bytes()); err != nil {
 				return err
 			}
 		}
@@ -231,7 +233,7 @@ func (s *stateObject) flush(trie *trie.Trie) error {
 
 	// Remove the account from state DB if suicided.
 	if s.suicided && !s.deleted {
-		trie.DeletePrefix(s.address.Bytes())
+		trie.DeletePrefix(s.addrHash.Bytes())
 		s.deleted = true
 	}
 
