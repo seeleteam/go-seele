@@ -328,8 +328,9 @@ func main() {
 		},
 	}
 
-	// sort commonds by name
-	sort.Sort((cli.CommandsByName)(app.Commands))
+	// sort commands and flags by name
+	sort.Sort(cli.CommandsByName(app.Commands))
+	sort.Sort(cli.FlagsByName(app.Flags))
 
 	err := app.Run(os.Args)
 	if err != nil {
