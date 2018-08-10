@@ -15,6 +15,9 @@ import (
 
 func main() {
 	app := cli.NewApp()
+	app.Name = "rpc client"
+	app.Usage = "interact with node process"
+	app.HideVersion = true
 
 	minerCommands := cli.Command{
 		Name:  "miner",
@@ -90,6 +93,9 @@ func main() {
 		},
 	}
 
+	sort.Sort(cli.CommandsByName(minerCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(minerCommands.Flags))
+
 	p2pCommands := cli.Command{
 		Name:  "p2p",
 		Usage: "p2p commands",
@@ -128,6 +134,9 @@ func main() {
 			},
 		},
 	}
+
+	sort.Sort(cli.CommandsByName(p2pCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(p2pCommands.Flags))
 
 	app.Commands = []cli.Command{
 		minerCommands,
