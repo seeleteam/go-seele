@@ -8,6 +8,7 @@ package main
 import (
 	"log"
 	"os"
+	"sort"
 
 	"github.com/urfave/cli"
 )
@@ -326,6 +327,9 @@ func main() {
 			Action: RPCAction(GetDumpHeap),
 		},
 	}
+
+	// sort commonds by name
+	sort.Sort((cli.CommandsByName)(app.Commands))
 
 	err := app.Run(os.Args)
 	if err != nil {
