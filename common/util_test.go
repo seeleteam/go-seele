@@ -7,10 +7,44 @@ package common
 
 import (
 	"bytes"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
 )
+
+func Test_Bytes(t *testing.T) {
+	str := "123456789"
+	arrayByte := Bytes(str)
+
+	arrayByte1, err := json.Marshal(arrayByte)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.HasPrefix(string(arrayByte1), "\"0x"), true)
+
+	tx := struct {
+		ID      int
+		PayLoad Bytes
+	}{
+		ID:      1,
+		PayLoad: arrayByte,
+	}
+
+	arrayByte2, err := json.Marshal(tx)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.Contains(string(arrayByte2), "0x"), true)
+
+	tx1 := struct {
+		ID      int
+		PayLoad Bytes
+	}{}
+
+	err = json.Unmarshal(arrayByte2, &tx1)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, tx.ID, tx1.ID)
+	assert.Equal(t, tx.PayLoad, tx1.PayLoad)
+	assert.Equal(t, string(tx1.PayLoad), str)
+}
 
 func Test_CopyBytes(t *testing.T) {
 	// src is valid with length > 0
