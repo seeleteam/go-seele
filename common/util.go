@@ -18,6 +18,7 @@ func (b Bytes) MarshalText() ([]byte, error) {
 	if len(b) == 0 {
 		return nil, nil
 	}
+
 	hex := hexutil.BytesToHex(b)
 	return []byte(hex), nil
 }
@@ -27,10 +28,12 @@ func (b *Bytes) UnmarshalText(hex []byte) error {
 	if len(hex) == 0 {
 		return nil
 	}
+
 	arrayByte, err := hexutil.HexToBytes(string(hex))
 	if err != nil {
 		return err
 	}
+
 	*b = arrayByte
 	return nil
 }

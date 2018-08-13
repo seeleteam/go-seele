@@ -8,7 +8,6 @@ package types
 import (
 	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -232,7 +231,7 @@ func Test_Transaction_Validate_PayLoadJSON(t *testing.T) {
 	arrayByte1, err := json.Marshal(tx2)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, strings.Contains(string(arrayByte1), "Payload\":\"0x"), true)
-	fmt.Println(string(arrayByte1))
+
 	tx3 := Transaction{}
 	err = json.Unmarshal(arrayByte1, &tx3)
 	assert.Equal(t, err, nil)
