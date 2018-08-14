@@ -8,7 +8,6 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/magiconair/properties/assert"
@@ -20,7 +19,7 @@ func Test_Bytes(t *testing.T) {
 
 	arrayByte1, err := json.Marshal(arrayByte)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, strings.HasPrefix(string(arrayByte1), "\"0x"), true)
+	assert.Equal(t, string(arrayByte1), `"0x313233343536373839"`)
 
 	tx := struct {
 		ID      int
@@ -32,7 +31,7 @@ func Test_Bytes(t *testing.T) {
 
 	arrayByte2, err := json.Marshal(tx)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, strings.Contains(string(arrayByte2), "0x"), true)
+	assert.Equal(t, string(arrayByte2), `{"ID":1,"PayLoad":"0x313233343536373839"}`)
 
 	tx1 := struct {
 		ID      int
@@ -42,13 +41,13 @@ func Test_Bytes(t *testing.T) {
 	err = json.Unmarshal(arrayByte2, &tx1)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, tx.ID, tx1.ID)
-	assert.Equal(t, tx.PayLoad, tx1.PayLoad)
+	assert.Equal(t, tx1.PayLoad, tx.PayLoad)
 	assert.Equal(t, string(tx1.PayLoad), str)
 
 	tx.PayLoad = nil
 	arrayByte3, err := json.Marshal(tx)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, strings.Contains(string(arrayByte3), "0x"), false)
+	assert.Equal(t, string(arrayByte3), `{"ID":1,"PayLoad":""}`)
 
 	tx2 := struct {
 		ID      int
