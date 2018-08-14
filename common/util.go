@@ -10,10 +10,10 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
-// Bytes is a array byte that is converted to hex string display when marshal
+// Bytes is a array byte that is converted to hex string display format when marshal
 type Bytes []byte
 
-// MarshalText implemente the TextMarshaler interface
+// MarshalText implement the TextMarshaler interface
 func (b Bytes) MarshalText() ([]byte, error) {
 	if len(b) == 0 {
 		return nil, nil
@@ -23,7 +23,7 @@ func (b Bytes) MarshalText() ([]byte, error) {
 	return []byte(hex), nil
 }
 
-// UnmarshalText implemente the TextUnmarshaler interface
+// UnmarshalText implement the TextUnmarshaler interface
 func (b *Bytes) UnmarshalText(hex []byte) error {
 	if len(hex) == 0 {
 		return nil

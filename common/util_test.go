@@ -44,6 +44,21 @@ func Test_Bytes(t *testing.T) {
 	assert.Equal(t, tx.ID, tx1.ID)
 	assert.Equal(t, tx.PayLoad, tx1.PayLoad)
 	assert.Equal(t, string(tx1.PayLoad), str)
+
+	tx.PayLoad = nil
+	arrayByte3, err := json.Marshal(tx)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.Contains(string(arrayByte3), "0x"), false)
+
+	tx2 := struct {
+		ID      int
+		PayLoad Bytes
+	}{}
+
+	err = json.Unmarshal(arrayByte3, &tx2)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, tx2.ID, tx.ID)
+	assert.Equal(t, tx2.PayLoad == nil, true)
 }
 
 func Test_CopyBytes(t *testing.T) {
