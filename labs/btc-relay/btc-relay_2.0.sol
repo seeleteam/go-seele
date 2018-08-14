@@ -13,15 +13,15 @@ pragma solidity ^0.4.0;
 contract BTCRelay {
 
     struct Block{
-        uint256 blockHeaderBytes;
-        int256 height;
-        uint256 previousblockhash;
+        uint256   blockHeaderBytes;
+        int256    height;
+        uint256   previousblockhash;
         uint256[] txs;
     }
 
-    uint256 public PreBlockHash;
-    int256 public PreBlockHeight = -1;
-    mapping(uint256 => Block) public blocks;
+    uint256                   public PreBlockHash;
+    int256                    public PreBlockHeight = -1;
+    mapping(uint256 => Block) public Blocks;
 
     uint256 constant FEE = 1;
 
@@ -46,7 +46,7 @@ contract BTCRelay {
             return returnCode;
         }
 
-        if (PreBlockHeight < 6 || blocks[txBlockHash].height < PreBlockHeight - 6) {
+        if (PreBlockHeight < 6 || Blocks[txBlockHash].height < PreBlockHeight - 6) {
             emit Error("verifyTx", returnCode, "ERR_CONFIRMATIONS_LESS_THAN_6");
             return returnCode;
         }
@@ -54,7 +54,7 @@ contract BTCRelay {
         // Send money to X relayer
         trustedXRelay.transfer(msg.value);
 
-        uint256[] memory txs = blocks[txBlockHash].txs;
+        uint256[] memory txs = Blocks[txBlockHash].txs;
         for (uint i = 0; i < txs.length; i++) {
             if (txs[i] == txHash){
                 returnCode = 1;
@@ -103,7 +103,7 @@ contract BTCRelay {
             return returnCode;
         }
 
-        if (blocks[blockHash].height > 0){
+        if (Blocks[blockHash].height > 0){
             emit Error("storeBlockHeader", returnCode, "ERR_BLOCK_HASH_ALREADY_EXISTS");
             return returnCode;
         }
@@ -113,7 +113,7 @@ contract BTCRelay {
             return returnCode;
         }
 
-        blocks[blockHash] = Block(blockHash, height, previousblockhash, txs);
+        Blocks[blockHash] = Block(blockHash, height, previousblockhash, txs);
         PreBlockHash = blockHash;
         PreBlockHeight = height;
         returnCode = 1;
@@ -133,7 +133,7 @@ contract BTCRelay {
         // Send money to X relayer
         trustedXRelay.transfer(msg.value);
 
-        if (blocks[blockHash].height > 0){
+        if (Blocks[blockHash].height > 0){
             returnCode = 1;
         }
         emit GetHeader(blockHash, returnCode);
