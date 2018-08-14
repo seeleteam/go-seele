@@ -102,7 +102,7 @@ func SignTxAction(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(result)
+	fmt.Println(string(result))
 	return nil
 }
 
