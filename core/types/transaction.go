@@ -70,7 +70,7 @@ type TransactionData struct {
 	AccountNonce uint64         // AccountNonce is the nonce of the sender account
 	Fee          *big.Int       // Transaction Fee
 	Timestamp    uint64         // Timestamp is used for the miner reward transaction, referring to the block timestamp
-	Payload      []byte         // Payload is the extra data of the transaction
+	Payload      common.Bytes   // Payload is the extra data of the transaction
 }
 
 // Transaction represents a transaction in the blockchain.

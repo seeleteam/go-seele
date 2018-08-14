@@ -7,6 +7,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"math/big"
 	"strings"
 	"testing"
@@ -206,6 +207,35 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 
 	err = tx.Validate(statedb)
 	assert.Equal(t, err, ErrPayloadOversized)
+}
+
+func Test_Transaction_Validate_PayLoadJSON(t *testing.T) {
+	tx := newTestTx(t, 100, 2, 38, true)
+	assert.Equal(t, len(tx.Data.Payload), 0)
+
+	arrayByte, err := json.Marshal(tx)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.Contains(string(arrayByte), "Payload\":\"0x"), false)
+
+	tx1 := Transaction{}
+	err = json.Unmarshal(arrayByte, &tx1)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, len(tx1.Data.Payload), 0)
+
+	from := crypto.MustGenerateRandomAddress()
+	to := crypto.MustGenerateRandomAddress()
+	tx2, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), 38, []byte("hello"))
+	assert.Equal(t, err, nil)
+	assert.Equal(t, string(tx2.Data.Payload), "hello")
+
+	arrayByte1, err := json.Marshal(tx2)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, strings.Contains(string(arrayByte1), "Payload\":\"0x"), true)
+
+	tx3 := Transaction{}
+	err = json.Unmarshal(arrayByte1, &tx3)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, tx3.Data.Payload, tx2.Data.Payload)
 }
 
 func prepareShardEnv(localShard uint) func() {
