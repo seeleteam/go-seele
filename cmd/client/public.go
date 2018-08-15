@@ -129,9 +129,12 @@ func AddTxAction(client *rpc.Client) (interface{}, error) {
 	}
 
 	var result bool
-	err = client.Call(&result, "seele_addTx", tx)
-
-	return result, err
+	if err = client.Call(&result, "seele_addTx", tx); err != nil {
+		fmt.Println("failed to send transaction")
+		return nil, err
+	}
+	fmt.Println("transaction sended successfully")
+	return tx, nil
 }
 
 func MakeAddress(value string) (common.Address, error) {
