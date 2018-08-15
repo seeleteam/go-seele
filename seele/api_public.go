@@ -157,7 +157,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) 
 }
 
 // AddTx add a tx to miner
-func (api *PublicSeeleAPI) AddTx(tx *types.Transaction) (bool, error) {
+func (api *PublicSeeleAPI) AddTx(tx *types.Transaction) (map[string]interface{}, error) {
 	shard := tx.Data.From.Shard()
 	var err error
 	if shard != common.LocalShardNumber {
@@ -169,10 +169,10 @@ func (api *PublicSeeleAPI) AddTx(tx *types.Transaction) (bool, error) {
 	}
 
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return true, nil
+	return PrintableOutputTx(tx), nil
 }
 
 // GetAccountNonce get account next used nonce
