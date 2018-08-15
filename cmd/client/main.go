@@ -186,11 +186,11 @@ func main() {
 			Usage: "call contract",
 			Flags: []cli.Flag{
 				addressFlag,
-				fromFlag,
 				toFlag,
 				paloadFlag,
+				heightFlag,
 			},
-			Action: RPCAction(CallAction),
+			Action: RPCAction(callAction),
 		},
 		{
 			Name:  "getblockheight",
