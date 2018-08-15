@@ -49,6 +49,23 @@ func Test_Worker(t *testing.T) {
 		hashInt.SetBytes(hash.Bytes())
 		assert.Equal(t, hashInt.Cmp(target) <= 0, true)
 	}
+
+	prevIsNonceFound := isNonceFound
+
+	go func() {
+		defer func() {
+			close(result)
+		}()
+
+		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
+	}()
+
+	found, ok := <-result
+	assert.Equal(t, ok, false)
+	assert.Equal(t, found == nil, true)
+
+	// exit mining as nonce is found by other threads
+	assert.Equal(t, prevIsNonceFound, isNonceFound)
 }
 
 func Test_WorkerStop(t *testing.T) {
@@ -62,8 +79,8 @@ func Test_WorkerStop(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
-		wg.Done()
 	}()
 
 	close(abort)
