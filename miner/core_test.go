@@ -52,23 +52,20 @@ func Test_Worker(t *testing.T) {
 
 	prevIsNonceFound := isNonceFound
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer func() {
+			close(result)
+		}()
+
 		StartMining(task, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
 	}()
-	wg.Wait()
 
-	close(result)
-	select {
-	case found, ok := <-result:
-		assert.Equal(t, ok, false)
-		assert.Equal(t, found == nil, true)
+	found, ok := <-result
+	assert.Equal(t, ok, false)
+	assert.Equal(t, found == nil, true)
 
-		// exit mining as nonce is found by other threads
-		assert.Equal(t, prevIsNonceFound, isNonceFound)
-	}
+	// exit mining as nonce is found by other threads
+	assert.Equal(t, prevIsNonceFound, isNonceFound)
 }
 
 func Test_WorkerStop(t *testing.T) {
