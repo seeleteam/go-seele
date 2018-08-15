@@ -64,20 +64,15 @@ func Test_Call(t *testing.T) {
 	api := newTestAPI(t, filepath.Join(common.GetTempFolder(), ".Call"))
 	// Create a simple_storage contract, get = 23
 	contractAddress, from := createContract(t, api, "0x6080604052601760005534801561001557600080fd5b5060df806100246000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a72305820a184cfae11a459efce14d114b09674a03d70eec7e0e19586a38528392a74d4b20029")
-
+	payload := "0x6d4ce63c"
+	api.s.miner.SetCoinbase(from)
 	// The origin statedb
 	statedbOri, err := api.s.chain.GetCurrentState()
 	assert.Equal(t, err, nil)
 
-	// Call the get function
-	msg, err := hexutil.HexToBytes("0x6d4ce63c")
-	assert.Equal(t, err, nil)
-	getTx, err := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(1), 1, msg)
-	assert.Equal(t, err, nil)
-
 	// Verify the result
 	result := make(map[string]interface{})
-	result, err = api.Call(getTx, -1)
+	result, err = api.Call(contractAddress.ToHex(), payload, -1)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000017")
 
