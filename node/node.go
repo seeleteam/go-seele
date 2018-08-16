@@ -53,11 +53,11 @@ type Node struct {
 	rpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
 
 	httpEndpoint string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	httpListener net.Listener // HTTP RPC listener socket to server API requests
+	httpListener net.Listener // HTTP RPC listener socket to serve API requests
 	httpHandler  *rpc.Server  // HTTP RPC request handler to process the API requests
 
 	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
-	wsListener net.Listener // Websocket RPC listener socket to server API requests
+	wsListener net.Listener // Websocket RPC listener socket to serve API requests
 	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
 }
 
@@ -185,8 +185,11 @@ func (n *Node) Stop() error {
 		}
 	}
 
-	// stop the p2p server
+	// stop the p2p server and related services
 	n.server.Stop()
+	n.stopRPC()
+	n.stopHTTP()
+	n.stopWS()
 
 	n.services = nil
 	n.server = nil
