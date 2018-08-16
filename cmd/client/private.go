@@ -147,3 +147,10 @@ func GetDumpHeap(client *rpc.Client) (interface{}, error) {
 	err := client.Call(&result, "debug_dumpHeap", dumpFileValue, gcBeforeDump)
 	return result, err
 }
+
+// GetBlockRlp retrieves the RLP encoded for of a single block
+func GetBlockRlp(client *rpc.Client) (interface{}, error) {
+	var result string
+	err := client.Call(&result, "debug_getBlockRlp", heightValue)
+	return result, err
+}
