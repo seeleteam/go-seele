@@ -27,8 +27,9 @@ import (
 
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 const jsondata = `
@@ -220,21 +221,24 @@ func TestMultiPack(t *testing.T) {
 	}
 }
 
-func ExampleJSON() {
+func TestExampleJSON(t *testing.T) {
 	const definition = `[{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"isBar","outputs":[{"name":"","type":"bool"}],"type":"function"}]`
 
 	abi, err := JSON(strings.NewReader(definition))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	out, err := abi.Pack("isBar", common.HexToAddress("01"))
+	addr, err := common.HexToAddress("0xe5cf366f4c96ffecc662e5e0c4ead897d7c0d3d1")
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	fmt.Printf("%x\n", out)
+	out, err := abi.Pack("isBar", addr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	assert.Equal(t, "1f2c4092000000000000000000000000e5cf366f4c96ffecc662e5e0c4ead897d7c0d3d1", fmt.Sprintf("%x", out))
 	// Output:
-	// 1f2c40920000000000000000000000000000000000000000000000000000000000000001
+	// 1f2c4092000000000000000000000000e5cf366f4c96ffecc662e5e0c4ead897d7c0d3d1
 }
 
 func TestInputVariableInputLength(t *testing.T) {

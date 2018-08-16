@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,8 +92,8 @@ func TestEventId(t *testing.T) {
 			{ "type" : "event", "name" : "check", "inputs": [{ "name" : "t", "type": "address" }, { "name": "b", "type": "uint256" }] }
 			]`,
 			expectations: map[string]common.Hash{
-				"balance": crypto.Keccak256Hash([]byte("balance(uint256)")),
-				"check":   crypto.Keccak256Hash([]byte("check(address,uint256)")),
+				"balance": crypto.HashBytes([]byte("balance(uint256)")),
+				"check":   crypto.HashBytes([]byte("check(address,uint256)")),
 			},
 		},
 	}
@@ -180,7 +181,8 @@ func TestEventTupleUnpack(t *testing.T) {
 	bigintExpected := big.NewInt(1000000)
 	bigintExpected2 := big.NewInt(2218516807680)
 	bigintExpected3 := big.NewInt(1000001)
-	addr := common.HexToAddress("0x00Ce0d46d924CC8437c806721496599FC3FFA268")
+	addr, err := common.HexToAddress("0x00Ce0d46d924CC8437c806721496599FC3FFA268")
+	assert.Equal(t, nil, err)
 	var testCases = []struct {
 		data     string
 		dest     interface{}
@@ -303,6 +305,15 @@ func TestEventTupleUnpack(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := unpackTestEventData(tc.dest, tc.data, tc.jsonLog, assert)
 			if tc.error == "" {
+				if err != nil {
+					fmt.Println("tc.data:", tc.data)
+					fmt.Println("tc.dest:", tc.dest)
+					fmt.Println("tc.expected:", tc.expected)
+					fmt.Println("tc.jsonlog:", string(tc.jsonLog))
+					fmt.Println("tc.error:", tc.error)
+					fmt.Println("tc.name:", tc.name)
+				}
+
 				assert.Nil(err, "Should be able to unpack event data.")
 				assert.Equal(tc.expected, tc.dest, tc.name)
 			} else {
