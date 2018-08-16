@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -115,14 +116,19 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 		return nil, err
 	}
 
-	from, amount, fee, nonce := api.s.miner.GetCoinbase(), big.NewInt(0), big.NewInt(1), uint64(1)
-	tx, err := types.NewMessageTransaction(from, contractAddr, amount, fee, nonce, msg)
+	coinbase := api.s.miner.GetCoinbase()
+	from := crypto.MustGenerateShardAddress(coinbase.Shard())
+	statedb.CreateAccount(*from)
+	statedb.SetBalance(*from, common.SeeleToFan)
+
+	amount, fee, nonce := big.NewInt(0), big.NewInt(1), uint64(1)
+	tx, err := types.NewMessageTransaction(*from, contractAddr, amount, fee, nonce, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %s", err)
 	}
 
 	// Get the transaction receipt, and the fee give to the miner coinbase
-	receipt, err := api.s.chain.ApplyTransaction(tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
+	receipt, err := api.s.chain.ApplyTransaction(tx, 0, coinbase, statedb, block.Header)
 	if err != nil {
 		return nil, err
 	}
