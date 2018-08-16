@@ -33,13 +33,20 @@ func Test_GetDifficult(t *testing.T) {
 
 	diff6 := getDiff(100, diff1)
 	assert.Equal(t, diff6.Int64(), int64(9964))
+
+	diff7 := getDiffWithHeight(100, diff1, 0)
+	assert.Equal(t, diff7.Int64(), diff1.Int64())
 }
 
 func getDiff(interval uint64, diff *big.Int) *big.Int {
+	return getDiffWithHeight(interval, diff, 10)
+}
+
+func getDiffWithHeight(interval uint64, diff *big.Int, height uint64) *big.Int {
 	header := &types.BlockHeader{
 		CreateTimestamp: big.NewInt(0),
 		Difficulty:      diff,
-		Height:          10,
+		Height:          height,
 	}
 
 	return GetDifficult(interval, header)
@@ -97,6 +104,6 @@ func randomAddress(t *testing.T) common.Address {
 		t.Fatalf("Failed to generate ECDSA private key, error = %s", keyErr.Error())
 	}
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
-	
+
 	return common.HexMustToAddres(hexAddress)
 }
