@@ -156,7 +156,7 @@ func main() {
 				addressFlag,
 				accountFlag,
 			},
-			Action: RPCAction(GetBalanceAction),
+			Action: RPCAction(getBalanceAction),
 		},
 		{
 			Name:  "sendtx",

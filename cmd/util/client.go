@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -23,14 +22,6 @@ func GetAccountNonce(client *rpc.Client, account common.Address) (uint64, error)
 	var nonce uint64
 	err := client.Call(&nonce, "seele_getAccountNonce", account)
 	return nonce, err
-}
-
-// GetAccountNonce get account nonce by account
-func GetBalance(client *rpc.Client, account common.Address) (*big.Int, error) {
-	var result hexutil.Big
-	err := client.Call(&result, "seele_getBalance", account)
-
-	return (*big.Int)(&result), err
 }
 
 func GetInfo(client *rpc.Client) (seele.MinerInfo, error) {

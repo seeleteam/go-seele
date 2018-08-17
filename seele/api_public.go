@@ -41,6 +41,12 @@ type MinerInfo struct {
 	MinerThread        int
 }
 
+// GetBalanceResponse response param for GetBalance api
+type GetBalanceResponse struct {
+	Account common.Address
+	Balance *big.Int
+}
+
 // GetBlockByHeightRequest request param for GetBlockByHeight api
 type GetBlockByHeightRequest struct {
 	Height int64
@@ -164,7 +170,7 @@ func (api *PublicSeeleAPI) GetInfo() (MinerInfo, error) {
 }
 
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
-func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) {
+func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.Equal(common.EmptyAddress) {
 		account = api.s.Miner().GetCoinbase()
 	}
@@ -174,8 +180,10 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) 
 		return nil, err
 	}
 
-	balance := state.GetBalance(account)
-	return balance, nil
+	return &GetBalanceResponse{
+		Account: account,
+		Balance: state.GetBalance(account),
+	}, nil
 }
 
 // AddTx add a tx to miner
