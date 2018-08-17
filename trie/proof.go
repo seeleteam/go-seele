@@ -13,20 +13,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto/sha3"
 )
 
-// Putter wraps the database write operation supported by both batches and regular databases.
-type Putter interface {
-	Put(key []byte, value []byte) error
-}
-
-// DatabaseReader wraps the Get and Has method of a backing store for the trie.
-type Reader interface {
-	// Get retrieves the value associated with key form the database.
-	Get(key []byte) (value []byte, err error)
-
-	// Has retrieves whether a key is present in the database.
-	Has(key []byte) (bool, error)
-}
-
 // Prove constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
@@ -34,7 +20,7 @@ type Reader interface {
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *Trie) Prove(key []byte, proofDb Putter) error {
+func (t *Trie) Prove(key []byte, proof map[string][]byte) error {
 	// Collect all nodes on the path to key.
 	key = keybytesToHex(key)
 	nodes := make([]noder, 0)
@@ -77,7 +63,7 @@ func (t *Trie) Prove(key []byte, proofDb Putter) error {
 		hash := t.hash(n, buf, sha, nil)
 		t.EncodeNode(n, buf, sha)
 
-		proofDb.Put(hash, buf.Bytes())
+		proof[string(hash)] = buf.Bytes()
 	}
 
 	return nil
@@ -86,11 +72,11 @@ func (t *Trie) Prove(key []byte, proofDb Putter) error {
 // VerifyProof checks merkle proofs. The given proof must contain the value for
 // key in a trie with the given root hash. VerifyProof returns an error if the
 // proof contains invalid trie nodes or the wrong value.
-func VerifyProof(rootHash common.Hash, key []byte, proofDb Reader) (value []byte, err error, nodes int) {
+func VerifyProof(rootHash common.Hash, key []byte, proof map[string][]byte) (value []byte, err error, nodes int) {
 	key = keybytesToHex(key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
-		buf, _ := proofDb.Get(wantHash[:])
+		buf := proof[string(wantHash[:])]
 		if buf == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash), i
 		}

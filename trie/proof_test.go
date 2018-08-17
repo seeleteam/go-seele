@@ -26,7 +26,7 @@ func TestProof(t *testing.T) {
 	trie, vals := randomTrie(500)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, _ := NewMemDatabase()
+		proofs := make(map[string][]byte)
 		if trie.Prove(kv.k, proofs) != nil {
 			t.Fatalf("missing key %x while constructing proof", kv.k)
 		}
@@ -44,15 +44,15 @@ func TestOneElementProof(t *testing.T) {
 	_, trie, dispose := newTestTrie()
 	defer dispose()
 
-	updateString(trie, "k", "v")
-	proofs, _ := NewMemDatabase()
+	trie.Put([]byte("k"), []byte("v"))
+	proofs := make(map[string][]byte)
 	trie.Prove([]byte("k"), proofs)
-	if len(proofs.Keys()) != 1 {
+	if len(proofs) != 1 {
 		t.Error("proof should have one element")
 	}
 	val, err, _ := VerifyProof(trie.Hash(), []byte("k"), proofs)
 	if err != nil {
-		t.Fatalf("VerifyProof error: %v\nproof hashes: %v", err, proofs.Keys())
+		t.Fatalf("VerifyProof error: %v\n", err)
 	}
 	if !bytes.Equal(val, []byte("v")) {
 		t.Fatalf("VerifyProof returned wrong value: got %x, want 'k'", val)
@@ -63,17 +63,21 @@ func TestVerifyBadProof(t *testing.T) {
 	trie, vals := randomTrie(800)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, _ := NewMemDatabase()
+		proofs := make(map[string][]byte)
 		trie.Prove(kv.k, proofs)
-		if len(proofs.Keys()) == 0 {
+		if len(proofs) == 0 {
 			t.Fatal("zero length proof")
 		}
-		keys := proofs.Keys()
-		key := keys[mrand.Intn(len(keys))]
-		node, _ := proofs.Get(key)
-		proofs.Delete(key)
+
+		var key string
+		for key, _ = range proofs {
+			break
+		}
+
+		node, _ := proofs[key]
+		delete(proofs, key)
 		mutateByte(node)
-		proofs.Put(crypto.HashBytes(node).Bytes(), node)
+		proofs[string(crypto.HashBytes(node).Bytes())] = node
 		if _, err, _ := VerifyProof(root, kv.k, proofs); err == nil {
 			t.Fatalf("expected proof to fail for key %x", kv.k)
 		}
@@ -101,8 +105,8 @@ func BenchmarkProve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		kv := vals[keys[i%len(keys)]]
-		proofs, _ := NewMemDatabase()
-		if trie.Prove(kv.k, proofs); len(proofs.Keys()) == 0 {
+		proofs := make(map[string][]byte)
+		if trie.Prove(kv.k, proofs); len(proofs) == 0 {
 			b.Fatalf("zero length proof for %x", kv.k)
 		}
 	}
@@ -112,10 +116,10 @@ func BenchmarkVerifyProof(b *testing.B) {
 	trie, vals := randomTrie(100)
 	root := trie.Hash()
 	var keys []string
-	var proofs []*MemDatabase
+	var proofs []map[string][]byte
 	for k := range vals {
 		keys = append(keys, k)
-		proof, _ := NewMemDatabase()
+		proof := make(map[string][]byte)
 		trie.Prove([]byte(k), proof)
 		proofs = append(proofs, proof)
 	}
@@ -162,16 +166,4 @@ func randBytes(n int) []byte {
 	r := make([]byte, n)
 	crand.Read(r)
 	return r
-}
-
-func getString(trie *Trie, k string) ([]byte, bool) {
-	return trie.Get([]byte(k))
-}
-
-func updateString(trie *Trie, k, v string) {
-	trie.Put([]byte(k), []byte(v))
-}
-
-func deleteString(trie *Trie, k string) {
-	trie.Delete([]byte(k))
 }
