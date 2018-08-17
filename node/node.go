@@ -187,11 +187,9 @@ func (n *Node) Stop() error {
 }
 
 func (n *Node) stopAllServices() {
-	n.stopP2PServer()
 	n.stopRPC()
-	n.stopHTTP()
-	n.stopWS()
 	n.stopRegisteredServices()
+	n.stopP2PServer()
 }
 
 func (n *Node) stopP2PServer() {
