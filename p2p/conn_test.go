@@ -38,7 +38,8 @@ func Test_connection(t *testing.T) {
 	con1 := connection{fd: fd1}
 	msg2, err := con1.ReadMsg()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, len(msg2.Payload), len(msg1.Payload))
+	assert.Equal(t, msg2.Payload, msg1.Payload)
+	assert.Equal(t, string(msg2.Payload), randStr1)
 
 	randStr2 := getRandomString(10)
 	msg1 = newMessage(randStr2)
@@ -48,5 +49,6 @@ func Test_connection(t *testing.T) {
 
 	msg3, err := con1.ReadMsg()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, len(msg3.Payload), len(msg1.Payload))
+	assert.Equal(t, msg3.Payload, msg1.Payload)
+	assert.Equal(t, string(msg3.Payload), randStr2)
 }
