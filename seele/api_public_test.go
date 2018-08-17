@@ -345,10 +345,10 @@ func Test_GetBanlance(t *testing.T) {
 	statedb.CreateAccount(coinbase)
 	statedb.SetBalance(coinbase, common.SeeleToFan)
 
-	// set raccount banlance
-	raccount := getFromAddress(statedb)
+	// set randomAcct banlance
+	randomAcct := getFromAddress(statedb)
 	balance := big.NewInt(0).Sub(common.SeeleToFan, big.NewInt(2))
-	statedb.SetBalance(raccount, balance)
+	statedb.SetBalance(randomAcct, balance)
 
 	// save the statedb
 	batch := api.s.accountStateDB.NewBatch()
@@ -366,16 +366,16 @@ func Test_GetBanlance(t *testing.T) {
 	assert.Equal(t, resp.Account, coinbase)
 	assert.Equal(t, resp.Balance, common.SeeleToFan)
 
-	// get raccount balance
-	resp, err = api.GetBalance(raccount)
+	// get randomAcct balance
+	resp, err = api.GetBalance(randomAcct)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, resp.Account, raccount)
+	assert.Equal(t, resp.Account, randomAcct)
 	assert.Equal(t, resp.Balance, balance)
 
 	// get non-existence account balance
-	raccount1 := getFromAddress(statedb)
-	resp, err = api.GetBalance(raccount1)
+	randomAcct1 := getFromAddress(statedb)
+	resp, err = api.GetBalance(randomAcct1)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, resp.Account, raccount1)
+	assert.Equal(t, resp.Account, randomAcct1)
 	assert.Equal(t, resp.Balance, big.NewInt(0))
 }
