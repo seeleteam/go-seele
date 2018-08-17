@@ -335,15 +335,6 @@ func main() {
 			},
 			Action: RPCAction(GetDumpHeap),
 		},
-		{
-			Name:  "getblockrlp",
-			Usage: "get block rlp hex by block height",
-			Flags: []cli.Flag{
-				addressFlag,
-				heightFlag,
-			},
-			Action: RPCAction(GetBlockRlp),
-		},
 	}
 
 	// sort commands and flags by name
