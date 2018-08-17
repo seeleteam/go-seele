@@ -48,13 +48,15 @@ func GetInfoAction(client *rpc.Client) (interface{}, error) {
 	return util.GetInfo(client)
 }
 
-func GetBalanceAction(client *rpc.Client) (interface{}, error) {
+func getBalanceAction(client *rpc.Client) (interface{}, error) {
 	account, err := MakeAddress(accountValue)
 	if err != nil {
 		return nil, err
 	}
 
-	return util.GetBalance(client, account)
+	var result seele.GetBalanceResponse
+	err = client.Call(&result, "seele_getBalance", account)
+	return result, err
 }
 
 func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {

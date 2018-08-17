@@ -19,6 +19,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
@@ -407,12 +408,12 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 func getBalance(address common.Address) (int, bool) {
 	client := getClient(address)
 
-	amount, err := util.GetBalance(client, address)
-	if err != nil {
+	var result seele.GetBalanceResponse
+	if err := client.Call(&result, "seele_getBalance", address); err != nil {
 		panic(fmt.Sprintf("failed to get the balance: %s\n", err))
 	}
 
-	return int(amount.Div(amount, common.SeeleToFan).Uint64()), true
+	return int(result.Balance.Div(result.Balance, common.SeeleToFan).Uint64()), true
 }
 
 func getClient(address common.Address) *rpc.Client {
