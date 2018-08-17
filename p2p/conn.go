@@ -118,13 +118,13 @@ func (c *connection) WriteMsg(msg Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
 
-	b := make([]byte, headBuffLength)
-	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
-	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
-
 	if err := msg.Zip(); err != nil {
 		return err
 	}
+
+	b := make([]byte, headBuffLength)
+	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
+	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
 
 	if err := c.writeFull(b); err != nil {
 		return err
