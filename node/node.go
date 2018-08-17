@@ -181,23 +181,17 @@ func (n *Node) Stop() error {
 	}
 
 	// stop all started services
-	stopErr := n.stopAllServices()
-
-	// return the stop errors if any
-	if len(stopErr.Services) > 0 {
-		return stopErr
-	}
+	n.stopAllServices()
 
 	return nil
 }
 
-func (n *Node) stopAllServices() *StopError {
+func (n *Node) stopAllServices() {
 	n.stopP2PServer()
 	n.stopRPC()
 	n.stopHTTP()
 	n.stopWS()
-
-	return n.stopRegisteredServices()
+	n.stopRegisteredServices()
 }
 
 func (n *Node) stopP2PServer() {
@@ -207,21 +201,9 @@ func (n *Node) stopP2PServer() {
 	}
 }
 
-func (n *Node) stopRegisteredServices() *StopError {
-	// stopErr is intended for possible stop errors
-	stopErr := &StopError{
-		Services: make(map[reflect.Type]error),
-	}
-
+func (n *Node) stopRegisteredServices() {
 	for _, service := range n.services {
-		if service != nil {
-			if err := service.Stop(); err != nil {
-				stopErr.Services[reflect.TypeOf(service)] = err
-			}
-			service = nil
-		}
+		service.Stop()
 	}
 	n.services = nil
-
-	return stopErr
 }
