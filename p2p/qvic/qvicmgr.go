@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -63,7 +62,7 @@ func NewQvicMgr() *QvicMgr {
 		portStart:  DefaultPortStart,
 		portEnd:    DefaultPortEnd,
 		magicMap:   make(map[uint32]*QConn),
-		log:        log.GetLogger("qvic", common.LogConfig.PrintLog),
+		log:        log.GetLogger("qvic"),
 	}
 
 	q.log.Info("QVIC module started!")
