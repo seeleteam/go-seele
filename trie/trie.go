@@ -208,7 +208,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	return node.Hash()
 }
 
-func (t *Trie) EncodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
+func (t *Trie) encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 	if node == nil {
 		return
 	}

@@ -26,11 +26,11 @@ func TestProof(t *testing.T) {
 	trie, vals := randomTrie(500)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs := make(map[string][]byte)
-		if trie.Prove(kv.k, proofs) != nil {
+		proofs, err := trie.Prove(kv.k)
+		if err != nil {
 			t.Fatalf("missing key %x while constructing proof", kv.k)
 		}
-		val, err, _ := VerifyProof(root, kv.k, proofs)
+		val, err := VerifyProof(root, kv.k, proofs)
 		if err != nil {
 			t.Fatalf("VerifyProof error for key %x: %v\nraw proof: %v", kv.k, err, proofs)
 		}
@@ -45,12 +45,16 @@ func TestOneElementProof(t *testing.T) {
 	defer dispose()
 
 	trie.Put([]byte("k"), []byte("v"))
-	proofs := make(map[string][]byte)
-	trie.Prove([]byte("k"), proofs)
+	proofs, err := trie.Prove([]byte("k"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if len(proofs) != 1 {
 		t.Error("proof should have one element")
 	}
-	val, err, _ := VerifyProof(trie.Hash(), []byte("k"), proofs)
+
+	val, err := VerifyProof(trie.Hash(), []byte("k"), proofs)
 	if err != nil {
 		t.Fatalf("VerifyProof error: %v\n", err)
 	}
@@ -63,8 +67,11 @@ func TestVerifyBadProof(t *testing.T) {
 	trie, vals := randomTrie(800)
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs := make(map[string][]byte)
-		trie.Prove(kv.k, proofs)
+		proofs, err := trie.Prove(kv.k)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		if len(proofs) == 0 {
 			t.Fatal("zero length proof")
 		}
@@ -78,7 +85,7 @@ func TestVerifyBadProof(t *testing.T) {
 		delete(proofs, key)
 		mutateByte(node)
 		proofs[string(crypto.HashBytes(node).Bytes())] = node
-		if _, err, _ := VerifyProof(root, kv.k, proofs); err == nil {
+		if _, err := VerifyProof(root, kv.k, proofs); err == nil {
 			t.Fatalf("expected proof to fail for key %x", kv.k)
 		}
 	}
@@ -105,8 +112,12 @@ func BenchmarkProve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		kv := vals[keys[i%len(keys)]]
-		proofs := make(map[string][]byte)
-		if trie.Prove(kv.k, proofs); len(proofs) == 0 {
+		proofs, err := trie.Prove(kv.k)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		if len(proofs) == 0 {
 			b.Fatalf("zero length proof for %x", kv.k)
 		}
 	}
@@ -119,15 +130,18 @@ func BenchmarkVerifyProof(b *testing.B) {
 	var proofs []map[string][]byte
 	for k := range vals {
 		keys = append(keys, k)
-		proof := make(map[string][]byte)
-		trie.Prove([]byte(k), proof)
+		proof, err := trie.Prove([]byte(k))
+		if err != nil {
+			b.Fatal(err)
+		}
+
 		proofs = append(proofs, proof)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		im := i % len(keys)
-		if _, err, _ := VerifyProof(root, []byte(keys[im]), proofs[im]); err != nil {
+		if _, err := VerifyProof(root, []byte(keys[im]), proofs[im]); err != nil {
 			b.Fatalf("key %x: %v", keys[im], err)
 		}
 	}
