@@ -208,6 +208,43 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	return node.Hash()
 }
 
+func (t *Trie) encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
+	if node == nil {
+		return
+	}
+
+	// node hash is dirty or requires to commit with specified batch
+	switch n := node.(type) {
+	case *LeafNode:
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			n.Key,
+			n.Value,
+		})
+	case *ExtensionNode:
+		nexthash := t.hash(n.NextNode, buf, sha, nil)
+
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			true, //add it to diff with extension node;modify later using compact func?
+			n.Key,
+			nexthash,
+		})
+	case *BranchNode:
+		var children [numBranchChildren][]byte
+		for i, child := range n.Children {
+			children[i] = t.hash(child, buf, sha, nil)
+		}
+
+		buf.Reset()
+		rlp.Encode(buf, []interface{}{
+			children,
+		})
+	default:
+		panic(fmt.Sprintf("invalid node: %v", node))
+	}
+}
+
 // return true if insert succeed,it also mean node is dirty,should recalc hash
 func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error) {
 	switch n := node.(type) {
@@ -438,11 +475,11 @@ func (t *Trie) loadNode(hash []byte) (noder, error) {
 	if err != nil || len(val) == 0 {
 		return nil, errNodeNotExist
 	}
-	return t.decodeNode(hash, val)
+	return decodeNode(hash, val)
 }
 
 // decodeNode decode node from buf byte
-func (t *Trie) decodeNode(hash, value []byte) (noder, error) {
+func decodeNode(hash, value []byte) (noder, error) {
 	if len(value) == 0 {
 		return nil, io.ErrUnexpectedEOF
 	}
@@ -452,17 +489,17 @@ func (t *Trie) decodeNode(hash, value []byte) (noder, error) {
 	}
 	switch n, _ := rlp.CountValues(vals); n {
 	case 1:
-		return t.decodeBranchNode(hash, vals)
+		return decodeBranchNode(hash, vals)
 	case 2:
-		return t.decodeLeafNode(hash, vals)
+		return decodeLeafNode(hash, vals)
 	case 3:
-		return t.decodeExtensionNode(hash, vals)
+		return decodeExtensionNode(hash, vals)
 	default:
 		return nil, nil
 	}
 }
 
-func (t *Trie) decodeLeafNode(hash, values []byte) (noder, error) {
+func decodeLeafNode(hash, values []byte) (noder, error) {
 	key, rest, err := rlp.SplitString(values)
 	if err != nil {
 		return nil, err
@@ -481,7 +518,7 @@ func (t *Trie) decodeLeafNode(hash, values []byte) (noder, error) {
 	}, nil
 }
 
-func (t *Trie) decodeExtensionNode(hash, values []byte) (noder, error) {
+func decodeExtensionNode(hash, values []byte) (noder, error) {
 	_, bufs, err := rlp.SplitString(values)
 	key, rest, err := rlp.SplitString(bufs)
 	if err != nil {
@@ -501,8 +538,7 @@ func (t *Trie) decodeExtensionNode(hash, values []byte) (noder, error) {
 	}, nil
 }
 
-func (t *Trie) decodeBranchNode(hash, values []byte) (noder, error) {
-
+func decodeBranchNode(hash, values []byte) (noder, error) {
 	kind, elems, _, err := rlp.Split(values)
 	if err != nil {
 		return nil, err
