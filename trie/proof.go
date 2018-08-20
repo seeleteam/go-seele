@@ -13,14 +13,14 @@ import (
 	"github.com/seeleteam/go-seele/crypto/sha3"
 )
 
-// Prove constructs a merkle proof for key. The result contains all encoded nodes
+// GetProof constructs a merkle proof for key. The result contains all encoded nodes
 // on the path to the value at key. The value itself is also included in the last
 // node and can be retrieved by verifying the proof.
 //
 // If the trie does not contain a value for key, the returned proof contains all
 // nodes of the longest existing prefix of the key (at least the root node), ending
 // with the node that proves the absence of the key.
-func (t *Trie) Prove(key []byte) (map[string][]byte, error) {
+func (t *Trie) GetProof(key []byte) (map[string][]byte, error) {
 	// Collect all nodes on the path to key.
 	key = keybytesToHex(key)
 	nodes := make([]noder, 0)
@@ -125,6 +125,10 @@ func get(tn noder, key []byte) ([]byte, noder) {
 		case nil:
 			return key, nil
 		case *LeafNode:
+			if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
+				return nil, nil
+			}
+
 			return nil, n
 		default:
 			panic(fmt.Sprintf("%T: invalid node: %v", tn, tn))

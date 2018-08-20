@@ -23,10 +23,12 @@ func init() {
 }
 
 func TestProof(t *testing.T) {
-	trie, vals := randomTrie(500)
+	trie, vals, dispose := randomTrie(500)
+	defer dispose()
+
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, err := trie.Prove(kv.k)
+		proofs, err := trie.GetProof(kv.k)
 		if err != nil {
 			t.Fatalf("missing key %x while constructing proof", kv.k)
 		}
@@ -45,7 +47,7 @@ func TestOneElementProof(t *testing.T) {
 	defer dispose()
 
 	trie.Put([]byte("k"), []byte("v"))
-	proofs, err := trie.Prove([]byte("k"))
+	proofs, err := trie.GetProof([]byte("k"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,10 +66,12 @@ func TestOneElementProof(t *testing.T) {
 }
 
 func TestVerifyBadProof(t *testing.T) {
-	trie, vals := randomTrie(800)
+	trie, vals, dispose := randomTrie(800)
+	defer dispose()
+
 	root := trie.Hash()
 	for _, kv := range vals {
-		proofs, err := trie.Prove(kv.k)
+		proofs, err := trie.GetProof(kv.k)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +107,9 @@ func mutateByte(b []byte) {
 }
 
 func BenchmarkProve(b *testing.B) {
-	trie, vals := randomTrie(100)
+	trie, vals, dispose := randomTrie(100)
+	defer dispose()
+
 	var keys []string
 	for k := range vals {
 		keys = append(keys, k)
@@ -112,7 +118,7 @@ func BenchmarkProve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		kv := vals[keys[i%len(keys)]]
-		proofs, err := trie.Prove(kv.k)
+		proofs, err := trie.GetProof(kv.k)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -124,13 +130,15 @@ func BenchmarkProve(b *testing.B) {
 }
 
 func BenchmarkVerifyProof(b *testing.B) {
-	trie, vals := randomTrie(100)
+	trie, vals, dispose := randomTrie(100)
+	defer dispose()
+
 	root := trie.Hash()
 	var keys []string
 	var proofs []map[string][]byte
 	for k := range vals {
 		keys = append(keys, k)
-		proof, err := trie.Prove([]byte(k))
+		proof, err := trie.GetProof([]byte(k))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -152,8 +160,8 @@ type kv struct {
 	t    bool
 }
 
-func randomTrie(n int) (*Trie, map[string]*kv) {
-	db, _ := leveldb.NewTestDatabase()
+func randomTrie(n int) (*Trie, map[string]*kv, func()) {
+	db, dispose := leveldb.NewTestDatabase()
 	trie, err := NewTrie(common2.EmptyHash, []byte("trietest"), db)
 	if err != nil {
 		panic(err)
@@ -173,7 +181,7 @@ func randomTrie(n int) (*Trie, map[string]*kv) {
 		trie.Put(value.k, value.v)
 		vals[string(value.k)] = value
 	}
-	return trie, vals
+	return trie, vals, dispose
 }
 
 func randBytes(n int) []byte {
