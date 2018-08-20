@@ -53,11 +53,11 @@ type Node struct {
 	rpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
 
 	httpEndpoint string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
-	httpListener net.Listener // HTTP RPC listener socket to server API requests
+	httpListener net.Listener // HTTP RPC listener socket to serve API requests
 	httpHandler  *rpc.Server  // HTTP RPC request handler to process the API requests
 
 	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
-	wsListener net.Listener // Websocket RPC listener socket to server API requests
+	wsListener net.Listener // Websocket RPC listener socket to serve API requests
 	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
 }
 
@@ -92,11 +92,45 @@ func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
+	// 1. Check node status
 	if n.server != nil {
 		return ErrNodeRunning
 	}
 
-	//check config
+	// 2. Check configurations
+	if err := n.checkConfig(); err != nil {
+		return err
+	}
+
+	// 3. Start p2p server
+	p2pServer, err := n.startP2PServer()
+	if err != nil {
+		return err
+	}
+	n.server = p2pServer
+
+	// 4. Start services
+	for _, service := range n.services {
+		if err := service.Start(p2pServer); err != nil {
+			n.log.Error("got error when start service %s", err)
+			n.stopAllServices()
+
+			return err
+		}
+	}
+
+	// 5. Start RPC server
+	if err := n.startRPC(n.services); err != nil {
+		n.log.Error("got error when start rpc %s", err)
+		n.stopAllServices()
+
+		return err
+	}
+
+	return nil
+}
+
+func (n *Node) checkConfig() error {
 	specificShard := n.config.SeeleConfig.GenesisConfig.ShardNumber
 	if specificShard == 0 {
 		// select a shard randomly
@@ -120,6 +154,10 @@ func (n *Node) Start() error {
 		}
 	}
 
+	return nil
+}
+
+func (n *Node) startP2PServer() (*p2p.Server, error) {
 	protocols := make([]p2p.Protocol, 0)
 	for _, service := range n.services {
 		protocols = append(protocols, service.Protocols()...)
@@ -127,42 +165,10 @@ func (n *Node) Start() error {
 
 	p2pServer := p2p.NewServer(n.config.SeeleConfig.GenesisConfig, n.config.P2PConfig, protocols)
 	if err := p2pServer.Start(n.config.BasicConfig.DataDir, n.config.SeeleConfig.GenesisConfig.ShardNumber); err != nil {
-		return ErrServiceStartFailed
+		return nil, ErrServiceStartFailed
 	}
 
-	// Start services
-	for i, service := range n.services {
-		if err := service.Start(p2pServer); err != nil {
-			n.log.Error("got error when start service %s", err)
-
-			for j := 0; j < i; j++ {
-				n.services[j].Stop()
-			}
-
-			// stop the p2p server
-			p2pServer.Stop()
-
-			return err
-		}
-	}
-
-	// Start RPC server
-	if err := n.startRPC(n.services); err != nil {
-		n.log.Error("got error when start rpc %s", err)
-
-		for _, service := range n.services {
-			service.Stop()
-		}
-
-		// stop the p2p server
-		p2pServer.Stop()
-
-		return err
-	}
-
-	n.server = p2pServer
-
-	return nil
+	return p2pServer, nil
 }
 
 // Stop terminates the running node and services registered.
@@ -174,27 +180,28 @@ func (n *Node) Stop() error {
 		return ErrNodeStopped
 	}
 
-	// stopErr is intended for possible stop errors
-	stopErr := &StopError{
-		Services: make(map[reflect.Type]error),
-	}
-
-	for _, service := range n.services {
-		if err := service.Stop(); err != nil {
-			stopErr.Services[reflect.TypeOf(service)] = err
-		}
-	}
-
-	// stop the p2p server
-	n.server.Stop()
-
-	n.services = nil
-	n.server = nil
-
-	// return the stop errors if any
-	if len(stopErr.Services) > 0 {
-		return stopErr
-	}
+	// stop all started services
+	n.stopAllServices()
 
 	return nil
+}
+
+func (n *Node) stopAllServices() {
+	n.stopRPC()
+	n.stopRegisteredServices()
+	n.stopP2PServer()
+}
+
+func (n *Node) stopP2PServer() {
+	if n.server != nil {
+		n.server.Stop()
+		n.server = nil
+	}
+}
+
+func (n *Node) stopRegisteredServices() {
+	for _, service := range n.services {
+		service.Stop()
+	}
+	n.services = nil
 }

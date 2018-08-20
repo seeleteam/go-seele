@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -38,6 +39,12 @@ type MinerInfo struct {
 	Shard              uint
 	MinerStatus        string
 	MinerThread        int
+}
+
+// GetBalanceResponse response param for GetBalance api
+type GetBalanceResponse struct {
+	Account common.Address
+	Balance *big.Int
 }
 
 // GetBlockByHeightRequest request param for GetBlockByHeight api
@@ -92,7 +99,17 @@ type CallRequest struct {
 
 // Call is to execute a given transaction on a statedb of a given block height.
 // It does not affect this statedb and blockchain and is useful for executing and retrieve values.
-func (api *PublicSeeleAPI) Call(tx *types.Transaction, height int64) (map[string]interface{}, error) {
+func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[string]interface{}, error) {
+	contractAddr, err := common.HexToAddress(contract)
+	if err != nil {
+		return nil, fmt.Errorf("invalid contract address: %s", err)
+	}
+
+	msg, err := hexutil.HexToBytes(payload)
+	if err != nil {
+		return nil, fmt.Errorf("invalid payload, %s", err)
+	}
+
 	// Get the block by block height, if the height is less than zero, get the current block.
 	block, err := getBlock(api.s.chain, height)
 	if err != nil {
@@ -105,8 +122,19 @@ func (api *PublicSeeleAPI) Call(tx *types.Transaction, height int64) (map[string
 		return nil, err
 	}
 
+	coinbase := api.s.miner.GetCoinbase()
+	from := crypto.MustGenerateShardAddress(coinbase.Shard())
+	statedb.CreateAccount(*from)
+	statedb.SetBalance(*from, common.SeeleToFan)
+
+	amount, fee, nonce := big.NewInt(0), big.NewInt(1), uint64(1)
+	tx, err := types.NewMessageTransaction(*from, contractAddr, amount, fee, nonce, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transaction: %s", err)
+	}
+
 	// Get the transaction receipt, and the fee give to the miner coinbase
-	receipt, err := api.s.chain.ApplyTransaction(tx, 0, api.s.miner.GetCoinbase(), statedb, block.Header)
+	receipt, err := api.s.chain.ApplyTransaction(tx, 0, coinbase, statedb, block.Header)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +170,7 @@ func (api *PublicSeeleAPI) GetInfo() (MinerInfo, error) {
 }
 
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
-func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) {
+func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.Equal(common.EmptyAddress) {
 		account = api.s.Miner().GetCoinbase()
 	}
@@ -152,8 +180,10 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*big.Int, error) 
 		return nil, err
 	}
 
-	balance := state.GetBalance(account)
-	return balance, nil
+	return &GetBalanceResponse{
+		Account: account,
+		Balance: state.GetBalance(account),
+	}, nil
 }
 
 // AddTx add a tx to miner

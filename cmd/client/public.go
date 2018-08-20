@@ -9,11 +9,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
@@ -50,13 +48,15 @@ func GetInfoAction(client *rpc.Client) (interface{}, error) {
 	return util.GetInfo(client)
 }
 
-func GetBalanceAction(client *rpc.Client) (interface{}, error) {
+func getBalanceAction(client *rpc.Client) (interface{}, error) {
 	account, err := MakeAddress(accountValue)
 	if err != nil {
 		return nil, err
 	}
 
-	return util.GetBalance(client, account)
+	var result seele.GetBalanceResponse
+	err = client.Call(&result, "seele_getBalance", account)
+	return result, err
 }
 
 func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
@@ -94,32 +94,11 @@ func GetLogsAction(client *rpc.Client) (interface{}, error) {
 	return result, err
 }
 
-func CallAction(client *rpc.Client) (interface{}, error) {
-	pass, err := common.GetPassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get password: %s", err)
-	}
+func callAction(client *rpc.Client) (interface{}, error) {
+	result := make(map[string]interface{})
+	err := client.Call(&result, "seele_call", toValue, paloadValue, heightValue)
 
-	key, err := keystore.GetKey(fromValue, pass)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
-	}
-
-	contractAddr, err := common.HexToAddress(toValue)
-	if err != nil {
-		return nil, fmt.Errorf("invalid contract address: %s", err)
-	}
-
-	payload, err := hexutil.HexToBytes(paloadValue)
-	if err != nil {
-		return nil, fmt.Errorf("invalid payload, %s", err)
-	}
-
-	amount := big.NewInt(0)
-	fee := big.NewInt(1)
-	nonce := uint64(1)
-
-	return util.Call(client, key.PrivateKey, &contractAddr, amount, fee, nonce, payload)
+	return result, err
 }
 
 func AddTxAction(client *rpc.Client) (interface{}, error) {
@@ -129,9 +108,13 @@ func AddTxAction(client *rpc.Client) (interface{}, error) {
 	}
 
 	var result bool
-	err = client.Call(&result, "seele_addTx", tx)
+	if err = client.Call(&result, "seele_addTx", tx); err != nil || !result {
+		fmt.Println("failed to send transaction")
+		return nil, err
+	}
 
-	return result, err
+	fmt.Println("transaction sent successfully")
+	return tx, nil
 }
 
 func MakeAddress(value string) (common.Address, error) {

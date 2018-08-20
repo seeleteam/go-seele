@@ -13,7 +13,6 @@ import (
 	"runtime/pprof"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -25,21 +24,6 @@ type PrivateDebugAPI struct {
 // NewPrivateDebugAPI creates a new NewPrivateDebugAPI object for rpc service.
 func NewPrivateDebugAPI(s *SeeleService) *PrivateDebugAPI {
 	return &PrivateDebugAPI{s}
-}
-
-// GetBlockRlp retrieves the RLP encoded for of a single block, when height is -1 the chain head is returned
-func (api *PrivateDebugAPI) GetBlockRlp(height int64) (string, error) {
-	block, err := getBlock(api.s.chain, height)
-	if err != nil {
-		return "", err
-	}
-
-	blockRlp, err := common.Serialize(block)
-	if err != nil {
-		return "", err
-	}
-
-	return hexutil.BytesToHex(blockRlp), nil
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form, when height is -1 the chain head is returned

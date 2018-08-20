@@ -97,6 +97,10 @@ func (n *Node) startPRC(apis []rpc.API) error {
 
 // stopRPC terminates the IPC RPC endpoint.
 func (n *Node) stopRPC() {
+	// Stop WS and HTTP server
+	n.stopWS()
+	n.stopHTTP()
+
 	if n.rpcListener != nil {
 		n.rpcListener.Close()
 		n.rpcListener = nil
