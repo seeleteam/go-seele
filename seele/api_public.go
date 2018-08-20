@@ -187,19 +187,15 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 }
 
 // AddTx add a tx to miner
-func (api *PublicSeeleAPI) AddTx(tx *types.Transaction) (bool, error) {
-	if tx == nil {
-		return false, fmt.Errorf("invalid tx, nil pointer")
-	}
-
+func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	shard := tx.Data.From.Shard()
 	var err error
 	if shard != common.LocalShardNumber {
 		if err = tx.ValidateWithoutState(true, false); err == nil {
-			api.s.seeleProtocol.SendDifferentShardTx(tx, shard)
+			api.s.seeleProtocol.SendDifferentShardTx(&tx, shard)
 		}
 	} else {
-		err = api.s.txPool.AddTransaction(tx)
+		err = api.s.txPool.AddTransaction(&tx)
 	}
 
 	if err != nil {

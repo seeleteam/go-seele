@@ -66,7 +66,7 @@ func GetTransactionByHash(client *rpc.Client, hash string) (map[string]interface
 
 func SendTx(client *rpc.Client, tx *types.Transaction) (bool, error) {
 	var result bool
-	err := client.Call(&result, "seele_addTx", tx)
+	err := client.Call(&result, "seele_addTx", *tx)
 
 	return result, err
 }

@@ -108,7 +108,7 @@ func AddTxAction(client *rpc.Client) (interface{}, error) {
 	}
 
 	var result bool
-	if err = client.Call(&result, "seele_addTx", tx); err != nil || !result {
+	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
 		fmt.Println("failed to send transaction")
 		return nil, err
 	}
