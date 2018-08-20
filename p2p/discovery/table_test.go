@@ -93,3 +93,66 @@ func Test_findNodeWithTarget(t *testing.T) {
 	nodes2 = table.findNodeWithTarget(noExistNode2.getSha())
 	assert.Equal(t, len(nodes2), 0)
 }
+
+func Test_deleteNode(t *testing.T) {
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	node1, err := NewNodeFromString(id1)
+	assert.Equal(t, err, nil)
+
+	add2 := common.HexMustToAddres("0xe58010916a17a5d333814f8bae82db6cb6b7ab81")
+	id2 := fmt.Sprintf("snode://%v%v", hex.EncodeToString(add2.Bytes()), "@127.0.0.1:9888[2]")
+	node2, err := NewNodeFromString(id2)
+	assert.Equal(t, err, nil)
+
+	table := newTestTable()
+	table.addNode(node1)
+	table.addNode(node2)
+
+	nodes := table.findNodeWithTarget(node1.getSha())
+	assert.Equal(t, len(nodes), 1)
+	table.deleteNode(node1)
+	nodes = table.findNodeWithTarget(node1.getSha())
+	assert.Equal(t, len(nodes), 0)
+	assert.Equal(t, len(table.shardBuckets[2].peers), 1)
+
+	noExistKey := common.HexMustToAddres("0x2a87b6504cd00af95a83b9887112016a2a991cf1")
+	noExistId := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey.Bytes()), "@127.0.0.1:9888[1]")
+	noExistNode, err := NewNodeFromString(noExistId)
+	table.deleteNode(noExistNode)
+	assert.Equal(t, len(nodes), 0)
+	assert.Equal(t, len(table.shardBuckets[2].peers), 1)
+
+	table.deleteNode(node2)
+	assert.Equal(t, len(nodes), 0)
+	assert.Equal(t, len(table.shardBuckets[2].peers), 0)
+}
+
+func Test_GetRandNodes(t *testing.T) {
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	node1, err := NewNodeFromString(id1)
+	assert.Equal(t, err, nil)
+
+	add2 := common.HexMustToAddres("0xe58010916a17a5d333814f8bae82db6cb6b7ab81")
+	id2 := fmt.Sprintf("snode://%v%v", hex.EncodeToString(add2.Bytes()), "@127.0.0.1:9888[2]")
+	node2, err := NewNodeFromString(id2)
+	assert.Equal(t, err, nil)
+
+	table := newTestTable()
+	table.addNode(node1)
+	table.addNode(node2)
+
+	nodes := table.GetRandNodes(0)
+	assert.Equal(t, len(nodes), 0)
+	nodes = table.GetRandNodes(1)
+	assert.Equal(t, len(nodes), 1)
+	nodes = table.GetRandNodes(2)
+	assert.Equal(t, len(nodes), 1)
+
+	add11 := common.HexMustToAddres("0x4fb7c8b0287378f0cf8b5a9262bf3ef7e101f8d1")
+	id11 := fmt.Sprintf("snode://%v%v", hex.EncodeToString(add11.Bytes()), "@127.0.0.1:9888[1]")
+	node11, err := NewNodeFromString(id11)
+	assert.Equal(t, err, nil)
+	table.addNode(node11)
+	nodes = table.GetRandNodes(2)
+	assert.Equal(t, len(nodes), 2)
+}
