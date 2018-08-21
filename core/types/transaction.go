@@ -296,7 +296,7 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 
 	for _, tx := range txs {
 		buff := common.SerializePanic(tx)
-		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
+		emptyTrie.Put(tx.CalculateHash().Bytes(), buff)
 	}
 
 	return emptyTrie.Hash()
