@@ -27,10 +27,10 @@ import (
 )
 
 const (
-	// Maximun number of peers that can be connected
+	// Maximum number of peers that can be connected
 	defaultMaxPeers = 500
 
-	// Maximum number of concurrently handshaking inbound connections.
+	// Maximum number of inbound connections for concurrent handshaking.
 	maxAcceptConns = 50
 
 	defaultDialTimeout = 15 * time.Second
@@ -48,7 +48,7 @@ const (
 	extraDataLen = 24
 )
 
-//P2PConfig is the Configuration of p2p
+// Config is the Configuration of p2p
 type Config struct {
 	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
 	ListenAddr string `json:"address"`
@@ -56,7 +56,7 @@ type Config struct {
 	// NetworkID used to define net type, for example main net and test net.
 	NetworkID uint64 `json:"networkID"`
 
-	// static nodes which will be connected to find more nodes when the node starts
+	// static nodes which will be connected to find more nodes when the node started
 	StaticNodes []*discovery.Node `json:"staticNodes"`
 
 	// SubPrivateKey which will be make PrivateKey
@@ -121,24 +121,23 @@ func (srv *Server) PeerCount() int {
 	return srv.peerSet.count()
 }
 
-// Start starts running the server.
+// Start starts the server.
 func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
+
 	if srv.running {
 		return errors.New("server already running")
 	}
 
-	srv.running = true
-	srv.log.Debug("Starting P2P networking...")
-	// self node
 	address := crypto.GetAddress(&srv.PrivateKey.PublicKey)
 	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-
-	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 	if err != nil {
 		return err
 	}
+
+	srv.log.Debug("Starting P2P networking...")
+	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
