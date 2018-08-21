@@ -277,6 +277,11 @@ func (tx *Transaction) ValidateState(statedb stateDB) error {
 	return nil
 }
 
+// CalculateHash calculates and returns the transaction hash.
+func (tx *Transaction) CalculateHash() common.Hash {
+	return crypto.MustHash(tx.Data)
+}
+
 // MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
 // If the given transactions are empty, return empty hash.
 func MerkleRootHash(txs []*Transaction) common.Hash {
