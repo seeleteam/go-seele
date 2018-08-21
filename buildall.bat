@@ -6,12 +6,10 @@ goto comment
 
 set para=%*
 if not defined para (
-    set act=all
-)else (
-    set act=%*
+    set para=all
 )
 
-for %%i in (%act%) do (
+for %%i in (%para%) do (
     call :%%i
 )  
 pause
