@@ -12,7 +12,7 @@ import (
 	"github.com/magiconair/properties/assert"
 )
 
-func Test_cap(t *testing.T) {
+func Test_Protocol_Cap(t *testing.T) {
 	protocol := newProtocol()
 	cap := protocol.cap()
 
@@ -20,7 +20,7 @@ func Test_cap(t *testing.T) {
 	assert.Equal(t, cap.Version, protocol.Version)
 }
 
-func Test_String(t *testing.T) {
+func Test_Protocol_String(t *testing.T) {
 	protocol := newProtocol()
 	cap := protocol.cap()
 	str := cap.String()
