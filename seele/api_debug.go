@@ -100,12 +100,6 @@ func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 	}, nil
 }
 
-// DumpHeapRequest represents the heamp dump request.
-type DumpHeapRequest struct {
-	Filename     string
-	GCBeforeDump bool
-}
-
 // DumpHeap dumps the heap usage.
 func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (string, error) {
 	if len(fileName) == 0 {
