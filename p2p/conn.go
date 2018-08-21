@@ -84,16 +84,16 @@ func (c *connection) close() {
 }
 
 // ReadMsg read msg with a full Message block
-func (c *connection) ReadMsg() (msgRecv Message, err error) {
+func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	c.rmutux.Lock()
 	defer c.rmutux.Unlock()
 
 	headbuff := make([]byte, headBuffLength)
 	if err = c.readFull(headbuff); err != nil {
-		return Message{}, err
+		return &Message{}, err
 	}
 
-	msgRecv = Message{
+	msgRecv = &Message{
 		Code: binary.BigEndian.Uint16(headbuff[headBuffCodeStart:headBuffCodeEnd]),
 	}
 
@@ -101,11 +101,11 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 	if size > 0 {
 		msgRecv.Payload = make([]byte, size)
 		if err = c.readFull(msgRecv.Payload); err != nil {
-			return Message{}, err
+			return &Message{}, err
 		}
 
 		if err = msgRecv.UnZip(); err != nil {
-			return Message{}, err
+			return &Message{}, err
 		}
 	}
 	metricsReceiveMessageCountMeter.Mark(1)
@@ -114,7 +114,7 @@ func (c *connection) ReadMsg() (msgRecv Message, err error) {
 }
 
 // WriteMsg message can be any data type
-func (c *connection) WriteMsg(msg Message) error {
+func (c *connection) WriteMsg(msg *Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
 
