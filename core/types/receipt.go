@@ -8,7 +8,7 @@ package types
 import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/merkle"
+	"github.com/seeleteam/go-seele/trie"
 )
 
 var emptyReceiptRootHash = crypto.MustHash("empty receipt root hash")
@@ -24,26 +24,6 @@ type Receipt struct {
 	ContractAddress []byte      // Used when the tx (nil To address) is to create a contract.
 }
 
-// CalculateHash calculates and returns the receipt hash.
-// This is to implement the merkle.Content interface.
-func (receipt *Receipt) CalculateHash() common.Hash {
-	return crypto.MustHash(receipt)
-}
-
-// Equals indicates if the receipt is equal to the specified content.
-// This is to implement the merkle.Content interface.
-func (receipt *Receipt) Equals(other merkle.Content) bool {
-	otherReceipt, ok := other.(*Receipt)
-	if !ok {
-		return false
-	}
-
-	hash := receipt.CalculateHash()
-	otherHash := otherReceipt.CalculateHash()
-
-	return hash.Equal(otherHash)
-}
-
 // ReceiptMerkleRootHash calculates and returns the merkle root hash of the specified receipts.
 // If the given receipts are empty, return empty hash.
 func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
@@ -51,14 +31,17 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 		return emptyReceiptRootHash
 	}
 
-	contents := make([]merkle.Content, len(receipts))
-	for i, receipt := range receipts {
-		contents[i] = receipt
+	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
+	if err != nil {
+		panic(err)
 	}
 
-	bmt, _ := merkle.NewTree(contents)
+	for _, r := range receipts {
+		buff := common.SerializePanic(r)
+		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
+	}
 
-	return bmt.MerkleRoot()
+	return emptyTrie.Hash()
 }
 
 // MakeRewardReceipt generates the receipt for the specified reward transaction

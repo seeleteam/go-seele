@@ -15,7 +15,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/merkle"
+	"github.com/seeleteam/go-seele/trie"
 )
 
 const (
@@ -277,19 +277,6 @@ func (tx *Transaction) ValidateState(statedb stateDB) error {
 	return nil
 }
 
-// CalculateHash calculates and returns the transaction hash.
-// This is to implement the merkle.Content interface.
-func (tx *Transaction) CalculateHash() common.Hash {
-	return crypto.MustHash(tx.Data)
-}
-
-// Equals indicates if the transaction is equal to the specified content.
-// This is to implement the merkle.Content interface.
-func (tx *Transaction) Equals(other merkle.Content) bool {
-	otherTx, ok := other.(*Transaction)
-	return ok && tx.Hash.Equal(otherTx.Hash)
-}
-
 // MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
 // If the given transactions are empty, return empty hash.
 func MerkleRootHash(txs []*Transaction) common.Hash {
@@ -297,14 +284,17 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 		return emptyTxRootHash
 	}
 
-	contents := make([]merkle.Content, len(txs))
-	for i, tx := range txs {
-		contents[i] = tx
+	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
+	if err != nil {
+		panic(err)
 	}
 
-	bmt, _ := merkle.NewTree(contents)
+	for _, tx := range txs {
+		buff := common.SerializePanic(tx)
+		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
+	}
 
-	return bmt.MerkleRoot()
+	return emptyTrie.Hash()
 }
 
 // BatchValidateTxs validates the state independent fields of specified txs in multiple threads.
