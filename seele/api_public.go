@@ -47,54 +47,11 @@ type GetBalanceResponse struct {
 	Balance *big.Int
 }
 
-// GetBlockByHeightRequest request param for GetBlockByHeight api
-type GetBlockByHeightRequest struct {
-	Height int64
-	FullTx bool
-}
-
-// GetBlocksRequest request param for GetBlocks api
-type GetBlocksRequest struct {
-	GetBlockByHeightRequest
-	Size uint
-}
-
-// GetBlockByHashRequest request param for GetBlockByHash api
-type GetBlockByHashRequest struct {
-	HashHex string
-	FullTx  bool
-}
-
-// GetLogsRequest request param for GetLogs api
-type GetLogsRequest struct {
-	Height          int64
-	ContractAddress string
-	Topics          string
-}
-
 // GetLogsResponse response param for GetLogs api
 type GetLogsResponse struct {
 	Txhash   common.Hash
 	LogIndex uint
 	Log      *types.Log
-}
-
-// GetTxByBlockHeightAndIndexRequest request param for GetTransactionByBlockHeightAndIndex api
-type GetTxByBlockHeightAndIndexRequest struct {
-	Height int64
-	Index  uint
-}
-
-// GetTxByBlockHashAndIndexRequest request param for GetTransactionByBlockHashAndIndex api
-type GetTxByBlockHashAndIndexRequest struct {
-	HashHex string
-	Index   uint
-}
-
-// CallRequest request param for Call api
-type CallRequest struct {
-	Tx     *types.Transaction
-	Height int64
 }
 
 // Call is to execute a given transaction on a statedb of a given block height.
