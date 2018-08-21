@@ -482,19 +482,19 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 
 // packWrapHSMsg compose the wrapped send msg.
 // A 32 byte ExtraData is used for verification process.
-func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64) (Message, error) {
+func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte, nounceCnt uint64) (*Message, error) {
 	// Serialize should handle big-endian
 	hdmsgRLP, err := common.Serialize(handshakeMsg)
 
 	if err != nil {
-		return Message{}, err
+		return &Message{}, err
 	}
 	wrapMsg := Message{
 		Code: ctlMsgProtoHandshake,
 	}
 	md5Inst := md5.New()
 	if _, err := md5Inst.Write(hdmsgRLP); err != nil {
-		return Message{}, err
+		return &Message{}, err
 	}
 	extBuf := make([]byte, extraDataLen)
 
@@ -515,11 +515,11 @@ func (srv *Server) packWrapHSMsg(handshakeMsg *ProtoHandShake, peerNodeID []byte
 	copy(wrapMsg.Payload, hdmsgRLP)
 	copy(wrapMsg.Payload[len(hdmsgRLP):], enc)
 	binary.BigEndian.PutUint32(wrapMsg.Payload[len(hdmsgRLP)+len(enc):], uint32(len(enc)))
-	return wrapMsg, nil
+	return &wrapMsg, nil
 }
 
 // unPackWrapHSMsg verify received msg, and recover the handshake msg
-func (srv *Server) unPackWrapHSMsg(recvWrapMsg Message) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
+func (srv *Server) unPackWrapHSMsg(recvWrapMsg *Message) (recvMsg *ProtoHandShake, nounceCnt uint64, err error) {
 	size := uint32(len(recvWrapMsg.Payload))
 	if size < extraDataLen+4 {
 		err = errors.New("received msg with invalid length")

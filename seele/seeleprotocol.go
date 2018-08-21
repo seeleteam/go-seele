@@ -601,7 +601,7 @@ handler:
 
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
 			p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
-			p.downloader.DeliverMsg(peer.peerStrID, &msg)
+			p.downloader.DeliverMsg(peer.peerStrID, msg)
 
 		case statusChainHeadMsgCode:
 			var status chainHeadStatus

@@ -175,7 +175,7 @@ func (p *Peer) notifyProtocolsDeletePeer() {
 	}
 }
 
-func (p *Peer) handle(msgRecv Message) error {
+func (p *Peer) handle(msgRecv *Message) error {
 	// control msg
 	if msgRecv.Code < baseProtoCode {
 		switch {
@@ -205,7 +205,7 @@ func (p *Peer) handle(msgRecv Message) error {
 		return fmt.Errorf(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
 	}
 
-	protocolTarget.in <- msgRecv
+	protocolTarget.in <- *msgRecv
 
 	return nil
 }
@@ -215,7 +215,7 @@ func (p *Peer) sendCtlMsg(msgCode uint16) error {
 		Code: msgCode,
 	}
 
-	p.rw.WriteMsg(hsMsg)
+	p.rw.WriteMsg(&hsMsg)
 
 	return nil
 }
@@ -239,7 +239,7 @@ type protocolRW struct {
 	close  chan struct{}
 }
 
-func (rw *protocolRW) WriteMsg(msg Message) (err error) {
+func (rw *protocolRW) WriteMsg(msg *Message) (err error) {
 	if msg.Code >= rw.Length {
 		return errors.New("invalid msg code")
 	}
@@ -249,14 +249,14 @@ func (rw *protocolRW) WriteMsg(msg Message) (err error) {
 	return rw.rw.WriteMsg(msg)
 }
 
-func (rw *protocolRW) ReadMsg() (Message, error) {
+func (rw *protocolRW) ReadMsg() (*Message, error) {
 	select {
 	case msg := <-rw.in:
 		msg.Code -= rw.offset
 
-		return msg, nil
+		return &msg, nil
 	case <-rw.close:
-		return Message{}, errors.New("peer connection closed")
+		return &Message{}, errors.New("peer connection closed")
 	}
 }
 
