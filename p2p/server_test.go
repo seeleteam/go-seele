@@ -112,7 +112,7 @@ func Test_peerIsValidate(t *testing.T) {
 	server := NewServer(genesis, *config, testProtocol())
 	assert.Equal(t, server.PeerCount(), 0)
 
-	var message = Message{}
+	var message = &Message{}
 	recvMsg, renounceCnt, err := server.unPackWrapHSMsg(message)
 	assert.Equal(t, strings.Contains(err.Error(), "received msg with invalid length"), true)
 	assert.Equal(t, renounceCnt, uint64(0))
