@@ -139,6 +139,9 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[s
 		}
 		output := PrintableOutputTx(block.Transactions[txIndex.Index])
 		output["status"] = "block"
+		output["blockHash"] = block.HeaderHash.ToHex()
+		output["blockHeight"] = block.Header.Height
+		output["txIndex"] = txIndex.Index
 
 		return output, nil
 	}
