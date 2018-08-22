@@ -37,7 +37,10 @@ func newTestTx(t *testing.T, amount, fee, nonce uint64, sign bool) *Transaction 
 	fromPrivKey, fromAddress := randomAccount(t)
 	toAddress := randomAddress(t)
 
-	tx, _ := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	tx, err := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if sign {
 		tx.Sign(fromPrivKey)
