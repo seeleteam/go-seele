@@ -30,13 +30,14 @@ type Message struct {
 	ReceivedAt time.Time
 }
 
-func SendMessage(write MsgWriter, code uint16, payload []byte) error {
+// SendMessage send message to peer
+func SendMessage(writer MsgWriter, code uint16, payload []byte) error {
 	msg := Message{
 		Code:    code,
 		Payload: payload,
 	}
 
-	return write.WriteMsg(&msg)
+	return writer.WriteMsg(&msg)
 }
 
 // Zip compress message when the length of payload is greater than zipBytesLimit
