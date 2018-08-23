@@ -63,7 +63,7 @@ func NewDebt(tx *Transaction) *Debt {
 		TxHash:  tx.Hash,
 		Shard:   shard,
 		Account: tx.Data.To,
-		amount:  big.NewInt(0).Set(tx.Data.Amount),
+		Amount:  big.NewInt(0).Set(tx.Data.Amount),
 	}
 
 	debt := &Debt{

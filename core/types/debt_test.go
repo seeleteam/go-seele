@@ -18,7 +18,7 @@ func Test_NewDebt(t *testing.T) {
 	tx1 := newTestTx(t, 1, 1, 1, true)
 
 	d1 := NewDebt(tx1)
-	assert.Equal(t, d1.Data.amount, big.NewInt(1))
+	assert.Equal(t, d1.Data.Amount, big.NewInt(1))
 	assert.Equal(t, d1.Data.Account, tx1.Data.To)
 	assert.Equal(t, d1.Data.Shard, tx1.Data.To.Shard())
 	assert.Equal(t, d1.Data.TxHash, tx1.Hash)
