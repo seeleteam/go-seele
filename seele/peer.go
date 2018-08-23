@@ -130,7 +130,7 @@ func (p *peer) sendDebts(debts []*types.Debt) error {
 	}
 
 	buff := common.SerializePanic(debts)
-	p.log.Debug("peer send [debtMsgCode] with size %d byte", len(buff))
+	p.log.Debug("peer send [debtMsgCode] with size %d bytes", len(buff))
 	err := p2p.SendMessage(p.rw, debtMsgCode, buff)
 	if err == nil {
 		for _, d := range debts {

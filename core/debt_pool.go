@@ -36,7 +36,7 @@ func (dp *DebtPool) Add(debts []*types.Debt) {
 
 func (dp *DebtPool) Remove(hash common.Hash) {
 	dp.mutex.Lock()
-	dp.mutex.Unlock()
+	defer dp.mutex.Unlock()
 
 	delete(dp.hashMap, hash)
 }

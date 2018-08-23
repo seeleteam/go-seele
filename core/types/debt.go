@@ -76,9 +76,6 @@ func NewDebt(tx *Transaction) *Debt {
 
 func NewDebtMap(txs []*Transaction) [][]*Debt {
 	debts := make([][]*Debt, common.ShardCount+1)
-	for i := 0; i < common.ShardCount+1; i++ {
-		debts[i] = make([]*Debt, 0)
-	}
 
 	for _, tx := range txs {
 		d := NewDebt(tx)
