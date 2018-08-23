@@ -111,7 +111,8 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 		receipt.Result = []byte(err.Error())
 	}
 
-	receipt.UsedGas = totalFee.Uint64()
+	receipt.UsedGas = gas - leftOverGas
+	receipt.TotalFee = totalFee.Uint64()
 
 	if receipt.PostState, err = statedb.Hash(); err != nil {
 		return nil, err
