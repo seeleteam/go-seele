@@ -371,6 +371,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 		"txhash":    re.TxHash.ToHex(),
 		"contract":  "0x",
 		"failed":    re.Failed,
+		"usedFan":   re.UsedGas,
 	}
 
 	if len(re.ContractAddress) > 0 {
