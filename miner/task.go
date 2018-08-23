@@ -22,6 +22,7 @@ type Task struct {
 	header   *types.BlockHeader
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+	debts    []*types.Debt
 
 	createdAt time.Time
 	coinbase  common.Address
@@ -58,7 +59,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 		return nil, err
 	}
 
-	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
+	rewardTxReceipt, rewardDebt, err := core.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +68,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 
 	// add the receipt of the reward tx
 	task.receipts = append(task.receipts, rewardTxReceipt)
+	task.debts = append(task.debts, rewardDebt)
 
 	return reward, nil
 }
@@ -99,6 +101,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 			task.txs = append(task.txs, tx)
 			task.receipts = append(task.receipts, receipt)
+			task.debts = append(task.debts, types.NewDebt(tx))
 			txIndex++
 		}
 
@@ -108,7 +111,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 // generateBlock builds a block from task
 func (task *Task) generateBlock() *types.Block {
-	return types.NewBlock(task.header, task.txs, task.receipts)
+	return types.NewBlock(task.header, task.txs, task.receipts, task.debts)
 }
 
 // Result is the result mined by engine. It contains the raw task and mined block.

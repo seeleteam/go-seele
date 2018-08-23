@@ -115,6 +115,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 
 	stateRootHash := common.EmptyHash
 	receiptsRootHash := common.EmptyHash
+	debtsRootHash := common.EmptyHash
 	parentBlock, err := bc.bcStore.GetBlock(parentHash)
 	if err == nil {
 		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
@@ -123,7 +124,8 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 		}
 
 		var receipts []*types.Receipt
-		if receipts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
+		var debts []*types.Debt
+		if receipts, debts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
 			panic(err)
 		}
 
@@ -132,10 +134,12 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 		}
 
 		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
+		debtsRootHash = types.DebtMerkleRootHash(debts)
 	}
 
 	header.StateHash = stateRootHash
 	header.ReceiptHash = receiptsRootHash
+	header.DebtHash = debtsRootHash
 
 	return &types.Block{
 		HeaderHash:   header.Hash(),
