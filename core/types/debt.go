@@ -15,14 +15,13 @@ import (
 
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction
-	Shard   uint           //target shard
-	Account common.Address //debt for account
-	amount  *big.Int       //debt amount
+	Shard   uint           // target shard
+	Account common.Address // debt for account
+	Amount  *big.Int       // debt amount
 }
 
 type Debt struct {
-	Hash common.Hash
-
+	Hash common.Hash	// Debt hash of DebtData
 	Data DebtData
 }
 
@@ -33,7 +32,7 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 		return common.EmptyHash
 	}
 
-	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
+	debtTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -44,14 +43,14 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 		}
 
 		buff := common.SerializePanic(d)
-		emptyTrie.Put(d.Hash.Bytes(), buff)
+		debtTrie.Put(d.Hash.Bytes(), buff)
 	}
 
-	return emptyTrie.Hash()
+	return debtTrie.Hash()
 }
 
 func NewDebt(tx *Transaction) *Debt {
-	if tx == nil || tx.Data.To == common.EmptyAddress {
+	if tx == nil || tx.Data.To.IsEmpty() {
 		return nil
 	}
 

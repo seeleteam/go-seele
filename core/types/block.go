@@ -19,7 +19,7 @@ type BlockHeader struct {
 	StateHash         common.Hash    // StateHash is the root hash of the state trie
 	TxHash            common.Hash    // TxHash is the root hash of the transaction merkle tree
 	ReceiptHash       common.Hash    // ReceiptHash is the root hash of the receipt merkle tree
-	DebtHash          common.Hash    //DebtHash is the root hash of the debt merkle tree
+	DebtHash          common.Hash    // DebtHash is the root hash of the debt merkle tree
 	Difficulty        *big.Int       // Difficulty is the difficulty of the block
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
