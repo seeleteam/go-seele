@@ -25,7 +25,8 @@ var (
 	errConnWriteTimeout = errors.New("Connection writes timeout")
 )
 
-// connection TODO add bandwidth meter for connection
+// connection
+// TODO add bandwidth metrics
 type connection struct {
 	fd net.Conn // tcp connection
 
@@ -33,10 +34,19 @@ type connection struct {
 	wmutux sync.Mutex // write msg lock
 }
 
-// readFull receive from fd till outBuf is full
+// readFull receive from fd till outBuf is full or timeout
 func (c *connection) readFull(outBuf []byte) (err error) {
+	return c.readFullo(outBuf, frameReadTimeout)
+}
+
+func (c *connection) readFullo(outBuf []byte, timeout time.Duration) (err error) {
 	needLen, curPos := len(outBuf), 0
-	c.fd.SetReadDeadline(time.Now().Add(frameReadTimeout))
+
+	err = c.fd.SetReadDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return err
+	}
+
 	for needLen > 0 && err == nil {
 		var nRead int
 		nRead, err = c.fd.Read(outBuf[curPos:])
@@ -44,20 +54,23 @@ func (c *connection) readFull(outBuf []byte) (err error) {
 		curPos += nRead
 	}
 
-	if err != nil {
-		// discard the input data
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // writeFull write to fd till all outBuf is sended,
 // if no data is writed (with deadline of connWriteTimeout), returns errConnWriteTimeout.
 func (c *connection) writeFull(outBuf []byte) (err error) {
+	return c.writeFullo(outBuf, connWriteTimeout)
+}
+
+func (c *connection) writeFullo(outBuf []byte, timeout time.Duration) (err error) {
 	needLen, curPos := len(outBuf), 0
 	for needLen > 0 {
-		c.fd.SetWriteDeadline(time.Now().Add(connWriteTimeout))
+		err := c.fd.SetWriteDeadline(time.Now().Add(timeout))
+		if err != nil {
+			return err
+		}
+
 		var curSend int
 		curSend, err = c.fd.Write(outBuf[curPos:])
 		if err != nil {
