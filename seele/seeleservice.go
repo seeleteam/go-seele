@@ -29,6 +29,7 @@ type SeeleService struct {
 	log           *log.SeeleLog
 
 	txPool         *core.TransactionPool
+	debtPool       *core.DebtPool
 	chain          *core.Blockchain
 	chainDB        database.Database // database used to store blocks.
 	accountStateDB database.Database // database used to store account state info.
@@ -41,6 +42,7 @@ type ServiceContext struct {
 }
 
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
+func (s *SeeleService) DebtPool() *core.DebtPool      { return s.debtPool }
 func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
 func (s *SeeleService) NetVersion() uint64            { return s.networkID }
 func (s *SeeleService) Miner() *miner.Miner           { return s.miner }
@@ -105,6 +107,8 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		log.Error("failed to create transaction pool in NewSeeleService, %s", err)
 		return nil, err
 	}
+
+	s.debtPool = core.NewDebtPool()
 
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {

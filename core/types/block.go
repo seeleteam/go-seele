@@ -54,6 +54,7 @@ type Block struct {
 	HeaderHash   common.Hash    // HeaderHash is the hash of the RLP encoded header bytes
 	Header       *BlockHeader   // Header is the block header, a block header is about 165byte
 	Transactions []*Transaction // Transactions is the block payload
+	Debts        []*Debt        // Debts for cross shard transaction
 }
 
 // NewBlock creates a new block. The input header is copied so that
@@ -71,6 +72,11 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt, debt
 	if len(txs) > 0 {
 		block.Transactions = make([]*Transaction, len(txs))
 		copy(block.Transactions, txs)
+	}
+
+	if len(debts) > 0 {
+		block.Debts = make([]*Debt, len(debts))
+		copy(block.Debts, debts)
 	}
 
 	block.Header.ReceiptHash = ReceiptMerkleRootHash(receipts)
