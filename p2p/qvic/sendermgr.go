@@ -190,7 +190,6 @@ func (sm *SenderMgr) doDel() {
 func (sm *SenderMgr) trySendPacket(p *VPacket, curTick uint32) bool {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
-	sm.log.Debug("sm trySendPacket sm.curSeq=%u sm.peerWinStartSeq=%u winsize=%u xxx=%u", sm.curSeq, sm.peerWinStartSeq, sm.winSize, sm.peerWinStartSeq+sm.winSize-256)
 	if sm.qconn.isEqAndBig_32(sm.curSeq, sm.peerWinStartSeq+sm.winSize-256) {
 		return false
 	}

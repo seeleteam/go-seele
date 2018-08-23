@@ -228,7 +228,6 @@ func (rv *ReceiverMgr) onRecvVPacket(pack *VPacket, curTick uint32, packType int
 		rv.least_peer_lastSeqSendTick = pack.lastSeqSendTick
 		rv.least_local_RecvedTick = curTick
 		if item.p != nil {
-			rv.log.Debug("qvic onRecvVPacket. seq:%u already exists", pack.seq)
 			return
 		}
 		item.p = pack

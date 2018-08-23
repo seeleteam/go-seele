@@ -18,10 +18,12 @@ import (
 )
 
 const (
-	StatusNone               = 0
-	StatusConnecting         = 1
-	StatusConnected          = 2
-	StatusClosing            = 3
+	StatusNone       = 0
+	StatusConnecting = 1
+	StatusConnected  = 2
+	StatusClosing    = 3
+	StatusClosed     = 4
+
 	msgHandshake        byte = 1
 	msgHandshakeAck     byte = 2
 	msgHandshakeErr     byte = 3
@@ -34,7 +36,8 @@ const (
 	DefaultJitter    = 40
 	VPacketDataLen   = 1380
 
-	DefaultWinSize = 4096 // default window size for QConn.
+	DefaultWinSize          = 4096 // default window size for QConn.
+	DefaultRecvPacketLength = 2048
 )
 
 // QConn represents a qvic connection, implements net.Conn interface.
@@ -105,7 +108,7 @@ func (qc *QConn) recvLoop(notifyCh chan struct{}) {
 
 needQuit:
 	for {
-		data := make([]byte, 2048)
+		data := make([]byte, DefaultRecvPacketLength)
 		n, remoteAddr, err := qc.udpFD.ReadFromUDP(data)
 		if err != nil {
 			select {
@@ -150,6 +153,7 @@ func (qc *QConn) handleMsg(from *net.UDPAddr, data []byte) {
 			qc.receiverMgr = NewReceiverMgr(qc)
 			atomic.StoreInt32(&qc.status, StatusConnected)
 			qc.log.Debug("qconn recved msgHandshakeAck myfd=%d", qc.myFD)
+
 		case msgHandshakeErr, msgQConnClose:
 			if atomic.CompareAndSwapInt32(&qc.status, StatusConnected, StatusClosing) {
 				select {
@@ -323,7 +327,7 @@ func (qc *QConn) Read(b []byte) (readLen int, err error) {
 	var deadLineTicker *time.Timer
 	if needWait.Nanoseconds() > 0 {
 		deadLineTicker = time.NewTimer(needWait)
-		qc.log.Debug("qconn read waittime=needWait %u", needWait.Seconds())
+		qc.log.Debug("qconn read waittime=needWait %us", needWait.Seconds())
 	} else {
 		// set a long enough time, if no readDeadLine is set
 		deadLineTicker = time.NewTimer(24 * time.Hour)
@@ -441,6 +445,7 @@ func (qc *QConn) Close() error {
 	defer qc.mgr.lock.Unlock()
 	delete(qc.mgr.magicMap, qc.magic)
 	qc.mgr.slots[qc.myFD] = nil
+	atomic.StoreInt32(&qc.status, StatusClosed)
 	qc.log.Info("qconn closed. myfd=%d", qc.myFD)
 	return nil
 }
