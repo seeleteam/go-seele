@@ -22,6 +22,7 @@ type Receipt struct {
 	Logs            []*Log      // the log objects
 	TxHash          common.Hash // the hash of the executed transaction
 	ContractAddress []byte      // Used when the tx (nil To address) is to create a contract.
+	TotalFee        uint64      // the full cost of the transaction
 }
 
 // ReceiptMerkleRootHash calculates and returns the merkle root hash of the specified receipts.
