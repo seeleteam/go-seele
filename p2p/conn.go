@@ -34,7 +34,8 @@ type connection struct {
 	wmutux sync.Mutex // write msg lock
 }
 
-// readFull receive from fd till outBuf is full or timeout
+// readFull receive from fd till outBuf is full,
+// if no data is read (with deadline of frameReadTimeout), returns timeout.
 func (c *connection) readFull(outBuf []byte) (err error) {
 	return c.readFullo(outBuf, frameReadTimeout)
 }
@@ -66,7 +67,7 @@ func (c *connection) writeFull(outBuf []byte) (err error) {
 func (c *connection) writeFullo(outBuf []byte, timeout time.Duration) (err error) {
 	needLen, curPos := len(outBuf), 0
 	for needLen > 0 {
-		err := c.fd.SetWriteDeadline(time.Now().Add(timeout))
+		err = c.fd.SetWriteDeadline(time.Now().Add(timeout))
 		if err != nil {
 			return err
 		}

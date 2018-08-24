@@ -62,7 +62,7 @@ func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
 	emptyBuff := make([]byte, 10)
 	assert.Equal(t, readBuff2[10:], emptyBuff[:])
 
-	// Case 3: write 20 bytes and read them with 10 bytes buff
+	// Case 4: write 20 bytes and read them with 10 bytes buff
 	writeBuff = []byte(getRandomString(20))
 	err = con.writeFull(writeBuff)
 	assert.Equal(t, err, nil)
