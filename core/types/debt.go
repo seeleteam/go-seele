@@ -21,7 +21,7 @@ type DebtData struct {
 }
 
 type Debt struct {
-	Hash common.Hash	// Debt hash of DebtData
+	Hash common.Hash // Debt hash of DebtData
 	Data DebtData
 }
 
@@ -72,4 +72,17 @@ func NewDebt(tx *Transaction) *Debt {
 	}
 
 	return debt
+}
+
+func NewDebtMap(txs []*Transaction) [][]*Debt {
+	debts := make([][]*Debt, common.ShardCount+1)
+
+	for _, tx := range txs {
+		d := NewDebt(tx)
+		if d != nil {
+			debts[d.Data.Shard] = append(debts[d.Data.Shard], d)
+		}
+	}
+
+	return debts
 }

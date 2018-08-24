@@ -34,7 +34,9 @@ var (
 	statusDataMsgCode      uint16 = 6
 	statusChainHeadMsgCode uint16 = 7
 
-	protocolMsgCodeLength uint16 = 13
+	debtMsgCode uint16 = 13
+
+	protocolMsgCodeLength uint16 = 14
 )
 
 func codeToStr(code uint16) string {
@@ -68,6 +70,7 @@ type SeeleProtocol struct {
 	networkID  uint64
 	downloader *downloader.Downloader
 	txPool     *core.TransactionPool
+	debtPool   *core.DebtPool
 	chain      *core.Blockchain
 
 	wg     sync.WaitGroup
@@ -89,6 +92,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		},
 		networkID:  seele.networkID,
 		txPool:     seele.TxPool(),
+		debtPool:   seele.debtPool,
 		chain:      seele.BlockChain(),
 		downloader: downloader.NewDownloader(seele.BlockChain()),
 		log:        log,
@@ -269,6 +273,18 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		if err != nil {
 			p.log.Warn("failed to send mined block hash %s", err.Error())
 		}
+		return true
+	})
+
+	debts := types.NewDebtMap(block.Transactions)
+	p.peerSet.ForEachAll(func(peer *peer) bool {
+		if len(debts[peer.Node.Shard]) > 0 {
+			err := peer.sendDebts(debts[peer.Node.Shard])
+			if err != nil {
+				p.log.Warn("failed to send debts to %s %s", peer.Node, err)
+			}
+		}
+
 		return true
 	})
 
@@ -487,6 +503,21 @@ handler:
 				// @todo need to make sure WriteBlock handle block fork
 				p.chain.WriteBlock(&block)
 			}
+
+		case debtMsgCode:
+			var debts []*types.Debt
+			err := common.Deserialize(msg.Payload, &debts)
+			if err != nil {
+				p.log.Warn("failed to deserialize debts msg %s", err)
+				continue
+			}
+
+			p.log.Debug("got %d debts message", len(debts))
+			for _, d := range debts {
+				peer.knownDebts.Add(d.Hash, nil)
+			}
+
+			p.debtPool.Add(debts)
 
 		case downloader.GetBlockHeadersMsg:
 			var query blockHeadersQuery

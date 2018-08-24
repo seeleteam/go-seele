@@ -26,6 +26,7 @@ const (
 
 	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
 	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
+	maxKnownDebts  = 32768 // Maximum debt hashes to keep in the known list
 )
 
 var (
@@ -53,6 +54,7 @@ type peer struct {
 
 	knownTxs    *lru.Cache // Set of transaction hashes known by this peer
 	knownBlocks *lru.Cache // Set of block hashes known by this peer
+	knownDebts  *lru.Cache // Set of debt hashes known by this peer
 
 	log *log.SeeleLog
 }
@@ -72,6 +74,11 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog)
 		panic(err)
 	}
 
+	knownDebtCache, err := lru.New(maxKnownDebts)
+	if err != nil {
+		panic(err)
+	}
+
 	return &peer{
 		Peer:        p,
 		version:     version,
@@ -80,6 +87,7 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog)
 		peerStrID:   idToStr(p.Node.ID),
 		knownTxs:    knownTxsCache,
 		knownBlocks: knownBlockCache,
+		knownDebts:  knownDebtCache,
 		rw:          rw,
 		log:         log,
 	}
@@ -108,6 +116,26 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	err := p2p.SendMessage(p.rw, transactionHashMsgCode, buff)
 	if err == nil {
 		p.knownTxs.Add(txHash, nil)
+	}
+
+	return err
+}
+
+func (p *peer) sendDebts(debts []*types.Debt) error {
+	filterDebts := make([]*types.Debt, 0)
+	for _, d := range debts {
+		if d != nil && !p.knownDebts.Contains(d.Hash) {
+			filterDebts = append(filterDebts, d)
+		}
+	}
+
+	buff := common.SerializePanic(debts)
+	p.log.Debug("peer send [debtMsgCode] with size %d bytes", len(buff))
+	err := p2p.SendMessage(p.rw, debtMsgCode, buff)
+	if err == nil {
+		for _, d := range debts {
+			p.knownDebts.Add(d.Hash, nil)
+		}
 	}
 
 	return err
