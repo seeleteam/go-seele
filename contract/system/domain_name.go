@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	gasCreateDomainName  = uint64(50000)
-	gasDomainNameCreator = uint64(100000)
+	gasCreateDomainName  = uint64(50000)  // gas used to create a domain name
+	gasDomainNameCreator = uint64(100000) // gas used to query the creator of given domain name
 
-	cmdCreateDomainName  = byte(0)
-	cmdDomainNameCreator = byte(1)
+	cmdCreateDomainName  = byte(0) // create a domain name
+	cmdDomainNameCreator = byte(1) // query the creator of specified domain name
 )
 
 var (
