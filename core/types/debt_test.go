@@ -45,3 +45,13 @@ func Test_MerkleRoot(t *testing.T) {
 		t.Fatal("got empty hash")
 	}
 }
+
+func Test_DebtSize(t *testing.T) {
+	tx := newTestTx(t, 1, 1, 1, true)
+
+	d := NewDebt(tx)
+
+	array := []*Debt{d, d}
+	buff := common.SerializePanic(array)
+	assert.Equal(t, len(buff)/2, DebtSize)
+}

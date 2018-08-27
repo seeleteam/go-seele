@@ -69,6 +69,10 @@ var (
 	// does not match the debts root hash in block header.
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
 
+	// ErrBlockTxDebtHashMismatch is returned when the calculated tx debts hash of block
+	// does not match the debts root hash in block header.
+	ErrBlockTxDebtHashMismatch = errors.New("block transaction debts hash mismatch")
+
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
 
@@ -261,8 +265,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	// Process the txs in the block and check the state root hash.
 	var blockStatedb *state.Statedb
 	var receipts []*types.Receipt
-	var debts []*types.Debt
-	if blockStatedb, receipts, debts, err = bc.applyTxs(block, preBlock); err != nil {
+	if blockStatedb, receipts, err = bc.applyTxs(block, preBlock); err != nil {
 		return err
 	}
 
@@ -271,7 +274,11 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		return ErrBlockReceiptHashMismatch
 	}
 
-	if debtsRootHash := types.DebtMerkleRootHash(debts); !debtsRootHash.Equal(block.Header.DebtHash) {
+	if txDebtsRootHash := types.DebtMerkleRootHash(types.NewDebts(block.Transactions)); !txDebtsRootHash.Equal(block.Header.TxDebtHash) {
+		return ErrBlockTxDebtHashMismatch
+	}
+
+	if debtsRootHash := types.DebtMerkleRootHash(block.Debts); !debtsRootHash.Equal(block.Header.DebtHash) {
 		return ErrBlockDebtHashMismatch
 	}
 
@@ -435,23 +442,23 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 
 // applyTxs processes the txs in the specified block and returns the new state DB of the block.
 // This method supposes the specified block is validated.
-func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, []*types.Receipt, []*types.Debt, error) {
+func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, []*types.Receipt, error) {
 	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	statedb, err := state.NewStatedb(preBlock.Header.StateHash, bc.accountStateDB)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	receipts, debts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
+	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return statedb, receipts, debts, nil
+	return statedb, receipts, nil
 }
 
 func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
@@ -488,58 +495,53 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 }
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction,
-	blockHeader *types.BlockHeader) ([]*types.Receipt, []*types.Debt, error) {
+	blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
-	rewardTxReceipt, rewardDebt, err := ApplyRewardTx(minerRewardTx, statedb)
+	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	receipts := make([]*types.Receipt, len(txs)+1)
-	debts := make([]*types.Debt, len(txs)+1)
 
 	// add the receipt of the reward tx
 	receipts[0] = rewardTxReceipt
-	debts[0] = rewardDebt
 
 	if err := types.BatchValidateTxs(txs); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// process other txs
 	for i, tx := range txs {
 		if err := tx.ValidateState(statedb); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		receipt, err := bc.ApplyTransaction(tx, i+1, minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		receipts[i+1] = receipt
-		debts[i+1] = types.NewDebt(tx)
 	}
 
-	return receipts, debts, nil
+	return receipts, nil
 }
 
 // ApplyRewardTx applies a reward transaction, changes corresponding statedb and generates a receipt.
-func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.Receipt, *types.Debt, error) {
+func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.Receipt, error) {
 	statedb.CreateAccount(rewardTx.Data.To)
 	statedb.AddBalance(rewardTx.Data.To, rewardTx.Data.Amount)
 
 	hash, err := statedb.Hash()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	receipt := types.MakeRewardReceipt(rewardTx)
 	receipt.PostState = hash
 
-	debt := types.NewDebt(rewardTx)
-
-	return receipt, debt, nil
+	return receipt, nil
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt

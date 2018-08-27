@@ -28,8 +28,8 @@ type Task struct {
 	coinbase  common.Address
 }
 
-// applyTransactions TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
+// applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
+func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
 	// the reward tx will always be at the first of the block's transactions
 	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
@@ -37,7 +37,8 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	}
 
 	// choose transactions from the given txs
-	task.chooseTransactions(seele, statedb, log)
+	size := task.chooseDebts(seele, statedb, log)
+	task.chooseTransactions(seele, statedb, log, size)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d", task.header.Height, reward, len(task.txs))
 
@@ -51,6 +52,32 @@ func (task *Task) applyTransactions(seele SeeleBackend, statedb *state.Statedb, 
 	return nil
 }
 
+func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) int {
+	size := core.BlockByteLimit
+
+	var debts []*types.Debt
+	for size > 0 {
+		debts, size = seele.DebtPool().Get(size)
+		if len(debts) == 0 {
+			return size
+		}
+
+		for _, d := range debts {
+			// @TODO validate debt
+
+			// @TODO add debt reward
+
+			if !statedb.Exist(d.Data.Account) {
+				statedb.CreateAccount(d.Data.Account)
+			}
+
+			statedb.AddBalance(d.Data.Account, d.Data.Amount)
+		}
+	}
+
+	return size
+}
+
 // handleMinerRewardTx handles the miner reward transaction.
 func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
 	reward := pow.GetReward(task.header.Height)
@@ -59,7 +86,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 		return nil, err
 	}
 
-	rewardTxReceipt, rewardDebt, err := core.ApplyRewardTx(rewardTx, statedb)
+	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +95,11 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 
 	// add the receipt of the reward tx
 	task.receipts = append(task.receipts, rewardTxReceipt)
-	task.debts = append(task.debts, rewardDebt)
 
 	return reward, nil
 }
 
-func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) {
-	size := core.BlockByteLimit
+func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int) {
 	txIndex := 1 // the first tx is miner reward
 
 	for size > 0 {
@@ -101,7 +126,6 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 			task.txs = append(task.txs, tx)
 			task.receipts = append(task.receipts, receipt)
-			task.debts = append(task.debts, types.NewDebt(tx))
 			txIndex++
 		}
 
