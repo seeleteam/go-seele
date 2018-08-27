@@ -93,7 +93,7 @@ func Test_Journal_State(t *testing.T) {
 
 	key := common.StringToHash("key")
 	value := common.StringToHash("value")
-	stateObj.cachedStorage[key] = value
+	stateObj.cachedStorage[key] = value.Bytes()
 
 	snapshot := statedb.Snapshot()
 	statedb.SetState(stateObj.address, key, common.StringToHash("value2"))

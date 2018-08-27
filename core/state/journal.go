@@ -65,7 +65,7 @@ type (
 	storageChange struct {
 		account *common.Address
 		key     common.Hash
-		prev    common.Hash
+		prev    []byte
 	}
 	balanceChange struct {
 		account *common.Address
