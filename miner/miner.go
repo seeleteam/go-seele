@@ -40,6 +40,7 @@ var (
 type SeeleBackend interface {
 	TxPool() *core.TransactionPool
 	BlockChain() *core.Blockchain
+	DebtPool() *core.DebtPool
 }
 
 // Miner defines base elements of miner
@@ -298,7 +299,7 @@ func (miner *Miner) prepareNewBlock() error {
 		coinbase:  miner.coinbase,
 	}
 
-	err = miner.current.applyTransactions(miner.seele, stateDB, miner.log)
+	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}

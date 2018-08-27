@@ -13,6 +13,9 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+// DebtSize debt serialized size
+const DebtSize = 94
+
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction
 	Shard   uint           // target shard
@@ -49,6 +52,10 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	return debtTrie.Hash()
 }
 
+func (d *Debt) Size() int {
+	return DebtSize
+}
+
 func NewDebt(tx *Transaction) *Debt {
 	if tx == nil || tx.Data.To.IsEmpty() {
 		return nil
@@ -72,6 +79,19 @@ func NewDebt(tx *Transaction) *Debt {
 	}
 
 	return debt
+}
+
+func NewDebts(txs []*Transaction) []*Debt {
+	debts := make([]*Debt, 0)
+
+	for _, tx := range txs {
+		d := NewDebt(tx)
+		if d != nil {
+			debts = append(debts, d)
+		}
+	}
+
+	return debts
 }
 
 func NewDebtMap(txs []*Transaction) [][]*Debt {
