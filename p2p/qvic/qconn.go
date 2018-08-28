@@ -38,6 +38,8 @@ const (
 
 	DefaultWinSize          = 4096 // default window size for QConn.
 	DefaultRecvPacketLength = 2048
+
+	ExtraLenPaddingInData = 2
 )
 
 // QConn represents a qvic connection, implements net.Conn interface.
@@ -344,7 +346,7 @@ needQuit:
 			}
 		case <-deadLineTicker.C:
 			err = &net.OpError{Op: "read", Net: "qvic", Source: qc.localAddr, Addr: qc.peerAddr, Err: NewQTimeoutError("qconn read timeout")}
-			qc.log.Debug("read deadline reached")
+			qc.log.Debug("read deadline reached. %s", err)
 			break needQuit
 		case <-qc.quit:
 			if readLen = qc.receiverMgr.tryReadData(b); readLen > 0 {
@@ -355,7 +357,7 @@ needQuit:
 			break needQuit
 		}
 	}
-	qc.log.Debug("qconn read OUT")
+
 	return readLen, err
 }
 
@@ -386,15 +388,15 @@ needQuit:
 			for needSend > 0 {
 				pack := new(VPacket)
 				pack.packType, pack.magic, pack.createTick = byte(PackTypeData), qc.magic, uint16(curTick)
-				roundLen := qc.packDataSize - 2
+				roundLen := qc.packDataSize - ExtraLenPaddingInData
 				if roundLen > needSend {
 					roundLen = needSend
 				}
 
-				pack.dataLen = roundLen + 2
-				pack.data = make([]byte, roundLen+2)
-				binary.BigEndian.PutUint16(pack.data[0:2], uint16(roundLen))
-				copy(pack.data[2:], b[curPos:curPos+roundLen])
+				pack.dataLen = roundLen + ExtraLenPaddingInData
+				pack.data = make([]byte, roundLen+ExtraLenPaddingInData)
+				binary.BigEndian.PutUint16(pack.data[0:ExtraLenPaddingInData], uint16(roundLen))
+				copy(pack.data[ExtraLenPaddingInData:], b[curPos:curPos+roundLen])
 				if !qc.senderMgr.trySendPacket(pack, uint32(curTick)) {
 					break
 				}
