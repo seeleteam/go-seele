@@ -20,44 +20,16 @@ const (
 )
 
 var (
-	errDomainNameEmpty   = errors.New("domain name is empty")
-	errDomainNameTooLong = errors.New("domain name too long")
-	errDomainNameExists  = errors.New("domain name already exists")
+	errNameEmpty   = errors.New("name is empty")
+	errNameTooLong = errors.New("name too long")
 
 	maxDomainNameLength = len(common.EmptyHash)
+
+	domainNameCommands = map[byte]*cmdInfo{
+		cmdCreateDomainName:  &cmdInfo{gasCreateDomainName, createDomainName},
+		cmdDomainNameCreator: &cmdInfo{gasDomainNameCreator, domainNameCreator},
+	}
 )
-
-type domainNameContract struct{}
-
-func (contract *domainNameContract) RequiredGas(input []byte) uint64 {
-	if len(input) == 0 {
-		return gasInvalidCommand
-	}
-
-	switch input[0] {
-	case cmdCreateDomainName:
-		return gasCreateDomainName
-	case cmdDomainNameCreator:
-		return gasDomainNameCreator
-	default:
-		return gasInvalidCommand
-	}
-}
-
-func (contract *domainNameContract) Run(input []byte, context *Context) ([]byte, error) {
-	if len(input) == 0 {
-		return nil, errInvalidCommand
-	}
-
-	switch input[0] {
-	case cmdCreateDomainName:
-		return createDomainName(input[1:], context)
-	case cmdDomainNameCreator:
-		return domainNameCreator(input[1:], context)
-	default:
-		return nil, errInvalidCommand
-	}
-}
 
 func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
@@ -70,7 +42,7 @@ func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 
 	// ensure not exist
 	if value := context.statedb.GetData(domainNameContractAddress, key); len(value) > 0 {
-		return nil, errDomainNameExists
+		return nil, errExists
 	}
 
 	// save in statedb
@@ -84,11 +56,11 @@ func domainNameToKey(domainName []byte) (common.Hash, error) {
 	nameLen := len(domainName)
 
 	if nameLen == 0 {
-		return common.EmptyHash, errDomainNameEmpty
+		return common.EmptyHash, errNameEmpty
 	}
 
 	if nameLen > maxDomainNameLength {
-		return common.EmptyHash, errDomainNameTooLong
+		return common.EmptyHash, errNameTooLong
 	}
 
 	return common.BytesToHash(domainName), nil

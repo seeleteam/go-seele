@@ -32,38 +32,21 @@ func newTestContext(db database.Database, contractAddr common.Address) *Context 
 	return NewContext(tx, statedb)
 }
 
-func Test_DomainNameContract_RequiredGas(t *testing.T) {
-	contract := domainNameContract{}
-
-	// empty input
-	assert.Equal(t, contract.RequiredGas(nil), gasInvalidCommand)
-	assert.Equal(t, contract.RequiredGas([]byte{}), gasInvalidCommand)
-
-	// invalid command
-	assert.Equal(t, contract.RequiredGas([]byte{123}), gasInvalidCommand)
-
-	// create domain name
-	assert.Equal(t, contract.RequiredGas([]byte{cmdCreateDomainName}), gasCreateDomainName)
-
-	// get domain creator
-	assert.Equal(t, contract.RequiredGas([]byte{cmdDomainNameCreator}), gasDomainNameCreator)
-}
-
-func Test_DomainNameContract_DomainNameToKey(t *testing.T) {
+func Test_DomainNameToKey(t *testing.T) {
 	// nil domain name
 	key, err := domainNameToKey(nil)
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameEmpty)
+	assert.Equal(t, err, errNameEmpty)
 
 	// empty domain name
 	key, err = domainNameToKey([]byte{})
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameEmpty)
+	assert.Equal(t, err, errNameEmpty)
 
 	// too long domain name
 	key, err = domainNameToKey(make([]byte, maxDomainNameLength+1))
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameTooLong)
+	assert.Equal(t, err, errNameTooLong)
 
 	// valid domain name
 	name := []byte("test.seele")
@@ -72,33 +55,32 @@ func Test_DomainNameContract_DomainNameToKey(t *testing.T) {
 	assert.Equal(t, err, nil)
 }
 
-func Test_DomainNameContract_CreateDomainName(t *testing.T) {
+func Test_CreateDomainName(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	context := newTestContext(db, domainNameContractAddress)
-	contract := domainNameContract{}
 
 	// valid name
-	input := []byte{cmdCreateDomainName, 'a', 'b', 'c'}
-	result, err := contract.Run(input, context)
+	input := []byte{'a', 'b', 'c'}
+	result, err := createDomainName(input, context)
 	assert.Equal(t, result, []byte(nil))
 	assert.Equal(t, err, nil)
 
 	// validate statedb
-	key, _ := domainNameToKey(input[1:])
+	key, _ := domainNameToKey(input)
 	value := context.statedb.GetData(domainNameContractAddress, key)
 	assert.Equal(t, value, context.tx.Data.From.Bytes())
 
 	// get domain creator with valid name
-	input = []byte{cmdDomainNameCreator, 'a', 'b', 'c'}
-	result, err = contract.Run(input, context)
+	input = []byte{'a', 'b', 'c'}
+	result, err = domainNameCreator(input, context)
 	assert.Equal(t, result, context.tx.Data.From.Bytes())
 	assert.Equal(t, err, nil)
 
 	// get domain creator with invalid name
-	input = []byte{cmdDomainNameCreator, 'a'}
-	result, err = contract.Run(input, context)
+	input = []byte{'a'}
+	result, err = domainNameCreator(input, context)
 	assert.Equal(t, result, []byte(nil))
 	assert.Equal(t, err, nil)
 }
