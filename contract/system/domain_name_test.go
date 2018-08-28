@@ -36,17 +36,17 @@ func Test_DomainNameToKey(t *testing.T) {
 	// nil domain name
 	key, err := domainNameToKey(nil)
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameEmpty)
+	assert.Equal(t, err, errNameEmpty)
 
 	// empty domain name
 	key, err = domainNameToKey([]byte{})
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameEmpty)
+	assert.Equal(t, err, errNameEmpty)
 
 	// too long domain name
 	key, err = domainNameToKey(make([]byte, maxDomainNameLength+1))
 	assert.Equal(t, key, common.EmptyHash)
-	assert.Equal(t, err, errDomainNameTooLong)
+	assert.Equal(t, err, errNameTooLong)
 
 	// valid domain name
 	name := []byte("test.seele")

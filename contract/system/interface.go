@@ -36,6 +36,7 @@ const (
 
 var (
 	errInvalidCommand = errors.New("invalid command")
+	errExists         = errors.New("already exists")
 
 	domainNameContractAddress = common.BytesToAddress([]byte{1, 1})
 	subChainContractAddress   = common.BytesToAddress([]byte{1, 2})
