@@ -34,7 +34,7 @@ type SenderMgr struct {
 
 // NewSenderMgr creates SenderMgr object.
 func NewSenderMgr(qc *QConn) *SenderMgr {
-	q := &SenderMgr{
+	s := &SenderMgr{
 		fecHelper:       qc.fecHelper,
 		winSize:         DefaultWinSize,
 		bundleNum:       DefaultFECBundle,
@@ -47,14 +47,14 @@ func NewSenderMgr(qc *QConn) *SenderMgr {
 		log:             qc.log,
 	}
 
-	q.senderSlice = make([]*VPacket, 0, q.winSize)
-	go q.sendHeartBeat()
-	q.log.Info("QVIC NewSenderMgr started!")
-	return q
+	s.senderSlice = make([]*VPacket, 0, s.winSize)
+	s.loopWG.Add(1)
+	go s.sendHeartBeat()
+	s.log.Info("QVIC NewSenderMgr started!")
+	return s
 }
 
 func (sm *SenderMgr) sendHeartBeat() {
-	sm.loopWG.Add(1)
 	defer sm.loopWG.Done()
 	ticker := time.NewTicker(1 * time.Second)
 needQuit:
@@ -88,6 +88,7 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 	msgEndPackNo := binary.BigEndian.Uint32(data[22:26])
 	msgWinStartPackNo := binary.BigEndian.Uint32(data[26:30])
 	msgBitmap := data[30:]
+
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 	if len(sm.senderSlice) == 0 {
@@ -135,6 +136,7 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 	if msgStartPackNo == msgEndPackNo {
 		return
 	}
+
 	if sm.qconn.isEqAndBig_32(msgEndPackNo, msgMaxSeq) {
 		msgEndPackNo = msgMaxSeq
 	}
@@ -143,6 +145,7 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 		if !sm.qconn.isEqAndBig_32(curSeq, sm.peerCurSeq) {
 			continue
 		}
+
 		pack = sm.senderSlice[curSeq-localStartSeq]
 		idx := curSeq - msgStartPackNo
 		indx, bitIndx := idx>>3, idx&7
@@ -154,9 +157,11 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 			pack.isSendedToPeer = true
 			continue
 		}
+
 		if pack.isSendedToPeer {
 			continue
 		}
+
 		if sm.qconn.isEqAndBig_16(msgLastArrived_SendTick, pack.lastSeqSendTick+sm.qconn.jitter-msgLastArrived_DurationTick) {
 			pack.lastSeqSendTick = uint16(curTick)
 
@@ -178,6 +183,7 @@ func (sm *SenderMgr) doDel() {
 	if len(sm.senderSlice) < 256 {
 		return
 	}
+
 	localStartSeq := sm.senderSlice[0].seq
 	toDel := sm.min(int(sm.peerCurSeq-localStartSeq), len(sm.senderSlice)-256)
 	if toDel == 0 {

@@ -313,7 +313,7 @@ func (qc *QConn) Read(b []byte) (readLen int, err error) {
 	}
 
 	if atomic.LoadInt32(&qc.status) != StatusConnected {
-		return 0, errQConnNotValid
+		return 0, errQConnInvalid
 	}
 
 	if readLen = qc.receiverMgr.tryReadData(b); readLen > 0 {
@@ -350,7 +350,7 @@ needQuit:
 			if readLen = qc.receiverMgr.tryReadData(b); readLen > 0 {
 				return readLen, nil
 			}
-			err = errQConnNotValid
+			err = errQConnInvalid
 			qc.log.Debug("qconn read quit")
 			break needQuit
 		}
@@ -361,7 +361,7 @@ needQuit:
 
 func (qc *QConn) Write(b []byte) (n int, err error) {
 	if atomic.LoadInt32(&qc.status) != StatusConnected {
-		return 0, errQConnNotValid
+		return 0, errQConnInvalid
 	}
 
 	tNow := time.Now()
@@ -407,7 +407,7 @@ needQuit:
 			errRet = &net.OpError{Op: "write", Net: "qvic", Source: qc.localAddr, Addr: qc.peerAddr, Err: NewQTimeoutError("qconn write timeout")}
 			break needQuit
 		case <-qc.quit:
-			errRet = errQConnNotValid
+			errRet = errQConnInvalid
 			break needQuit
 		}
 	}

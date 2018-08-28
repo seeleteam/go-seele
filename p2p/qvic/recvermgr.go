@@ -43,7 +43,7 @@ type ReceiverMgr struct {
 
 // NewReceiverMgr creates ReceiverMgr object.
 func NewReceiverMgr(qc *QConn) *ReceiverMgr {
-	q := &ReceiverMgr{
+	r := &ReceiverMgr{
 		fecHelper:        qc.fecHelper,
 		winSize:          DefaultWinSize,
 		bundleNum:        DefaultFECBundle,
@@ -60,9 +60,10 @@ func NewReceiverMgr(qc *QConn) *ReceiverMgr {
 		bitmap:           make([]byte, DefaultWinSize/8),
 		log:              qc.log,
 	}
-	go q.runLoop()
-	q.log.Info("QVIC NewReceiverMgr started!")
-	return q
+
+	go r.runLoop()
+	r.log.Info("QVIC NewReceiverMgr started!")
+	return r
 }
 
 func (rv *ReceiverMgr) runLoop() {
@@ -75,7 +76,7 @@ needQuit:
 		select {
 		case <-timerTick.C:
 			rv.lock.Lock()
-			if time.Now().Sub(rv.lastHBTime) > maxHearbeatInterval*time.Second {
+			if time.Now().Sub(rv.lastHBTime) > maxHearbeatInterval {
 				// heartbeat msg is not received for a long time
 				if atomic.CompareAndSwapInt32(&rv.qconn.status, StatusConnected, StatusClosing) {
 					select {
@@ -117,6 +118,7 @@ func (rv *ReceiverMgr) sendBitmap() {
 	if !rv.bHasPacketRecved {
 		return
 	}
+
 	rv.lock.Lock()
 	defer rv.lock.Unlock()
 	curTick := uint32(time.Now().UnixNano() / (1000 * 1000))
@@ -134,6 +136,7 @@ func (rv *ReceiverMgr) sendBitmap() {
 		rv.udpfd.WriteTo(data[0:len], rv.qconn.RemoteAddr())
 		return
 	}
+
 	if diff < uint32(rv.qconn.jitter) {
 		diff = uint32(rv.qconn.jitter) - diff
 		cnt := uint32(0)
@@ -157,6 +160,7 @@ func (rv *ReceiverMgr) sendBitmap() {
 			return
 		}
 	}
+
 	startSeq := (rv.curSeq >> 3) << 3
 	total := toSeq - startSeq + 1
 	if total == 0 {
@@ -170,6 +174,7 @@ func (rv *ReceiverMgr) sendBitmap() {
 	if total%per != 0 {
 		cnt++
 	}
+
 	preStartSeq := startSeq
 	for i := uint32(0); i < cnt; i++ {
 		startSeq = preStartSeq + i*per
@@ -225,11 +230,13 @@ func (rv *ReceiverMgr) onRecvVPacket(pack *VPacket, curTick uint32, packType int
 			}
 			return
 		}
+
 		rv.least_peer_lastSeqSendTick = pack.lastSeqSendTick
 		rv.least_local_RecvedTick = curTick
 		if item.p != nil {
 			return
 		}
+
 		item.p = pack
 		rv.setBitmap(pack.seq, true)
 		for rv.tryRecoverFec(pack.seq, curTick) {

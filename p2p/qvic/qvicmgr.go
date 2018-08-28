@@ -19,7 +19,7 @@ const (
 	SlotsNum            = 16384 // maximum number of qconn that QvicMgr can hold.
 	DefaultPortStart    = 50000
 	DefaultPortEnd      = 51023
-	maxHearbeatInterval = 12 // max heartbeat timeout interval
+	maxHearbeatInterval = 12 * time.Second // max heartbeat timeout interval
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	errSlotsNotEnough  = errors.New("QvicMgr's Slots not enough")
 	errPortNotEnough   = errors.New("QvicMgr's port range is too small")
 	errDailFailed      = errors.New("QConn connects err")
-	errQConnNotValid   = errors.New("QConn is not valid")
+	errQConnInvalid    = errors.New("QConn is not valid")
 )
 
 // QvicMgr manages qvic module.
@@ -187,6 +187,7 @@ func (mgr *QvicMgr) handleMsg(from *net.UDPAddr, data []byte) {
 	if int(ptType) != PackTypeControl || msgType != msgHandshake {
 		return
 	}
+
 	magic := binary.BigEndian.Uint32(data[:4])
 	mgr.lock.Lock()
 	if qconn, ok := mgr.magicMap[magic]; ok {
@@ -203,6 +204,7 @@ func (mgr *QvicMgr) handleMsg(from *net.UDPAddr, data []byte) {
 		mgr.sendConnectErrMsg(magic, from)
 		return
 	}
+
 	mgr.lock.Lock()
 	mgr.magicMap[magic] = qconn
 	mgr.lock.Unlock()
