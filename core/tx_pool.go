@@ -315,8 +315,8 @@ func (pool *TransactionPool) removeTransactions() {
 
 // GetProcessableTransactions retrieves processable transactions from pool.
 func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Transaction, int) {
-	pool.mutex.RLock()
-	defer pool.mutex.RUnlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 
 	totalSize := 0
 	var txs []*types.Transaction
