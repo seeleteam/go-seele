@@ -7,12 +7,15 @@ package seele
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
@@ -20,6 +23,8 @@ import (
 	rpc "github.com/seeleteam/go-seele/rpc2"
 	"github.com/seeleteam/go-seele/seele/download"
 )
+
+const chainHeaderChangeBuffSize = 100
 
 // SeeleService implements full node service.
 type SeeleService struct {
@@ -34,6 +39,9 @@ type SeeleService struct {
 	chainDB        database.Database // database used to store blocks.
 	accountStateDB database.Database // database used to store account state info.
 	miner          *miner.Miner
+
+	lastHeader               common.Hash
+	chainHeaderChangeChannel chan common.Hash
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -100,15 +108,13 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.txPool, err = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
+	err = s.initPool(conf)
 	if err != nil {
 		s.chainDB.Close()
 		s.accountStateDB.Close()
 		log.Error("failed to create transaction pool in NewSeeleService, %s", err)
 		return nil, err
 	}
-
-	s.debtPool = core.NewDebtPool()
 
 	s.seeleProtocol, err = NewSeeleProtocol(s, log)
 	if err != nil {
@@ -121,6 +127,53 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
 
 	return s, nil
+}
+
+func (s *SeeleService) initPool(conf *node.Config) error {
+	var err error
+	s.lastHeader, err = s.chain.GetStore().GetHeadBlockHash()
+	if err != nil {
+		return fmt.Errorf("failed to get chain header, %s", err)
+	}
+
+	s.chainHeaderChangeChannel = make(chan common.Hash, chainHeaderChangeBuffSize)
+	s.debtPool = core.NewDebtPool(s.chain)
+	s.txPool = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
+
+	event.ChainHeaderChangedEventMananger.AddAsyncListener(s.chainHeaderChanged)
+	go s.MonitorChainHeaderChange()
+
+	return nil
+}
+
+// chainHeaderChanged handle chain header changed event.
+// add forked transaction back
+// deleted invalid transaction
+func (s *SeeleService) chainHeaderChanged(e event.Event) {
+	newHeader := e.(common.Hash)
+	if newHeader.IsEmpty() {
+		return
+	}
+
+	s.chainHeaderChangeChannel <- newHeader
+}
+
+// MonitorChainHeaderChange monitor and handle chain header event
+func (s *SeeleService) MonitorChainHeaderChange() {
+	for {
+		select {
+		case newHeader := <-s.chainHeaderChangeChannel:
+			if s.lastHeader.IsEmpty() {
+				s.lastHeader = newHeader
+				return
+			}
+
+			s.txPool.HandleChainHeaderChanged(newHeader, s.lastHeader)
+			s.debtPool.HandleChainHeaderChanged(newHeader, s.lastHeader)
+
+			s.lastHeader = newHeader
+		}
+	}
 }
 
 // Protocols implements node.Service, returning all the currently configured
