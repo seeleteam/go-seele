@@ -353,7 +353,7 @@ needQuit:
 				return readLen, nil
 			}
 			err = errQConnInvalid
-			qc.log.Debug("qconn read quit")
+			qc.log.Debug("qconn read quit %s", err)
 			break needQuit
 		}
 	}
