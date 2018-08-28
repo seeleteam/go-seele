@@ -36,12 +36,45 @@ const (
 
 var (
 	errInvalidCommand = errors.New("invalid command")
-)
 
-var (
 	domainNameContractAddress = common.BytesToAddress([]byte{1, 1})
 
 	contracts = map[common.Address]Contract{
-		domainNameContractAddress: &domainNameContract{},
+		domainNameContractAddress: &contract{domainNameCommands},
 	}
 )
+
+type handler func([]byte, *Context) ([]byte, error)
+
+type cmdInfo struct {
+	cmdUsedGas uint64
+	cmdHandler handler
+}
+
+type contract struct {
+	cmds map[byte]cmdInfo
+}
+
+func (c *contract) RequiredGas(input []byte) uint64 {
+	if len(input) == 0 {
+		return gasInvalidCommand
+	}
+
+	if info, found := c.cmds[input[0]]; found {
+		return info.cmdUsedGas
+	}
+
+	return gasInvalidCommand
+}
+
+func (c *contract) Run(input []byte, context *Context) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, errInvalidCommand
+	}
+
+	if info, found := c.cmds[input[0]]; found {
+		return info.cmdHandler(input[1:], context)
+	}
+
+	return nil, errInvalidCommand
+}

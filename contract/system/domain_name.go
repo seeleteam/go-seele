@@ -25,39 +25,12 @@ var (
 	errDomainNameExists  = errors.New("domain name already exists")
 
 	maxDomainNameLength = len(common.EmptyHash)
+
+	domainNameCommands = map[byte]cmdInfo{
+		cmdCreateDomainName:  cmdInfo{gasCreateDomainName, createDomainName},
+		cmdDomainNameCreator: cmdInfo{gasDomainNameCreator, domainNameCreator},
+	}
 )
-
-type domainNameContract struct{}
-
-func (contract *domainNameContract) RequiredGas(input []byte) uint64 {
-	if len(input) == 0 {
-		return gasInvalidCommand
-	}
-
-	switch input[0] {
-	case cmdCreateDomainName:
-		return gasCreateDomainName
-	case cmdDomainNameCreator:
-		return gasDomainNameCreator
-	default:
-		return gasInvalidCommand
-	}
-}
-
-func (contract *domainNameContract) Run(input []byte, context *Context) ([]byte, error) {
-	if len(input) == 0 {
-		return nil, errInvalidCommand
-	}
-
-	switch input[0] {
-	case cmdCreateDomainName:
-		return createDomainName(input[1:], context)
-	case cmdDomainNameCreator:
-		return domainNameCreator(input[1:], context)
-	default:
-		return nil, errInvalidCommand
-	}
-}
 
 func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
