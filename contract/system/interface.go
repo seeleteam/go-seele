@@ -38,9 +38,11 @@ var (
 	errInvalidCommand = errors.New("invalid command")
 
 	domainNameContractAddress = common.BytesToAddress([]byte{1, 1})
+	subChainContractAddress   = common.BytesToAddress([]byte{1, 2})
 
 	contracts = map[common.Address]Contract{
 		domainNameContractAddress: &contract{domainNameCommands},
+		subChainContractAddress:   &contract{subChainCommands},
 	}
 )
 
@@ -52,7 +54,7 @@ type cmdInfo struct {
 }
 
 type contract struct {
-	cmds map[byte]cmdInfo
+	cmds map[byte]*cmdInfo
 }
 
 func (c *contract) RequiredGas(input []byte) uint64 {

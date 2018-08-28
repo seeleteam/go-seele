@@ -26,9 +26,9 @@ var (
 
 	maxDomainNameLength = len(common.EmptyHash)
 
-	domainNameCommands = map[byte]cmdInfo{
-		cmdCreateDomainName:  cmdInfo{gasCreateDomainName, createDomainName},
-		cmdDomainNameCreator: cmdInfo{gasDomainNameCreator, domainNameCreator},
+	domainNameCommands = map[byte]*cmdInfo{
+		cmdCreateDomainName:  &cmdInfo{gasCreateDomainName, createDomainName},
+		cmdDomainNameCreator: &cmdInfo{gasDomainNameCreator, domainNameCreator},
 	}
 )
 
