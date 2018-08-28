@@ -65,14 +65,14 @@ type pending struct {
 }
 
 type send struct {
-	toId   common.Address
+	toID   common.Address
 	toAddr *net.UDPAddr
 	buff   []byte
 	code   msgType
 }
 
 type reply struct {
-	fromId   common.Address
+	fromID   common.Address
 	fromAddr *net.UDPAddr
 	code     msgType
 
@@ -107,7 +107,7 @@ func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {
 	return transport
 }
 
-func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *net.UDPAddr) {
+func (u *udp) sendMsg(t msgType, msg interface{}, toID common.Address, toAddr *net.UDPAddr) {
 	encoding, err := common.Serialize(msg)
 	if err != nil {
 		u.log.Info(err.Error())
@@ -117,7 +117,7 @@ func (u *udp) sendMsg(t msgType, msg interface{}, toId common.Address, toAddr *n
 	buff := generateBuff(t, encoding)
 	s := &send{
 		buff:   buff,
-		toId:   toId,
+		toID:   toID,
 		toAddr: toAddr,
 		code:   t,
 	}
@@ -147,7 +147,7 @@ func (u *udp) sendLoop() {
 			success := u.sendConnMsg(s.buff, u.conn, s.toAddr)
 			if !success {
 				r := &reply{
-					fromId:   s.toId,
+					fromID:   s.toID,
 					fromAddr: s.toAddr,
 					code:     s.code,
 					err:      true,
@@ -186,7 +186,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			r := &reply{
-				fromId:   msg.SelfID,
+				fromID:   msg.SelfID,
 				fromAddr: from,
 				code:     code,
 				data:     msg,
@@ -214,7 +214,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			r := &reply{
-				fromId:   msg.SelfID,
+				fromID:   msg.SelfID,
 				fromAddr: from,
 				code:     code,
 				data:     msg,
@@ -240,7 +240,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			r := &reply{
-				fromId:   msg.SelfID,
+				fromID:   msg.SelfID,
 				fromAddr: from,
 				code:     code,
 				data:     msg,
