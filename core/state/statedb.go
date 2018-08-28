@@ -83,17 +83,16 @@ func (s *Statedb) setError(err error) {
 // GetBalance returns the balance of the specified account if exists.
 // Otherwise, returns zero.
 func (s *Statedb) GetBalance(addr common.Address) *big.Int {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		return object.getAmount()
 	}
+
 	return stateBalance0
 }
 
 // SetBalance sets the balance of the specified account if exists.
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		s.curJournal.append(balanceChange{&addr, object.getAmount()})
 		object.setAmount(balance)
 	}
@@ -101,8 +100,7 @@ func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 
 // AddBalance adds the specified amount to the balance for the specified account if exists.
 func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		s.curJournal.append(balanceChange{&addr, object.getAmount()})
 		object.addAmount(amount)
 	}
@@ -110,8 +108,7 @@ func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 
 // SubBalance substracts the specified amount from the balance for the specified account if exists.
 func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		s.curJournal.append(balanceChange{&addr, object.getAmount()})
 		object.subAmount(amount)
 	}
@@ -120,19 +117,37 @@ func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 // GetNonce gets the nonce of the specified account if exists.
 // Otherwise, return 0.
 func (s *Statedb) GetNonce(addr common.Address) uint64 {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		return object.getNonce()
 	}
+
 	return 0
 }
 
 // SetNonce sets the nonce of the specified account if exists.
 func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
-	object := s.getStateObject(addr)
-	if object != nil {
+	if object := s.getStateObject(addr); object != nil {
 		s.curJournal.append(nonceChange{&addr, object.getNonce()})
 		object.setNonce(nonce)
+	}
+}
+
+// GetData returns the account data of the specified key if exists.
+// Otherwise, return nil.
+func (s *Statedb) GetData(addr common.Address, key common.Hash) []byte {
+	if object := s.getStateObject(addr); object != nil {
+		return object.getState(s.trie, key)
+	}
+
+	return nil
+}
+
+// SetData sets the key value pair for the specified account if exists.
+func (s *Statedb) SetData(addr common.Address, key common.Hash, value []byte) {
+	if object := s.getStateObject(addr); object != nil {
+		prevValue := object.getState(s.trie, key)
+		s.curJournal.append(storageChange{&addr, key, prevValue})
+		object.setState(key, value)
 	}
 }
 

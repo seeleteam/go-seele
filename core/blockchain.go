@@ -65,6 +65,14 @@ var (
 	// does not match the receipts root hash in block header.
 	ErrBlockReceiptHashMismatch = errors.New("block receipts hash mismatch")
 
+	// ErrBlockDebtHashMismatch is returned when the calculated debts hash of block
+	// does not match the debts root hash in block header.
+	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
+
+	// ErrBlockTxDebtHashMismatch is returned when the calculated tx debts hash of block
+	// does not match the debts root hash in block header.
+	ErrBlockTxDebtHashMismatch = errors.New("block transaction debts hash mismatch")
+
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
 
@@ -264,6 +272,14 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	// Validate receipts root hash.
 	if receiptsRootHash := types.ReceiptMerkleRootHash(receipts); !receiptsRootHash.Equal(block.Header.ReceiptHash) {
 		return ErrBlockReceiptHashMismatch
+	}
+
+	if txDebtsRootHash := types.DebtMerkleRootHash(types.NewDebts(block.Transactions)); !txDebtsRootHash.Equal(block.Header.TxDebtHash) {
+		return ErrBlockTxDebtHashMismatch
+	}
+
+	if debtsRootHash := types.DebtMerkleRootHash(block.Debts); !debtsRootHash.Equal(block.Header.DebtHash) {
+		return ErrBlockDebtHashMismatch
 	}
 
 	// Validate state root hash.
@@ -478,7 +494,8 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 	return minerRewardTx, nil
 }
 
-func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
+func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction,
+	blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	// process miner reward
 	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
 	if err != nil {
@@ -528,7 +545,8 @@ func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
-func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb, blockHeader *types.BlockHeader) (*types.Receipt, error) {
+func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb,
+	blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	context := NewEVMContext(tx, blockHeader, coinbase, bc.bcStore)
 	receipt, err := ProcessContract(context, tx, txIndex, statedb, &vm.Config{})
 	if err != nil {

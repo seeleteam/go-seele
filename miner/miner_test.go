@@ -113,6 +113,7 @@ func checkMinerMembers(miner *Miner, addr common.Address, seele SeeleBackend, t 
 // TestSeeleBackend implements the SeeleBackend interface.
 type TestSeeleBackend struct {
 	txPool     *core.TransactionPool
+	debtPool   *core.DebtPool
 	blockchain *core.Blockchain
 }
 
@@ -121,12 +122,17 @@ func NewTestSeeleBackend(db database.Database) *TestSeeleBackend {
 
 	seeleBeckend.txPool = newTestPool(core.DefaultTxPoolConfig(), db)
 	seeleBeckend.blockchain = newTestBlockchain(db)
+	seeleBeckend.debtPool = core.NewDebtPool()
 
 	return seeleBeckend
 }
 
 func (t TestSeeleBackend) TxPool() *core.TransactionPool {
 	return t.txPool
+}
+
+func (t TestSeeleBackend) DebtPool() *core.DebtPool {
+	return t.debtPool
 }
 
 func (t TestSeeleBackend) BlockChain() *core.Blockchain {

@@ -14,50 +14,42 @@ import (
 
 // CreateAccount creates a new account in statedb.
 func (s *Statedb) CreateAccount(address common.Address) {
-	stateObj := s.getStateObject(address)
-	if stateObj != nil {
-		return
+	if object := s.getStateObject(address); object == nil {
+		object = newStateObject(address)
+		s.curJournal.append(createObjectChange{&address})
+		s.stateObjects[address] = object
 	}
-
-	stateObj = newStateObject(address)
-	s.curJournal.append(createObjectChange{&address})
-	s.stateObjects[address] = stateObj
 }
 
 // GetCodeHash returns the hash of the contract code associated with the specified address if any.
 // Otherwise, return an empty hash.
 func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return common.EmptyHash
+	if object := s.getStateObject(address); object != nil {
+		return common.BytesToHash(object.account.CodeHash)
 	}
 
-	return common.BytesToHash(stateObj.account.CodeHash)
+	return common.EmptyHash
 }
 
 // GetCode returns the contract code associated with the specified address if any.
 // Otherwise, return nil.
 func (s *Statedb) GetCode(address common.Address) []byte {
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return nil
+	if object := s.getStateObject(address); object != nil {
+		return object.loadCode(s.trie)
 	}
 
-	return stateObj.loadCode(s.trie)
+	return nil
 }
 
 // SetCode sets the contract code of the specified address if exists.
 func (s *Statedb) SetCode(address common.Address, code []byte) {
 	// EVM call SetCode after CreateAccount during contract creation.
 	// So, here the retrieved stateObj should not be nil.
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return
+	if object := s.getStateObject(address); object != nil {
+		prevCode := object.loadCode(s.trie)
+		s.curJournal.append(codeChange{&address, prevCode})
+		object.setCode(code)
 	}
-
-	prevCode := stateObj.loadCode(s.trie)
-	s.curJournal.append(codeChange{&address, prevCode})
-	stateObj.setCode(code)
 }
 
 // GetCodeSize returns the size of the contract code associated with the specified address if any.
@@ -81,24 +73,13 @@ func (s *Statedb) GetRefund() uint64 {
 // GetState returns the value of the specified key in account storage if exists.
 // Otherwise, return empty hash.
 func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash {
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return common.EmptyHash
-	}
-
-	return stateObj.getState(s.trie, key)
+	value := s.GetData(address, key)
+	return common.BytesToHash(value)
 }
 
 // SetState adds or updates the specified key-value pair in account storage.
 func (s *Statedb) SetState(address common.Address, key common.Hash, value common.Hash) {
-	stateObj := s.getStateObject(address)
-	if stateObj == nil {
-		return
-	}
-
-	prevValue := stateObj.getState(s.trie, key)
-	s.curJournal.append(storageChange{&address, key, prevValue})
-	stateObj.setState(key, value)
+	s.SetData(address, key, value.Bytes())
 }
 
 // Suicide marks the given account as suicided and clears the account balance.

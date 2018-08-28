@@ -106,6 +106,8 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 		Creator:           minerAccount.addr,
 		StateHash:         common.EmptyHash,
 		TxHash:            types.MerkleRootHash(txs),
+		TxDebtHash:        types.DebtMerkleRootHash(types.NewDebts(txs)),
+		DebtHash:          common.EmptyHash,
 		Height:            blockHeight,
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),

@@ -77,7 +77,7 @@ func Test_SimpleStorage(t *testing.T) {
 	statedb, bcStore, address, dispose := preprocessContract(1000*common.SeeleToFan.Uint64(), 38)
 	defer dispose()
 
-	vmConfnig := &vm.Config{}
+	vmConfig := &vm.Config{}
 	header := newTestBlockHeader()
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,12 +87,14 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
-	receipt, err := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+	receipt, err := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfig)
 
 	// Validate receipt of contract creation.
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.TxHash, createContractTx.CalculateHash())
 	assert.Equal(t, receipt.ContractAddress, crypto.CreateAddress(address, 38).Bytes())
+	assert.Equal(t, receipt.UsedGas, uint64(64707))
+	assert.Equal(t, receipt.TotalFee, (big.NewInt(0).Add(createContractTx.Data.Fee, contractFeeSimple)).Uint64())
 
 	// Validate the state DB after contract created.
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
@@ -107,13 +109,15 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = ProcessContract(evmContext, callContractTx, 9, statedb, vmConfnig)
+	receipt, err = ProcessContract(evmContext, callContractTx, 9, statedb, vmConfig)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5})
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
+	assert.Equal(t, receipt.UsedGas, uint64(424))
+	assert.Equal(t, receipt.TotalFee, (big.NewInt(0).Add(createContractTx.Data.Fee, usedGasFee(receipt.UsedGas))).Uint64())
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.set(666)
@@ -122,13 +126,15 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = ProcessContract(evmContext, callContractTx, 10, statedb, vmConfnig)
+	receipt, err = ProcessContract(evmContext, callContractTx, 10, statedb, vmConfig)
 
 	// Validate receipt contract call
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(receipt.Result), 0)
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
+	assert.Equal(t, receipt.UsedGas, uint64(5205))
+	assert.Equal(t, receipt.TotalFee, (big.NewInt(0).Add(createContractTx.Data.Fee, usedGasFee(receipt.UsedGas))).Uint64())
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Call contract tx: SimpleStorage.get(), it returns 666 as set above.
@@ -137,13 +143,15 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	evmContext = NewEVMContext(callContractTx, header, header.Creator, bcStore)
-	receipt, err = ProcessContract(evmContext, callContractTx, 11, statedb, vmConfnig)
+	receipt, err = ProcessContract(evmContext, callContractTx, 11, statedb, vmConfig)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Result, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 154}) // 666
 	assert.Equal(t, receipt.TxHash, callContractTx.CalculateHash())
 	assert.Equal(t, len(receipt.ContractAddress), 0)
+	assert.Equal(t, receipt.UsedGas, uint64(424))
+	assert.Equal(t, receipt.TotalFee, (big.NewInt(0).Add(createContractTx.Data.Fee, usedGasFee(receipt.UsedGas))).Uint64())
 }
 
 func Test_InsufficientBalance(t *testing.T) {
@@ -151,7 +159,7 @@ func Test_InsufficientBalance(t *testing.T) {
 	statedb, bcStore, address, dispose := preprocessContract(common.SeeleToFan.Uint64(), 38)
 	defer dispose()
 
-	vmConfnig := &vm.Config{}
+	vmConfig := &vm.Config{}
 	header := newTestBlockHeader()
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,7 +170,7 @@ func Test_InsufficientBalance(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
-	_, err = ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+	_, err = ProcessContract(evmContext, createContractTx, 8, statedb, vmConfig)
 	assert.Equal(t, err, vm.ErrInsufficientBalance)
 }
 
@@ -171,7 +179,7 @@ func Benchmark_CreateContract(b *testing.B) {
 	defer dispose()
 
 	statedb.SetBalance(address, new(big.Int).Mul(common.SeeleToFan, big.NewInt(100000000)))
-	vmConfnig := &vm.Config{}
+	vmConfig := &vm.Config{}
 	header := newTestBlockHeader()
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -186,7 +194,7 @@ func Benchmark_CreateContract(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+		ProcessContract(evmContext, createContractTx, 8, statedb, vmConfig)
 		createContractTx.Data.AccountNonce++
 	}
 }
@@ -196,7 +204,7 @@ func Benchmark_CallContract(b *testing.B) {
 	defer dispose()
 
 	statedb.SetBalance(address, new(big.Int).Mul(common.SeeleToFan, big.NewInt(100000000)))
-	vmConfnig := &vm.Config{}
+	vmConfig := &vm.Config{}
 	header := newTestBlockHeader()
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +216,7 @@ func Benchmark_CallContract(b *testing.B) {
 	createContractTx, _ := types.NewContractTransaction(address, amount, fee, nonce, code)
 
 	evmContext := NewEVMContext(createContractTx, header, header.Creator, bcStore)
-	receipt, _ := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfnig)
+	receipt, _ := ProcessContract(evmContext, createContractTx, 8, statedb, vmConfig)
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,6 +229,6 @@ func Benchmark_CallContract(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ProcessContract(evmContext, callContractTx, 9, statedb, vmConfnig)
+		ProcessContract(evmContext, callContractTx, 9, statedb, vmConfig)
 	}
 }

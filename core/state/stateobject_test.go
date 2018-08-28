@@ -33,8 +33,7 @@ func Test_StateObjectClone(t *testing.T) {
 
 	// The change in src value cannot change the value of dest
 	so1.address = *crypto.MustGenerateRandomAddress()
-	hash1 := common.BytesToHash([]byte("root hash1"))
-	so1.cachedStorage[hash1] = hash1
+	so1.cachedStorage[common.StringToHash("hash1")] = []byte("value1")
 
 	assert.Equal(t, so1.address != so2.address, true)
 	assert.Equal(t, reflect.DeepEqual(so1.cachedStorage, so2.cachedStorage), false)

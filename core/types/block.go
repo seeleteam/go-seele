@@ -19,6 +19,8 @@ type BlockHeader struct {
 	StateHash         common.Hash    // StateHash is the root hash of the state trie
 	TxHash            common.Hash    // TxHash is the root hash of the transaction merkle tree
 	ReceiptHash       common.Hash    // ReceiptHash is the root hash of the receipt merkle tree
+	TxDebtHash        common.Hash    // TxDebtHash is the root hash of the tx's debt merkle tree
+	DebtHash          common.Hash    // DebtHash is the root hash of the debt merkle tree
 	Difficulty        *big.Int       // Difficulty is the difficulty of the block
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
@@ -53,6 +55,7 @@ type Block struct {
 	HeaderHash   common.Hash    // HeaderHash is the hash of the RLP encoded header bytes
 	Header       *BlockHeader   // Header is the block header, a block header is about 165byte
 	Transactions []*Transaction // Transactions is the block payload
+	Debts        []*Debt        // Debts for cross shard transaction
 }
 
 // NewBlock creates a new block. The input header is copied so that
@@ -60,7 +63,7 @@ type Block struct {
 // array is copied, but each transaction is not copied.
 // So any change of the input transaction will affect the block.
 // The input receipt array is the same behavior with transation array.
-func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Block {
+func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt, debts []*Debt) *Block {
 	block := &Block{
 		Header: header.Clone(),
 	}
@@ -72,7 +75,14 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt) *Blo
 		copy(block.Transactions, txs)
 	}
 
+	if len(debts) > 0 {
+		block.Debts = make([]*Debt, len(debts))
+		copy(block.Debts, debts)
+	}
+
 	block.Header.ReceiptHash = ReceiptMerkleRootHash(receipts)
+	block.Header.DebtHash = DebtMerkleRootHash(debts)
+	block.Header.TxDebtHash = DebtMerkleRootHash(NewDebts(txs))
 
 	// Calculate the block header hash.
 	block.HeaderHash = block.Header.Hash()

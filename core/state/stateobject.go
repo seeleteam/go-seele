@@ -51,8 +51,8 @@ type stateObject struct {
 	code      []byte // contract code
 	dirtyCode bool
 
-	cachedStorage map[common.Hash]common.Hash // cache the retrieved account states.
-	dirtyStorage  map[common.Hash]common.Hash // changed account states that need to flush to DB.
+	cachedStorage map[common.Hash][]byte // cache the retrieved account states.
+	dirtyStorage  map[common.Hash][]byte // changed account states that need to flush to DB.
 
 	// When a state object is marked as suicided, it will be deleted from the trie when commit the state DB.
 	suicided bool
@@ -67,8 +67,8 @@ func newStateObject(address common.Address) *stateObject {
 		addrHash:      crypto.MustHash(address),
 		account:       newAccount(),
 		dirtyAccount:  true,
-		cachedStorage: make(map[common.Hash]common.Hash),
-		dirtyStorage:  make(map[common.Hash]common.Hash),
+		cachedStorage: make(map[common.Hash][]byte),
+		dirtyStorage:  make(map[common.Hash][]byte),
 	}
 }
 
@@ -83,11 +83,11 @@ func (s *stateObject) clone() *stateObject {
 	return &cloned
 }
 
-func copyStorage(src map[common.Hash]common.Hash) map[common.Hash]common.Hash {
-	cloned := make(map[common.Hash]common.Hash)
+func copyStorage(src map[common.Hash][]byte) map[common.Hash][]byte {
+	cloned := make(map[common.Hash][]byte)
 
 	for k, v := range src {
-		cloned[k] = v
+		cloned[k] = common.CopyBytes(v)
 	}
 
 	return cloned
@@ -185,21 +185,21 @@ func (s *stateObject) empty() bool {
 	return s.account.Nonce == 0 && s.account.Amount.Sign() == 0 && len(s.account.CodeHash) == 0
 }
 
-func (s *stateObject) setState(key, value common.Hash) {
+func (s *stateObject) setState(key common.Hash, value []byte) {
 	s.cachedStorage[key] = value
 	s.dirtyStorage[key] = value
 }
 
-func (s *stateObject) getState(trie *trie.Trie, key common.Hash) common.Hash {
+func (s *stateObject) getState(trie *trie.Trie, key common.Hash) []byte {
 	if value, ok := s.cachedStorage[key]; ok {
 		return value
 	}
 
 	if value, ok := trie.Get(s.dataKey(dataTypeStorage, crypto.MustHash(key).Bytes()...)); ok {
-		return common.BytesToHash(value)
+		return value
 	}
 
-	return common.EmptyHash
+	return nil
 }
 
 // flush update the dirty data of state object to the specified trie if any.
@@ -207,11 +207,11 @@ func (s *stateObject) flush(trie *trie.Trie) error {
 	// Flush storage change.
 	if len(s.dirtyStorage) > 0 {
 		for k, v := range s.dirtyStorage {
-			if err := trie.Put(s.dataKey(dataTypeStorage, crypto.MustHash(k).Bytes()...), v.Bytes()); err != nil {
+			if err := trie.Put(s.dataKey(dataTypeStorage, crypto.MustHash(k).Bytes()...), v); err != nil {
 				return err
 			}
 		}
-		s.dirtyStorage = make(map[common.Hash]common.Hash)
+		s.dirtyStorage = make(map[common.Hash][]byte)
 	}
 
 	// Flush code change.

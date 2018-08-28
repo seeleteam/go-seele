@@ -131,7 +131,7 @@ func Test_cachedStore_PutBlock(t *testing.T) {
 	store := NewMemStore()
 	cachedStore := NewCachedStore(store)
 
-	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}})
+	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}}, nil)
 	err := cachedStore.PutBlock(block, big.NewInt(38), true)
 	assert.Equal(t, err, nil)
 
@@ -152,7 +152,7 @@ func Test_cachedStore_PutBlock(t *testing.T) {
 
 func Test_cachedStore_GutBlock(t *testing.T) {
 	store := NewMemStore()
-	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}})
+	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}}, nil)
 	store.PutBlock(block, big.NewInt(38), true)
 	cachedStore := NewCachedStore(store)
 
@@ -169,7 +169,7 @@ func Test_cachedStore_DeleteBlock(t *testing.T) {
 	store := NewMemStore()
 	cachedStore := NewCachedStore(store)
 
-	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}})
+	block := types.NewBlock(newTestBlockHeader(), []*types.Transaction{newTestTx()}, []*types.Receipt{&types.Receipt{}}, nil)
 	cachedStore.PutBlock(block, big.NewInt(38), true)
 
 	assert.Equal(t, cachedStore.DeleteBlock(block.HeaderHash), nil)

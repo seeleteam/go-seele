@@ -82,7 +82,7 @@ func Test_Block_NewBlock(t *testing.T) {
 		newTestReceipt(),
 	}
 
-	block := NewBlock(header, txs, receipts)
+	block := NewBlock(header, txs, receipts, nil)
 	assert.Equal(t, block != nil, true)
 
 	// ensure the header is copied
@@ -105,18 +105,18 @@ func Test_Block_GetExcludeRewardTransactions(t *testing.T) {
 		newTestTx(t, 30, 1, 3, true),
 	}
 
-	block := NewBlock(header, txs, nil)
+	block := NewBlock(header, txs, nil, nil)
 	excludeTxs := block.GetExcludeRewardTransactions()
 	assert.Equal(t, len(excludeTxs) == 2, true)
 
 	// only reward transaction
 	rewardTxs := []*Transaction{newTestTx(t, 10, 1, 1, true)}
-	block = NewBlock(header, rewardTxs, nil)
+	block = NewBlock(header, rewardTxs, nil, nil)
 	excludeTxs = block.GetExcludeRewardTransactions()
 	assert.Equal(t, len(excludeTxs) == 0, true)
 
 	// txs is nil
-	block = NewBlock(header, nil, nil)
+	block = NewBlock(header, nil, nil, nil)
 	excludeTxs = block.GetExcludeRewardTransactions()
 	assert.Equal(t, len(excludeTxs) == 0, true)
 }
@@ -129,7 +129,7 @@ func Test_Block_FindTransaction(t *testing.T) {
 		newTestTx(t, 30, 1, 3, true),
 	}
 
-	block := NewBlock(header, txs, nil)
+	block := NewBlock(header, txs, nil, nil)
 
 	assert.Equal(t, block.FindTransaction(txs[0].Hash), txs[0])
 	assert.Equal(t, block.FindTransaction(txs[1].Hash), txs[1])
@@ -142,7 +142,7 @@ func Test_Block_FindTransaction(t *testing.T) {
 func Test_Block_GetShardNumber(t *testing.T) {
 	// header is nil
 	header := newTestBlockHeader(t)
-	block := NewBlock(header, nil, nil)
+	block := NewBlock(header, nil, nil, nil)
 	block.Header = nil
 	assert.Equal(t, block.GetShardNumber(), common.UndefinedShardNumber)
 
