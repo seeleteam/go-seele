@@ -6,6 +6,7 @@
 package miner
 
 import (
+	"bytes"
 	"math/big"
 	"time"
 
@@ -63,7 +64,10 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			// @TODO validate debt
+			data := statedb.GetData(d.Data.Account, d.Hash)
+			if bytes.Equal(data, core.DebtDataFlag) {
+				continue
+			}
 
 			// @TODO add debt reward
 
@@ -72,6 +76,8 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 			}
 
 			statedb.AddBalance(d.Data.Account, d.Data.Amount)
+			statedb.SetData(d.Data.Account, d.Hash, core.DebtDataFlag)
+			task.debts = append(task.debts, d)
 		}
 	}
 
