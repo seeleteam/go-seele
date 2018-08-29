@@ -3,23 +3,23 @@
 * @copyright defined in go-seele/LICENSE
  */
 
-package core
+package svm
 
 import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/svm/evm"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/core/vm"
 )
 
-// SVMTYPE for vm type
-type SVMTYPE string
+// TYPE for vm type
+type TYPE string
 
 const (
 	// EVM is ethereum virtual machine
-	EVM SVMTYPE = "evm"
+	EVM TYPE = "evm"
 )
 
 // SeeleVM is heterogeneous and adaptive
@@ -28,11 +28,13 @@ type SeeleVM interface {
 }
 
 // NewSeeleVM implements a variety of vm, and you must ensure that the SVMTYPE is completed, otherwise the returns result is nil
-func NewSeeleVM(svmType SVMTYPE, tx *types.Transaction, statedb StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) SeeleVM {
+func NewSeeleVM(svmType TYPE, tx *types.Transaction, statedb StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) SeeleVM {
 	var svm SeeleVM
 	switch svmType {
 	case EVM:
-		return vm.NewEVMByDefaultConfig(tx, statedb, blockHeader, bcStore)
+		return &evm.SVM{
+			Evm: evm.NewEVMByDefaultConfig(tx, statedb, blockHeader, bcStore),
+		}
 	}
 	return svm
 }

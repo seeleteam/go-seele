@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/svm"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
@@ -546,7 +547,7 @@ func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
 func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb,
 	blockHeader *types.BlockHeader) (*types.Receipt, error) {
-	svm := NewSeeleVM(EVM, tx, statedb, blockHeader, bc.bcStore)
+	svm := svm.NewSeeleVM(svm.EVM, tx, statedb, blockHeader, bc.bcStore)
 	receipt, err := svm.Process(tx, txIndex)
 	if err != nil {
 		return nil, err

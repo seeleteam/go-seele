@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/svm"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
@@ -157,6 +157,6 @@ func processContract(statedb *state.Statedb, bcStore store.BlockchainStore, tx *
 		ExtraData:         make([]byte, 0),
 	}
 
-	svm := core.NewSeeleVM(core.EVM, tx, statedb, header, bcStore)
+	svm := svm.NewSeeleVM(svm.EVM, tx, statedb, header, bcStore)
 	return svm.Process(tx, 0)
 }

@@ -2,7 +2,7 @@
 * @file
 * @copyright defined in go-seele/LICENSE
  */
-package core
+package svm
 
 import (
 	"math/big"
