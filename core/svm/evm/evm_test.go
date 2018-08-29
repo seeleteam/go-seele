@@ -85,7 +85,7 @@ func Test_SimpleStorage(t *testing.T) {
 	createContractTx, err := types.NewContractTransaction(address, new(big.Int), big.NewInt(1), 38, code)
 	assert.Equal(t, err, nil)
 
-	svm := &SVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
+	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
 	receipt, err := svm.Process(createContractTx, 8)
 	// Validate receipt of contract creation.
 	assert.Equal(t, err, nil)
@@ -106,7 +106,7 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err := types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
-	svm = &SVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
+	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
 	receipt, err = svm.Process(callContractTx, 9)
 
 	// Validate receipt of contract call
@@ -123,7 +123,7 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
-	svm = &SVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
+	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
 	receipt, err = svm.Process(callContractTx, 10)
 
 	// Validate receipt contract call
@@ -140,7 +140,7 @@ func Test_SimpleStorage(t *testing.T) {
 	callContractTx, err = types.NewMessageTransaction(address, contractAddr, new(big.Int), big.NewInt(1), 1, input)
 	assert.Equal(t, err, nil)
 
-	svm = &SVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
+	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
 	receipt, err = svm.Process(callContractTx, 11)
 
 	// Validate receipt of contract call
@@ -166,7 +166,7 @@ func Test_InsufficientBalance(t *testing.T) {
 	createContractTx, err := types.NewContractTransaction(address, new(big.Int), common.SeeleToFan, 38, code)
 	assert.Equal(t, err, nil)
 
-	svm := &SVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
+	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
 	_, err = svm.Process(createContractTx, 8)
 	assert.Equal(t, err, vm.ErrInsufficientBalance)
 }
@@ -186,7 +186,7 @@ func Benchmark_CreateContract(b *testing.B) {
 	nonce := uint64(38)
 	createContractTx, _ := types.NewContractTransaction(address, amount, fee, nonce, code)
 
-	svm := &SVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
+	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		svm.Process(createContractTx, 8)
@@ -209,7 +209,7 @@ func Benchmark_CallContract(b *testing.B) {
 	nonce := uint64(38)
 	createContractTx, _ := types.NewContractTransaction(address, amount, fee, nonce, code)
 
-	svm := &SVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
+	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, statedb, header, bcStore)}
 	receipt, _ := svm.Process(createContractTx, 8)
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
 
@@ -219,7 +219,7 @@ func Benchmark_CallContract(b *testing.B) {
 	nonce = uint64(1)
 	callContractTx, _ := types.NewMessageTransaction(address, contractAddr, amount, fee, nonce, input)
 
-	svm = &SVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
+	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, statedb, header, bcStore)}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		svm.Process(callContractTx, 9)

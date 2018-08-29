@@ -19,7 +19,7 @@ import (
 
 // NewEVMByDefaultConfig returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVMByDefaultConfig(tx *types.Transaction, statedb vm.StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
+func NewEVMByDefaultConfig(tx *types.Transaction, statedb *state.Statedb, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
 	evmContext := newEVMContext(tx, blockHeader, blockHeader.Creator, bcStore)
 	chainConfig := &params.ChainConfig{
 		ChainId:             big.NewInt(1),
@@ -80,13 +80,13 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 	}
 }
 
-// SVM implemented by ethereum vm
-type SVM struct {
+// EVM implemented svm by ethereum vm
+type EVM struct {
 	Evm *vm.EVM
 }
 
 // Process implements the SeeleVM interface
-func (s *SVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
+func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
 	statedb, ok := s.Evm.StateDB.(*state.Statedb)
 	if !ok {
 		return nil, fmt.Errorf("use an invalid statedb")
