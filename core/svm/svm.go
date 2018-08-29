@@ -28,10 +28,7 @@ type Context struct {
 // NewSeeleVM implements a variety of vm, and you must ensure that the SVMTYPE is completed, otherwise the returns result is nil
 func NewSeeleVM(ctx *Context) SeeleVM {
 	// TODO for other vm
-	switch ctx.Tx.Data.Payload {
-	default:
-		return &evm.EVM{
-			Evm: evm.NewEVMByDefaultConfig(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore),
-		}
+	return &evm.EVM{
+		Evm: evm.NewEVMByDefaultConfig(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore),
 	}
 }
