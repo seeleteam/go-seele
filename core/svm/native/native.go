@@ -40,6 +40,7 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 	}
 
 	receipt := &types.Receipt{
+		Failed:          false,
 		UsedGas:         usedGas,
 		TxHash:          tx.Hash,
 		ContractAddress: tx.Data.To.Bytes(),
@@ -49,12 +50,11 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 	// add from nonce
 	n.statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 
+	var err error
 	ctx := system.NewContext(tx, n.statedb)
-	result, err := contract.Run(tx.Data.Payload, ctx)
-	if err != nil {
+	if receipt.Result, err = contract.Run(tx.Data.Payload, ctx); err != nil {
 		receipt.Result = []byte(err.Error())
 		receipt.Failed = true
-		return receipt, err
 	}
 
 	// transfer fee to coinbase
@@ -70,8 +70,6 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 		receipt.Logs = make([]*types.Log, 0)
 	}
 
-	receipt.Result = result
-	receipt.Failed = false
 	return receipt, nil
 }
 
