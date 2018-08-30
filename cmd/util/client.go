@@ -41,7 +41,7 @@ func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee 
 	} else {
 		switch to.Type() {
 		case common.AddressTypeExternal:
-			tx, err = types.NewTransaction(*fromAddr, to, amount, fee, nonce)
+			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
 		case common.AddressTypeContract:
 			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
 		default:
