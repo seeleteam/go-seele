@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -86,8 +85,11 @@ func Test_Database_GetCopy(t *testing.T) {
 	// 2 nodes in this db
 	db := testNewDatabase()
 	nodeMap := db.GetCopy()
+	assert.Equal(t, nodeMap, db.m)
 
-	// m1 and m2 are the maps we want to compare
-	eq := reflect.DeepEqual(nodeMap, db.m)
-	assert.Equal(t, eq, true)
+	// 0 nodes in this db
+	log := log.GetLogger("discovery")
+	db = NewDatabase(log)
+	nodeMap = db.GetCopy()
+	assert.Equal(t, len(nodeMap), 0)
 }
