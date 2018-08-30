@@ -40,6 +40,7 @@ func newTestUDP() *udp {
 		self:              NewNodeWithAddr(self.ID, addr, 1),
 		db:                NewDatabase(log),
 		writer:            make(chan *send, 1),
+		addPending:        make(chan *pending, 1),
 		log:               log,
 		timeoutNodesCount: cmap.New(),
 	}
