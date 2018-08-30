@@ -19,7 +19,7 @@ func Test_Domain_Name(t *testing.T) {
 	defer dispose()
 
 	header := newTestBlockHeader(address)
-	contractAddr := common.BytesToAddress([]byte{1, 65}) // 0x0000000000000000000000000000000000000141
+	contractAddr := common.BytesToAddress([]byte{1, 1}) // 0x0000000000000000000000000000000000000101
 	// CreateDomainName
 	byteD := []byte{0}
 	input := append(byteD, []byte("seele.fan")...) // 0x007365656c652e66616e

@@ -46,6 +46,9 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 		TotalFee:        totalFee.Uint64(),
 	}
 
+	// add from nonce
+	n.statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
+
 	ctx := system.NewContext(tx, n.statedb)
 	result, err := contract.Run(tx.Data.Payload, ctx)
 	if err != nil {
@@ -53,6 +56,10 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 		receipt.Failed = true
 		return receipt, err
 	}
+
+	// transfer fee to coinbase
+	n.statedb.SubBalance(tx.Data.From, totalFee)
+	n.statedb.AddBalance(n.blockHeader.Creator, totalFee)
 
 	if receipt.PostState, err = n.statedb.Hash(); err != nil {
 		return nil, err

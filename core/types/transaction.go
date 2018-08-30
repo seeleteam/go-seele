@@ -182,11 +182,6 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 			}
 		}
 
-		if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
-			if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
-				return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
-			}
-		}
 	}
 
 	// vaildate signature
