@@ -27,7 +27,7 @@ type Context struct {
 	BcStore     store.BlockchainStore
 }
 
-// NewSeeleVM implements a variety of vm, now only evm is completed
+// NewSeeleVM implements a variety of vm
 func NewSeeleVM(ctx *Context) SeeleVM {
 	// NVM
 	_, ok := system.Contracts[ctx.Tx.Data.To]
