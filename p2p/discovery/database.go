@@ -18,8 +18,10 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
+// NodeHook some hook funcs
 type NodeHook func(node *Node)
 
+// Database definition
 type Database struct {
 	m              map[common.Hash]*Node
 	log            *log.SeeleLog
@@ -40,6 +42,7 @@ const (
 func (db *Database) StartSaveNodes(nodeDir string, done chan struct{}) {
 	ticker := time.NewTicker(NodesBackupInterval)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -50,6 +53,7 @@ func (db *Database) StartSaveNodes(nodeDir string, done chan struct{}) {
 	}
 }
 
+// SaveNodes dump nodes info into disk file
 func (db *Database) SaveNodes(nodeDir string) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -87,6 +91,7 @@ func (db *Database) SaveNodes(nodeDir string) {
 	db.log.Debug("nodes:%s info backup success\n", string(nodeByte))
 }
 
+// NewDatabase new database
 func NewDatabase(log *log.SeeleLog) *Database {
 	return &Database{
 		m:   make(map[common.Hash]*Node),
@@ -106,6 +111,7 @@ func (db *Database) add(value *Node, notify bool) {
 	db.m[sha] = value
 }
 
+// FindByNodeID find node by its id
 func (db *Database) FindByNodeID(id common.Address) (*Node, bool) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
@@ -161,6 +167,7 @@ func (db *Database) size() int {
 	return len(db.m)
 }
 
+// GetCopy get replica from db.nodes
 func (db *Database) GetCopy() map[common.Hash]*Node {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
