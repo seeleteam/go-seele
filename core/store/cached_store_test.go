@@ -182,3 +182,10 @@ func Test_cachedStore_DeleteBlock(t *testing.T) {
 	block2, _ := cachedStore.GetBlock(block.HeaderHash)
 	assert.Equal(t, block2, (*types.Block)(nil))
 }
+
+func Test_GetDebtIndex(t *testing.T) {
+	store := NewMemStore()
+	cachedStore := NewCachedStore(store)
+
+	GetDebtIndexTest(t, cachedStore)
+}

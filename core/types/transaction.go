@@ -174,17 +174,11 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrPayloadEmpty
 	}
 
-	// validate shard of from/to address
+	// validate shard of from address
 	if shardNeeded {
 		if common.IsShardEnabled() {
 			if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
 				return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
-			}
-		}
-
-		if !tx.Data.To.IsEmpty() && common.IsShardEnabled() {
-			if toShardNum := tx.Data.To.Shard(); toShardNum != common.LocalShardNumber {
-				return fmt.Errorf("invalid to address, shard number is [%v], but coinbase shard number is [%v]", toShardNum, common.LocalShardNumber)
 			}
 		}
 	}

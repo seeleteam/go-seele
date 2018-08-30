@@ -108,6 +108,12 @@ func GetTransactionByHashAction(client *rpc.Client) (interface{}, error) {
 	return util.GetTransactionByHash(client, hashValue)
 }
 
+func GetDebtByHashAction(client *rpc.Client) (interface{}, error) {
+	var result map[string]interface{}
+	err := client.Call(&result, "txpool_getDebtByHash", hashValue)
+	return result, err
+}
+
 func GetPendingTransactionsAction(client *rpc.Client) (interface{}, error) {
 	var result []map[string]interface{}
 	err := client.Call(&result, "txpool_getPendingTransactions")
