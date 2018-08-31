@@ -96,16 +96,16 @@ func (b *bucket) getRandNodes(number int) []*Node {
 	defer b.lock.RUnlock()
 
 	var result []*Node
-	if len(b.peers) > number {
+	if peersLen := len(b.peers); peersLen > number {
 		result = make([]*Node, number)
-		rands := getRandNumbers(len(b.peers), number)
+		rands := getRandNumbers(peersLen, number)
 
 		for i := 0; i < number; i++ {
 			result[i] = &Node{}
 			*result[i] = *b.peers[rands[i]]
 		}
 	} else {
-		result = make([]*Node, len(b.peers))
+		result = make([]*Node, peersLen)
 		for i := 0; i < len(result); i++ {
 			result[i] = &Node{}
 			*(result[i]) = *(b.peers[i])
