@@ -214,3 +214,8 @@ func (store *cachedStore) GetReceiptByTxHash(txHash common.Hash) (*types.Receipt
 func (store *cachedStore) GetTxIndex(txHash common.Hash) (*types.TxIndex, error) {
 	return store.raw.GetTxIndex(txHash)
 }
+
+// GetDebtIndex retrieves the debt index for the specified debt hash
+func (store *cachedStore) GetDebtIndex(txHash common.Hash) (*types.DebtIndex, error) {
+	return store.raw.GetDebtIndex(txHash)
+}

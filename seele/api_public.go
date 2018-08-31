@@ -295,15 +295,8 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (map[string]interface{}, error) {
 	head := b.Header
 	fields := map[string]interface{}{
-		"height":     head.Height,
-		"hash":       b.HeaderHash.ToHex(),
-		"parentHash": head.PreviousBlockHash.ToHex(),
-		"nonce":      head.Nonce,
-		"stateHash":  head.StateHash.ToHex(),
-		"txHash":     head.TxHash.ToHex(),
-		"creator":    head.Creator.ToHex(),
-		"timestamp":  head.CreateTimestamp,
-		"difficulty": head.Difficulty,
+		"header": head,
+		"hash":   b.HeaderHash.ToHex(),
 	}
 
 	txs := b.Transactions
@@ -323,7 +316,24 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 	}
 	fields["totalDifficulty"] = totalDifficulty
 
+	debts := types.NewDebts(txs)
+	fields["txDebts"] = getOutputDebts(debts, fullTx)
+	fields["debts"] = getOutputDebts(b.Debts, fullTx)
+
 	return fields, nil
+}
+
+func getOutputDebts(debts []*types.Debt, fullTx bool) []interface{} {
+	outputDebts := make([]interface{}, len(debts))
+	for i, d := range debts {
+		if fullTx {
+			outputDebts[i] = d
+		} else {
+			outputDebts[i] = d.Hash
+		}
+	}
+
+	return outputDebts
 }
 
 func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) ([]map[string]interface{}, error) {

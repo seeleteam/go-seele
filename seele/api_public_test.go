@@ -267,9 +267,7 @@ func Test_GetBlocks(t *testing.T) {
 	result, err := api.GetBlocks(2, true, 2)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 2)
-	assert.Equal(t, result[0]["height"].(uint64), uint64(2))
 	assert.Equal(t, result[0]["hash"].(string), block2.Header.Hash().ToHex())
-	assert.Equal(t, result[1]["height"].(uint64), uint64(1))
 	assert.Equal(t, result[1]["hash"].(string), block1.Header.Hash().ToHex())
 
 	result, err = api.GetBlocks(-1, true, 1)
