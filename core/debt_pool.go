@@ -173,3 +173,10 @@ func (dp *DebtPool) Get(size int) ([]*types.Debt, int) {
 
 	return results, remainSize
 }
+
+func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
+	dp.mutex.RLock()
+	defer dp.mutex.RUnlock()
+
+	return dp.hashMap[debt]
+}

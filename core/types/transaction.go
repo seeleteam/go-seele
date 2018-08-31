@@ -80,11 +80,13 @@ type Transaction struct {
 	Signature crypto.Signature // Signature is the signature of the transaction
 }
 
-// TxIndex represents an index that used to query block info by tx hash.
-type TxIndex struct {
+type indexInBlock struct {
 	BlockHash common.Hash
-	Index     uint // tx array index in block body
+	Index     uint // index in block body
 }
+
+// TxIndex represents an index that used to query block info by tx hash.
+type TxIndex indexInBlock
 
 type stateDB interface {
 	GetBalance(common.Address) *big.Int
@@ -174,14 +176,13 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrPayloadEmpty
 	}
 
-	// validate shard of from/to address
+	// validate shard of from address
 	if shardNeeded {
 		if common.IsShardEnabled() {
 			if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
 				return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
 			}
 		}
-
 	}
 
 	// vaildate signature

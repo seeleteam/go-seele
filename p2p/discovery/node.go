@@ -52,8 +52,9 @@ func NewNodeWithAddr(id common.Address, addr *net.UDPAddr, shard uint) *Node {
 	return NewNode(id, addr.IP, addr.Port, shard)
 }
 
-func NewNodeFromIP(id string) (*Node, error) {
-	addr, err := net.ResolveUDPAddr("udp", id)
+// NewNodeFromIP new node from ip address
+func NewNodeFromIP(ip string) (*Node, error) {
+	addr, err := net.ResolveUDPAddr("udp", ip)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +63,7 @@ func NewNodeFromIP(id string) (*Node, error) {
 	return node, nil
 }
 
+// NewNodeFromString new node from id
 func NewNodeFromString(id string) (*Node, error) {
 	if !strings.HasPrefix(id, nodeHeader) {
 		return nil, errNodeHeaderInvalid
@@ -76,12 +78,12 @@ func NewNodeFromString(id string) (*Node, error) {
 		return nil, errInvalidNodeString
 	}
 
-	nodeId, err := hex.DecodeString(idSplit[0])
+	nodeID, err := hex.DecodeString(idSplit[0])
 	if err != nil {
 		return nil, err
 	}
 
-	publicKey, err := common.NewAddress(nodeId)
+	publicKey, err := common.NewAddress(nodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +114,7 @@ func NewNodeFromString(id string) (*Node, error) {
 	return node, nil
 }
 
+// GetUDPAddr get UDPAddr from node struct
 func (n *Node) GetUDPAddr() *net.UDPAddr {
 	return &net.UDPAddr{
 		IP:   n.IP,
@@ -137,11 +140,12 @@ func (n *Node) String() string {
 	return fmt.Sprintf(nodeHeader+"%s@%s[%d]", hex, addr, n.Shard)
 }
 
-func (node *Node) UnmarshalText(json []byte) error {
-	n, err := NewNodeFromIP(string(json))
+// UnmarshalText unmarshal json to node
+func (n *Node) UnmarshalText(json []byte) error {
+	node, err := NewNodeFromIP(string(json))
 	if err != nil {
 		return err
 	}
-	*node = *n
+	*n = *node
 	return nil
 }

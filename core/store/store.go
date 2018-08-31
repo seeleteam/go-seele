@@ -66,4 +66,7 @@ type BlockchainStore interface {
 
 	// GetTxIndex retrieves the tx index for the specified tx hash.
 	GetTxIndex(txHash common.Hash) (*types.TxIndex, error)
+
+	// GetDebtIndex retrieves the debt index for the specified debt hash
+	GetDebtIndex(debtHash common.Hash) (*types.DebtIndex, error)
 }
