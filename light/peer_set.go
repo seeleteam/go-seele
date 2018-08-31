@@ -55,3 +55,10 @@ func (p *peerSet) Add(pe *peer) {
 	p.peerMap[peerID] = pe
 	p.shardPeers[pe.Node.Shard][peerID] = pe
 }
+
+func (p *peerSet) choosePeers() []*peer {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	// todo choose peers randomly
+	return nil
+}

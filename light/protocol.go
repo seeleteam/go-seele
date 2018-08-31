@@ -14,17 +14,10 @@ import (
 )
 
 var (
-	transactionHashMsgCode    uint16 = 0
-	transactionRequestMsgCode uint16 = 1
-	transactionsMsgCode       uint16 = 2
-	blockHashMsgCode          uint16 = 3
-	blockRequestMsgCode       uint16 = 4
-	blockMsgCode              uint16 = 5
+	blockRequestMsgCode uint16 = 0
+	blockMsgCode        uint16 = 1
 
-	statusDataMsgCode      uint16 = 6
-	statusChainHeadMsgCode uint16 = 7
-
-	protocolMsgCodeLength uint16 = 13
+	protocolMsgCodeLength uint16 = 2
 )
 
 type BlockChain interface {

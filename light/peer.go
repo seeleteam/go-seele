@@ -71,3 +71,16 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	copy(hash[:], p.head[:])
 	return hash, new(big.Int).Set(p.td)
 }
+
+// RequestBlocksByHashOrNumber fetches a block according to hash or block number.
+func (p *peer) RequestBlocksByHashOrNumber(reqID uint32, origin common.Hash, num uint64) error {
+	query := &blockQuery{
+		ReqID:  reqID,
+		Hash:   origin,
+		Number: num,
+	}
+
+	buff := common.SerializePanic(query)
+	p.log.Debug("peer send [blockRequestMsgCode] query with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, blockRequestMsgCode, buff)
+}
