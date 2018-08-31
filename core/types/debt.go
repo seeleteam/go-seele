@@ -28,10 +28,7 @@ type Debt struct {
 	Data DebtData
 }
 
-type DebtIndex struct {
-	BlockHash common.Hash
-	Index     uint // debts array index in block body
-}
+type DebtIndex indexInBlock
 
 // DebtMerkleRootHash calculates and returns the merkle root hash of the specified debts.
 // If the given receipts are empty, return empty hash.
