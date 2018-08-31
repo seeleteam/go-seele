@@ -7,6 +7,7 @@ package system
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -41,8 +42,8 @@ var (
 	domainNameContractAddress = common.BytesToAddress([]byte{1, 1})
 	subChainContractAddress   = common.BytesToAddress([]byte{1, 2})
 
-	// Contracts is system contracts
-	Contracts = map[common.Address]Contract{
+	// Contracts are system contracts
+	contracts = map[common.Address]Contract{
 		domainNameContractAddress: &contract{domainNameCommands},
 		subChainContractAddress:   &contract{subChainCommands},
 	}
@@ -81,4 +82,14 @@ func (c *contract) Run(input []byte, context *Context) ([]byte, error) {
 	}
 
 	return nil, errInvalidCommand
+}
+
+// GetContractByAddress get system contract by the address
+func GetContractByAddress(address common.Address) (Contract, error) {
+	contract, ok := contracts[address]
+	if !ok {
+		return nil, fmt.Errorf("system contract[%s] that does not exist", address.ToHex())
+	}
+
+	return contract, nil
 }

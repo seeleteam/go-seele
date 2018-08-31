@@ -6,7 +6,6 @@
 package svm
 
 import (
-	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm/evm"
@@ -27,11 +26,10 @@ type Context struct {
 	BcStore     store.BlockchainStore
 }
 
-// NewSeeleVM implements a variety of vm
+// NewSeeleVM creates a Seele VM with specified context to process transaction
 func NewSeeleVM(ctx *Context) SeeleVM {
-	// NVM
-	_, ok := system.Contracts[ctx.Tx.Data.To]
-	if ok {
+	// System contract process
+	if ctx.Tx.Data.To.IsReserved() {
 		return native.NewNativeVM(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore)
 	}
 

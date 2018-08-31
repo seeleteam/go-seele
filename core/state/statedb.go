@@ -278,18 +278,6 @@ func (s *Statedb) GetCodeSize(address common.Address) int {
 	return len(code)
 }
 
-// GetState returns the value of the specified key in account storage if exists.
-// Otherwise, return empty hash.
-func (s *Statedb) GetState(address common.Address, key common.Hash) common.Hash {
-	value := s.GetData(address, key)
-	return common.BytesToHash(value)
-}
-
-// SetState adds or updates the specified key-value pair in account storage.
-func (s *Statedb) SetState(address common.Address, key common.Hash, value common.Hash) {
-	s.SetData(address, key, value.Bytes())
-}
-
 // Exist indicates whether the given account exists in statedb.
 // Note that it should also return true for suicided accounts.
 func (s *Statedb) Exist(address common.Address) bool {

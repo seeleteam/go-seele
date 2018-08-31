@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/trie"
+	"github.com/stretchr/testify/assert"
 )
 
 func BytesToAddressForTest(b []byte) common.Address {
@@ -147,7 +147,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	statedb.SetBalance(addr, big.NewInt(99))
 	statedb.SetNonce(addr, 38)
 	statedb.SetCode(addr, []byte("test code"))
-	statedb.SetState(addr, common.StringToHash("test key"), common.StringToHash("test value"))
+	statedb.SetData(addr, common.StringToHash("test key"), []byte("test value"))
 
 	// Get root hash for receipt PostState
 	root1, err := statedb.Hash()
@@ -168,7 +168,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	storageKey := stateObj.dataKey(dataTypeStorage, crypto.MustHash(common.StringToHash("test key")).Bytes()...)
 	storageValue, found := trie.Get(storageKey)
 	assert.Equal(t, found, true)
-	assert.Equal(t, storageValue, common.StringToHash("test value").Bytes())
+	assert.Equal(t, storageValue, []byte("test value"))
 }
 
 func Test_StateDB_CommitMultipleChanges(t *testing.T) {
@@ -187,7 +187,7 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 		statedb.SetBalance(addr, big.NewInt(38))
 		statedb.SetNonce(addr, 6)
 		statedb.SetCode(addr, []byte("hello"))
-		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+		statedb.SetData(addr, common.StringToHash("key"), []byte("value"))
 
 		if _, err = statedb.Hash(); err != nil {
 			panic(err)
@@ -222,8 +222,8 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 			t.Fatalf("Invalid account code %v", code)
 		}
 
-		if value := statedb2.GetState(addr, common.StringToHash("key")); !value.Equal(common.StringToHash("value")) {
-			t.Fatalf("Invalid acocunt state value, %v", value.ToHex())
+		if value := statedb2.GetData(addr, common.StringToHash("key")); string(value) != "value" {
+			t.Fatalf("Invalid acocunt state value, %v", value)
 		}
 	}
 }
@@ -244,7 +244,7 @@ func Benchmark_Trie_Hash(b *testing.B) {
 		statedb.SetBalance(addr, big.NewInt(38))
 		statedb.SetNonce(addr, 6)
 		statedb.SetCode(addr, []byte("hello"))
-		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+		statedb.SetData(addr, common.StringToHash("key"), []byte("value"))
 
 		if _, err := statedb.Hash(); err != nil {
 			panic(err)
@@ -371,43 +371,14 @@ func Test_Refund(t *testing.T) {
 	assert.Equal(t, statedb.refund, uint64(38+66))
 }
 
-func Test_State(t *testing.T) {
-	db, statedb, stateObj, dispose := newTestEVMStateDB()
-	defer dispose()
-
-	addr := stateObj.address
-	k1 := common.StringToHash("key1")
-	v1 := common.StringToHash("value1")
-
-	// By default, no state in account.
-	assert.Equal(t, statedb.GetState(addr, k1), common.EmptyHash)
-
-	// Set k1-v1
-	statedb.SetState(addr, k1, v1)
-	assert.Equal(t, statedb.GetState(addr, k1), v1)
-
-	// Set k2-v2
-	k2 := common.StringToHash("key2")
-	v2 := common.StringToHash("value2")
-	statedb.SetState(addr, k2, v2)
-	assert.Equal(t, statedb.GetState(addr, k2), v2)
-
-	// Commit the state change
-	_, statedb2 := commitAndNewStateDB(db, statedb)
-
-	// Ensure the state is valid.
-	assert.Equal(t, statedb2.GetState(addr, k1), v1)
-	assert.Equal(t, statedb2.GetState(addr, k2), v2)
-}
-
 func Test_Suicide(t *testing.T) {
 	db, statedb, stateObj, dispose := newTestEVMStateDB()
 	defer dispose()
 
 	addr := stateObj.address
 	statedb.SetCode(addr, []byte("hello,world"))
-	statedb.SetState(addr, common.StringToHash("k1"), common.StringToHash("v1"))
-	statedb.SetState(addr, common.StringToHash("k2"), common.StringToHash("v2"))
+	statedb.SetData(addr, common.StringToHash("k1"), []byte("v1"))
+	statedb.SetData(addr, common.StringToHash("k2"), []byte("v2"))
 
 	assert.Equal(t, statedb.Exist(addr), true)
 	assert.Equal(t, statedb.HasSuicided(addr), false)
@@ -419,10 +390,10 @@ func Test_Suicide(t *testing.T) {
 	// Commit the state change
 	_, statedb2 := commitAndNewStateDB(db, statedb)
 
-	assert.Equal(t, statedb2.Exist(addr), false)                                          // account not exists
-	assert.Equal(t, statedb2.GetCode(addr), []byte(nil))                                  // code not exists
-	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k1")), common.EmptyHash) // k1 not exists
-	assert.Equal(t, statedb2.GetState(addr, common.StringToHash("k2")), common.EmptyHash) // k2 not exists
+	assert.Equal(t, statedb2.Exist(addr), false)                                    // account not exists
+	assert.Equal(t, statedb2.GetCode(addr), []byte(nil))                            // code not exists
+	assert.Equal(t, statedb2.GetData(addr, common.StringToHash("k1")), []byte(nil)) // k1 not exists
+	assert.Equal(t, statedb2.GetData(addr, common.StringToHash("k2")), []byte(nil)) // k2 not exists
 }
 
 func Test_Log(t *testing.T) {

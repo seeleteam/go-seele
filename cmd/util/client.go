@@ -31,6 +31,7 @@ func GetInfo(client *rpc.Client) (seele.MinerInfo, error) {
 	return info, err
 }
 
+// GenerateTx generate a transaction based on the address type of to
 func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*types.Transaction, error) {
 	fromAddr := crypto.GetAddress(&from.PublicKey)
 
@@ -41,8 +42,10 @@ func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee 
 	} else {
 		switch to.Type() {
 		case common.AddressTypeExternal:
-			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
+			tx, err = types.NewTransaction(*fromAddr, to, amount, fee, nonce)
 		case common.AddressTypeContract:
+			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
+		case common.AddressTypeReserved:
 			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
 		default:
 			return nil, fmt.Errorf("unsupported address type: %d", to.Type())

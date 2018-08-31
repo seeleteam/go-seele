@@ -1,7 +1,6 @@
 package native
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/contract/system"
@@ -26,9 +25,9 @@ func NewNativeVM(tx *types.Transaction, statedb *state.Statedb, blockHeader *typ
 
 // Process the system contract
 func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
-	contract, ok := system.Contracts[tx.Data.To]
-	if !ok {
-		return nil, fmt.Errorf("system contract[%s] that does not exist", tx.Data.To.ToHex())
+	contract, err := system.GetContractByAddress(tx.Data.To)
+	if err != nil {
+		return nil, err
 	}
 
 	n.statedb.Prepare(txIndex)
@@ -40,7 +39,6 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 	}
 
 	receipt := &types.Receipt{
-		Failed:          false,
 		UsedGas:         usedGas,
 		TxHash:          tx.Hash,
 		ContractAddress: tx.Data.To.Bytes(),
@@ -50,7 +48,6 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 	// add from nonce
 	n.statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 
-	var err error
 	ctx := system.NewContext(tx, n.statedb)
 	if receipt.Result, err = contract.Run(tx.Data.Payload, ctx); err != nil {
 		receipt.Result = []byte(err.Error())
