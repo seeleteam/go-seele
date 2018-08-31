@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -27,7 +28,7 @@ func Test_Domain_Name(t *testing.T) {
 	tx, err := types.NewMessageTransaction(address, contractAddr, amount, fee, nonce, input)
 	assert.Equal(t, err, nil)
 
-	nvm := NewNativeVM(tx, statedb, header, bcStore)
+	nvm := NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
 	receipt, err := nvm.Process(tx, 0)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
@@ -48,7 +49,7 @@ func Test_Domain_Name(t *testing.T) {
 	tx, err = types.NewMessageTransaction(address, contractAddr, amount, fee, nonce, input)
 	assert.Equal(t, err, nil)
 
-	nvm = NewNativeVM(tx, statedb, header, bcStore)
+	nvm = NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
 	receipt, err = nvm.Process(tx, 1)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
@@ -68,9 +69,9 @@ func Test_Domain_Name(t *testing.T) {
 	tx, err = types.NewMessageTransaction(address, contractAddr, amount, fee, nonce, input)
 	assert.Equal(t, err, nil)
 
-	nvm = NewNativeVM(tx, statedb, header, bcStore)
+	nvm = NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
 	_, err = nvm.Process(tx, 2)
-	assert.Equal(t, err.Error(), "system contract[0x0000000000000000000000000000000000000140] that does not exist")
+	assert.Equal(t, err.Error(), "use an invalid system contract")
 }
 
 // preprocessContract creates the contract tx dependent state DB, blockchain store

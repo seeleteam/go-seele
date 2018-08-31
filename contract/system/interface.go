@@ -7,7 +7,6 @@ package system
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -85,11 +84,6 @@ func (c *contract) Run(input []byte, context *Context) ([]byte, error) {
 }
 
 // GetContractByAddress get system contract by the address
-func GetContractByAddress(address common.Address) (Contract, error) {
-	contract, ok := contracts[address]
-	if !ok {
-		return nil, fmt.Errorf("system contract[%s] that does not exist", address.ToHex())
-	}
-
-	return contract, nil
+func GetContractByAddress(address common.Address) Contract {
+	return contracts[address]
 }

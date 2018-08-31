@@ -1,6 +1,7 @@
 package native
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/contract/system"
@@ -16,23 +17,24 @@ type NVM struct {
 	statedb     *state.Statedb
 	blockHeader *types.BlockHeader
 	bcStore     store.BlockchainStore
+	contract    system.Contract
 }
 
-// NewNativeVM is to process the system contract
-func NewNativeVM(tx *types.Transaction, statedb *state.Statedb, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *NVM {
-	return &NVM{tx, statedb, blockHeader, bcStore}
+// NewNativeVM is to process the system contract, You must guarantee that the contract is non-empty
+func NewNativeVM(tx *types.Transaction, statedb *state.Statedb, blockHeader *types.BlockHeader, bcStore store.BlockchainStore, contract system.Contract) *NVM {
+	return &NVM{tx, statedb, blockHeader, bcStore, contract}
 }
 
 // Process the system contract
 func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
-	contract, err := system.GetContractByAddress(tx.Data.To)
-	if err != nil {
-		return nil, err
+	if n.contract == nil && system.GetContractByAddress(tx.Data.To) == nil {
+		return nil, fmt.Errorf("use an invalid system contract")
 	}
 
+	// TODO separate the commom statedb operation
 	n.statedb.Prepare(txIndex)
 
-	usedGas := contract.RequiredGas(tx.Data.Payload)
+	usedGas := n.contract.RequiredGas(tx.Data.Payload)
 	totalFee := new(big.Int).Add(usedGasFee(usedGas), tx.Data.Fee)
 	if balance := n.statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
 		return nil, vm.ErrInsufficientBalance
@@ -48,8 +50,9 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 	// add from nonce
 	n.statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 
+	var err error
 	ctx := system.NewContext(tx, n.statedb)
-	if receipt.Result, err = contract.Run(tx.Data.Payload, ctx); err != nil {
+	if receipt.Result, err = n.contract.Run(tx.Data.Payload, ctx); err != nil {
 		receipt.Result = []byte(err.Error())
 		receipt.Failed = true
 	}

@@ -6,6 +6,7 @@
 package svm
 
 import (
+	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm/evm"
@@ -30,7 +31,9 @@ type Context struct {
 func NewSeeleVM(ctx *Context) SeeleVM {
 	// System contract process
 	if ctx.Tx.Data.To.IsReserved() {
-		return native.NewNativeVM(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore)
+		if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil {
+			return native.NewNativeVM(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore, contract)
+		}
 	}
 
 	// EVM

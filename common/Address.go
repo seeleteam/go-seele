@@ -84,11 +84,7 @@ func (id *Address) Type() AddressType {
 
 // IsReserved returns true if the address is reserved
 func (id *Address) IsReserved() bool {
-	if id.IsEmpty() {
-		return false
-	}
-
-	if bytes.Compare(id.Bytes(), MaxSystemContractAddress.Bytes()) <= 0 {
+	if !id.IsEmpty() && bytes.Compare(id.Bytes(), MaxSystemContractAddress.Bytes()) <= 0 {
 		return true
 	}
 
