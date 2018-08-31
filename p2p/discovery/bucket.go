@@ -8,6 +8,7 @@ package discovery
 import (
 	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -123,6 +124,7 @@ func getRandNumbers(upperBound int, len int) []int {
 	rands := make([]int, 0)
 	count := 0
 
+	rand.Seed(time.Now().UnixNano())
 	for {
 		i := rand.Intn(upperBound)
 		if !generated[i] {
