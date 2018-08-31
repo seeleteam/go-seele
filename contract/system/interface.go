@@ -38,13 +38,15 @@ var (
 	errInvalidCommand = errors.New("invalid command")
 	errExists         = errors.New("already exists")
 
-	domainNameContractAddress = common.BytesToAddress([]byte{1, 1})
-	subChainContractAddress   = common.BytesToAddress([]byte{1, 2})
+	domainNameContractAddress   = common.BytesToAddress([]byte{1, 1})
+	subChainContractAddress     = common.BytesToAddress([]byte{1, 2})
+	hashTimeLockContractAddress = common.BytesToAddress([]byte{1, 3})
 
 	// Contracts are system contracts
 	contracts = map[common.Address]Contract{
-		domainNameContractAddress: &contract{domainNameCommands},
-		subChainContractAddress:   &contract{subChainCommands},
+		domainNameContractAddress:   &contract{domainNameCommands},
+		subChainContractAddress:     &contract{subChainCommands},
+		hashTimeLockContractAddress: &contract{htlcCommands},
 	}
 )
 
