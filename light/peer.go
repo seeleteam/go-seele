@@ -25,7 +25,6 @@ type PeerInfo struct {
 
 type peer struct {
 	*p2p.Peer
-	peerID    common.Address // id of the peer
 	peerStrID string
 	version   uint // Seele protocol version negotiated
 	head      common.Hash
@@ -47,7 +46,6 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog)
 		Peer:      p,
 		version:   version,
 		td:        big.NewInt(0),
-		peerID:    p.Node.ID,
 		peerStrID: idToStr(p.Node.ID),
 		rw:        rw,
 		log:       log,
