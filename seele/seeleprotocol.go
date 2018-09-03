@@ -309,7 +309,12 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 
-	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
+	genesisHash, err := p.chain.GetStore().GetBlockHash(0)
+	if err != nil {
+		return
+	}
+	
+	if err := newPeer.handShake(p.networkID, localTD, head, genesisHash); err != nil {
 		p.log.Error("handleAddPeer err. %s", err)
 		newPeer.Disconnect(DiscHandShakeErr)
 		return
