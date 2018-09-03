@@ -94,11 +94,11 @@ func Test_newHTLC(t *testing.T) {
 	context.statedb.SetBalance(testGenesisAccounts[0].addr, big.NewInt(50000))
 	var lockinfo hashTimeLock
 	locktime := time.Now().Unix() + 48*3600
-	lockinfo.Timelock = big.NewInt(0).SetInt64(locktime)
+	lockinfo.TimeLock = locktime
 	hash, err := common.HexToHash(secretehash)
 	assert.Equal(t, err, nil)
 
-	lockinfo.Hashlock = hash
+	lockinfo.HashLock = hash
 	databytes, err := json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -130,11 +130,11 @@ func Test_Withdraw(t *testing.T) {
 
 	var lockinfo hashTimeLock
 	locktime := time.Now().Unix() + 48*3600
-	lockinfo.Timelock = big.NewInt(0).SetInt64(locktime)
+	lockinfo.TimeLock = locktime
 	hash, err := common.HexToHash(secretehash)
 	assert.Equal(t, err, nil)
 
-	lockinfo.Hashlock = hash
+	lockinfo.HashLock = hash
 	databytes, err := json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -157,7 +157,7 @@ func Test_Withdraw(t *testing.T) {
 
 	// case 1: forged preimage
 	_, err = withdraw(databytes, context)
-	assert.Equal(t, err, errHashNotMatch)
+	assert.Equal(t, err, errHashMismatch)
 
 	// case 2: forged receiver
 	preimage, err = hexutil.HexToBytes(secret)
@@ -184,7 +184,7 @@ func Test_Withdraw(t *testing.T) {
 	assert.Equal(t, err, errWithdrawAfterWithdrawed)
 	// case 5: timelock is passed, can not be withdrawable
 	locktime = time.Now().Unix() + 1
-	lockinfo.Timelock = big.NewInt(0).SetInt64(locktime)
+	lockinfo.TimeLock = locktime
 	databytes, err = json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -208,7 +208,7 @@ func Test_Withdraw(t *testing.T) {
 	context.tx = tx
 	context.BlockHeader.CreateTimestamp = big.NewInt(time.Now().Unix() + 1)
 	_, err = withdraw(databytes, context)
-	assert.Equal(t, err, errTimeLockOver)
+	assert.Equal(t, err, errTimeExpired)
 }
 
 func Test_Refund(t *testing.T) {
@@ -231,10 +231,10 @@ func Test_Refund(t *testing.T) {
 
 	var lockinfo hashTimeLock
 	locktime := time.Now().Unix() + 48*3600
-	lockinfo.Timelock = big.NewInt(locktime)
+	lockinfo.TimeLock = locktime
 	hash, err := common.HexToHash(secretehash)
 	assert.Equal(t, err, nil)
-	lockinfo.Hashlock = hash
+	lockinfo.HashLock = hash
 	databytes, err := json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -255,11 +255,11 @@ func Test_Refund(t *testing.T) {
 	tx = newTestTx(0, 1, 100, 100, 0)
 	context.tx = tx
 	_, err = refund(hashbytes, context)
-	assert.Equal(t, err, errTimeLock)
+	assert.Equal(t, err, errTimeLocked)
 
 	// case 3: receiver have withdrawed
 	locktime = time.Now().Unix() + 1
-	lockinfo.Timelock = big.NewInt(locktime)
+	lockinfo.TimeLock = locktime
 	databytes, err = json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -294,7 +294,7 @@ func Test_Refund(t *testing.T) {
 	// case 4: refund
 	context.BlockHeader.CreateTimestamp = big.NewInt(time.Now().Unix())
 	locktime = time.Now().Unix() + 1
-	lockinfo.Timelock = big.NewInt(locktime)
+	lockinfo.TimeLock = locktime
 	databytes, err = json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -325,11 +325,11 @@ func Test_GetContract(t *testing.T) {
 	context.statedb.CreateAccount(hashTimeLockContractAddress)
 	var lockinfo hashTimeLock
 	locktime := time.Now().Unix() + 48*3600
-	lockinfo.Timelock = big.NewInt(locktime)
+	lockinfo.TimeLock = locktime
 	hash, err := common.HexToHash(secretehash)
 	assert.Equal(t, err, nil)
 
-	lockinfo.Hashlock = hash
+	lockinfo.HashLock = hash
 	databytes, err := json.Marshal(lockinfo)
 	assert.Equal(t, err, nil)
 
@@ -340,6 +340,6 @@ func Test_GetContract(t *testing.T) {
 
 	// case 2: get data by key, no value with key
 	_, err = getContract(common.EmptyHash.Bytes(), context)
-	assert.Equal(t, err, errNoValueWithKey)
+	assert.Equal(t, err, errNotFound)
 
 }
