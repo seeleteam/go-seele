@@ -7,25 +7,28 @@ package light
 
 import (
 	"context"
+	"path/filepath"
 
+	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
 )
 
-// ServiceClient implements full node service.
+// ServiceClient implements service for light mode.
 type ServiceClient struct {
 	networkID     uint64
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol
 	log           *log.SeeleLog
 
-	txPool         TransactionPool
-	chain          BlockChain
-	chainDB        database.Database // database used to store blocks.
-	accountStateDB database.Database // database used to store account state info.
+	txPool  *LightPool
+	chain   *LightChain
+	lightDB database.Database // database used to store blocks and account state.
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -40,14 +43,56 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		networkID: conf.P2PConfig.NetworkID,
 	}
 
+	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	// Initialize blockchain DB.
+	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
+	log.Info("NewServiceClient BlockChain datadir is %s", chainDBPath)
+	s.lightDB, err = leveldb.NewLevelDB(chainDBPath)
+	if err != nil {
+		log.Error("NewServiceClient Create lightDB err. %s", err)
+		return nil, err
+	}
+	leveldb.StartMetrics(s.lightDB, "lightDB", log)
+
+	// initialize and validate genesis
+	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.lightDB))
+	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
+
+	err = genesis.InitializeAndValidate(bcStore, s.lightDB)
+	if err != nil {
+		s.lightDB.Close()
+		log.Error("NewServiceClient genesis.Initialize err. %s", err)
+		return nil, err
+	}
+
+	s.chain, err = newLightChain(bcStore, s.lightDB)
+	if err != nil {
+		s.lightDB.Close()
+		log.Error("failed to init chain in NewServiceClient. %s", err)
+		return nil, err
+	}
+
+	s.txPool, err = newLightPool(s.chain)
+	if err != nil {
+		s.lightDB.Close()
+		log.Error("failed to create transaction pool in NewServiceClient, %s", err)
+		return nil, err
+	}
+
+	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, true, log)
+	if err != nil {
+		s.lightDB.Close()
+		log.Error("failed to create seeleProtocol in NewServiceClient, %s", err)
+		return nil, err
+	}
+
 	return s, nil
 }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
 func (s *ServiceClient) Protocols() (protos []p2p.Protocol) {
-	protos = append(protos, s.seeleProtocol.Protocol)
-	return
+	return append(protos, s.seeleProtocol.Protocol)
 }
 
 // Start implements node.Service, starting goroutines needed by ServiceClient.
@@ -62,12 +107,12 @@ func (s *ServiceClient) Start(srvr *p2p.Server) error {
 func (s *ServiceClient) Stop() error {
 	s.seeleProtocol.Stop()
 
-	s.chainDB.Close()
-	s.accountStateDB.Close()
+	s.lightDB.Close()
 	return nil
 }
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
+	// todo
 	return
 }

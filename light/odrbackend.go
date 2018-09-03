@@ -112,8 +112,10 @@ func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error)
 	select {
 	case msg := <-ch:
 		reqMsg := msg.(*BlockMsgBody)
+		close(ch)
 		return reqMsg.Block, nil
 	case <-o.quitCh:
+		close(ch)
 		return nil, errServiceQuited
 	}
 }

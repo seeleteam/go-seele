@@ -40,8 +40,7 @@ func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.S
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
 func (s *ServiceServer) Protocols() (protos []p2p.Protocol) {
-	protos = append(protos, s.seeleProtocol.Protocol)
-	return
+	return append(protos, s.seeleProtocol.Protocol)
 }
 
 // Start implements node.Service, starting goroutines needed by ServiceServer.
@@ -61,6 +60,7 @@ func (s *ServiceServer) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceServer) APIs() (apis []rpc.API) {
+	//todo
 	return
 }
 
