@@ -57,6 +57,8 @@ func codeToStr(code uint16) string {
 		return "statusDataMsgCode"
 	case statusChainHeadMsgCode:
 		return "statusChainHeadMsgCode"
+	case debtMsgCode:
+		return "debtMsgCode"
 	}
 
 	return downloader.CodeToStr(code)
@@ -368,7 +370,7 @@ handler:
 
 		// skip unsupported message from different shard peer
 		if peer.Node.Shard != common.LocalShardNumber {
-			if msg.Code != transactionsMsgCode {
+			if msg.Code != transactionsMsgCode && msg.Code != debtMsgCode {
 				continue
 			}
 		}
@@ -512,7 +514,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got %d debts message", len(debts))
+			p.log.Debug("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
 			for _, d := range debts {
 				peer.knownDebts.Add(d.Hash, nil)
 			}
