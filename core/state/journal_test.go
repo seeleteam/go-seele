@@ -9,9 +9,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Journal_CreateAccount(t *testing.T) {
@@ -96,9 +96,9 @@ func Test_Journal_State(t *testing.T) {
 	stateObj.cachedStorage[key] = value.Bytes()
 
 	snapshot := statedb.Snapshot()
-	statedb.SetState(stateObj.address, key, common.StringToHash("value2"))
+	statedb.SetData(stateObj.address, key, []byte("value2"))
 	statedb.RevertToSnapshot(snapshot)
-	assert.Equal(t, statedb.GetState(stateObj.address, key), value)
+	assert.Equal(t, statedb.GetData(stateObj.address, key), value.Bytes())
 }
 
 func Test_Journal_Suicide(t *testing.T) {

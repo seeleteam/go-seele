@@ -262,32 +262,6 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 	assert.Equal(t, strings.Contains(err.Error(), "invalid from address"), true)
 }
 
-func Test_Transaction_Validate_InvalidToShard(t *testing.T) {
-	dispose := prepareShardEnv(9)
-	defer dispose()
-
-	from, _ := crypto.MustGenerateShardKeyPair(9)
-	to := crypto.MustGenerateShardAddress(1) // invalid shard
-	_, err := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-
-	assert.Equal(t, err != nil, true)
-	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
-}
-
-func Test_Transaction_Validate_InvalidContractShard(t *testing.T) {
-	dispose := prepareShardEnv(9)
-	defer dispose()
-
-	// From address in one shard, but contract address in another shard.
-	from, _ := crypto.MustGenerateShardKeyPair(9)
-	to := crypto.MustGenerateShardAddress(15)
-	contractAddr := crypto.CreateAddress(*to, 38)
-	_, err := NewMessageTransaction(*from, contractAddr, big.NewInt(20), big.NewInt(10), 5, []byte("contract message"))
-
-	assert.Equal(t, err != nil, true)
-	assert.Equal(t, strings.Contains(err.Error(), "invalid to address"), true)
-}
-
 func Test_Transaction_InvalidFee(t *testing.T) {
 	dispose := prepareShardEnv(9)
 	defer dispose()

@@ -97,7 +97,7 @@ func (r *rpcNode) ToNode() *Node {
 	return NewNode(r.SelfID, r.IP, int(r.UDPPort), r.Shard)
 }
 
-func ConvertToRpcNode(n *Node) *rpcNode {
+func convertToRPCNode(n *Node) *rpcNode {
 	return &rpcNode{
 		SelfID:  n.ID,
 		IP:      n.IP,
@@ -179,7 +179,7 @@ func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 
 	rpcs := make([]*rpcNode, len(nodes))
 	for index, n := range nodes {
-		rpcs[index] = ConvertToRpcNode(n)
+		rpcs[index] = convertToRPCNode(n)
 	}
 
 	response := &neighbors{
@@ -302,7 +302,7 @@ func (m *findShardNode) handle(t *udp, from *net.UDPAddr) {
 
 	rpcNodes := make([]*rpcNode, len(nodes))
 	for i := 0; i < len(nodes); i++ {
-		rpcNodes[i] = ConvertToRpcNode(nodes[i])
+		rpcNodes[i] = convertToRPCNode(nodes[i])
 	}
 
 	response := &shardNode{

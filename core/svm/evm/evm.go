@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
@@ -19,7 +18,7 @@ import (
 
 // NewEVMByDefaultConfig returns a new EVM. The returned EVM is not thread safe and should
 // only ever be used *once*.
-func NewEVMByDefaultConfig(tx *types.Transaction, statedb *state.Statedb, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
+func NewEVMByDefaultConfig(tx *types.Transaction, statedb *StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
 	evmContext := newEVMContext(tx, blockHeader, blockHeader.Creator, bcStore)
 	chainConfig := &params.ChainConfig{
 		ChainId:             big.NewInt(1),
@@ -90,7 +89,7 @@ type EVM struct {
 
 // Process implements the SeeleVM interface
 func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
-	statedb, ok := s.Evm.StateDB.(*state.Statedb)
+	statedb, ok := s.Evm.StateDB.(*StateDB)
 	if !ok {
 		return nil, fmt.Errorf("use an invalid statedb")
 	}

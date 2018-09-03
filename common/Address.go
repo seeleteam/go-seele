@@ -32,10 +32,15 @@ const (
 	AddressTypeExternal = AddressType(1)
 	// AddressTypeContract is the address type for contract account.
 	AddressTypeContract = AddressType(2)
+	// AddressTypeReserved is the reserved address type for system contract.
+	AddressTypeReserved = AddressType(3)
 )
 
 // EmptyAddress presents an empty address
 var EmptyAddress = Address{}
+
+// MaxSystemContractAddress max system contract address
+var MaxSystemContractAddress = BytesToAddress([]byte{4, 255})
 
 // Address we use public key as node id
 type Address [addressLen]byte
@@ -70,7 +75,16 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 
 // Type returns the address type
 func (id *Address) Type() AddressType {
+	if id.IsReserved() {
+		return AddressTypeReserved
+	}
+
 	return AddressType(id[addressLen-1] & 0x0F)
+}
+
+// IsReserved returns true if the address is reserved
+func (id *Address) IsReserved() bool {
+	return !id.IsEmpty() && bytes.Compare(id.Bytes(), MaxSystemContractAddress.Bytes()) <= 0
 }
 
 // Bytes get the actual bytes

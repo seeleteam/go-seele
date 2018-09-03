@@ -28,6 +28,8 @@ type Debt struct {
 	Data DebtData
 }
 
+type DebtIndex indexInBlock
+
 // DebtMerkleRootHash calculates and returns the merkle root hash of the specified debts.
 // If the given receipts are empty, return empty hash.
 func DebtMerkleRootHash(debts []*Debt) common.Hash {
