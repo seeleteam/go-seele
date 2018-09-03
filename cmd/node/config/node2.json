@@ -15,7 +15,7 @@
     "networkID": 1
   },
   "log": {
-    "isDebug": false,
+    "isDebug": true,
     "printLog": true
   },
   "httpServer": {
