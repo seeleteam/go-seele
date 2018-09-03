@@ -15,13 +15,14 @@ import (
 
 // Context provides information that required in system contract.
 type Context struct {
-	tx      *types.Transaction
-	statedb *state.Statedb
+	tx          *types.Transaction
+	statedb     *state.Statedb
+	BlockHeader *types.BlockHeader
 }
 
 // NewContext creates a system contract context.
-func NewContext(tx *types.Transaction, statedb *state.Statedb) *Context {
-	return &Context{tx, statedb}
+func NewContext(tx *types.Transaction, statedb *state.Statedb, BlockHeader *types.BlockHeader) *Context {
+	return &Context{tx, statedb, BlockHeader}
 }
 
 // Contract is the basic interface for native Go contracts in Seele.
