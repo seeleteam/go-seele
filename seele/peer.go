@@ -32,6 +32,7 @@ const (
 var (
 	errMsgNotMatch     = errors.New("Message not match")
 	errNetworkNotMatch = errors.New("NetworkID not match")
+	errGenesisNotMatch = errors.New("Genesis not match")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -308,8 +309,11 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 }
 
 func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64) error {
-	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
+	if retStatusMsg.NetworkID != networkID {
 		return errNetworkNotMatch
+	}
+	if retStatusMsg.GenesisBlock != genesis {
+		return errGenesisNotMatch
 	}
 	return nil
 }
