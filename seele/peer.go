@@ -298,11 +298,18 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 		return err
 	}
 
-	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
-		return errNetworkNotMatch
+	if err = verifyGenesisAndNetworkID(retStatusMsg, genesis, networkID); err != nil {
+		return err
 	}
 
 	p.head = retStatusMsg.CurrentBlock
 	p.td = retStatusMsg.TD
+	return nil
+}
+
+func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64) error {
+	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
+		return errNetworkNotMatch
+	}
 	return nil
 }
