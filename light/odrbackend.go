@@ -7,6 +7,7 @@ package light
 
 import (
 	"errors"
+	"fmt"
 	rand2 "math/rand"
 	"sync"
 	"time"
@@ -28,22 +29,25 @@ type odrBackend struct {
 	quitCh     chan struct{}
 	requestMap map[uint32]chan interface{}
 	wg         sync.WaitGroup
-	peers      peerSet
+	peers      *peerSet
 	log        *log.SeeleLog
 }
 
-func newOdrBackend(log *log.SeeleLog, peers peerSet) *odrBackend {
+func newOdrBackend(log *log.SeeleLog) *odrBackend {
 	o := &odrBackend{
-		peers:      peers,
 		msgCh:      make(chan *p2p.Message),
 		requestMap: make(map[uint32]chan interface{}),
 		quitCh:     make(chan struct{}),
 		log:        log,
 	}
 
+	return o
+}
+
+func (o *odrBackend) start(peers *peerSet) {
+	o.peers = peers
 	o.wg.Add(1)
 	go o.run()
-	return o
 }
 
 func (o *odrBackend) run() {
@@ -68,7 +72,10 @@ loopOut:
 				reqCh := o.requestMap[reqID]
 				if reqCh != nil {
 					delete(o.requestMap, reqID)
-					reqCh <- reqMsg
+					// if block is retrieved correctly, sends to reqCh.
+					if reqMsg.(*BlockMsgBody).Block != nil {
+						reqCh <- reqMsg
+					}
 				}
 				o.lock.Unlock()
 			}
@@ -109,6 +116,7 @@ func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error)
 		p.RequestBlocksByHashOrNumber(reqID, hash, no)
 	}
 
+	timeout := time.NewTimer(MsgWaitTimeout)
 	select {
 	case msg := <-ch:
 		reqMsg := msg.(*BlockMsgBody)
@@ -117,6 +125,15 @@ func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error)
 	case <-o.quitCh:
 		close(ch)
 		return nil, errServiceQuited
+	case <-timeout.C:
+		err = fmt.Errorf("wait for msg reqid=%u timeout", reqID)
+		o.lock.Lock()
+		reqCh := o.requestMap[reqID]
+		if reqCh != nil {
+			delete(o.requestMap, reqID)
+		}
+		o.lock.Unlock()
+		return nil, err
 	}
 }
 

@@ -24,7 +24,7 @@ type ServiceServer struct {
 
 // NewServiceServer create ServiceServer
 func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.SeeleLog) (*ServiceServer, error) {
-	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.BlockChain(), true, log)
+	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.BlockChain(), true, nil, log)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +81,12 @@ needQuit:
 	for {
 		select {
 		case newHeader := <-pm.chainHeaderChangeChannel:
-			//
+			// todo
 			pm.log.Debug("blockLoop head changed. %s", newHeader)
 		case <-pm.quitCh:
 			break needQuit
 		}
 	}
+
+	event.ChainHeaderChangedEventMananger.RemoveListener(pm.chainHeaderChanged)
 }

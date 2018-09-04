@@ -25,6 +25,7 @@ type ServiceClient struct {
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol
 	log           *log.SeeleLog
+	odrBackend    *odrBackend
 
 	txPool  *LightPool
 	chain   *LightChain
@@ -54,6 +55,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	}
 	leveldb.StartMetrics(s.lightDB, "lightDB", log)
 
+	s.odrBackend = newOdrBackend(log)
 	// initialize and validate genesis
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.lightDB))
 	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
@@ -61,6 +63,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	err = genesis.InitializeAndValidate(bcStore, s.lightDB)
 	if err != nil {
 		s.lightDB.Close()
+		s.odrBackend.close()
 		log.Error("NewServiceClient genesis.Initialize err. %s", err)
 		return nil, err
 	}
@@ -68,6 +71,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	s.chain, err = newLightChain(bcStore, s.lightDB)
 	if err != nil {
 		s.lightDB.Close()
+		s.odrBackend.close()
 		log.Error("failed to init chain in NewServiceClient. %s", err)
 		return nil, err
 	}
@@ -75,17 +79,20 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	s.txPool, err = newLightPool(s.chain)
 	if err != nil {
 		s.lightDB.Close()
+		s.odrBackend.close()
 		log.Error("failed to create transaction pool in NewServiceClient, %s", err)
 		return nil, err
 	}
 
-	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, true, log)
+	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, true, s.odrBackend, log)
 	if err != nil {
 		s.lightDB.Close()
+		s.odrBackend.close()
 		log.Error("failed to create seeleProtocol in NewServiceClient, %s", err)
 		return nil, err
 	}
 
+	s.odrBackend.start(s.seeleProtocol.peerSet)
 	return s, nil
 }
 
@@ -106,8 +113,8 @@ func (s *ServiceClient) Start(srvr *p2p.Server) error {
 // Stop implements node.Service, terminating all internal goroutines.
 func (s *ServiceClient) Stop() error {
 	s.seeleProtocol.Stop()
-
 	s.lightDB.Close()
+	s.odrBackend.close()
 	return nil
 }
 
