@@ -8,18 +8,14 @@ package svm
 import (
 	"math/big"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/svm/evm"
+	"github.com/seeleteam/go-seele/core/svm/native"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 )
-
-// SeeleVM is heterogeneous and adaptive
-type SeeleVM interface {
-	ProcessTransaction(tx *types.Transaction) (*types.Receipt, error)
-}
 
 // Context for other vm constructs
 type Context struct {
@@ -32,25 +28,33 @@ type Context struct {
 
 // Process the tx
 func Process(ctx *Context) (*types.Receipt, error) {
-	_type := EVM
-	if ctx.Tx.Data.To.IsReserved() {
-		if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil {
-			_type = Native
-		}
-	}
-	s := CreateSVM(ctx, _type)
+	var receipt *types.Receipt
+	var err error
+	var IsHandledNonceAndAmount bool
 
+	snapshot := ctx.Statedb.Snapshot()
 	ctx.Statedb.Prepare(ctx.TxIndex)
 
+	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
+		vm := native.NewNativeVM(ctx.Tx, ctx.Statedb, ctx.BlockHeader, ctx.BcStore, contract)
+		receipt, err = vm.ProcessTransaction(ctx.Tx)
+	} else {
+		statedb := &evm.StateDB{Statedb: ctx.Statedb}
+		vm := &evm.EVM{Evm: evm.NewEVMByDefaultConfig(ctx.Tx, statedb, ctx.BlockHeader, ctx.BcStore)}
+		receipt, err = vm.ProcessTransaction(ctx.Tx)
+		IsHandledNonceAndAmount = true
+	}
+
 	// ProcessTransaction
-	receipt, err := s.ProcessTransaction(ctx.Tx)
 	if err != nil {
+		ctx.Statedb.RevertToSnapshot(snapshot)
 		return nil, err
 	}
 
 	// Calculating the From account balance is enough
 	totalFee := new(big.Int).SetUint64(receipt.TotalFee)
 	if balance := ctx.Statedb.GetBalance(ctx.Tx.Data.From); balance.Cmp(totalFee) < 0 {
+		ctx.Statedb.RevertToSnapshot(snapshot)
 		return nil, vm.ErrInsufficientBalance
 	}
 
@@ -58,18 +62,15 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	ctx.Statedb.SubBalance(ctx.Tx.Data.From, totalFee)
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, totalFee)
 
-	if _type != EVM {
+	if !IsHandledNonceAndAmount {
 		// Transfer amount
 		amount, sender, recipient := ctx.Tx.Data.Amount, ctx.Tx.Data.From, ctx.Tx.Data.To
 		if ctx.Statedb.GetBalance(sender).Cmp(amount) < 0 {
+			ctx.Statedb.RevertToSnapshot(snapshot)
 			return nil, vm.ErrInsufficientBalance
 		}
 
 		ctx.Statedb.SubBalance(sender, amount)
-
-		if recipient.IsEmpty() {
-			recipient = common.BytesToAddress(receipt.ContractAddress)
-		}
 		ctx.Statedb.AddBalance(recipient, amount)
 
 		// Add from nonce
@@ -78,6 +79,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 	// Record statedb hash
 	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
+		ctx.Statedb.RevertToSnapshot(snapshot)
 		return nil, err
 	}
 
