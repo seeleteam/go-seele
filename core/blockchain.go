@@ -549,12 +549,12 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	ctx := &svm.Context{
 		Tx:          tx,
+		TxIndex:     txIndex,
 		Statedb:     statedb,
 		BlockHeader: blockHeader,
 		BcStore:     bc.bcStore,
 	}
-	svm := svm.NewSeeleVM(ctx)
-	receipt, err := svm.Process(tx, txIndex)
+	receipt, err := svm.Process(ctx)
 	if err != nil {
 		return nil, err
 	}

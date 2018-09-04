@@ -8,7 +8,6 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/core/vm"
 )
 
 // NVM implemented svm by system contract
@@ -25,20 +24,14 @@ func NewNativeVM(tx *types.Transaction, statedb *state.Statedb, blockHeader *typ
 	return &NVM{tx, statedb, blockHeader, bcStore, contract}
 }
 
-// Process the system contract
-func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
+// ProcessTransaction the system contract
+func (n *NVM) ProcessTransaction(tx *types.Transaction) (*types.Receipt, error) {
 	if n.contract == nil && system.GetContractByAddress(tx.Data.To) == nil {
 		return nil, fmt.Errorf("use an invalid system contract")
 	}
 
-	// TODO separate the commom statedb operation
-	n.statedb.Prepare(txIndex)
-
 	usedGas := n.contract.RequiredGas(tx.Data.Payload)
 	totalFee := new(big.Int).Add(usedGasFee(usedGas), tx.Data.Fee)
-	if balance := n.statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
-		return nil, vm.ErrInsufficientBalance
-	}
 
 	receipt := &types.Receipt{
 		UsedGas:         usedGas,
@@ -47,27 +40,11 @@ func (n *NVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 		TotalFee:        totalFee.Uint64(),
 	}
 
-	// add from nonce
-	n.statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
-
 	var err error
 	ctx := system.NewContext(tx, n.statedb)
 	if receipt.Result, err = n.contract.Run(tx.Data.Payload, ctx); err != nil {
 		receipt.Result = []byte(err.Error())
 		receipt.Failed = true
-	}
-
-	// transfer fee to coinbase
-	n.statedb.SubBalance(tx.Data.From, totalFee)
-	n.statedb.AddBalance(n.blockHeader.Creator, totalFee)
-
-	if receipt.PostState, err = n.statedb.Hash(); err != nil {
-		return nil, err
-	}
-
-	receipt.Logs = n.statedb.GetCurrentLogs()
-	if receipt.Logs == nil {
-		receipt.Logs = make([]*types.Log, 0)
 	}
 
 	return receipt, nil

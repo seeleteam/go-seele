@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,7 +87,7 @@ func Test_SimpleStorage(t *testing.T) {
 
 	stateDB := &StateDB{statedb}
 	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, stateDB, header, bcStore)}
-	receipt, err := svm.Process(createContractTx, 8)
+	receipt, err := svm.ProcessTransaction(createContractTx)
 	// Validate receipt of contract creation.
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.TxHash, createContractTx.CalculateHash())
@@ -109,7 +109,7 @@ func Test_SimpleStorage(t *testing.T) {
 
 	stateDB.Statedb = statedb
 	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, stateDB, header, bcStore)}
-	receipt, err = svm.Process(callContractTx, 9)
+	receipt, err = svm.ProcessTransaction(callContractTx)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
@@ -126,7 +126,7 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, stateDB, header, bcStore)}
-	receipt, err = svm.Process(callContractTx, 10)
+	receipt, err = svm.ProcessTransaction(callContractTx)
 
 	// Validate receipt contract call
 	assert.Equal(t, err, nil)
@@ -143,7 +143,7 @@ func Test_SimpleStorage(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, stateDB, header, bcStore)}
-	receipt, err = svm.Process(callContractTx, 11)
+	receipt, err = svm.ProcessTransaction(callContractTx)
 
 	// Validate receipt of contract call
 	assert.Equal(t, err, nil)
@@ -156,7 +156,7 @@ func Test_SimpleStorage(t *testing.T) {
 
 func Test_InsufficientBalance(t *testing.T) {
 	// Account balance: 1 seele
-	statedb, bcStore, address, dispose := preprocessContract(common.SeeleToFan.Uint64(), 38)
+	statedb, bcStore, address, dispose := preprocessContract(uint64(0), 38)
 	defer dispose()
 
 	header := newTestBlockHeader()
@@ -164,13 +164,13 @@ func Test_InsufficientBalance(t *testing.T) {
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	// tx fee: 1 seele
-	createContractTx, err := types.NewContractTransaction(address, new(big.Int), common.SeeleToFan, 38, code)
+	// tx amount: 1 seele
+	createContractTx, err := types.NewContractTransaction(address, common.SeeleToFan, common.SeeleToFan, 38, code)
 	assert.Equal(t, err, nil)
 
 	stateDB := &StateDB{statedb}
 	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, stateDB, header, bcStore)}
-	_, err = svm.Process(createContractTx, 8)
+	_, err = svm.ProcessTransaction(createContractTx)
 	assert.Equal(t, err, vm.ErrInsufficientBalance)
 }
 
@@ -193,7 +193,7 @@ func Benchmark_CreateContract(b *testing.B) {
 	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, stateDB, header, bcStore)}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		svm.Process(createContractTx, 8)
+		svm.ProcessTransaction(createContractTx)
 		createContractTx.Data.AccountNonce++
 	}
 }
@@ -215,7 +215,7 @@ func Benchmark_CallContract(b *testing.B) {
 
 	stateDB := &StateDB{statedb}
 	svm := &EVM{Evm: NewEVMByDefaultConfig(createContractTx, stateDB, header, bcStore)}
-	receipt, _ := svm.Process(createContractTx, 8)
+	receipt, _ := svm.ProcessTransaction(createContractTx)
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
@@ -227,6 +227,6 @@ func Benchmark_CallContract(b *testing.B) {
 	svm = &EVM{Evm: NewEVMByDefaultConfig(callContractTx, stateDB, header, bcStore)}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		svm.Process(callContractTx, 9)
+		svm.ProcessTransaction(callContractTx)
 	}
 }

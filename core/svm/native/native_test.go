@@ -29,15 +29,11 @@ func Test_Domain_Name(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	nvm := NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
-	receipt, err := nvm.Process(tx, 0)
+	receipt, err := nvm.ProcessTransaction(tx)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
 	assert.Equal(t, receipt.ContractAddress, contractAddr.Bytes())
 	assert.Equal(t, receipt.TxHash, tx.Hash)
-
-	postState, err := statedb.Hash()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.PostState, postState)
 
 	gasCreateDomainName := uint64(50000) // gas used to create a domain name
 	assert.Equal(t, receipt.UsedGas, gasCreateDomainName)
@@ -50,15 +46,11 @@ func Test_Domain_Name(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	nvm = NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
-	receipt, err = nvm.Process(tx, 1)
+	receipt, err = nvm.ProcessTransaction(tx)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
 	assert.Equal(t, receipt.ContractAddress, contractAddr.Bytes())
 	assert.Equal(t, receipt.TxHash, tx.Hash)
-
-	postState, err = statedb.Hash()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, receipt.PostState, postState)
 
 	gasDomainNameCreator := uint64(100000) // gas used to query the creator of given domain name
 	assert.Equal(t, receipt.UsedGas, gasDomainNameCreator)
@@ -70,7 +62,7 @@ func Test_Domain_Name(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	nvm = NewNativeVM(tx, statedb, header, bcStore, system.GetContractByAddress(contractAddr))
-	_, err = nvm.Process(tx, 2)
+	_, err = nvm.ProcessTransaction(tx)
 	assert.Equal(t, err.Error(), "use an invalid system contract")
 }
 

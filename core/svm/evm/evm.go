@@ -6,7 +6,6 @@
 package evm
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -84,14 +83,8 @@ type EVM struct {
 	Evm *vm.EVM
 }
 
-// Process implements the SeeleVM interface
-func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
-	statedb, ok := s.Evm.StateDB.(*StateDB)
-	if !ok {
-		return nil, fmt.Errorf("use an invalid statedb")
-	}
-
-	statedb.Prepare(txIndex)
+// ProcessTransaction implements the SeeleVM interface
+func (s *EVM) ProcessTransaction(tx *types.Transaction) (*types.Receipt, error) {
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
@@ -106,7 +99,7 @@ func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
-		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
+		s.Evm.StateDB.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = s.Evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
 
 		gasFee = usedGasFee(gas - leftOverGas)
@@ -120,31 +113,13 @@ func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error
 		return nil, err
 	}
 
-	totalFee := new(big.Int).Add(gasFee, tx.Data.Fee)
-	if balance := statedb.GetBalance(tx.Data.From); balance.Cmp(totalFee) < 0 {
-		return nil, vm.ErrInsufficientBalance
-	}
-
-	// transfer fee to coinbase
-	statedb.SubBalance(tx.Data.From, totalFee)
-	statedb.AddBalance(s.Evm.Coinbase, totalFee)
-
 	if err != nil {
 		receipt.Failed = true
 		receipt.Result = []byte(err.Error())
 	}
 
 	receipt.UsedGas = gas - leftOverGas
-	receipt.TotalFee = totalFee.Uint64()
-
-	if receipt.PostState, err = statedb.Hash(); err != nil {
-		return nil, err
-	}
-
-	receipt.Logs = statedb.GetCurrentLogs()
-	if receipt.Logs == nil {
-		receipt.Logs = make([]*types.Log, 0)
-	}
+	receipt.TotalFee = new(big.Int).Add(gasFee, tx.Data.Fee).Uint64()
 
 	return receipt, nil
 }

@@ -159,10 +159,10 @@ func processContract(statedb *state.Statedb, bcStore store.BlockchainStore, tx *
 
 	ctx := &svm.Context{
 		Tx:          tx,
+		TxIndex:     0,
 		Statedb:     statedb,
 		BlockHeader: header,
 		BcStore:     bcStore,
 	}
-	svm := svm.NewSeeleVM(ctx)
-	return svm.Process(tx, 0)
+	return svm.Process(ctx)
 }
