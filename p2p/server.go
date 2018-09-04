@@ -438,20 +438,27 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
+
+		peer.rw.magic = nounceCnt
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}
+
+		peer.rw.checkMagic = true
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
 			return nil, 0, err
 		}
+
 		recvMsg, renounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
 		}
+
 		if renounceCnt != nounceCnt {
 			return nil, 0, errors.New("client nounceCnt is changed")
 		}
+
 		if !srv.peerIsValidate(recvMsg) {
 			return nil, 0, errors.New("node is not consitent with groups")
 		}
@@ -461,17 +468,22 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
+
 		recvMsg, nounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
 		}
+
 		if !srv.peerIsValidate(recvMsg) {
 			return nil, 0, errors.New("node is not consitent with groups")
 		}
+
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err
 		}
+
+		peer.rw.magic = nounceCnt
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}
