@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
