@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"

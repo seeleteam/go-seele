@@ -9,11 +9,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestBlockchainDatabase() (BlockchainStore, func()) {
@@ -68,7 +68,7 @@ func Test_blockchainDatabase_Header_invalid(t *testing.T) {
 
 	// Invalid block
 	var block1 *types.Block
-	assert.Panic(t, func() { bcStore.PutBlock(block1, header.Difficulty, true) }, "block is nil")
+	assert.Panics(t, func() { bcStore.PutBlock(block1, header.Difficulty, true) }, "block is nil")
 }
 
 func Test_blockchainDatabase_Header(t *testing.T) {
