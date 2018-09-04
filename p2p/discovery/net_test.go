@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Net_GetUDPConn(t *testing.T) {
-	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:9888")
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:9898")
 	if err != nil {
 		t.Fatal(err)
 	}
