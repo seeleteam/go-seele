@@ -9,11 +9,11 @@ import (
 	"net"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/crypto"
 	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func getTestPeer(shard uint) *peer {
