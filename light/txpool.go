@@ -10,10 +10,14 @@ import (
 )
 
 type LightPool struct {
-	log *log.SeeleLog
+	odrBackend *odrBackend
+	log        *log.SeeleLog
 }
 
-func newLightPool(chain BlockChain) (*LightPool, error) {
-	//todo
-	return nil, nil
+func newLightPool(chain BlockChain, odrBackend *odrBackend) (*LightPool, error) {
+	pool := &LightPool{
+		odrBackend: odrBackend,
+	}
+
+	return pool, nil
 }

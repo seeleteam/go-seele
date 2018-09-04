@@ -68,7 +68,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
-	s.chain, err = newLightChain(bcStore, s.lightDB)
+	s.chain, err = newLightChain(bcStore, s.lightDB, s.odrBackend)
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()
@@ -76,7 +76,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
-	s.txPool, err = newLightPool(s.chain)
+	s.txPool, err = newLightPool(s.chain, s.odrBackend)
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()

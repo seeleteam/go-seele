@@ -13,12 +13,15 @@ import (
 )
 
 type LightChain struct {
-	log *log.SeeleLog
+	odrBackend *odrBackend
+	log        *log.SeeleLog
 }
 
-func newLightChain(bcStore store.BlockchainStore, lightDB database.Database) (*LightChain, error) {
-	//todo
-	return nil, nil
+func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odrBackend *odrBackend) (*LightChain, error) {
+	chain := &LightChain{
+		odrBackend: odrBackend,
+	}
+	return chain, nil
 }
 
 func (bc *LightChain) CurrentBlock() *types.Block {
