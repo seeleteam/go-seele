@@ -12,7 +12,7 @@ import (
 )
 
 func newConnection() (*connection, net.Listener, error) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := net.Listen("tcp", "127.0.0.1:8888")
 	if err != nil {
 		return nil, nil, err
 	}
