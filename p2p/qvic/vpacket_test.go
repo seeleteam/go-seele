@@ -16,9 +16,9 @@ func Test_MarshalData(t *testing.T) {
 	v1.MarshalData()
 
 	// meta info
-	if v1.seq != 101 || v1.packType != 2 || v1.fecIdx != 4 || v1.crc != 110 || v1.magic != 120 ||
+	if v1.seq != 101 || v1.packType != 2 || v1.fecIdx != 4 || v1.magic != 120 ||
 		v1.lastSeqSendTick != 0 || v1.createTick != 0 || v1.dataLen != 6 {
-		fmt.Println("Test_MarshalData:", v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic, v1.lastSeqSendTick, v1.createTick, v1.dataLen)
+		fmt.Println("Test_MarshalData:", v1.seq, v1.packType, v1.fecIdx, v1.magic, v1.lastSeqSendTick, v1.createTick, v1.dataLen)
 		t.Fail()
 	}
 
@@ -50,10 +50,10 @@ func Test_ParseData(t *testing.T) {
 	v2.ParseData(v1.dataNet[:])
 
 	// meta info
-	if v1.seq != v2.seq || v1.packType != v2.packType || v1.fecIdx != v2.fecIdx || v1.crc != v2.crc || v1.magic != v2.magic ||
+	if v1.seq != v2.seq || v1.packType != v2.packType || v1.fecIdx != v2.fecIdx || v1.magic != v2.magic ||
 		v1.lastSeqSendTick != v2.lastSeqSendTick || v1.createTick != v2.createTick {
-		fmt.Println("Test_ParseData v1:", v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic, v1.lastSeqSendTick, v1.createTick)
-		fmt.Println("Test_ParseData v2:", v2.seq, v2.packType, v2.fecIdx, v2.crc, v2.magic, v2.lastSeqSendTick, v2.createTick)
+		fmt.Println("Test_ParseData v1:", v1.seq, v1.packType, v1.fecIdx, v1.magic, v1.lastSeqSendTick, v1.createTick)
+		fmt.Println("Test_ParseData v2:", v2.seq, v2.packType, v2.fecIdx, v2.magic, v2.lastSeqSendTick, v2.createTick)
 		t.Fail()
 	}
 
@@ -72,9 +72,8 @@ func Test_ParseData(t *testing.T) {
 
 func createVPacket(data string) (v *VPacket) {
 	v1 := new(VPacket)
-	v1.seq, v1.packType, v1.fecIdx, v1.crc, v1.magic = 101, 2, 4, 110, 120
+	v1.seq, v1.packType, v1.fecIdx, v1.magic = 101, 2, 4, 120
 	v1.data = []byte(data)
-	v1.dataLen = uint(len(v1.data))
-
+	v1.dataLen = len(v1.data)
 	return v1
 }

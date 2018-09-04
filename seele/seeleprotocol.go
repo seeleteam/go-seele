@@ -57,6 +57,8 @@ func codeToStr(code uint16) string {
 		return "statusDataMsgCode"
 	case statusChainHeadMsgCode:
 		return "statusChainHeadMsgCode"
+	case debtMsgCode:
+		return "debtMsgCode"
 	}
 
 	return downloader.CodeToStr(code)
@@ -309,7 +311,12 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 
-	if err := newPeer.handShake(p.networkID, localTD, head, common.EmptyHash); err != nil {
+	genesisHash, err := p.chain.GetStore().GetBlockHash(0)
+	if err != nil {
+		return
+	}
+	
+	if err := newPeer.handShake(p.networkID, localTD, head, genesisHash); err != nil {
 		p.log.Error("handleAddPeer err. %s", err)
 		newPeer.Disconnect(DiscHandShakeErr)
 		return
@@ -368,7 +375,7 @@ handler:
 
 		// skip unsupported message from different shard peer
 		if peer.Node.Shard != common.LocalShardNumber {
-			if msg.Code != transactionsMsgCode {
+			if msg.Code != transactionsMsgCode && msg.Code != debtMsgCode {
 				continue
 			}
 		}
@@ -512,7 +519,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got %d debts message", len(debts))
+			p.log.Debug("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
 			for _, d := range debts {
 				peer.knownDebts.Add(d.Hash, nil)
 			}

@@ -3,30 +3,52 @@
 * @copyright defined in go-seele/LICENSE
  */
 
-package core
+package evm
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/core/vm"
 )
 
-const maxTxGas = uint64(10000000)
+// NewEVMByDefaultConfig returns a new EVM. The returned EVM is not thread safe and should
+// only ever be used *once*.
+func NewEVMByDefaultConfig(tx *types.Transaction, statedb *StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
+	evmContext := newEVMContext(tx, blockHeader, blockHeader.Creator, bcStore)
+	chainConfig := &params.ChainConfig{
+		ChainId:             big.NewInt(1),
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		DAOForkSupport:      true,
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: nil,
+		Ethash:              new(params.EthashConfig),
+	}
+	vmConfig := &vm.Config{}
+
+	return vm.NewEVM(*evmContext, statedb, chainConfig, *vmConfig)
+}
 
 // NewEVMContext creates a new context for use in the EVM.
-func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
+func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddress common.Address, bcStore store.BlockchainStore) *vm.Context {
 	canTransferFunc := func(db vm.StateDB, addr common.Address, amount *big.Int) bool {
 		return db.GetBalance(addr).Cmp(amount) >= 0
 	}
 
 	transferFunc := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 		db.SubBalance(sender, amount)
-		db.AddBalance(recipient, amount)
+
+		if sender.Shard() == recipient.Shard() {
+			db.AddBalance(recipient, amount)
+		}
 	}
 
 	heightToHashMapping := map[uint64]common.Hash{
@@ -57,34 +79,38 @@ func NewEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 		BlockNumber: new(big.Int).SetUint64(header.Height),
 		Time:        new(big.Int).Set(header.CreateTimestamp),
 		Difficulty:  new(big.Int).Set(header.Difficulty),
-		// GasLimit:    header.GasLimit,
-		// GasPrice:    new(big.Int).Set(tx.GasPrice()),
 	}
 }
 
-// ProcessContract process the specified contract tx and return the receipt.
-func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, statedb *state.Statedb, vmConfig *vm.Config) (*types.Receipt, error) {
-	statedb.Prepare(txIndex)
-	evm := vm.NewEVM(*context, statedb, getDefaultChainConfig(), *vmConfig)
+// EVM implemented svm by ethereum vm
+type EVM struct {
+	Evm *vm.EVM
+}
 
+// Process implements the SeeleVM interface
+func (s *EVM) Process(tx *types.Transaction, txIndex int) (*types.Receipt, error) {
+	statedb, ok := s.Evm.StateDB.(*StateDB)
+	if !ok {
+		return nil, fmt.Errorf("use an invalid statedb")
+	}
+
+	statedb.Prepare(txIndex)
 	var err error
 	caller := vm.AccountRef(tx.Data.From)
 	receipt := &types.Receipt{TxHash: tx.Hash}
-	gas := maxTxGas
-	leftOverGas := uint64(0)
-	gasFee := new(big.Int)
+	gas, leftOverGas, gasFee := maxTxGas, uint64(0), big.NewInt(0)
 
 	// Currently, use maxTxGas gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if tx.Data.To.IsEmpty() {
 		gasFee = contractCreationFee(tx.Data.Payload)
 
 		var createdContractAddr common.Address
-		if receipt.Result, createdContractAddr, leftOverGas, err = evm.Create(caller, tx.Data.Payload, gas, tx.Data.Amount); err == nil {
+		if receipt.Result, createdContractAddr, leftOverGas, err = s.Evm.Create(caller, tx.Data.Payload, gas, tx.Data.Amount); err == nil {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
 	} else {
 		statedb.SetNonce(tx.Data.From, tx.Data.AccountNonce+1)
-		receipt.Result, leftOverGas, err = evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
+		receipt.Result, leftOverGas, err = s.Evm.Call(caller, tx.Data.To, tx.Data.Payload, gas, tx.Data.Amount)
 
 		gasFee = usedGasFee(gas - leftOverGas)
 	}
@@ -104,7 +130,7 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 
 	// transfer fee to coinbase
 	statedb.SubBalance(tx.Data.From, totalFee)
-	statedb.AddBalance(context.Coinbase, totalFee)
+	statedb.AddBalance(s.Evm.Coinbase, totalFee)
 
 	if err != nil {
 		receipt.Failed = true
@@ -126,24 +152,11 @@ func ProcessContract(context *vm.Context, tx *types.Transaction, txIndex int, st
 	return receipt, nil
 }
 
-func getDefaultChainConfig() *params.ChainConfig {
-	return &params.ChainConfig{
-		ChainId:             big.NewInt(1),
-		HomesteadBlock:      big.NewInt(0),
-		DAOForkBlock:        big.NewInt(0),
-		DAOForkSupport:      true,
-		EIP150Block:         big.NewInt(0),
-		EIP155Block:         big.NewInt(0),
-		EIP158Block:         big.NewInt(0),
-		ByzantiumBlock:      big.NewInt(0),
-		ConstantinopleBlock: nil,
-		Ethash:              new(params.EthashConfig),
-	}
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////
 // Gas fee model for test net
 ///////////////////////////////////////////////////////////////////////////////////////
+const maxTxGas = uint64(10000000)
+
 var (
 	contractFeeComplex       = new(big.Int).Div(common.SeeleToFan, big.NewInt(100))
 	contractFeeCustomToken   = new(big.Int).Div(common.SeeleToFan, big.NewInt(200))

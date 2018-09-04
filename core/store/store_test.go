@@ -9,11 +9,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestBlockchainDatabase() (BlockchainStore, func()) {
@@ -68,7 +68,7 @@ func Test_blockchainDatabase_Header_invalid(t *testing.T) {
 
 	// Invalid block
 	var block1 *types.Block
-	assert.Panic(t, func() { bcStore.PutBlock(block1, header.Difficulty, true) }, "block is nil")
+	assert.Panics(t, func() { bcStore.PutBlock(block1, header.Difficulty, true) }, "block is nil")
 }
 
 func Test_blockchainDatabase_Header(t *testing.T) {
@@ -140,6 +140,10 @@ func newTestTx() *types.Transaction {
 	tx.Hash = crypto.MustHash(tx.Data)
 
 	return tx
+}
+
+func newTestDebt() *types.Debt {
+	return types.NewDebt(newTestTx())
 }
 
 func Test_blockchainDatabase_Block(t *testing.T) {
@@ -239,5 +243,41 @@ func Test_blockchainDatabase_GetTxIndex(t *testing.T) {
 	// tx that doesn't exist
 	txNoExist := newTestTx()
 	_, err = bcStore.GetTxIndex(txNoExist.Hash)
+	assert.Equal(t, err != nil, true)
+}
+
+func Test_blockchainDatabase_GetDebtIndex(t *testing.T) {
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+	GetDebtIndexTest(t, bcStore)
+}
+
+func GetDebtIndexTest(t *testing.T, bcStore BlockchainStore) {
+	d1 := newTestDebt()
+	d2 := newTestDebt()
+	d3 := newTestDebt()
+	debts := []*types.Debt{d1, d2, d3}
+
+	header := newTestBlockHeader()
+	block := &types.Block{
+		HeaderHash: header.Hash(),
+		Header:     header,
+		Debts:      debts,
+	}
+
+	err := bcStore.PutBlock(block, header.Difficulty, true)
+	assert.Equal(t, err, error(nil))
+
+	for i, d := range debts {
+		debtIndex, err := bcStore.GetDebtIndex(d.Hash)
+		assert.Equal(t, err, error(nil))
+		assert.Equal(t, debtIndex != nil, true)
+		assert.Equal(t, debtIndex.Index, uint(i))
+		assert.Equal(t, debtIndex.BlockHash, block.HeaderHash)
+	}
+
+	// tx that doesn't exist
+	debtNoExist := newTestDebt()
+	_, err = bcStore.GetTxIndex(debtNoExist.Hash)
 	assert.Equal(t, err != nil, true)
 }

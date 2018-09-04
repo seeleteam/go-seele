@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
@@ -32,7 +32,7 @@ func Test_GetTxByHash(t *testing.T) {
 	poolAPI := NewPrivateTransactionPoolAPI(api.s)
 	outputs, err := poolAPI.GetTransactionByHash(tx1.Hash.ToHex())
 	assert.Equal(t, err, nil)
-	assert.Equal(t, tx1.Hash.ToHex(), outputs["hash"])
+	assert.Equal(t, tx1.Hash.ToHex(), outputs["transaction"].(map[string]interface{})["hash"].(string))
 	assert.Equal(t, outputs["status"], "pool")
 
 	// save tx to block
@@ -48,7 +48,7 @@ func Test_GetTxByHash(t *testing.T) {
 	poolAPI.s.txPool.RemoveTransaction(tx1.Hash)
 	outputs, err = poolAPI.GetTransactionByHash(tx1.Hash.ToHex())
 	assert.Equal(t, err, nil)
-	assert.Equal(t, outputs["hash"], tx1.Hash.ToHex())
+	assert.Equal(t, outputs["transaction"].(map[string]interface{})["hash"].(string), tx1.Hash.ToHex())
 	assert.Equal(t, outputs["status"], "block")
 	assert.Equal(t, outputs["blockHash"], block.HeaderHash.ToHex())
 	assert.Equal(t, outputs["blockHeight"], block.Header.Height)

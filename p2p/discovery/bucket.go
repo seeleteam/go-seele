@@ -6,7 +6,9 @@
 package discovery
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -94,15 +96,16 @@ func (b *bucket) getRandNodes(number int) []*Node {
 	defer b.lock.RUnlock()
 
 	var result []*Node
-	if len(b.peers) > number {
+	if peersLen := len(b.peers); peersLen > number {
 		result = make([]*Node, number)
-		// @TODO use random selection
+		rands := getRandNumbers(peersLen, number)
+
 		for i := 0; i < number; i++ {
 			result[i] = &Node{}
-			*result[i] = *b.peers[i]
+			*result[i] = *b.peers[rands[i]]
 		}
 	} else {
-		result = make([]*Node, len(b.peers))
+		result = make([]*Node, peersLen)
 		for i := 0; i < len(result); i++ {
 			result[i] = &Node{}
 			*(result[i]) = *(b.peers[i])
@@ -110,6 +113,32 @@ func (b *bucket) getRandNodes(number int) []*Node {
 	}
 
 	return result
+}
+
+func getRandNumbers(upperBound int, len int) []int {
+	if upperBound < len || len <= 0 {
+		return nil
+	}
+
+	generated := make(map[int]bool)
+	rands := make([]int, 0)
+	count := 0
+
+	rand.Seed(time.Now().UnixNano())
+	for {
+		i := rand.Intn(upperBound)
+		if !generated[i] {
+			generated[i] = true
+			rands = append(rands, i)
+
+			count++
+			if count == len {
+				break
+			}
+		}
+	}
+
+	return rands
 }
 
 func (b *bucket) get(index int) *Node {

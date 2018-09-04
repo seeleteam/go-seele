@@ -269,6 +269,23 @@ func main() {
 			Action: RPCAction(GetTransactionByHashAction),
 		},
 		{
+			Name:  "getdebtbyhash",
+			Usage: "get debt by debt hash",
+			Flags: []cli.Flag{
+				addressFlag,
+				hashFlag,
+			},
+			Action: RPCAction(GetDebtByHashAction),
+		},
+		{
+			Name:  "getdebts",
+			Usage: "get pending debts",
+			Flags: []cli.Flag{
+				addressFlag,
+			},
+			Action: RPCAction(GetPendingDebtsAction),
+		},
+		{
 			Name:  "getreceipt",
 			Usage: "get receipt by transaction hash",
 			Flags: []cli.Flag{

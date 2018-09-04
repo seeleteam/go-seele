@@ -26,7 +26,6 @@ var (
 	errTxNonceUsed  = errors.New("transaction nonce already been used")
 )
 
-const chainHeaderChangeBuffSize = 100
 const overTimeInterval = 3 * time.Hour
 
 type blockchain interface {
@@ -48,76 +47,43 @@ func newPooledTx(tx *types.Transaction) *pooledTx {
 // from the network or submitted locally. A transaction will be removed from
 // the pool once included in a blockchain or pending time too long (> overTimeInterval).
 type TransactionPool struct {
-	mutex                    sync.RWMutex
-	config                   TransactionPoolConfig
-	chain                    blockchain
-	hashToTxMap              map[common.Hash]*pooledTx
-	pendingQueue             *pendingQueue
-	processingTxs            map[common.Hash]struct{}
-	lastHeader               common.Hash
-	chainHeaderChangeChannel chan common.Hash
-	log                      *log.SeeleLog
+	mutex         sync.RWMutex
+	config        TransactionPoolConfig
+	chain         blockchain
+	hashToTxMap   map[common.Hash]*pooledTx
+	pendingQueue  *pendingQueue
+	processingTxs map[common.Hash]struct{}
+	log           *log.SeeleLog
 }
 
 // NewTransactionPool creates and returns a transaction pool.
-func NewTransactionPool(config TransactionPoolConfig, chain blockchain) (*TransactionPool, error) {
-	header, err := chain.GetStore().GetHeadBlockHash()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chain header, %s", err)
-	}
-
+func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
 	pool := &TransactionPool{
 		config:        config,
 		chain:         chain,
 		hashToTxMap:   make(map[common.Hash]*pooledTx),
 		pendingQueue:  newPendingQueue(),
 		processingTxs: make(map[common.Hash]struct{}),
-		lastHeader:    header,
 		log:           log.GetLogger("txpool"),
-		chainHeaderChangeChannel: make(chan common.Hash, chainHeaderChangeBuffSize),
 	}
 
-	event.ChainHeaderChangedEventMananger.AddAsyncListener(pool.chainHeaderChanged)
-	go pool.MonitorChainHeaderChange()
-
-	return pool, nil
+	return pool
 }
 
-// chainHeaderChanged handle chain header changed event.
-// add forked transaction back
-// deleted invalid transaction
-func (pool *TransactionPool) chainHeaderChanged(e event.Event) {
-	newHeader := e.(common.Hash)
-	if newHeader.IsEmpty() {
-		return
+func (pool *TransactionPool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
+	reinject := pool.getReinjectTransaction(newHeader, lastHeader)
+	count := pool.addTransactions(reinject)
+	if count > 0 {
+		pool.log.Info("add %d reinject transactions", count)
 	}
 
-	pool.chainHeaderChangeChannel <- newHeader
+	pool.removeTransactions()
 }
 
-// MonitorChainHeaderChange monitor and handle chain header event
-func (pool *TransactionPool) MonitorChainHeaderChange() {
-	for {
-		select {
-		case newHeader := <-pool.chainHeaderChangeChannel:
-			if pool.lastHeader.IsEmpty() {
-				pool.lastHeader = newHeader
-				return
-			}
+func (pool *TransactionPool) getReinjectTransaction(newHeader, lastHeader common.Hash) []*types.Transaction {
+	chainStore := pool.chain.GetStore()
+	log := pool.log
 
-			reinject := getReinjectTransaction(pool.chain.GetStore(), newHeader, pool.lastHeader, pool.log)
-			count := pool.addTransactions(reinject)
-			if count > 0 {
-				pool.log.Info("add %d reinject transactions", count)
-			}
-
-			pool.lastHeader = newHeader
-			pool.removeTransactions()
-		}
-	}
-}
-
-func getReinjectTransaction(chainStore store.BlockchainStore, newHeader, lastHeader common.Hash, log *log.SeeleLog) []*types.Transaction {
 	newBlock, err := chainStore.GetBlock(newHeader)
 	if err != nil {
 		log.Error("got block failed, %s", err)
@@ -315,8 +281,8 @@ func (pool *TransactionPool) removeTransactions() {
 
 // GetProcessableTransactions retrieves processable transactions from pool.
 func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Transaction, int) {
-	pool.mutex.RLock()
-	defer pool.mutex.RUnlock()
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
 
 	totalSize := 0
 	var txs []*types.Transaction

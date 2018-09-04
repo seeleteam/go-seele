@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -81,15 +81,15 @@ func Test_findNodeWithTarget(t *testing.T) {
 
 	//The nodes of shard 1 will return, becaus of the distance is less than target that comparing with the table selnode
 	noExistKey := common.HexMustToAddres("0x2a87b6504cd00af95a83b9887112016a2a991cf1")
-	noExistId := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey.Bytes()), "@127.0.0.1:9888[1]")
-	noExistNode, err := NewNodeFromString(noExistId)
+	noExistID := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey.Bytes()), "@127.0.0.1:9888[1]")
+	noExistNode, err := NewNodeFromString(noExistID)
 	nodes1 := table.findNodeWithTarget(noExistNode.getSha())
 	assert.Equal(t, len(nodes1), 1)
 
 	//The nodes of shard 1 won't return, because of the distance is greater than target that comparing with the table selnode
 	noExistKey2 := common.HexMustToAddres("0xfbe506bdaf256682551873290d0a794d51bac4d1")
-	noExistId2 := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey2.Bytes()), "@127.0.0.1:9888[2]")
-	noExistNode2, err := NewNodeFromString(noExistId2)
+	noExistID2 := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey2.Bytes()), "@127.0.0.1:9888[2]")
+	noExistNode2, err := NewNodeFromString(noExistID2)
 	nodes2 = table.findNodeWithTarget(noExistNode2.getSha())
 	assert.Equal(t, len(nodes2), 0)
 }
@@ -116,8 +116,8 @@ func Test_deleteNode(t *testing.T) {
 	assert.Equal(t, len(table.shardBuckets[2].peers), 1)
 
 	noExistKey := common.HexMustToAddres("0x2a87b6504cd00af95a83b9887112016a2a991cf1")
-	noExistId := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey.Bytes()), "@127.0.0.1:9888[1]")
-	noExistNode, err := NewNodeFromString(noExistId)
+	noExistID := fmt.Sprintf("snode://%v%v", hex.EncodeToString(noExistKey.Bytes()), "@127.0.0.1:9888[1]")
+	noExistNode, err := NewNodeFromString(noExistID)
 	table.deleteNode(noExistNode)
 	assert.Equal(t, len(nodes), 0)
 	assert.Equal(t, len(table.shardBuckets[2].peers), 1)

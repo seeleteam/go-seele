@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc2"
 )
@@ -106,6 +107,18 @@ func GetReceiptByTxHashAction(client *rpc.Client) (interface{}, error) {
 
 func GetTransactionByHashAction(client *rpc.Client) (interface{}, error) {
 	return util.GetTransactionByHash(client, hashValue)
+}
+
+func GetPendingDebtsAction(client *rpc.Client) (interface{}, error) {
+	var result []*types.Debt
+	err := client.Call(&result, "txpool_getPendingDebts")
+	return result, err
+}
+
+func GetDebtByHashAction(client *rpc.Client) (interface{}, error) {
+	var result map[string]interface{}
+	err := client.Call(&result, "txpool_getDebtByHash", hashValue)
+	return result, err
 }
 
 func GetPendingTransactionsAction(client *rpc.Client) (interface{}, error) {

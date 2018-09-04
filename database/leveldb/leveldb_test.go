@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/syndtr/goleveldb/leveldb"
 )

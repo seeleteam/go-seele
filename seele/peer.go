@@ -32,6 +32,7 @@ const (
 var (
 	errMsgNotMatch     = errors.New("Message not match")
 	errNetworkNotMatch = errors.New("NetworkID not match")
+	errGenesisNotMatch = errors.New("Genesis not match")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -130,7 +131,7 @@ func (p *peer) sendDebts(debts []*types.Debt) error {
 	}
 
 	buff := common.SerializePanic(debts)
-	p.log.Debug("peer send [debtMsgCode] with size %d bytes", len(buff))
+	p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(debts))
 	err := p2p.SendMessage(p.rw, debtMsgCode, buff)
 	if err == nil {
 		for _, d := range debts {
@@ -298,11 +299,21 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 		return err
 	}
 
-	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
-		return errNetworkNotMatch
+	if err = verifyGenesisAndNetworkID(retStatusMsg, genesis, networkID); err != nil {
+		return err
 	}
 
 	p.head = retStatusMsg.CurrentBlock
 	p.td = retStatusMsg.TD
+	return nil
+}
+
+func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64) error {
+	if retStatusMsg.NetworkID != networkID {
+		return errNetworkNotMatch
+	}
+	if retStatusMsg.GenesisBlock != genesis {
+		return errGenesisNotMatch
+	}
 	return nil
 }

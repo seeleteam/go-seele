@@ -16,8 +16,8 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/svm"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
@@ -29,7 +29,7 @@ const (
 	// limit block should not be ahead of 10 seconds of current time
 	futureBlockLimit int64 = 10
 
-	// block transaction number limit, 1000 simple transactions are about 152kb
+	// BlockTransactionNumberLimit block transaction number limit, 1000 simple transactions are about 152kb
 	// If for block size as 100KB, it could contains about 5k transactions
 	BlockTransactionNumberLimit = 5000
 
@@ -547,8 +547,14 @@ func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
 func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb,
 	blockHeader *types.BlockHeader) (*types.Receipt, error) {
-	context := NewEVMContext(tx, blockHeader, coinbase, bc.bcStore)
-	receipt, err := ProcessContract(context, tx, txIndex, statedb, &vm.Config{})
+	ctx := &svm.Context{
+		Tx:          tx,
+		Statedb:     statedb,
+		BlockHeader: blockHeader,
+		BcStore:     bc.bcStore,
+	}
+	svm := svm.NewSeeleVM(ctx)
+	receipt, err := svm.Process(tx, txIndex)
 	if err != nil {
 		return nil, err
 	}

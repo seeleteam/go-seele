@@ -12,12 +12,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/trie"
+	"github.com/stretchr/testify/assert"
 )
 
 func BytesToAddressForTest(b []byte) common.Address {
@@ -146,7 +147,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	statedb.SetBalance(addr, big.NewInt(99))
 	statedb.SetNonce(addr, 38)
 	statedb.SetCode(addr, []byte("test code"))
-	statedb.SetState(addr, common.StringToHash("test key"), common.StringToHash("test value"))
+	statedb.SetData(addr, common.StringToHash("test key"), []byte("test value"))
 
 	// Get root hash for receipt PostState
 	root1, err := statedb.Hash()
@@ -167,7 +168,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	storageKey := stateObj.dataKey(dataTypeStorage, crypto.MustHash(common.StringToHash("test key")).Bytes()...)
 	storageValue, found := trie.Get(storageKey)
 	assert.Equal(t, found, true)
-	assert.Equal(t, storageValue, common.StringToHash("test value").Bytes())
+	assert.Equal(t, storageValue, []byte("test value"))
 }
 
 func Test_StateDB_CommitMultipleChanges(t *testing.T) {
@@ -186,7 +187,7 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 		statedb.SetBalance(addr, big.NewInt(38))
 		statedb.SetNonce(addr, 6)
 		statedb.SetCode(addr, []byte("hello"))
-		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+		statedb.SetData(addr, common.StringToHash("key"), []byte("value"))
 
 		if _, err = statedb.Hash(); err != nil {
 			panic(err)
@@ -221,8 +222,8 @@ func Test_StateDB_CommitMultipleChanges(t *testing.T) {
 			t.Fatalf("Invalid account code %v", code)
 		}
 
-		if value := statedb2.GetState(addr, common.StringToHash("key")); !value.Equal(common.StringToHash("value")) {
-			t.Fatalf("Invalid acocunt state value, %v", value.ToHex())
+		if value := statedb2.GetData(addr, common.StringToHash("key")); string(value) != "value" {
+			t.Fatalf("Invalid acocunt state value, %v", value)
 		}
 	}
 }
@@ -243,7 +244,7 @@ func Benchmark_Trie_Hash(b *testing.B) {
 		statedb.SetBalance(addr, big.NewInt(38))
 		statedb.SetNonce(addr, 6)
 		statedb.SetCode(addr, []byte("hello"))
-		statedb.SetState(addr, common.StringToHash("key"), common.StringToHash("value"))
+		statedb.SetData(addr, common.StringToHash("key"), []byte("value"))
 
 		if _, err := statedb.Hash(); err != nil {
 			panic(err)
@@ -256,4 +257,158 @@ func Benchmark_Trie_Hash(b *testing.B) {
 			panic(err)
 		}
 	}
+}
+
+func newTestEVMStateDB() (database.Database, *Statedb, *stateObject, func()) {
+	db, dispose := leveldb.NewTestDatabase()
+
+	statedb, err := NewStatedb(common.EmptyHash, db)
+	if err != nil {
+		dispose()
+		panic(err)
+	}
+
+	testAddr := *crypto.MustGenerateRandomAddress()
+	statedb.CreateAccount(testAddr)
+
+	stateObj := statedb.getStateObject(testAddr)
+	if stateObj == nil {
+		dispose()
+		panic("cannot find the state object.")
+	}
+
+	if !stateObj.address.Equal(testAddr) {
+		dispose()
+		panic("the address of state object is invalid.")
+	}
+
+	return db, statedb, stateObj, dispose
+}
+
+func commitAndNewStateDB(db database.Database, statedb *Statedb) (common.Hash, *Statedb) {
+	batch := db.NewBatch()
+	rootHash, err := statedb.Commit(batch)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = batch.Commit(); err != nil {
+		panic(err)
+	}
+
+	newStatedb, err := NewStatedb(rootHash, db)
+	if err != nil {
+		panic(err)
+	}
+
+	return rootHash, newStatedb
+}
+
+func Test_CreateAccount(t *testing.T) {
+	_, statedb, stateObj, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	// Assert the no code for a new created account.
+	assert.Equal(t, statedb.dbErr, error(nil))
+	assert.Equal(t, stateObj.account.CodeHash, []byte(nil))
+	assert.Equal(t, stateObj.code, []byte(nil))
+	assert.Equal(t, stateObj.dirtyCode, false)
+}
+
+func Test_Code(t *testing.T) {
+	db, statedb, stateObj, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	addr := stateObj.address
+
+	// Set code to account
+	code := []byte("test code")
+	codeHash := crypto.HashBytes(code)
+	statedb.SetCode(addr, code)
+
+	// Validate code APIs
+	assert.Equal(t, statedb.GetCodeHash(addr), codeHash)
+	assert.Equal(t, statedb.GetCode(addr), code)
+	assert.Equal(t, statedb.GetCodeSize(addr), len(code))
+	assert.Equal(t, stateObj.dirtyCode, true)
+
+	// Commit the account code change and create another state DB with the same root hash.
+	_, statedb2 := commitAndNewStateDB(db, statedb)
+	assert.Equal(t, stateObj.dirtyCode, false)
+
+	// Ensure the account code is valid.
+	assert.Equal(t, statedb2.GetCodeHash(addr), codeHash)
+	assert.Equal(t, statedb2.GetCode(addr), code)
+	assert.Equal(t, statedb2.GetCodeSize(addr), len(code))
+	assert.Equal(t, stateObj.dirtyCode, false)
+
+	// Empty address
+	var emptyCode []byte
+	addr = common.EmptyAddress
+	assert.Equal(t, statedb2.GetCodeHash(addr), common.EmptyHash)
+	assert.Equal(t, statedb2.GetCode(addr), emptyCode)
+	assert.Equal(t, statedb2.GetCodeSize(addr), 0)
+	assert.Equal(t, statedb2.Empty(addr), true)
+
+	// An address that does not exist
+	addr = *crypto.MustGenerateRandomAddress()
+	assert.Equal(t, statedb2.GetCodeHash(addr), common.EmptyHash)
+	assert.Equal(t, statedb2.GetCode(addr), emptyCode)
+	assert.Equal(t, statedb2.GetCodeSize(addr), 0)
+	assert.Equal(t, statedb2.Empty(addr), true)
+}
+
+func Test_Refund(t *testing.T) {
+	_, statedb, _, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	assert.Equal(t, statedb.refund, uint64(0))
+
+	statedb.AddRefund(38)
+	assert.Equal(t, statedb.refund, uint64(38))
+
+	statedb.AddRefund(66)
+	assert.Equal(t, statedb.refund, uint64(38+66))
+}
+
+func Test_Suicide(t *testing.T) {
+	db, statedb, stateObj, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	addr := stateObj.address
+	statedb.SetCode(addr, []byte("hello,world"))
+	statedb.SetData(addr, common.StringToHash("k1"), []byte("v1"))
+	statedb.SetData(addr, common.StringToHash("k2"), []byte("v2"))
+
+	assert.Equal(t, statedb.Exist(addr), true)
+	assert.Equal(t, statedb.HasSuicided(addr), false)
+
+	assert.Equal(t, statedb.Suicide(*crypto.MustGenerateRandomAddress()), false)
+	assert.Equal(t, statedb.Suicide(addr), true)
+	assert.Equal(t, statedb.HasSuicided(addr), true)
+
+	// Commit the state change
+	_, statedb2 := commitAndNewStateDB(db, statedb)
+
+	assert.Equal(t, statedb2.Exist(addr), false)                                    // account not exists
+	assert.Equal(t, statedb2.GetCode(addr), []byte(nil))                            // code not exists
+	assert.Equal(t, statedb2.GetData(addr, common.StringToHash("k1")), []byte(nil)) // k1 not exists
+	assert.Equal(t, statedb2.GetData(addr, common.StringToHash("k2")), []byte(nil)) // k2 not exists
+}
+
+func Test_Log(t *testing.T) {
+	_, statedb, _, dispose := newTestEVMStateDB()
+	defer dispose()
+
+	statedb.Prepare(38)
+
+	statedb.AddLog(new(types.Log))
+	statedb.AddLog(new(types.Log))
+	statedb.AddLog(new(types.Log))
+
+	logs := statedb.GetCurrentLogs()
+	assert.Equal(t, len(logs), 3)
+	assert.Equal(t, logs[0].TxIndex, uint(38))
+	assert.Equal(t, logs[1].TxIndex, uint(38))
+	assert.Equal(t, logs[2].TxIndex, uint(38))
 }

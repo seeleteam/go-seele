@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_BigToDecimal(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -75,7 +75,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 
 func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
-	toAddress := crypto.MustGenerateRandomAddress()
+	toAddress := crypto.MustGenerateShardAddress(fromAccount.addr.Shard())
 
 	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
 	tx.Sign(fromAccount.privKey)
@@ -371,12 +371,12 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 
 	// prepare tx to apply, amount is 10 and fee is 2
 	tx := newTestBlockTx(0, 10, 2, 0)
-	coinbase := *crypto.MustGenerateRandomAddress()
+	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
+	coinbase := block.Header.Creator
 	statedb, err := bc.GetCurrentState()
 	assert.Equal(t, err, nil)
 	statedb.CreateAccount(coinbase)
 	statedb.SetBalance(coinbase, big.NewInt(50))
-	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 
 	// check before applying tx
 	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100000))

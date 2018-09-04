@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
@@ -122,7 +122,7 @@ func NewTestSeeleBackend(db database.Database) *TestSeeleBackend {
 
 	seeleBeckend.txPool = newTestPool(core.DefaultTxPoolConfig(), db)
 	seeleBeckend.blockchain = newTestBlockchain(db)
-	seeleBeckend.debtPool = core.NewDebtPool()
+	seeleBeckend.debtPool = core.NewDebtPool(seeleBeckend.blockchain)
 
 	return seeleBeckend
 }
@@ -211,10 +211,7 @@ type testAccount struct {
 
 func newTestPool(config *core.TransactionPoolConfig, db database.Database) *core.TransactionPool {
 	chain := newTestBlockchain(db)
-	txPool, err := core.NewTransactionPool(*config, chain)
-	if err != nil {
-		panic(err)
-	}
+	txPool := core.NewTransactionPool(*config, chain)
 
 	return txPool
 }

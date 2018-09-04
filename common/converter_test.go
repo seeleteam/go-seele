@@ -10,7 +10,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_ConvertInt64ToBytes(t *testing.T) {

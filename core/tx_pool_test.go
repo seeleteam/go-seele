@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -84,7 +84,6 @@ func newTestPool(config *TransactionPoolConfig) (*TransactionPool, *mockBlockcha
 		hashToTxMap:   make(map[common.Hash]*pooledTx),
 		pendingQueue:  newPendingQueue(),
 		processingTxs: make(map[common.Hash]struct{}),
-		lastHeader:    common.EmptyHash,
 		log:           log.GetLogger("test"),
 	}
 
@@ -228,18 +227,26 @@ func Test_TransactionPool_Remove(t *testing.T) {
 }
 
 func Test_GetReinjectTransaction(t *testing.T) {
-	log := log.GetLogger("test")
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	bc := newTestBlockchain(db)
+	pool := &TransactionPool{
+		config:        *DefaultTxPoolConfig(),
+		chain:         bc,
+		hashToTxMap:   make(map[common.Hash]*pooledTx),
+		pendingQueue:  newPendingQueue(),
+		processingTxs: make(map[common.Hash]struct{}),
+		log:           log.GetLogger("test"),
+	}
+
 	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)
 	bc.WriteBlock(b1)
 
 	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 3*types.TransactionPreSize)
 	bc.WriteBlock(b2)
 
-	reinject := getReinjectTransaction(bc.GetStore(), b1.HeaderHash, b2.HeaderHash, log)
+	reinject := pool.getReinjectTransaction(b1.HeaderHash, b2.HeaderHash)
 
 	assert.Equal(t, len(reinject), 2)
 	txs := make(map[common.Hash]*types.Transaction)

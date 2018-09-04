@@ -14,7 +14,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_BytesToAddress(t *testing.T) {
@@ -99,4 +99,21 @@ func Test_Address_Type(t *testing.T) {
 
 	contractAddr := addr.CreateContractAddress(38, hashFunc)
 	assert.Equal(t, contractAddr.Type(), AddressTypeContract)
+
+	contractAddr = BytesToAddress([]byte{1, 255})
+	assert.Equal(t, contractAddr.Type(), AddressTypeReserved)
+}
+
+func Test_IsSystemAddress(t *testing.T) {
+	contractAddr := BytesToAddress([]byte{5, 0})
+	assert.Equal(t, contractAddr.IsReserved(), false)
+
+	contractAddr = BytesToAddress([]byte{0})
+	assert.Equal(t, contractAddr.IsReserved(), false)
+
+	contractAddr = BytesToAddress([]byte{1, 255})
+	assert.Equal(t, contractAddr.IsReserved(), true)
+
+	contractAddr = BytesToAddress([]byte{1})
+	assert.Equal(t, contractAddr.IsReserved(), true)
 }

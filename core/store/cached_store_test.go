@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -181,4 +181,11 @@ func Test_cachedStore_DeleteBlock(t *testing.T) {
 	assert.Equal(t, td, (*big.Int)(nil))
 	block2, _ := cachedStore.GetBlock(block.HeaderHash)
 	assert.Equal(t, block2, (*types.Block)(nil))
+}
+
+func Test_GetDebtIndex(t *testing.T) {
+	store := NewMemStore()
+	cachedStore := NewCachedStore(store)
+
+	GetDebtIndexTest(t, cachedStore)
 }
