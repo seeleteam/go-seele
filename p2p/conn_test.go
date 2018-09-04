@@ -3,7 +3,6 @@ package p2p
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"errors"
 	"net"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 )
 
 func newConnection() (*connection, net.Listener, error) {
-	ln, err := net.Listen("tcp", "127.0.0.1:8888")
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -110,19 +109,20 @@ func Test_connection(t *testing.T) {
 	// change the magic
 	magic = [2]byte{'1', '1'}
 	msg3, err := con.ReadMsg()
-	assert.Equal(t, err, errors.New("Failed to wait magic"))
+	assert.Equal(t, err, errMagic)
 	assert.Equal(t, msg3, &Message{})
 
-	// case 4: too big size greater than 8M bytes
-	randStr1 = getRandomString(zipBytesLimit * 128)
+	// case 3: too big size greater than 8M bytes
+	randStr1 = getRandomString(zipBytesLimit)
+	maxSize = 10
 	msg1 = newMessage(randStr1)
 	msg1Copy = *msg1
 	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-	magic = [2]byte{'s', 'l'}
+	magic = [2]byte{'^', '~'}
 	err = con.WriteMsg(&msg1Copy)
 	assert.Equal(t, err, nil)
 
 	msg2, err = con1.ReadMsg()
-	assert.Equal(t, err, errors.New("Failed to get data, size is too big"))
+	assert.Equal(t, err, errSize)
 	assert.Equal(t, msg2, &Message{})
 }

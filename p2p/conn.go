@@ -17,22 +17,24 @@ import (
 
 const (
 	headBuffLength     = 8
-	headBuffSizeStart  = 0
-	headBuffSizeEnd    = 4
-	headBuffCodeStart  = 4
-	headBuffCodeEnd    = 6
-	headBuffMagicStart = 6
-	headBuffMagicEnd   = 8
-	maxSize            = 8 * 1024 * 1024
+	headBuffMagicStart = 0
+	headBuffMagicEnd   = 2
+	headBuffSizeStart  = 2
+	headBuffSizeEnd    = 6
+	headBuffCodeStart  = 6
+	headBuffCodeEnd    = 8
 )
 
 var (
 	// magic used to check the data head
-	magic = [2]byte{'s', 'l'}
+	magic   = [2]byte{'^', '~'}
+	maxSize = uint32(8 * 1024 * 1024)
 )
 
 var (
 	errConnWriteTimeout = errors.New("Connection writes timeout")
+	errMagic            = errors.New("Failed to wait magic")
+	errSize             = errors.New("Failed to get data, size is too big")
 )
 
 // connection
@@ -125,13 +127,13 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	if binary.BigEndian.Uint16(magic[:]) != magicNum {
 		mlog := log.GetLogger("p2p")
 		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", binary.BigEndian.Uint16(magic[:]), magicNum, c.fd.RemoteAddr().String())
-		return &Message{}, errors.New("Failed to wait magic")
+		return &Message{}, errMagic
 	}
 
 	if size > maxSize {
 		mlog := log.GetLogger("p2p")
-		mlog.Debug("Failed to get data, size %d is so big, sender is %s", size, c.fd.RemoteAddr().String())
-		return &Message{}, errors.New("Failed to get data, size is too big")
+		mlog.Debug("Failed to get data, payload size %d exceeds the limit %d, sender is %s", size, maxSize, c.fd.RemoteAddr().String())
+		return &Message{}, errSize
 	}
 
 	if size > 0 {
