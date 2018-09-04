@@ -126,7 +126,7 @@ func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error)
 		close(ch)
 		return nil, errServiceQuited
 	case <-timeout.C:
-		err = fmt.Errorf("wait for msg reqid=%u timeout", reqID)
+		err = fmt.Errorf("wait for msg reqid=%d timeout", reqID)
 		o.lock.Lock()
 		reqCh := o.requestMap[reqID]
 		if reqCh != nil {
