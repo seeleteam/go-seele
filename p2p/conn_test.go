@@ -108,6 +108,7 @@ func Test_connection(t *testing.T) {
 
 	// change the magic
 	magic = [2]byte{'1', '1'}
+	magicNumber = binary.BigEndian.Uint16(magic[:])
 	msg3, err := con.ReadMsg()
 	assert.Equal(t, err, errMagic)
 	assert.Equal(t, msg3, &Message{})
@@ -119,6 +120,7 @@ func Test_connection(t *testing.T) {
 	msg1Copy = *msg1
 	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
 	magic = [2]byte{'^', '~'}
+	magicNumber = binary.BigEndian.Uint16(magic[:])
 	err = con.WriteMsg(&msg1Copy)
 	assert.Equal(t, err, nil)
 

@@ -27,8 +27,9 @@ const (
 
 var (
 	// magic used to check the data head
-	magic   = [2]byte{'^', '~'}
-	maxSize = uint32(8 * 1024 * 1024)
+	magic       = [2]byte{'^', '~'}
+	maxSize     = uint32(8 * 1024 * 1024)
+	magicNumber = binary.BigEndian.Uint16(magic[:])
 )
 
 var (
@@ -123,10 +124,10 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	}
 
 	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
-	magicNum := binary.BigEndian.Uint16(headbuff[headBuffMagicStart:headBuffMagicEnd])
-	if binary.BigEndian.Uint16(magic[:]) != magicNum {
+	receive := binary.BigEndian.Uint16(headbuff[headBuffMagicStart:headBuffMagicEnd])
+	if magicNumber != receive {
 		mlog := log.GetLogger("p2p")
-		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", binary.BigEndian.Uint16(magic[:]), magicNum, c.fd.RemoteAddr().String())
+		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", magicNumber, receive, c.fd.RemoteAddr().String())
 		return &Message{}, errMagic
 	}
 
@@ -163,7 +164,7 @@ func (c *connection) WriteMsg(msg *Message) error {
 	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
-	binary.BigEndian.PutUint16(b[headBuffMagicStart:headBuffMagicEnd], binary.BigEndian.Uint16(magic[:]))
+	binary.BigEndian.PutUint16(b[headBuffMagicStart:headBuffMagicEnd], magicNumber)
 
 	if err := c.writeFull(b); err != nil {
 		return err
