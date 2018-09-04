@@ -19,8 +19,11 @@ import (
 var (
 	blockRequestMsgCode uint16 = 0
 	blockMsgCode        uint16 = 1
+	statusDataMsgCode   uint16 = 2
+	announceRequestCode uint16 = 3
+	announceCode        uint16 = 4
 
-	protocolMsgCodeLength uint16 = 2
+	protocolMsgCodeLength uint16 = 5
 	MsgWaitTimeout               = time.Second * 120
 )
 
@@ -91,7 +94,7 @@ func NewLightProtocol(networkID uint64, txPool TransactionPool, chain BlockChain
 
 func (sp *LightProtocol) Start() {
 	sp.log.Debug("SeeleProtocol.Start called!")
-
+	go sp.syncer()
 }
 
 // Stop stops protocol, called when seeleService quits.
@@ -101,13 +104,56 @@ func (sp *LightProtocol) Stop() {
 	sp.wg.Wait()
 }
 
+// syncer try to synchronise with remote peer
+func (sp *LightProtocol) syncer() {
+	defer sp.wg.Done()
+	sp.wg.Add(1)
+
+	forceSync := time.NewTicker(forceSyncInterval)
+	for {
+		select {
+		case <-sp.syncCh:
+			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
+		case <-forceSync.C:
+			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
+		case <-sp.quitCh:
+			return
+		}
+	}
+}
+
+func (sp *LightProtocol) synchronise(p *peer) {
+	if p == nil {
+		return
+	}
+
+	if common.PrintExplosionLog {
+		sp.log.Debug("sp.synchronise called.")
+	}
+
+	block := sp.chain.CurrentBlock()
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	if err != nil {
+		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		return
+	}
+	_, pTd := p.Head()
+
+	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
+	if localTD.Cmp(pTd) >= 0 {
+		return
+	}
+
+	// todo download headers from peer, and insert to local blockchain
+}
+
 func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	if sp.peerSet.Find(p2pPeer.Node.ID) != nil {
 		sp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
 		return
 	}
 
-	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp.bServerMode)
+	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
 
 	block := sp.chain.CurrentBlock()
 	head := block.HeaderHash
@@ -125,6 +171,14 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 			newPeer.Disconnect(DiscHandShakeErr)
 		}
 		return
+	}
+
+	if sp.bServerMode {
+		if err := newPeer.sendAnnounce(0, 0); err != nil {
+			sp.log.Error("sendAnnounce err. %s", err)
+			newPeer.Disconnect(DiscAnnounceErr)
+			return
+		}
 	}
 
 	sp.log.Info("add peer %s -> %s to LightProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
@@ -192,6 +246,25 @@ handler:
 		case blockMsgCode:
 			bNeedDeliver = true
 			sp.log.Debug("Received Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
+
+		case announceRequestCode:
+			var query AnnounceQuery
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				sp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
+				break handler
+			}
+
+			peer.sendAnnounce(query.Begin, query.End)
+		case announceCode:
+			var query Announce
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				sp.log.Error("failed to deserialize Announce, quit! %s", err)
+				break handler
+			}
+
+			peer.handleAnnounce(&query)
 		}
 
 		if bNeedDeliver {

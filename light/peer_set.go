@@ -6,6 +6,7 @@
 package light
 
 import (
+	"math/big"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -28,6 +29,36 @@ func newPeerSet() *peerSet {
 	}
 
 	return ps
+}
+
+func (p *peerSet) bestPeer(shard uint) *peer {
+	var (
+		bestPeer *peer
+		bestTd   *big.Int
+	)
+
+	p.ForEach(shard, func(p *peer) bool {
+		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+			if !p.bSynching {
+				bestPeer, bestTd = p, td
+			}
+		}
+
+		return true
+	})
+
+	return bestPeer
+}
+
+func (p *peerSet) ForEach(shard uint, handle func(*peer) bool) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	for _, v := range p.shardPeers[shard] {
+		if !handle(v) {
+			break
+		}
+	}
 }
 
 func (p *peerSet) Remove(peerID common.Address) {

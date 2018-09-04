@@ -6,6 +6,9 @@
 package light
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -19,7 +22,19 @@ const (
 
 	// BlockChainDir lightchain data directory based on config.DataRoot
 	BlockChainDir = "/db/lightchain"
+
+	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 )
+
+// statusData the structure for peers to exchange status
+type statusData struct {
+	ProtocolVersion uint32
+	NetworkID       uint64
+	IsServer        bool // whether server mode
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	GenesisBlock    common.Hash
+}
 
 type blockQuery struct {
 	ReqID  uint32      // ReqID number for request
@@ -31,4 +46,16 @@ type blockQuery struct {
 type BlockMsgBody struct {
 	ReqID uint32
 	Block *types.Block
+}
+
+type AnnounceQuery struct {
+	Begin uint64
+	End   uint64
+}
+
+type Announce struct {
+	TD           *big.Int
+	CurrentBlock common.Hash
+	BlockNumArr  []uint64
+	HeaderArr    []common.Hash
 }
