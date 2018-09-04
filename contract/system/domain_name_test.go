@@ -29,7 +29,7 @@ func newTestContext(db database.Database, contractAddr common.Address) *Context 
 		panic(err)
 	}
 
-	return NewContext(tx, statedb)
+	return NewContext(tx, statedb, newTestBlockHeader())
 }
 
 func Test_DomainNameToKey(t *testing.T) {
