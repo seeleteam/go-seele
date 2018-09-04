@@ -16,14 +16,19 @@ import (
 )
 
 const (
-	headBuffLength     = 14
+	headBuffLength     = 8
 	headBuffSizeStart  = 0
 	headBuffSizeEnd    = 4
 	headBuffCodeStart  = 4
 	headBuffCodeEnd    = 6
 	headBuffMagicStart = 6
-	headBuffMagicEnd   = 14
+	headBuffMagicEnd   = 8
 	maxSize            = 8 * 1024 * 1024
+)
+
+var (
+	// magic used to check the data head
+	magic = [2]byte{'s', 'l'}
 )
 
 var (
@@ -33,11 +38,9 @@ var (
 // connection
 // TODO add bandwidth metrics
 type connection struct {
-	fd         net.Conn   // tcp connection
-	rmutux     sync.Mutex // read msg lock
-	wmutux     sync.Mutex // write msg lock
-	magic      uint64
-	checkMagic bool
+	fd     net.Conn   // tcp connection
+	rmutux sync.Mutex // read msg lock
+	wmutux sync.Mutex // write msg lock
 }
 
 // readFull receive from fd till outBuf is full,
@@ -118,18 +121,16 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	}
 
 	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
-	magic := binary.BigEndian.Uint64(headbuff[headBuffMagicStart:headBuffMagicEnd])
-	if c.checkMagic {
-		if c.magic != magic {
-			mlog := log.GetLogger("p2p")
-			mlog.Info("Failed to wait magic %d, got %d, sender is %s", c.magic, magic, c.fd.RemoteAddr().String())
-			return &Message{}, errors.New("Failed to wait magic")
-		}
+	magicNum := binary.BigEndian.Uint16(headbuff[headBuffMagicStart:headBuffMagicEnd])
+	if binary.BigEndian.Uint16(magic[:]) != magicNum {
+		mlog := log.GetLogger("p2p")
+		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", binary.BigEndian.Uint16(magic[:]), magicNum, c.fd.RemoteAddr().String())
+		return &Message{}, errors.New("Failed to wait magic")
 	}
 
 	if size > maxSize {
 		mlog := log.GetLogger("p2p")
-		mlog.Info("Failed to get data, size %d is so big, sender is %s", size, c.fd.RemoteAddr().String())
+		mlog.Debug("Failed to get data, size %d is so big, sender is %s", size, c.fd.RemoteAddr().String())
 		return &Message{}, errors.New("Failed to get data, size is too big")
 	}
 
@@ -160,7 +161,7 @@ func (c *connection) WriteMsg(msg *Message) error {
 	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
-	binary.BigEndian.PutUint64(b[headBuffMagicStart:headBuffMagicEnd], c.magic)
+	binary.BigEndian.PutUint16(b[headBuffMagicStart:headBuffMagicEnd], binary.BigEndian.Uint16(magic[:]))
 
 	if err := c.writeFull(b); err != nil {
 		return err

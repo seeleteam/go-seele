@@ -439,12 +439,10 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, err
 		}
 
-		peer.rw.magic = nounceCnt
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}
 
-		peer.rw.checkMagic = true
 		recvWrapMsg, err := peer.rw.ReadMsg()
 		if err != nil {
 			return nil, 0, err
@@ -483,7 +481,6 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, err
 		}
 
-		peer.rw.magic = nounceCnt
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}

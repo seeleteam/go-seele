@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -92,8 +91,8 @@ func Test_connection(t *testing.T) {
 	msg1Copy := *msg1
 	var nounceCnt uint64
 	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-	con.magic = nounceCnt
-	// case 1: client write with nounceCnt
+
+	// case 1: client consitent with server
 	err = con.WriteMsg(&msg1Copy)
 	assert.Equal(t, err, nil)
 
@@ -101,56 +100,25 @@ func Test_connection(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, msg2.Payload, msg1.Payload)
 	assert.Equal(t, string(msg2.Payload), randStr1)
-	fmt.Println("case 1:", err)
-	// case 2: server write with nounceCnt
+
+	// case 2: server write with magic
 	randStr2 := getRandomString(10)
 	msg1 = newMessage(randStr2)
-
-	con1.magic = nounceCnt
 	err = con1.WriteMsg(msg1)
 	assert.Equal(t, err, nil)
 
-	con.checkMagic = true
+	// change the magic
+	magic = [2]byte{'1', '1'}
 	msg3, err := con.ReadMsg()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, msg3.Payload, msg1.Payload)
-	result := string(msg3.Payload)
-	assert.Equal(t, result == randStr2, true)
-	fmt.Println("case 2:", err)
-	// case 3: cleint server unconsistent
-	randStr1 = getRandomString(zipBytesLimit * 10)
-	msg1 = newMessage(randStr1)
-	msg1Copy = *msg1
-	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-	con.magic = nounceCnt
-
-	err = con.WriteMsg(&msg1Copy)
-	assert.Equal(t, err, nil)
-
-	msg2, err = con1.ReadMsg()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, msg2.Payload, msg1.Payload)
-	assert.Equal(t, string(msg2.Payload), randStr1)
-
-	randStr2 = getRandomString(10)
-	msg1 = newMessage(randStr2)
-
-	con1.magic = nounceCnt + 1
-	err = con1.WriteMsg(msg1)
-	assert.Equal(t, err, nil)
-
-	con.checkMagic = true
-	msg3, err = con.ReadMsg()
 	assert.Equal(t, err, errors.New("Failed to wait magic"))
 	assert.Equal(t, msg3, &Message{})
 
 	// case 4: too big size greater than 8M bytes
-	randStr1 = getRandomString(zipBytesLimit * 1024)
+	randStr1 = getRandomString(zipBytesLimit * 128)
 	msg1 = newMessage(randStr1)
 	msg1Copy = *msg1
 	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
-	con.magic = nounceCnt
-
+	magic = [2]byte{'s', 'l'}
 	err = con.WriteMsg(&msg1Copy)
 	assert.Equal(t, err, nil)
 
