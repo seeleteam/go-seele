@@ -75,7 +75,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 
 func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
-	toAddress := crypto.MustGenerateRandomAddress()
+	toAddress := crypto.MustGenerateShardAddress(fromAccount.addr.Shard())
 
 	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
 	tx.Sign(fromAccount.privKey)
