@@ -8,29 +8,10 @@ package system
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
-	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
-
-func newTestContext(db database.Database, contractAddr common.Address) *Context {
-	tx := &types.Transaction{
-		Data: types.TransactionData{
-			From: common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
-			To:   contractAddr,
-		},
-	}
-
-	statedb, err := state.NewStatedb(common.EmptyHash, db)
-	if err != nil {
-		panic(err)
-	}
-
-	return NewContext(tx, statedb, newTestBlockHeader())
-}
 
 func Test_DomainNameToKey(t *testing.T) {
 	// nil domain name
@@ -59,7 +40,7 @@ func Test_CreateDomainName(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, domainNameContractAddress)
+	context := newTestContext(db, domainNameContractAddress, newTestBlockHeader())
 
 	// valid name
 	input := []byte{'a', 'b', 'c'}

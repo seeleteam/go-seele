@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_RegisterSubChain(t *testing.T) {
@@ -37,7 +37,7 @@ func Test_RegisterSubChain(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, subChainContractAddress)
+	context := newTestContext(db, subChainContractAddress, newTestBlockHeader())
 
 	// register with valid reg info
 	result, err := registerSubChain(encoded, context)

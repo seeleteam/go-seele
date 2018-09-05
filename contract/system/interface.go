@@ -38,6 +38,7 @@ const (
 var (
 	errInvalidCommand = errors.New("invalid command")
 	errExists         = errors.New("already exists")
+	errInvalidContext = errors.New("invalid context")
 
 	domainNameContractAddress   = common.BytesToAddress([]byte{1, 1})
 	subChainContractAddress     = common.BytesToAddress([]byte{1, 2})
@@ -77,6 +78,10 @@ func (c *contract) RequiredGas(input []byte) uint64 {
 func (c *contract) Run(input []byte, context *Context) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, errInvalidCommand
+	}
+
+	if context == nil {
+		return nil, errInvalidContext
 	}
 
 	if info, found := c.cmds[input[0]]; found {
