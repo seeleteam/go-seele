@@ -41,7 +41,7 @@ func (n *NVM) ProcessTransaction(tx *types.Transaction) (*types.Receipt, error) 
 	}
 
 	var err error
-	ctx := system.NewContext(tx, n.statedb, n.blockHeader)
+	ctx := system.NewContext(tx, n.statedb)
 	if receipt.Result, err = n.contract.Run(tx.Data.Payload, ctx); err != nil {
 		receipt.Result = []byte(err.Error())
 		receipt.Failed = true
