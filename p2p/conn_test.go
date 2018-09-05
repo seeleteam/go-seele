@@ -1,11 +1,13 @@
 package p2p
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func newConnection() (*connection, net.Listener, error) {
@@ -79,31 +81,50 @@ func Test_connection(t *testing.T) {
 	defer con.close()
 	assert.Equal(t, err, nil)
 
-	randStr1 := getRandomString(zipBytesLimit * 10)
-	msg1 := newMessage(randStr1)
-	msg1Copy := *msg1
-
-	err = con.WriteMsg(&msg1Copy)
-	assert.Equal(t, err, nil)
-
 	fd1, err := ln.Accept()
 	assert.Equal(t, err, nil)
 
 	con1 := connection{fd: fd1}
+	randStr1 := getRandomString(zipBytesLimit * 10)
+	msg1 := newMessage(randStr1)
+	msg1Copy := *msg1
+	var nounceCnt uint64
+	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
+
+	// case 1: client consitent with server
+	err = con.WriteMsg(&msg1Copy)
+	assert.Equal(t, err, nil)
+
 	msg2, err := con1.ReadMsg()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, msg2.Payload, msg1.Payload)
 	assert.Equal(t, string(msg2.Payload), randStr1)
 
+	// case 2: server write with magic
 	randStr2 := getRandomString(10)
 	msg1 = newMessage(randStr2)
-
-	err = con.WriteMsg(msg1)
+	err = con1.WriteMsg(msg1)
 	assert.Equal(t, err, nil)
 
-	msg3, err := con1.ReadMsg()
+	// change the magic
+	magic = [2]byte{'1', '1'}
+	magicNumber = binary.BigEndian.Uint16(magic[:])
+	msg3, err := con.ReadMsg()
+	assert.Equal(t, err, errMagic)
+	assert.Equal(t, msg3, &Message{})
+
+	// case 3: too big size greater than 8M bytes
+	randStr1 = getRandomString(zipBytesLimit)
+	maxSize = 10
+	msg1 = newMessage(randStr1)
+	msg1Copy = *msg1
+	binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
+	magic = [2]byte{'^', '~'}
+	magicNumber = binary.BigEndian.Uint16(magic[:])
+	err = con.WriteMsg(&msg1Copy)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, msg3.Payload, msg1.Payload)
-	result := string(msg3.Payload)
-	assert.Equal(t, result == randStr2, true)
+
+	msg2, err = con1.ReadMsg()
+	assert.Equal(t, err, errSize)
+	assert.Equal(t, msg2, &Message{})
 }

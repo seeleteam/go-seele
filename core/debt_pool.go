@@ -180,3 +180,15 @@ func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
 
 	return dp.hashMap[debt]
 }
+
+func (dp *DebtPool) GetAll() []*types.Debt {
+	dp.mutex.RLock()
+	defer dp.mutex.RUnlock()
+
+	results := make([]*types.Debt, 0)
+	for _, v := range dp.hashMap {
+		results = append(results, v)
+	}
+
+	return results
+}

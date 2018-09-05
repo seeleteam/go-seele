@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	metric "github.com/rcrowley/go-metrics"
 )
 

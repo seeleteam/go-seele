@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 var (
@@ -122,7 +123,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[s
 	// Try to get transaction in txpool
 	tx := api.s.TxPool().GetTransaction(hash)
 	if tx != nil {
-		output["transaction"] = PrintableOutputTx(tx)
+		addTxInfo(output, tx)
 		output["status"] = "pool"
 
 		return output, nil
@@ -140,7 +141,8 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[s
 		if err != nil {
 			return nil, err
 		}
-		output["transaction"] = PrintableOutputTx(block.Transactions[txIndex.Index])
+
+		addTxInfo(output, block.Transactions[txIndex.Index])
 		output["status"] = "block"
 		output["blockHash"] = block.HeaderHash.ToHex()
 		output["blockHeight"] = block.Header.Height
@@ -150,6 +152,14 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[s
 	}
 
 	return nil, nil
+}
+
+func addTxInfo(output map[string]interface{}, tx *types.Transaction) {
+	output["transaction"] = PrintableOutputTx(tx)
+	debt := types.NewDebt(tx)
+	if debt != nil {
+		output["debt"] = debt
+	}
 }
 
 // GetDebtByHash return the debt info by debt hash
@@ -203,4 +213,8 @@ func (api *PrivateTransactionPoolAPI) GetPendingTransactions() ([]map[string]int
 	}
 
 	return transactions, nil
+}
+
+func (api *PrivateTransactionPoolAPI) GetPendingDebts() ([]*types.Debt, error) {
+	return api.s.DebtPool().GetAll(), nil
 }

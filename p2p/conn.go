@@ -11,25 +11,37 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
-	headBuffLength    = 6
-	headBuffSizeStart = 0
-	headBuffSizeEnd   = 4
-	headBuffCodeStart = 4
-	headBuffCodeEnd   = 6
+	headBuffLength     = 8
+	headBuffMagicStart = 0
+	headBuffMagicEnd   = 2
+	headBuffSizeStart  = 2
+	headBuffSizeEnd    = 6
+	headBuffCodeStart  = 6
+	headBuffCodeEnd    = 8
+)
+
+var (
+	// magic used to check the data head
+	magic       = [2]byte{'^', '~'}
+	maxSize     = uint32(8 * 1024 * 1024)
+	magicNumber = binary.BigEndian.Uint16(magic[:])
 )
 
 var (
 	errConnWriteTimeout = errors.New("Connection writes timeout")
+	errMagic            = errors.New("Failed to wait magic")
+	errSize             = errors.New("Failed to get data, size is too big")
 )
 
 // connection
 // TODO add bandwidth metrics
 type connection struct {
-	fd net.Conn // tcp connection
-
+	fd     net.Conn   // tcp connection
 	rmutux sync.Mutex // read msg lock
 	wmutux sync.Mutex // write msg lock
 }
@@ -112,6 +124,19 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	}
 
 	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
+	receive := binary.BigEndian.Uint16(headbuff[headBuffMagicStart:headBuffMagicEnd])
+	if magicNumber != receive {
+		mlog := log.GetLogger("p2p")
+		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", magicNumber, receive, c.fd.RemoteAddr().String())
+		return &Message{}, errMagic
+	}
+
+	if size > maxSize {
+		mlog := log.GetLogger("p2p")
+		mlog.Debug("Failed to get data, payload size %d exceeds the limit %d, sender is %s", size, maxSize, c.fd.RemoteAddr().String())
+		return &Message{}, errSize
+	}
+
 	if size > 0 {
 		msgRecv.Payload = make([]byte, size)
 		if err = c.readFull(msgRecv.Payload); err != nil {
@@ -139,6 +164,7 @@ func (c *connection) WriteMsg(msg *Message) error {
 	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)
+	binary.BigEndian.PutUint16(b[headBuffMagicStart:headBuffMagicEnd], magicNumber)
 
 	if err := c.writeFull(b); err != nil {
 		return err

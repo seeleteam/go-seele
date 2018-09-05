@@ -14,6 +14,7 @@ import (
 	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_peer_Info(t *testing.T) {
@@ -39,4 +40,29 @@ func Test_peer_Info(t *testing.T) {
 	if okStr != resultStr {
 		t.Fail()
 	}
+}
+
+func Test_verifyGenesis(t *testing.T) {
+	networkID := uint64(0)
+	statusData := statusData{
+		ProtocolVersion: uint32(0),
+		NetworkID:       networkID,
+		TD:              big.NewInt(0),
+		CurrentBlock:    common.EmptyHash,
+		GenesisBlock:    common.EmptyHash,
+		Shard:           1,
+		Difficult:       8000000,
+	}
+	err := verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 1, 8000000)
+	assert.Equal(t, err, nil)
+
+	err = verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 2, 8000000)
+	assert.Equal(t, err, nil)
+
+	err = verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 2, 9000000)
+	assert.Equal(t, err == errGenesisDifficultNotMatch, true)
+
+	errorHash := common.StringToHash("error hash")
+	err = verifyGenesisAndNetworkID(statusData, errorHash, networkID, 1, 8000000)
+	assert.Equal(t, err != nil, true)
 }

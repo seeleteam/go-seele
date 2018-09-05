@@ -8,7 +8,7 @@ package crypto
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Sign(t *testing.T) {

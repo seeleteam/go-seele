@@ -44,7 +44,10 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 
 	transferFunc := func(db vm.StateDB, sender, recipient common.Address, amount *big.Int) {
 		db.SubBalance(sender, amount)
-		db.AddBalance(recipient, amount)
+
+		if sender.Shard() == recipient.Shard() {
+			db.AddBalance(recipient, amount)
+		}
 	}
 
 	heightToHashMapping := map[uint64]common.Hash{
