@@ -11,18 +11,22 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/stretchr/testify/assert"
 )
 
+// TestDownloadPeer implements the inferace of Peer
 type TestDownloadPeer struct{}
 
 func (s TestDownloadPeer) Head() (common.Hash, *big.Int) {
 	return common.EmptyHash, nil
 }
+
 func (s TestDownloadPeer) RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error {
 	return nil
 }
+
 func (s TestDownloadPeer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error {
 	return nil
 }
@@ -50,6 +54,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 		_, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, errPeerQuit)
 	}()
+
 	time.Sleep(100 * time.Millisecond)
 	pc.close()
 
@@ -59,48 +64,58 @@ func Test_Download_WaitMsg(t *testing.T) {
 		_, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, errReceivedQuitMsg)
 	}()
+
 	time.Sleep(100 * time.Millisecond)
 	close(cancelCh)
 
 	// BlockHeadersMsg
 	msgCode = BlockHeadersMsg
 	cancelCh = make(chan struct{})
-	msg := newMessage(BlockHeadersMsg)
+	blockHeadersMsgHeader := newBlockHeadersMsgBody(magic)
+	payload := common.SerializePanic(blockHeadersMsgHeader)
+	msg := newMessage(BlockHeadersMsg, payload)
 	pc = testPeerConn()
 
 	go func() {
 		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
+		assert.Equal(t, ret, blockHeadersMsgHeader.Headers)
 	}()
+
 	time.Sleep(100 * time.Millisecond)
 	pc.waitingMsgMap[BlockHeadersMsg] <- msg
 
 	// BlocksMsg
 	msgCode = BlocksMsg
 	cancelCh = make(chan struct{})
-	msg = newMessage(BlocksMsg)
+	blocksMsgHeader := newBlocksMsgBody(magic)
+	payload = common.SerializePanic(blocksMsgHeader)
+	msg = newMessage(BlockHeadersMsg, payload)
 	pc = testPeerConn()
 
 	go func() {
 		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
+		assert.Equal(t, ret, blocksMsgHeader.Blocks)
 	}()
+
 	time.Sleep(100 * time.Millisecond)
 	pc.waitingMsgMap[BlocksMsg] <- msg
 
 	// BlocksMsg sent by deliverMsg
 	msgCode = BlocksMsg
 	cancelCh = make(chan struct{})
-	msg = newMessage(BlocksMsg)
 	pc = testPeerConn()
 
 	go func() {
 		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
+		assert.Equal(t, ret, blocksMsgHeader.Blocks)
 	}()
+
 	time.Sleep(100 * time.Millisecond)
 	pc.deliverMsg(msgCode, msg)
 }
@@ -113,16 +128,100 @@ func testPeerConn() *peerConn {
 	return pc
 }
 
-const (
-	ctlMsgProtoHandshake uint16 = 10
-	ctlMsgDiscCode       uint16 = 4
-	ctlMsgPingCode       uint16 = 3
-	ctlMsgPongCode       uint16 = 4
-)
-
-func newMessage(code uint16) *p2p.Message {
+func newMessage(code uint16, payload []byte) *p2p.Message {
 	return &p2p.Message{
-		Code:    code,
-		Payload: []byte("payLoad"),
+		Code:       code,
+		Payload:    payload,
+		ReceivedAt: time.Now(),
+	}
+}
+
+func newBlockHeadersMsgBody(magic uint32) *BlockHeadersMsgBody {
+	return &BlockHeadersMsgBody{
+		Magic:   magic,
+		Headers: newTestBlockHeader(),
+	}
+}
+
+func newTestBlockHeader() []*types.BlockHeader {
+	return []*types.BlockHeader{
+		{
+			PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
+			Creator:           common.EmptyAddress,
+			StateHash:         common.StringToHash("StateHash"),
+			TxHash:            common.StringToHash("TxHash"),
+			Difficulty:        big.NewInt(1),
+			Height:            1,
+			CreateTimestamp:   big.NewInt(time.Now().Unix()),
+			Nonce:             1,
+			ExtraData:         common.CopyBytes([]byte("ExtraData")),
+		},
+	}
+}
+
+func newBlocksMsgBody(magic uint32) *BlocksMsgBody {
+	return &BlocksMsgBody{
+		Magic:  magic,
+		Blocks: newTestBlocks(),
+	}
+}
+
+func newTestBlocks() []*types.Block {
+	header := newTestBlockHeader()
+	txs := []*types.Transaction{
+		newTestBlockTx(10, 1, 1),
+		newTestBlockTx(20, 1, 2),
+		newTestBlockTx(30, 1, 3),
+	}
+	receipts := []*types.Receipt{
+		newTestReceipt(),
+		newTestReceipt(),
+		newTestReceipt(),
+	}
+	debts := []*types.Debt{
+		newDebt(),
+		newDebt(),
+		newDebt(),
+	}
+
+	block := types.NewBlock(header[0], txs, receipts, debts)
+
+	return []*types.Block{block}
+}
+
+func newTestBlockTx(amount, fee, nonce uint64) *types.Transaction {
+	fromAddr := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781")
+	toAddr := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01780")
+
+	tx, err := types.NewTransaction(fromAddr, toAddr, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func newTestReceipt() *types.Receipt {
+	return &types.Receipt{
+		Result:    []byte("result"),
+		PostState: common.StringToHash("post state"),
+		Logs:      nil,
+		TxHash:    common.StringToHash("tx hash"),
+	}
+}
+
+func newDebt() *types.Debt {
+	return &types.Debt{
+		Hash: common.EmptyHash,
+		Data: *newDebtData(),
+	}
+}
+
+func newDebtData() *types.DebtData {
+	return &types.DebtData{
+		TxHash:  common.EmptyHash,
+		Shard:   2,
+		Account: common.EmptyAddress,
+		Amount:  new(big.Int).SetUint64(10),
 	}
 }
