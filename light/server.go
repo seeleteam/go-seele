@@ -15,7 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/seele"
 )
 
-// ServiceServer implements full node service.
+// ServiceServer implements light server service.
 type ServiceServer struct {
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol

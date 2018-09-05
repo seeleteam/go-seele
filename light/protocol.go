@@ -52,13 +52,13 @@ func codeToStr(code uint16) string {
 type LightProtocol struct {
 	p2p.Protocol
 
-	bServerMode bool
-	networkID   uint64
-	txPool      TransactionPool
-	chain       BlockChain
-	peerSet     *peerSet
-	odrBackend  *odrBackend
-
+	bServerMode              bool
+	networkID                uint64
+	txPool                   TransactionPool
+	chain                    BlockChain
+	peerSet                  *peerSet
+	odrBackend               *odrBackend
+	downloader               *Downloader
 	wg                       sync.WaitGroup
 	quitCh                   chan struct{}
 	syncCh                   chan struct{}
@@ -85,16 +85,21 @@ func NewLightProtocol(networkID uint64, txPool TransactionPool, chain BlockChain
 		peerSet:     newPeerSet(),
 	}
 
+	if !serverMode {
+		s.downloader = newDownloader(chain)
+	}
+
 	s.Protocol.AddPeer = s.handleAddPeer
 	s.Protocol.DeletePeer = s.handleDelPeer
 	s.Protocol.GetPeer = s.handleGetPeer
-
 	return s, nil
 }
 
 func (sp *LightProtocol) Start() {
 	sp.log.Debug("SeeleProtocol.Start called!")
-	go sp.syncer()
+	if !sp.bServerMode {
+		go sp.syncer()
+	}
 }
 
 // Stop stops protocol, called when seeleService quits.
@@ -106,6 +111,7 @@ func (sp *LightProtocol) Stop() {
 
 // syncer try to synchronise with remote peer
 func (sp *LightProtocol) syncer() {
+	defer sp.downloader.Terminate()
 	defer sp.wg.Done()
 	sp.wg.Add(1)
 
@@ -144,7 +150,14 @@ func (sp *LightProtocol) synchronise(p *peer) {
 		return
 	}
 
-	// todo download headers from peer, and insert to local blockchain
+	err = sp.downloader.synchronise(p)
+	if err != nil {
+		if err == ErrIsSynchronising {
+			sp.log.Info("exit synchronise as it is already running.")
+		} else {
+			sp.log.Error("synchronise err. %s", err)
+		}
+	}
 }
 
 func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
