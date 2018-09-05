@@ -10,11 +10,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_peer_Info(t *testing.T) {
@@ -50,11 +50,19 @@ func Test_verifyGenesis(t *testing.T) {
 		TD:              big.NewInt(0),
 		CurrentBlock:    common.EmptyHash,
 		GenesisBlock:    common.EmptyHash,
+		Shard:           1,
+		Difficult:       8000000,
 	}
-	err := verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID)
+	err := verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 1, 8000000)
 	assert.Equal(t, err, nil)
 
+	err = verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 2, 8000000)
+	assert.Equal(t, err, nil)
+
+	err = verifyGenesisAndNetworkID(statusData, common.EmptyHash, networkID, 2, 9000000)
+	assert.Equal(t, err == errGenesisDifficultNotMatch, true)
+
 	errorHash := common.StringToHash("error hash")
-	err = verifyGenesisAndNetworkID(statusData, errorHash, networkID)
+	err = verifyGenesisAndNetworkID(statusData, errorHash, networkID, 1, 8000000)
 	assert.Equal(t, err != nil, true)
 }

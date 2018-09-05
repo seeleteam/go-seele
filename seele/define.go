@@ -40,6 +40,8 @@ type statusData struct {
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	GenesisBlock    common.Hash
+	Shard           uint
+	Difficult       uint64
 }
 
 // blockHeadersQuery represents a block header query.
