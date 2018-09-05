@@ -106,7 +106,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 	// Record statedb hash
 	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
-		return nil, err
+		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
 
 	// Add logs
