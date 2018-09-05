@@ -39,7 +39,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
 		receipt.UsedGas = contract.RequiredGas(ctx.Tx.Data.Payload)
-		receipt.Result, err = contract.Run(ctx.Tx.Data.Payload, system.NewContext(ctx.Tx, ctx.Statedb))
+		receipt.Result, err = contract.Run(ctx.Tx.Data.Payload, system.NewContext(ctx.Tx, ctx.Statedb, ctx.BlockHeader))
 	} else {
 		statedb := &evm.StateDB{Statedb: ctx.Statedb}
 		e := evm.NewEVMByDefaultConfig(ctx.Tx, statedb, ctx.BlockHeader, ctx.BcStore)

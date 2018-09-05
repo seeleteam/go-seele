@@ -16,7 +16,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/stretchr/testify/assert"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
