@@ -95,7 +95,7 @@ func main() {
 					hashFlag,
 					timeLockFlag,
 				},
-				Action: RPCAction(NewHTLC),
+				Action: RPCAction(CreateHTLC),
 			},
 			{
 				Name:  "withdraw",
@@ -127,8 +127,8 @@ func main() {
 				Action: RPCAction(Refund),
 			},
 			{
-				Name:  "getContract",
-				Usage: "getContract from HTLC",
+				Name:  "getHTLC",
+				Usage: "get HTLC information",
 				Flags: []cli.Flag{
 					addressFlag,
 					fromFlag,
@@ -138,7 +138,7 @@ func main() {
 					nonceFlag,
 					hashFlag,
 				},
-				Action: RPCAction(GetContract),
+				Action: RPCAction(GetHTLC),
 			},
 		},
 	}

@@ -161,8 +161,8 @@ func HTLCTransaction(client *rpc.Client) (*keystore.Key, *types.TransactionData,
 	return key, txd, nil
 }
 
-// NewHTLC create HTLC
-func NewHTLC(client *rpc.Client) (interface{}, error) {
+// CreateHTLC create HTLC
+func CreateHTLC(client *rpc.Client) (interface{}, error) {
 	key, txd, err := HTLCTransaction(client)
 	if err != nil {
 		return nil, err
@@ -289,8 +289,8 @@ func Refund(client *rpc.Client) (interface{}, error) {
 	return output, err
 }
 
-// GetContract used to get HTLC
-func GetContract(client *rpc.Client) (interface{}, error) {
+// GetHTLC used to get HTLC
+func GetHTLC(client *rpc.Client) (interface{}, error) {
 	key, txd, err := HTLCTransaction(client)
 	if err != nil {
 		return nil, err
