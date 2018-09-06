@@ -98,7 +98,7 @@ func Test_Run(t *testing.T) {
 }
 
 func Test_GetContractByAddress(t *testing.T) {
-	c := GetContractByAddress(domainNameContractAddress)
+	c := GetContractByAddress(DomainNameContractAddress)
 	assert.Equal(t, c, &contract{domainNameCommands})
 
 	contractAddress := common.BytesToAddress([]byte{123, 1})
