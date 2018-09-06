@@ -77,6 +77,75 @@ func main() {
 	sort.Sort(cli.CommandsByName(minerCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(minerCommands.Flags))
 
+	htlcCommands := cli.Command{
+		Name:  "htlc",
+		Usage: "Hash Time Lock Contract command",
+		Subcommands: []cli.Command{
+			{
+				Name:  "create",
+				Usage: "create HTLC",
+				Flags: []cli.Flag{
+					addressFlag,
+					fromFlag,
+					toFlag,
+					amountFlag,
+					feeFlag,
+					paloadFlag,
+					nonceFlag,
+					hashFlag,
+					timeLockFlag,
+				},
+				Action: RPCAction(NewHTLC),
+			},
+			{
+				Name:  "withdraw",
+				Usage: "withdraw seele from HTLC",
+				Flags: []cli.Flag{
+					addressFlag,
+					fromFlag,
+					feeFlag,
+					amountFlag,
+					paloadFlag,
+					nonceFlag,
+					hashFlag,
+					preimageFlag,
+				},
+				Action: RPCAction(Withdraw),
+			},
+			{
+				Name:  "refund",
+				Usage: "refund seele from HTLC",
+				Flags: []cli.Flag{
+					addressFlag,
+					fromFlag,
+					feeFlag,
+					amountFlag,
+					paloadFlag,
+					nonceFlag,
+					hashFlag,
+				},
+				Action: RPCAction(Refund),
+			},
+			{
+				Name:  "getContract",
+				Usage: "getContract from HTLC",
+				Flags: []cli.Flag{
+					addressFlag,
+					fromFlag,
+					feeFlag,
+					amountFlag,
+					paloadFlag,
+					nonceFlag,
+					hashFlag,
+				},
+				Action: RPCAction(GetContract),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
+
 	p2pCommands := cli.Command{
 		Name:  "p2p",
 		Usage: "p2p commands",
@@ -112,6 +181,7 @@ func main() {
 	sort.Sort(cli.FlagsByName(p2pCommands.Flags))
 
 	app.Commands = []cli.Command{
+		htlcCommands,
 		minerCommands,
 		p2pCommands,
 		{

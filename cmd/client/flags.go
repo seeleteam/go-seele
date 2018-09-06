@@ -183,4 +183,18 @@ var (
 		Usage:       "heap dump file name, defualt heap.dump",
 		Destination: &dumpFileValue,
 	}
+
+	timeLockValue string
+	timeLockFlag  = cli.StringFlag{
+		Name:        "time",
+		Usage:       "time lock in the transaction",
+		Destination: &timeLockValue,
+	}
+
+	preimageValue string
+	preimageFlag  = cli.StringFlag{
+		Name:        "preimage",
+		Usage:       "preimage of hash in the transaction",
+		Destination: &preimageValue,
+	}
 )
