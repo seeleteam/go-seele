@@ -95,7 +95,9 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 		return nil, errNotFutureTime
 	}
 
+	tx := *context.tx
 	copyContext := *context
+	copyContext.tx = &tx
 	var data htlc
 	data.Tx = copyContext.tx
 	data.Tx.Data.To = info.To
