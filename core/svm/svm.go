@@ -29,7 +29,6 @@ type Context struct {
 // Process the tx
 func Process(ctx *Context) (*types.Receipt, error) {
 	var err error
-	var isHandledNonceAndAmount bool
 	receipt := &types.Receipt{
 		TxHash:          ctx.Tx.Hash,
 		ContractAddress: ctx.Tx.Data.To.Bytes(),
@@ -38,9 +37,22 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	snapshot := ctx.Statedb.Prepare(ctx.TxIndex)
 
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
+		// Add from nonce
+		ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+
+		// Transfer amount
+		amount, sender, recipient := ctx.Tx.Data.Amount, ctx.Tx.Data.From, ctx.Tx.Data.To
+		if ctx.Statedb.GetBalance(sender).Cmp(amount) < 0 {
+			return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
+		}
+
+		ctx.Statedb.SubBalance(sender, amount)
+		ctx.Statedb.AddBalance(recipient, amount)
+
+		// Run
 		receipt.UsedGas = contract.RequiredGas(ctx.Tx.Data.Payload)
 		receipt.Result, err = contract.Run(ctx.Tx.Data.Payload, system.NewContext(ctx.Tx, ctx.Statedb, ctx.BlockHeader))
-	} else {
+	} else { // evm
 		statedb := &evm.StateDB{Statedb: ctx.Statedb}
 		e := evm.NewEVMByDefaultConfig(ctx.Tx, statedb, ctx.BlockHeader, ctx.BcStore)
 		caller := vm.AccountRef(ctx.Tx.Data.From)
@@ -58,7 +70,6 @@ func Process(ctx *Context) (*types.Receipt, error) {
 			receipt.Result, leftOverGas, err = e.Call(caller, ctx.Tx.Data.To, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 		}
 		receipt.UsedGas = gas - leftOverGas
-		isHandledNonceAndAmount = true
 	}
 
 	// Gas is not enough
@@ -89,20 +100,6 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	ctx.Statedb.SubBalance(ctx.Tx.Data.From, totalFee)
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, totalFee)
 	receipt.TotalFee = totalFee.Uint64()
-
-	if !isHandledNonceAndAmount {
-		// Transfer amount
-		amount, sender, recipient := ctx.Tx.Data.Amount, ctx.Tx.Data.From, ctx.Tx.Data.To
-		if ctx.Statedb.GetBalance(sender).Cmp(amount) < 0 {
-			return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
-		}
-
-		ctx.Statedb.SubBalance(sender, amount)
-		ctx.Statedb.AddBalance(recipient, amount)
-
-		// Add from nonce
-		ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
-	}
 
 	// Record statedb hash
 	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
