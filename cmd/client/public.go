@@ -15,7 +15,6 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
-	"github.com/seeleteam/go-seele/seele"
 	"github.com/urfave/cli"
 )
 
@@ -44,37 +43,59 @@ func RPCAction(handler func(client *rpc.Client) (interface{}, error)) func(c *cl
 	}
 }
 
-func GetInfoAction(client *rpc.Client) (interface{}, error) {
-	return util.GetInfo(client)
+func rpcFlags(callArgFlags ...cli.Flag) []cli.Flag {
+	return append([]cli.Flag{addressFlag}, callArgFlags...)
 }
 
-func getBalanceAction(client *rpc.Client) (interface{}, error) {
-	account, err := MakeAddress(accountValue)
-	if err != nil {
-		return nil, err
+func rpcAction(namespace string, method string) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		// parse the call args from command flags.
+		var args []interface{}
+		for _, flag := range c.Command.Flags {
+			if flag == addressFlag || flag == cli.HelpFlag {
+				continue
+			}
+
+			if rf, ok := flag.(rpcFlag); ok {
+				v, err := rf.getValue()
+				if err != nil {
+					return err
+				}
+
+				args = append(args, v)
+			} else {
+				args = append(args, c.Generic(flag.GetName()))
+			}
+		}
+
+		// dail RPC connection.
+		client, err := rpc.DialTCP(context.Background(), addressValue)
+		if err != nil {
+			return err
+		}
+
+		// RPC call
+		var result interface{}
+		rpcMethod := fmt.Sprintf("%s_%s", namespace, method)
+		if err = client.Call(&result, rpcMethod, args...); err != nil {
+			return fmt.Errorf("Failed to call rpc, %s", err)
+		}
+
+		// print RPC call result in JSON format.
+		if result != nil {
+			encoded, err := json.MarshalIndent(result, "", "\t")
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(string(encoded))
+		}
+
+		return nil
 	}
-
-	var result seele.GetBalanceResponse
-	err = client.Call(&result, "seele_getBalance", account)
-	return result, err
 }
 
-func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
-	account, err := MakeAddress(accountValue)
-	if err != nil {
-		return nil, err
-	}
-
-	return util.GetAccountNonce(client, account)
-}
-
-func GetBlockHeightAction(client *rpc.Client) (interface{}, error) {
-	var result uint64
-	err := client.Call(&result, "seele_getBlockHeight")
-	return result, err
-}
-
-func GetBlockAction(client *rpc.Client) (interface{}, error) {
+func getBlockAction(client *rpc.Client) (interface{}, error) {
 	var result map[string]interface{}
 	var err error
 
@@ -87,22 +108,8 @@ func GetBlockAction(client *rpc.Client) (interface{}, error) {
 	return result, err
 }
 
-func GetLogsAction(client *rpc.Client) (interface{}, error) {
-	var result []seele.GetLogsResponse
-	err := client.Call(&result, "seele_getLogs", heightValue, contractValue, topicValue)
-
-	return result, err
-}
-
-func callAction(client *rpc.Client) (interface{}, error) {
-	result := make(map[string]interface{})
-	err := client.Call(&result, "seele_call", toValue, paloadValue, heightValue)
-
-	return result, err
-}
-
-func AddTxAction(client *rpc.Client) (interface{}, error) {
-	tx, err := MakeTransaction(client)
+func addTxAction(client *rpc.Client) (interface{}, error) {
+	tx, err := makeTransaction(client)
 	if err != nil {
 		return nil, err
 	}
@@ -117,23 +124,15 @@ func AddTxAction(client *rpc.Client) (interface{}, error) {
 	return tx, nil
 }
 
-func MakeAddress(value string) (common.Address, error) {
-	if value == "" {
-		return common.EmptyAddress, nil
-	} else {
-		return common.HexToAddress(value)
-	}
-}
-
-func MakeTransaction(client *rpc.Client) (*types.Transaction, error) {
+func makeTransaction(client *rpc.Client) (*types.Transaction, error) {
 	pass, err := common.GetPassword()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get password %s\n", err)
+		return nil, fmt.Errorf("failed to get password %s", err)
 	}
 
 	key, err := keystore.GetKey(fromValue, pass)
 	if err != nil {
-		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s\n", err)
+		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
 	}
 
 	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
