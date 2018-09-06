@@ -31,6 +31,10 @@ func (s TestDownloadPeer) RequestBlocksByHashOrNumber(magic uint32, origin commo
 	return nil
 }
 
+func (s TestDownloadPeer) GetPeerRequestInfo() (uint32, common.Hash, uint64, int) {
+	return 0, common.EmptyHash, 0, 0
+}
+
 func Test_Download_NewPeerConnAndClose(t *testing.T) {
 	var peer TestDownloadPeer
 	peerID := "testPeerID"
@@ -159,7 +163,7 @@ func newTestBlockHeader() *types.BlockHeader {
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
 		Nonce:             1,
-		ExtraData:         common.CopyBytes([]byte("ExtraData")),
+		ExtraData:         common.CopyBytes([]byte("")),
 	}
 }
 

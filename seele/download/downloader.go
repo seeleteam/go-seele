@@ -22,13 +22,19 @@ import (
 )
 
 const (
+	// GetBlockHeadersMsg message type for getting block headers
 	GetBlockHeadersMsg uint16 = 8
-	BlockHeadersMsg    uint16 = 9
-	GetBlocksMsg       uint16 = 10
-	BlocksPreMsg       uint16 = 11 // BlocksPreMsg is sent before BlockMsg, containing block numbers of BlockMsg.
-	BlocksMsg          uint16 = 12
+	// BlockHeadersMsg message type for delivering block headers
+	BlockHeadersMsg uint16 = 9
+	// GetBlocksMsg message type for getting blocks
+	GetBlocksMsg uint16 = 10
+	// BlocksPreMsg is sent before BlockMsg, containing block numbers of BlockMsg.
+	BlocksPreMsg uint16 = 11
+	// BlocksMsg message type for delivering blocks
+	BlocksMsg uint16 = 12
 )
 
+// CodeToStr message code -> message string
 func CodeToStr(code uint16) string {
 	switch code {
 	case GetBlockHeadersMsg:
@@ -47,12 +53,16 @@ func CodeToStr(code uint16) string {
 }
 
 var (
-	MaxBlockFetch  = 10  // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch = 256 // Amount of block headers to be fetched per retrieval request
+	// MaxBlockFetch amount of blocks to be fetched per retrieval request
+	MaxBlockFetch = 10
+	// MaxHeaderFetch amount of block headers to be fetched per retrieval request
+	MaxHeaderFetch = 256
 
-	MaxForkAncestry = 90000       // Maximum chain reorganisation
+	// MaxForkAncestry maximum chain reorganisation
+	MaxForkAncestry = 90000
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
 
+	//MaxMessageLength maximum message length
 	MaxMessageLength = 8 * 1024 * 1024
 	statusNone       = 1 // no sync session
 	statusPreparing  = 2 // sync session is preparing
@@ -64,10 +74,13 @@ var (
 	errHashNotMatch          = errors.New("Hash not match")
 	errInvalidAncestor       = errors.New("Ancestor is invalid")
 	errInvalidPacketReceived = errors.New("Invalid packet received")
-	ErrIsSynchronising       = errors.New("Is synchronising")
-	errMaxForkAncestor       = errors.New("Can not find ancestor when reached MaxForkAncestry")
-	errPeerNotFound          = errors.New("Peer not found")
-	errSyncErr               = errors.New("Err occurs when syncing")
+
+	// ErrIsSynchronising indicates downloader is synchronising
+	ErrIsSynchronising = errors.New("Is synchronising")
+
+	errMaxForkAncestor = errors.New("Can not find ancestor when reached MaxForkAncestry")
+	errPeerNotFound    = errors.New("Peer not found")
+	errSyncErr         = errors.New("Err occurs when syncing")
 )
 
 // Downloader sync block chain with remote peer
@@ -100,16 +113,19 @@ type BlocksMsgBody struct {
 // NewDownloader create Downloader
 func NewDownloader(chain *core.Blockchain) *Downloader {
 	d := &Downloader{
+		cancelCh:   make(chan struct{}),
 		peers:      make(map[string]*peerConn),
 		chain:      chain,
 		syncStatus: statusNone,
 	}
 	d.log = log.GetLogger("download")
+
 	return d
 }
 
 func (d *Downloader) getReadableStatus() string {
 	var status string
+
 	switch d.syncStatus {
 	case statusNone:
 		status = "NotSyncing"
@@ -120,6 +136,7 @@ func (d *Downloader) getReadableStatus() string {
 	case statusCleaning:
 		status = "Cleaning"
 	}
+
 	return status
 }
 
@@ -143,10 +160,12 @@ func (d *Downloader) getSyncInfo(info *SyncInfo) {
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, localTD *big.Int) error {
 	// Make sure only one routine can pass at once
 	d.lock.Lock()
+
 	if d.syncStatus != statusNone {
 		d.lock.Unlock()
 		return ErrIsSynchronising
 	}
+
 	d.syncStatus = statusPreparing
 	d.cancelCh = make(chan struct{})
 	d.masterPeer = id
@@ -160,11 +179,13 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	d.lock.Unlock()
 
 	err := d.doSynchronise(p, head, td, localTD)
+
 	d.lock.Lock()
 	d.syncStatus = statusNone
 	d.sessionWG.Wait()
 	d.cancelCh = nil
 	d.lock.Unlock()
+
 	return err
 }
 
@@ -249,51 +270,29 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 	// Get the top height
 	block := d.chain.CurrentBlock()
 	localHeight := block.Header.Height
-	var top uint64
-	if localHeight <= height {
-		top = localHeight
-	} else {
-		top = height
-	}
 
+	top := getTop(localHeight, height)
 	if top == 0 {
 		return top, nil
 	}
 
-	// get maximum chain reorganisation
-	var maxFetchAncestry int
-	if top >= uint64(MaxForkAncestry) {
-		maxFetchAncestry = MaxForkAncestry
-	} else {
-		maxFetchAncestry = int(top) + 1
-	}
-
 	// Compare the peer and local block head hash and return the ancestor height
 	var cmpCount = 0
+	maxFetchAncestry := getMaxFetchAncestry(top)
 	for {
 		localTop := top - uint64(cmpCount)
-		var fetchCount = 0
-		if (maxFetchAncestry - cmpCount) >= MaxHeaderFetch {
-			fetchCount = MaxHeaderFetch
-		} else {
-			fetchCount = maxFetchAncestry - cmpCount
-		}
+
+		fetchCount := getFetchCount(maxFetchAncestry, cmpCount)
 		if fetchCount == 0 {
 			return 0, errMaxForkAncestor
 		}
 
 		// Get peer block headers
-		magic := rand2.Uint32()
-		go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, fetchCount, true)
-		msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
+		headers, err := d.getPeerBlockHaders(conn, localTop, fetchCount)
 		if err != nil {
 			return 0, err
 		}
 
-		headers := msg.([]*types.BlockHeader)
-		if len(headers) == 0 {
-			return 0, errInvalidAncestor
-		}
 		cmpCount += len(headers)
 
 		// Is ancenstor found
@@ -310,10 +309,65 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 	}
 }
 
+func getTop(localHeight, height uint64) uint64 {
+	var top uint64
+
+	if localHeight <= height {
+		top = localHeight
+	} else {
+		top = height
+	}
+
+	return top
+}
+
+// getMaxFetchAncestry gets maximum chain reorganisation
+func getMaxFetchAncestry(top uint64) int {
+	var maxFetchAncestry int
+
+	if top >= uint64(MaxForkAncestry) {
+		maxFetchAncestry = MaxForkAncestry
+	} else {
+		maxFetchAncestry = int(top) + 1
+	}
+
+	return maxFetchAncestry
+}
+
+func getFetchCount(maxFetchAncestry, cmpCount int) int {
+	var fetchCount = 0
+
+	if (maxFetchAncestry - cmpCount) >= MaxHeaderFetch {
+		fetchCount = MaxHeaderFetch
+	} else {
+		fetchCount = maxFetchAncestry - cmpCount
+	}
+
+	return fetchCount
+}
+
+func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop uint64, fetchCount int) ([]*types.BlockHeader, error) {
+	magic := rand2.Uint32()
+	go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, fetchCount, true)
+
+	msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := msg.([]*types.BlockHeader)
+	if len(headers) == 0 {
+		return nil, errInvalidAncestor
+	}
+
+	return headers, nil
+}
+
 // RegisterPeer add peer to download routine
 func (d *Downloader) RegisterPeer(peerID string, peer Peer) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
+
 	newConn := newPeerConn(peer, peerID, d.log)
 	d.peers[peerID] = newConn
 
@@ -327,6 +381,7 @@ func (d *Downloader) RegisterPeer(peerID string, peer Peer) {
 func (d *Downloader) UnRegisterPeer(peerID string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
+
 	if peerConn, ok := d.peers[peerID]; ok {
 		peerConn.close()
 		delete(d.peers, peerID)
@@ -338,22 +393,23 @@ func (d *Downloader) DeliverMsg(peerID string, msg *p2p.Message) {
 	d.lock.Lock()
 	peerConn, ok := d.peers[peerID]
 	d.lock.Unlock()
-	if !ok {
-		return
+
+	if ok {
+		peerConn.deliverMsg(msg.Code, msg)
 	}
-	peerConn.deliverMsg(msg.Code, msg)
-	return
 }
 
 // Cancel cancels current session.
 func (d *Downloader) Cancel() {
 	d.lock.Lock()
 	defer d.lock.Unlock()
+
 	if d.cancelCh != nil {
 		select {
 		case <-d.cancelCh:
 		default:
 			close(d.cancelCh)
+			d.cancelCh = nil
 		}
 	}
 }
@@ -368,10 +424,12 @@ func (d *Downloader) Terminate() {
 // peerDownload peer download routine
 func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
 	defer d.sessionWG.Done()
+
 	d.log.Debug("Downloader.peerDownload start")
-	bMaster := (conn.peerID == d.masterPeer)
+	isMaster := (conn.peerID == d.masterPeer)
 	peerID := conn.peerID
 	var err error
+
 outLoop:
 	for !tm.isDone() {
 		hasReqData := false
@@ -458,7 +516,7 @@ outLoop:
 	}
 
 	tm.onPeerQuit(peerID)
-	if bMaster {
+	if isMaster {
 		d.Cancel()
 	}
 	d.log.Debug("Downloader.peerDownload end")
@@ -467,16 +525,14 @@ outLoop:
 // processBlocks writes blocks to the blockchain.
 func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
-		d.log.Debug("height:%d hash:%s <- preHash:%s ", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
-	}
+		d.log.Debug("height:%d, hash:%s, preHash:%s", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
 
-	for _, h := range headInfos {
-		d.log.Debug("d.processBlock %d", h.block.Header.Height)
 		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
-			d.log.Error("downloader processBlocks err. %s", err)
+			d.log.Error("failed to write block:%s", err)
 			d.Cancel()
 			break
 		}
+
 		h.status = taskStatusProcessed
 	}
 }
