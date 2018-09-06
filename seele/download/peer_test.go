@@ -139,23 +139,27 @@ func newMessage(code uint16, payload []byte) *p2p.Message {
 func newBlockHeadersMsgBody(magic uint32) *BlockHeadersMsgBody {
 	return &BlockHeadersMsgBody{
 		Magic:   magic,
-		Headers: newTestBlockHeader(),
+		Headers: newTestBlockHeaders(),
 	}
 }
 
-func newTestBlockHeader() []*types.BlockHeader {
+func newTestBlockHeaders() []*types.BlockHeader {
 	return []*types.BlockHeader{
-		{
-			PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
-			Creator:           common.EmptyAddress,
-			StateHash:         common.StringToHash("StateHash"),
-			TxHash:            common.StringToHash("TxHash"),
-			Difficulty:        big.NewInt(1),
-			Height:            1,
-			CreateTimestamp:   big.NewInt(time.Now().Unix()),
-			Nonce:             1,
-			ExtraData:         common.CopyBytes([]byte("ExtraData")),
-		},
+		newTestBlockHeader(),
+	}
+}
+
+func newTestBlockHeader() *types.BlockHeader {
+	return &types.BlockHeader{
+		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
+		Creator:           common.EmptyAddress,
+		StateHash:         common.StringToHash("StateHash"),
+		TxHash:            common.StringToHash("TxHash"),
+		Difficulty:        big.NewInt(1),
+		Height:            1,
+		CreateTimestamp:   big.NewInt(time.Now().Unix()),
+		Nonce:             1,
+		ExtraData:         common.CopyBytes([]byte("ExtraData")),
 	}
 }
 
@@ -167,7 +171,7 @@ func newBlocksMsgBody(magic uint32) *BlocksMsgBody {
 }
 
 func newTestBlocks() []*types.Block {
-	header := newTestBlockHeader()
+	headers := newTestBlockHeaders()
 	txs := []*types.Transaction{
 		newTestBlockTx(10, 1, 1),
 		newTestBlockTx(20, 1, 2),
@@ -184,7 +188,7 @@ func newTestBlocks() []*types.Block {
 		newDebt(),
 	}
 
-	block := types.NewBlock(header[0], txs, receipts, debts)
+	block := types.NewBlock(headers[0], txs, receipts, debts)
 
 	return []*types.Block{block}
 }
