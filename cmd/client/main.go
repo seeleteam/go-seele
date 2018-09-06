@@ -130,7 +130,7 @@ func main() {
 			Name:   "sendtx",
 			Usage:  "send transaction to node",
 			Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag),
-			Action: rpcActionEx("seele", "addTx", makeTransaction),
+			Action: rpcActionEx("seele", "addTx", makeTransaction, onTxAdded),
 		},
 		{
 			Name:   "getnonce",
