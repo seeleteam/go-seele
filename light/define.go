@@ -24,6 +24,8 @@ const (
 	BlockChainDir = "/db/lightchain"
 
 	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
+
+	MaxBlockHashRequested uint64 = 1024
 )
 
 // statusData the structure for peers to exchange status
@@ -33,6 +35,7 @@ type statusData struct {
 	IsServer        bool // whether server mode
 	TD              *big.Int
 	CurrentBlock    common.Hash
+	CurrentBlockNum uint64
 	GenesisBlock    common.Hash
 }
 
@@ -54,8 +57,21 @@ type AnnounceQuery struct {
 }
 
 type Announce struct {
-	TD           *big.Int
-	CurrentBlock common.Hash
-	BlockNumArr  []uint64
-	HeaderArr    []common.Hash
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	CurrentBlockNum uint64
+	BlockNumArr     []uint64
+	HeaderArr       []common.Hash
+}
+
+type HeaderHashSyncQuery struct {
+	begin uint64
+}
+
+type HeaderHashSync struct {
+	TD              *big.Int
+	CurrentBlock    common.Hash
+	CurrentBlockNum uint64
+	BeginNum        uint64
+	HeaderArr       []common.Hash
 }

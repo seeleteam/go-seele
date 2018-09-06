@@ -6,6 +6,7 @@
 package light
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -16,15 +17,21 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
-var (
-	blockRequestMsgCode uint16 = 0
-	blockMsgCode        uint16 = 1
-	statusDataMsgCode   uint16 = 2
-	announceRequestCode uint16 = 3
-	announceCode        uint16 = 4
+const (
+	blockRequestMsgCode  uint16 = 0
+	blockMsgCode         uint16 = 1
+	statusDataMsgCode    uint16 = 2
+	announceRequestCode  uint16 = 3
+	announceCode         uint16 = 4
+	syncHashRequestCode  uint16 = 5
+	syncHashResponseCode uint16 = 6
 
-	protocolMsgCodeLength uint16 = 5
-	MsgWaitTimeout               = time.Second * 120
+	protocolMsgCodeLength uint16 = 7
+	msgWaitTimeout               = time.Second * 120
+)
+
+var (
+	errReadChain = errors.New("Load message from chain err")
 )
 
 type BlockChain interface {
@@ -175,7 +182,12 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		return
 	}
 
-	if err := newPeer.handShake(sp.networkID, localTD, head, head); err != nil {
+	genesisBlock, err := sp.chain.GetStore().GetBlockByHeight(0)
+	if err != nil {
+		return
+	}
+
+	if err := newPeer.handShake(sp.networkID, localTD, head, block.Header.Height, genesisBlock.HeaderHash); err != nil {
 		sp.log.Error("handleAddPeer err. %s", err)
 		if sp.bServerMode {
 			// todo. light protocol need quit, but seeleprotocol can run normally.
@@ -225,7 +237,7 @@ handler:
 			sp.log.Debug("got msg with type:%s", codeToStr(msg.Code))
 		}
 
-		bNeedDeliver := false
+		bNeedDeliverOdr := false
 		switch msg.Code {
 		case blockRequestMsgCode:
 			var query blockQuery
@@ -257,7 +269,7 @@ handler:
 			}
 
 		case blockMsgCode:
-			bNeedDeliver = true
+			bNeedDeliverOdr = true
 			sp.log.Debug("Received Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
 
 		case announceRequestCode:
@@ -268,7 +280,11 @@ handler:
 				break handler
 			}
 
-			peer.sendAnnounce(query.Begin, query.End)
+			if err := peer.sendAnnounce(query.Begin, query.End); err != nil {
+				sp.log.Error("failed to sendAnnounce, quit! %s", err)
+				break handler
+			}
+
 		case announceCode:
 			var query Announce
 			err := common.Deserialize(msg.Payload, &query)
@@ -277,10 +293,39 @@ handler:
 				break handler
 			}
 
-			peer.handleAnnounce(&query)
+			if err := peer.handleAnnounce(&query); err != nil {
+				sp.log.Error("failed to handleAnnounce, quit! %s", err)
+				break handler
+			}
+
+		case syncHashRequestCode:
+			var query HeaderHashSyncQuery
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				sp.log.Error("failed to deserialize HeaderHashSyncQuery, quit! %s", err)
+				break handler
+			}
+
+			if err := peer.handleSyncHashRequest(&query); err != nil {
+				sp.log.Error("failed to handleSyncHashRequest, quit! %s", err)
+				break handler
+			}
+
+		case syncHashResponseCode:
+			var query HeaderHashSync
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				sp.log.Error("failed to deserialize HeaderHashSync, quit! %s", err)
+				break handler
+			}
+
+			if err := peer.handleSyncHash(&query); err != nil {
+				sp.log.Error("failed to handleSyncHash, quit! %s", err)
+				break handler
+			}
 		}
 
-		if bNeedDeliver {
+		if bNeedDeliverOdr {
 			sp.odrBackend.msgCh <- msg
 		}
 	}

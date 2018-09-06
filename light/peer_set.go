@@ -39,7 +39,7 @@ func (p *peerSet) bestPeer(shard uint) *peer {
 
 	p.ForEach(shard, func(p *peer) bool {
 		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			if !p.bSynching {
+			if !p.isSyncing() {
 				bestPeer, bestTd = p, td
 			}
 		}

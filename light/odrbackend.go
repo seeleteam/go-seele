@@ -116,7 +116,7 @@ func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error)
 		p.RequestBlocksByHashOrNumber(reqID, hash, no)
 	}
 
-	timeout := time.NewTimer(MsgWaitTimeout)
+	timeout := time.NewTimer(msgWaitTimeout)
 	select {
 	case msg := <-ch:
 		reqMsg := msg.(*BlockMsgBody)
