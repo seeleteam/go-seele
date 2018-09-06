@@ -37,7 +37,7 @@ func Test_RegisterSubChain(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, subChainContractAddress, newTestBlockHeader())
+	context := newTestContext(db, subChainContractAddress)
 
 	// register with valid reg info
 	result, err := registerSubChain(encoded, context)

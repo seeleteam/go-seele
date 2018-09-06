@@ -40,7 +40,7 @@ func Test_CreateDomainName(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, domainNameContractAddress, newTestBlockHeader())
+	context := newTestContext(db, domainNameContractAddress)
 
 	// valid name
 	input := []byte{'a', 'b', 'c'}

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newTestContext(db database.Database, contractAddr common.Address, blockHeader *types.BlockHeader) *Context {
+func newTestContext(db database.Database, contractAddr common.Address) *Context {
 	tx := &types.Transaction{
 		Data: types.TransactionData{
 			From: common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
@@ -24,17 +24,30 @@ func newTestContext(db database.Database, contractAddr common.Address, blockHead
 		panic(err)
 	}
 
-	return NewContext(tx, statedb, blockHeader)
+	return NewContext(tx, statedb, newTestBlockHeader())
 }
 
 func Test_NewContext(t *testing.T) {
+	tx := &types.Transaction{
+		Data: types.TransactionData{
+			From: common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+			To:   domainNameContractAddress,
+		},
+	}
+
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
+	statedb, err := state.NewStatedb(common.EmptyHash, db)
+	if err != nil {
+		panic(err)
+	}
+
 	blockHeader := newTestBlockHeader()
 
-	context := newTestContext(db, domainNameContractAddress, blockHeader)
+	context := NewContext(tx, statedb, blockHeader)
 	assert.Equal(t, context.tx.Data.To, domainNameContractAddress)
+	assert.Equal(t, context.statedb, statedb)
 	assert.Equal(t, context.BlockHeader, blockHeader)
 }
 
@@ -64,17 +77,10 @@ func Test_Run(t *testing.T) {
 	assert.Equal(t, err, errInvalidCommand)
 	assert.Equal(t, arrayByte == nil, true)
 
-	// context is nil
-	arrayByte, err = c.Run([]byte{cmdCreateDomainName}, nil)
-	assert.Equal(t, err, errInvalidContext)
-	assert.Equal(t, arrayByte == nil, true)
-
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	blockHeader := newTestBlockHeader()
-
-	context := newTestContext(db, domainNameContractAddress, blockHeader)
+	context := newTestContext(db, domainNameContractAddress)
 
 	// input inclues cmdCreateDomainName command, but not domain name
 	arrayByte, err = c.Run([]byte{cmdCreateDomainName}, context)
