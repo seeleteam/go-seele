@@ -8,7 +8,7 @@ package common
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_IsShardEnabled(t *testing.T) {

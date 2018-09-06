@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"bytes"
 	"math/big"
 	"time"
 
@@ -31,14 +30,15 @@ type Task struct {
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
 func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
+	// choose transactions from the given txs
+	size := task.chooseDebts(seele, statedb, log)
+
 	// the reward tx will always be at the first of the block's transactions
 	reward, err := task.handleMinerRewardTx(statedb)
 	if err != nil {
 		return err
 	}
 
-	// choose transactions from the given txs
-	size := task.chooseDebts(seele, statedb, log)
 	task.chooseTransactions(seele, statedb, log, size)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d, debt number: %d",
@@ -65,19 +65,12 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			data := statedb.GetData(d.Data.Account, d.Hash)
-			if bytes.Equal(data, core.DebtDataFlag) {
+			err := core.ApplyDebt(statedb, d)
+			if err != nil {
 				continue
 			}
 
 			// @TODO add debt reward
-
-			if !statedb.Exist(d.Data.Account) {
-				statedb.CreateAccount(d.Data.Account)
-			}
-
-			statedb.AddBalance(d.Data.Account, d.Data.Amount)
-			statedb.SetData(d.Data.Account, d.Hash, core.DebtDataFlag)
 			task.debts = append(task.debts, d)
 		}
 	}

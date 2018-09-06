@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Protocol_Cap(t *testing.T) {

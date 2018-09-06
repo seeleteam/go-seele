@@ -23,9 +23,15 @@ var (
 	errNodeNotExist = errors.New("node not exist in db")
 )
 
+// Database is used to load trie nodes by hash.
+// It's levelDB in full node, and odrDB in light node.
+type Database interface {
+	Get(key []byte) ([]byte, error)
+}
+
 // Trie is a Merkle Patricia Trie
 type Trie struct {
-	db       database.Database
+	db       Database
 	root     noder     // root node of the Trie
 	dbprefix []byte    // db prefix of Trie node
 	sha      hash.Hash // hash calc for trie
@@ -45,7 +51,7 @@ func (t *Trie) ShallowCopy() (*Trie, error) {
 // NewTrie new a trie tree
 // param dbprefix will be used as prefix of hash key to save db.
 // because we save all of trie trees in the same db,dbprefix protects key/values for different trees
-func NewTrie(root common.Hash, dbprefix []byte, db database.Database) (*Trie, error) {
+func NewTrie(root common.Hash, dbprefix []byte, db Database) (*Trie, error) {
 	trie := &Trie{
 		db:       db,
 		dbprefix: dbprefix,

@@ -88,12 +88,6 @@
 			"revisionTime": "2017-02-15T23:32:05Z"
 		},
 		{
-			"checksumSHA1": "YDBzGZ2PAI6cQYpHWI01YlhYo/Y=",
-			"path": "github.com/gorilla/websocket",
-			"revision": "21ab95fa12b9bdd8fecf5fa3586aad941cc98785",
-			"revisionTime": "2018-04-20T17:16:12Z"
-		},
-		{
 			"checksumSHA1": "sZBC82LlCP+qEu9/4rzKzgfEdIc=",
 			"path": "github.com/hashicorp/golang-lru",
 			"revision": "0fb14efe8c47ae851c0034ed7a448854d3d34cf3",
@@ -216,12 +210,6 @@
 		{
 			"checksumSHA1": "n0vM9ZdqBSklFaH4RpNla332aVs=",
 			"path": "github.com/magiconair/properties",
-			"revision": "49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934",
-			"revisionTime": "2017-10-31T21:05:36Z"
-		},
-		{
-			"checksumSHA1": "WtEzjODSs/UaFZBTuejMcCekY7Y=",
-			"path": "github.com/magiconair/properties/assert",
 			"revision": "49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934",
 			"revisionTime": "2017-10-31T21:05:36Z"
 		},

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Net_GetUDPConn(t *testing.T) {

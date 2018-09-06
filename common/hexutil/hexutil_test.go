@@ -7,7 +7,7 @@ package hexutil
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Hex(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/crypto"
 )

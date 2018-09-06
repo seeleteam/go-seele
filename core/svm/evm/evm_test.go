@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

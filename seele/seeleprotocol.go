@@ -332,12 +332,12 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 		return
 	}
 
-	genesisHash, err := p.chain.GetStore().GetBlockHash(0)
+	genesisBlock, err := p.chain.GetStore().GetBlockByHeight(0)
 	if err != nil {
 		return
 	}
 
-	if err := newPeer.handShake(p.networkID, localTD, head, genesisHash); err != nil {
+	if err := newPeer.handShake(p.networkID, localTD, head, genesisBlock.HeaderHash, genesisBlock.Header.Difficulty.Uint64()); err != nil {
 		p.log.Error("handleAddPeer err. %s", err)
 		newPeer.Disconnect(DiscHandShakeErr)
 		return

@@ -30,9 +30,10 @@ const (
 )
 
 var (
-	errMsgNotMatch     = errors.New("Message not match")
-	errNetworkNotMatch = errors.New("NetworkID not match")
-	errGenesisNotMatch = errors.New("Genesis not match")
+	errMsgNotMatch              = errors.New("Message not match")
+	errNetworkNotMatch          = errors.New("NetworkID not match")
+	errGenesisNotMatch          = errors.New("Genesis not match")
+	errGenesisDifficultNotMatch = errors.New("Genesis Difficult not match")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -273,13 +274,15 @@ func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
 }
 
 // handShake exchange networkid td etc between two connected peers.
-func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesis common.Hash) error {
+func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesis common.Hash, difficult uint64) error {
 	msg := &statusData{
 		ProtocolVersion: uint32(SeeleVersion),
 		NetworkID:       networkID,
 		TD:              td,
 		CurrentBlock:    head,
 		GenesisBlock:    genesis,
+		Shard:           common.LocalShardNumber,
+		Difficult:       difficult,
 	}
 
 	if err := p2p.SendMessage(p.rw, statusDataMsgCode, common.SerializePanic(msg)); err != nil {
@@ -299,7 +302,7 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 		return err
 	}
 
-	if err = verifyGenesisAndNetworkID(retStatusMsg, genesis, networkID); err != nil {
+	if err = verifyGenesisAndNetworkID(retStatusMsg, genesis, networkID, common.LocalShardNumber, difficult); err != nil {
 		return err
 	}
 
@@ -308,12 +311,18 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 	return nil
 }
 
-func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64) error {
+func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64, shard uint, difficult uint64) error {
 	if retStatusMsg.NetworkID != networkID {
 		return errNetworkNotMatch
 	}
-	if retStatusMsg.GenesisBlock != genesis {
-		return errGenesisNotMatch
+	if retStatusMsg.Shard == shard {
+		if retStatusMsg.GenesisBlock != genesis {
+			return errGenesisNotMatch
+		}
+	} else {
+		if retStatusMsg.Difficult != difficult {
+			return errGenesisDifficultNotMatch
+		}
 	}
 	return nil
 }
