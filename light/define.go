@@ -25,7 +25,8 @@ const (
 
 	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 
-	MaxBlockHashRequested uint64 = 1024
+	MaxBlockHashRequest   uint64 = 1024
+	MaxBlockHeaderRequest uint64 = 256
 )
 
 // statusData the structure for peers to exchange status
@@ -65,7 +66,7 @@ type Announce struct {
 }
 
 type HeaderHashSyncQuery struct {
-	begin uint64
+	BeginNum uint64
 }
 
 type HeaderHashSync struct {
@@ -74,4 +75,15 @@ type HeaderHashSync struct {
 	CurrentBlockNum uint64
 	BeginNum        uint64
 	HeaderArr       []common.Hash
+}
+
+type DownloadHeaderQuery struct {
+	ReqID    uint32
+	BeginNum uint64
+}
+
+type DownloadHeader struct {
+	ReqID       uint32
+	HasFinished bool
+	Hearders    []*types.BlockHeader
 }

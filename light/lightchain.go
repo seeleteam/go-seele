@@ -31,3 +31,7 @@ func (bc *LightChain) CurrentBlock() *types.Block {
 func (bc *LightChain) GetStore() store.BlockchainStore {
 	return nil
 }
+
+func (bc *LightChain) WriteHeader(*types.BlockHeader) error {
+	return nil
+}

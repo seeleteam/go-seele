@@ -100,6 +100,8 @@ var (
 
 	// ErrBlockExtraDataNotEmpty is returned when the block extra data is not empty.
 	ErrBlockExtraDataNotEmpty = errors.New("block extra data is not empty")
+
+	ErrNotSupported = errors.New("not supported function")
 )
 
 type consensusEngine interface {
@@ -232,6 +234,11 @@ func (bc *Blockchain) WriteBlock(block *types.Block) error {
 	markTime := time.Since(startWriteBlockTime)
 	metrics.MetricsWriteBlockMeter.Mark(markTime.Nanoseconds())
 	return nil
+}
+
+// WriteHeader writes the specified head to the blockchain store, only used in lightchain.
+func (bc *Blockchain) WriteHeader(*types.BlockHeader) error {
+	return ErrNotSupported
 }
 
 func (bc *Blockchain) doWriteBlock(block *types.Block) error {

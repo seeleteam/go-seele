@@ -18,15 +18,17 @@ import (
 )
 
 const (
-	blockRequestMsgCode  uint16 = 0
-	blockMsgCode         uint16 = 1
-	statusDataMsgCode    uint16 = 2
-	announceRequestCode  uint16 = 3
-	announceCode         uint16 = 4
-	syncHashRequestCode  uint16 = 5
-	syncHashResponseCode uint16 = 6
+	blockRequestMsgCode         uint16 = 0
+	blockMsgCode                uint16 = 1
+	statusDataMsgCode           uint16 = 2
+	announceRequestCode         uint16 = 3
+	announceCode                uint16 = 4
+	syncHashRequestCode         uint16 = 5
+	syncHashResponseCode        uint16 = 6
+	downloadHeadersRequestCode  uint16 = 7
+	downloadHeadersResponseCode uint16 = 8
 
-	protocolMsgCodeLength uint16 = 7
+	protocolMsgCodeLength uint16 = 9
 	msgWaitTimeout               = time.Second * 120
 )
 
@@ -37,6 +39,7 @@ var (
 type BlockChain interface {
 	CurrentBlock() *types.Block
 	GetStore() store.BlockchainStore
+	WriteHeader(*types.BlockHeader) error
 }
 
 type TransactionPool interface {
@@ -50,6 +53,16 @@ func codeToStr(code uint16) string {
 		return "blockRequestMsgCode"
 	case blockMsgCode:
 		return "blockMsgCode"
+	case statusDataMsgCode:
+		return "statusDataMsgCode"
+	case announceRequestCode:
+		return "announceRequestCode"
+	case announceCode:
+		return "announceCode"
+	case syncHashRequestCode:
+		return "syncHashRequestCode"
+	case syncHashResponseCode:
+		return "syncHashResponseCode"
 	}
 
 	return "unknown"
@@ -221,6 +234,10 @@ func (sp *LightProtocol) handleGetPeer(address common.Address) interface{} {
 
 func (sp *LightProtocol) handleDelPeer(peer *p2p.Peer) {
 	sp.log.Debug("delete peer from peer set. %s", peer.Node)
+	if p := sp.peerSet.Find(peer.Node.ID); p != nil {
+		p.close()
+	}
+
 	sp.peerSet.Remove(peer.Node.ID)
 }
 
@@ -315,14 +332,30 @@ handler:
 			var query HeaderHashSync
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize HeaderHashSync, quit! %s", err)
+				sp.log.Error("failed to deserialize syncHashResponseCode, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.handleSyncHash(&query); err != nil {
-				sp.log.Error("failed to handleSyncHash, quit! %s", err)
+				sp.log.Error("failed to syncHashResponseCode, quit! %s", err)
 				break handler
 			}
+
+		case downloadHeadersRequestCode:
+			var query DownloadHeaderQuery
+			err := common.Deserialize(msg.Payload, &query)
+			if err != nil {
+				sp.log.Error("failed to deserialize DownloadHeaderQuery, quit! %s", err)
+				break handler
+			}
+
+			if err := peer.handleDownloadHeadersRequest(&query); err != nil {
+				sp.log.Error("failed to DownloadHeaderQuery, quit! %s", err)
+				break handler
+			}
+
+		case downloadHeadersResponseCode:
+			sp.downloader.deliverMsg(peer, msg)
 		}
 
 		if bNeedDeliverOdr {

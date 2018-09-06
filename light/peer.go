@@ -27,6 +27,7 @@ var (
 	errMsgNotMatch     = errors.New("Message not match")
 	errNetworkNotMatch = errors.New("NetworkID not match")
 	errModeNotMatch    = errors.New("server/client mode not match")
+	errBlockNotFound   = errors.New("block not found")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -38,6 +39,7 @@ type PeerInfo struct {
 
 type peer struct {
 	*p2p.Peer
+	quitCh          chan struct{}
 	peerStrID       string
 	peerID          common.Address
 	version         uint // Seele protocol version negotiated
@@ -60,6 +62,7 @@ func idToStr(id common.Address) string {
 func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog, protocolManager *LightProtocol) *peer {
 	return &peer{
 		Peer:            p,
+		quitCh:          make(chan struct{}),
 		version:         version,
 		td:              big.NewInt(0),
 		peerStrID:       idToStr(p.Node.ID),
@@ -67,6 +70,16 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog,
 		rw:              rw,
 		protocolManager: protocolManager,
 		log:             log,
+	}
+}
+
+func (p *peer) close() {
+	if p.quitCh != nil {
+		select {
+		case <-p.quitCh:
+		default:
+			close(p.quitCh)
+		}
 	}
 }
 
@@ -102,6 +115,29 @@ func (p *peer) Head() (hash common.Hash, td *big.Int) {
 	return hash, new(big.Int).Set(p.td)
 }
 
+func (p *peer) findAncestor() (uint64, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if len(p.blockHashArr) == 0 {
+		return 0, errBlockNotFound
+	}
+
+	chain := p.protocolManager.chain
+	for idx := len(p.blockHashArr) - 1; idx >= 0; idx-- {
+		curNum, curHash := p.blockNumBegin+uint64(idx), p.blockHashArr[idx]
+		localBlock, err := chain.GetStore().GetBlockByHeight(curNum)
+		if err != nil {
+			continue
+		}
+
+		if localBlock.HeaderHash == curHash {
+			return curNum, nil
+		}
+	}
+
+	return 0, errBlockNotFound
+}
+
 // RequestBlocksByHashOrNumber fetches a block according to hash or block number.
 func (p *peer) RequestBlocksByHashOrNumber(reqID uint32, origin common.Hash, num uint64) error {
 	query := &blockQuery{
@@ -113,6 +149,44 @@ func (p *peer) RequestBlocksByHashOrNumber(reqID uint32, origin common.Hash, num
 	buff := common.SerializePanic(query)
 	p.log.Debug("peer send [blockRequestMsgCode] query with size %d byte", len(buff))
 	return p2p.SendMessage(p.rw, blockRequestMsgCode, buff)
+}
+
+func (p *peer) sendDownloadHeadersRequest(reqID uint32, begin uint64) error {
+	query := &DownloadHeaderQuery{
+		ReqID:    reqID,
+		BeginNum: begin,
+	}
+
+	buff := common.SerializePanic(query)
+	p.log.Debug("peer send [downloadHeadersRequestCode] query with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, downloadHeadersRequestCode, buff)
+}
+
+func (p *peer) handleDownloadHeadersRequest(msg *DownloadHeaderQuery) error {
+	chain := p.protocolManager.chain
+	var headers []*types.BlockHeader
+	beginNum := msg.BeginNum
+	for i := uint64(0); i < MaxBlockHeaderRequest; i++ {
+		if block, err := chain.GetStore().GetBlockByHeight(beginNum + i); err == nil {
+			headers = append(headers, block.Header)
+			continue
+		}
+		break
+	}
+
+	sendMsg := &DownloadHeader{
+		ReqID:       msg.ReqID,
+		HasFinished: false,
+		Hearders:    headers,
+	}
+
+	if len(headers) > 0 && headers[len(headers)-1].Hash() == chain.CurrentBlock().HeaderHash {
+		sendMsg.HasFinished = true
+	}
+
+	buff := common.SerializePanic(sendMsg)
+	p.log.Debug("peer send [downloadHeadersResponseCode] query with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, downloadHeadersResponseCode, buff)
 }
 
 func (p *peer) sendBlock(reqID uint32, block *types.Block) error {
@@ -128,7 +202,7 @@ func (p *peer) sendBlock(reqID uint32, block *types.Block) error {
 
 func (p *peer) sendSyncHashRequest(begin uint64) error {
 	sendMsg := &HeaderHashSyncQuery{
-		begin: begin,
+		BeginNum: begin,
 	}
 	buff := common.SerializePanic(sendMsg)
 
@@ -150,18 +224,18 @@ func (p *peer) handleSyncHashRequest(msg *HeaderHashSyncQuery) error {
 		TD:              localTD,
 		CurrentBlock:    head.HeaderHash,
 		CurrentBlockNum: height,
-		BeginNum:        msg.begin,
+		BeginNum:        msg.BeginNum,
 	}
 
 	var headerArr []common.Hash
-	if height >= msg.begin {
-		count := height - msg.begin + 1
-		if count > MaxBlockHashRequested {
-			count = MaxBlockHashRequested
+	if height >= msg.BeginNum {
+		count := height - msg.BeginNum + 1
+		if count > MaxBlockHashRequest {
+			count = MaxBlockHashRequest
 		}
 
 		for i := uint64(0); i < count; i++ {
-			num := msg.begin + i
+			num := msg.BeginNum + i
 			block, err := chain.GetStore().GetBlockByHeight(num)
 			if err != nil {
 				break
