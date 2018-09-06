@@ -163,7 +163,7 @@ func HTLCTransaction(client *rpc.Client) (*keystore.Key, *types.TransactionData,
 
 // CreateHTLC create HTLC
 func CreateHTLC(client *rpc.Client) (interface{}, error) {
-	key, txd, err := HTLCTransaction(client)
+	key, txd, err := MakeTransaction(client)
 	if err != nil {
 		return nil, err
 	}
@@ -187,10 +187,7 @@ func CreateHTLC(client *rpc.Client) (interface{}, error) {
 		return nil, err
 	}
 
-	input := make([]byte, len(dataBytes)+1)
-	input[0] = system.CmdNewContract
-	copy(input[1:], dataBytes)
-	txd.Payload = input
+	txd.Payload = append([]byte{system.CmdNewContract}, dataBytes...)
 	txd.To = system.HashTimeLockContractAddress
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
@@ -211,7 +208,7 @@ func CreateHTLC(client *rpc.Client) (interface{}, error) {
 
 // Withdraw obtain seele from transaction
 func Withdraw(client *rpc.Client) (interface{}, error) {
-	key, txd, err := HTLCTransaction(client)
+	key, txd, err := MakeTransaction(client)
 	if err != nil {
 		return nil, err
 	}
@@ -235,10 +232,7 @@ func Withdraw(client *rpc.Client) (interface{}, error) {
 	}
 
 	txd.To = system.HashTimeLockContractAddress
-	input := make([]byte, len(dataBytes)+1)
-	input[0] = system.CmdWithdraw
-	copy(input[1:], dataBytes)
-	txd.Payload = input
+	txd.Payload = append([]byte{system.CmdWithdraw}, dataBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return nil, err
@@ -258,7 +252,7 @@ func Withdraw(client *rpc.Client) (interface{}, error) {
 
 // Refund used to refund seele from HTLC
 func Refund(client *rpc.Client) (interface{}, error) {
-	key, txd, err := HTLCTransaction(client)
+	key, txd, err := MakeTransaction(client)
 	if err != nil {
 		return nil, err
 	}
@@ -268,11 +262,8 @@ func Refund(client *rpc.Client) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
-	input := make([]byte, len(txHashBytes)+1)
-	input[0] = system.CmdRefund
-	copy(input[1:], txHashBytes)
 	txd.To = system.HashTimeLockContractAddress
-	txd.Payload = input
+	txd.Payload = append([]byte{system.CmdRefund}, txHashBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return nil, err
@@ -291,7 +282,7 @@ func Refund(client *rpc.Client) (interface{}, error) {
 
 // GetHTLC used to get HTLC
 func GetHTLC(client *rpc.Client) (interface{}, error) {
-	key, txd, err := HTLCTransaction(client)
+	key, txd, err := MakeTransaction(client)
 	if err != nil {
 		return nil, err
 	}
@@ -301,11 +292,8 @@ func GetHTLC(client *rpc.Client) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
-	input := make([]byte, len(txHashBytes)+1)
-	input[0] = system.CmdGetContract
-	copy(input[1:], txHashBytes)
 	txd.To = system.HashTimeLockContractAddress
-	txd.Payload = input
+	txd.Payload = append([]byte{system.CmdGetContract}, txHashBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return nil, err
