@@ -31,7 +31,7 @@ func Test_NewContext(t *testing.T) {
 	tx := &types.Transaction{
 		Data: types.TransactionData{
 			From: common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
-			To:   domainNameContractAddress,
+			To:   DomainNameContractAddress,
 		},
 	}
 
@@ -46,13 +46,13 @@ func Test_NewContext(t *testing.T) {
 	blockHeader := newTestBlockHeader()
 
 	context := NewContext(tx, statedb, blockHeader)
-	assert.Equal(t, context.tx.Data.To, domainNameContractAddress)
+	assert.Equal(t, context.tx.Data.To, DomainNameContractAddress)
 	assert.Equal(t, context.statedb, statedb)
 	assert.Equal(t, context.BlockHeader, blockHeader)
 }
 
 func Test_RequiredGas(t *testing.T) {
-	c, ok := contracts[domainNameContractAddress]
+	c, ok := contracts[DomainNameContractAddress]
 	assert.Equal(t, ok, true)
 
 	// input is nil
@@ -69,7 +69,7 @@ func Test_RequiredGas(t *testing.T) {
 }
 
 func Test_Run(t *testing.T) {
-	c, ok := contracts[domainNameContractAddress]
+	c, ok := contracts[DomainNameContractAddress]
 	assert.Equal(t, ok, true)
 
 	// input and context are nil
@@ -80,7 +80,7 @@ func Test_Run(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, domainNameContractAddress)
+	context := newTestContext(db, DomainNameContractAddress)
 
 	// input inclues cmdCreateDomainName command, but not domain name
 	arrayByte, err = c.Run([]byte{cmdCreateDomainName}, context)
@@ -98,7 +98,7 @@ func Test_Run(t *testing.T) {
 }
 
 func Test_GetContractByAddress(t *testing.T) {
-	c := GetContractByAddress(domainNameContractAddress)
+	c := GetContractByAddress(DomainNameContractAddress)
 	assert.Equal(t, c, &contract{domainNameCommands})
 
 	contractAddress := common.BytesToAddress([]byte{123, 1})

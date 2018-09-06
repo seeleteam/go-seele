@@ -38,16 +38,16 @@ func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 	}
 
 	// create account in statedb for the first time.
-	context.statedb.CreateAccount(domainNameContractAddress)
+	context.statedb.CreateAccount(DomainNameContractAddress)
 
 	// ensure not exist
-	if value := context.statedb.GetData(domainNameContractAddress, key); len(value) > 0 {
+	if value := context.statedb.GetData(DomainNameContractAddress, key); len(value) > 0 {
 		return nil, errExists
 	}
 
 	// save in statedb
 	value := context.tx.Data.From.Bytes()
-	context.statedb.SetData(domainNameContractAddress, key, value)
+	context.statedb.SetData(DomainNameContractAddress, key, value)
 
 	return nil, nil
 }
@@ -72,5 +72,5 @@ func domainNameCreator(domainName []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	return context.statedb.GetData(domainNameContractAddress, key), nil
+	return context.statedb.GetData(DomainNameContractAddress, key), nil
 }

@@ -53,7 +53,7 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	if value := context.statedb.GetData(subChainContractAddress, key); len(value) > 0 {
+	if value := context.statedb.GetData(SubChainContractAddress, key); len(value) > 0 {
 		return nil, errExists
 	}
 
@@ -62,8 +62,8 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	context.statedb.CreateAccount(subChainContractAddress)
-	context.statedb.SetData(subChainContractAddress, key, value)
+	context.statedb.CreateAccount(SubChainContractAddress)
+	context.statedb.SetData(SubChainContractAddress, key, value)
 
 	return nil, nil
 }
@@ -74,5 +74,5 @@ func querySubChain(subChainName []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	return context.statedb.GetData(subChainContractAddress, key), nil
+	return context.statedb.GetData(SubChainContractAddress, key), nil
 }
