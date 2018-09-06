@@ -267,6 +267,29 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	})
 }
 
+func (p *SeeleProtocol) propagateDebt(debts []*types.Debt) {
+	debtsMap := make([][]*types.Debt, common.ShardCount+1)
+
+	for _, d := range debts {
+		debtsMap[d.Data.Shard] = append(debtsMap[d.Data.Shard], d)
+	}
+
+	p.propagateDebtMap(debtsMap)
+}
+
+func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt) {
+	p.peerSet.ForEachAll(func(peer *peer) bool {
+		if len(debtsMap[peer.Node.Shard]) > 0 {
+			err := peer.sendDebts(debtsMap[peer.Node.Shard])
+			if err != nil {
+				p.log.Warn("failed to send debts to %s %s", peer.Node, err)
+			}
+		}
+
+		return true
+	})
+}
+
 func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	block := e.(*types.Block)
 
@@ -278,17 +301,17 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		return true
 	})
 
-	debts := types.NewDebtMap(block.Transactions)
-	p.peerSet.ForEachAll(func(peer *peer) bool {
-		if len(debts[peer.Node.Shard]) > 0 {
-			err := peer.sendDebts(debts[peer.Node.Shard])
-			if err != nil {
-				p.log.Warn("failed to send debts to %s %s", peer.Node, err)
-			}
+	// propagate confirmed block
+	if block.Header.Height > common.ConfirmedBlockNumber {
+		confirmedHeight := block.Header.Height - common.ConfirmedBlockNumber
+		confirmedBlock, err := p.chain.GetStore().GetBlockByHeight(confirmedHeight)
+		if err != nil {
+			p.log.Warn("failed to load confirmed block height %d, err %s", confirmedHeight, err)
 		}
 
-		return true
-	})
+		debts := types.NewDebtMap(confirmedBlock.Transactions)
+		p.propagateDebtMap(debts)
+	}
 
 	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
 		block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
@@ -450,7 +473,7 @@ handler:
 				peer.knownTxs.Add(tx.Hash, nil)
 				shard := tx.Data.From.Shard()
 				if shard != common.LocalShardNumber {
-					p.SendDifferentShardTx(tx, shard)
+					go p.SendDifferentShardTx(tx, shard)
 					continue
 				} else {
 					p.txPool.AddTransaction(tx)
@@ -525,6 +548,7 @@ handler:
 			}
 
 			p.debtPool.Add(debts)
+			go p.propagateDebt(debts)
 
 		case downloader.GetBlockHeadersMsg:
 			var query blockHeadersQuery

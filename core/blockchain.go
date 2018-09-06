@@ -460,6 +460,14 @@ func (bc *Blockchain) applyTxs(block, preBlock *types.Block) (*state.Statedb, []
 		return nil, nil, err
 	}
 
+	// update debts
+	for _, d := range block.Debts {
+		err = ApplyDebt(statedb, d)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
 	if err != nil {
 		return nil, nil, err
@@ -556,17 +564,32 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	blockHeader *types.BlockHeader) (*types.Receipt, error) {
 	ctx := &svm.Context{
 		Tx:          tx,
+		TxIndex:     txIndex,
 		Statedb:     statedb,
 		BlockHeader: blockHeader,
 		BcStore:     bc.bcStore,
 	}
-	svm := svm.NewSeeleVM(ctx)
-	receipt, err := svm.Process(tx, txIndex)
+	receipt, err := svm.Process(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return receipt, nil
+}
+
+func ApplyDebt(statedb *state.Statedb, d *types.Debt) error {
+	data := statedb.GetData(d.Data.Account, d.Hash)
+	if bytes.Equal(data, DebtDataFlag) {
+		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
+	}
+
+	if !statedb.Exist(d.Data.Account) {
+		statedb.CreateAccount(d.Data.Account)
+	}
+
+	statedb.AddBalance(d.Data.Account, d.Data.Amount)
+	statedb.SetData(d.Data.Account, d.Hash, DebtDataFlag)
+	return nil
 }
 
 // deleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.

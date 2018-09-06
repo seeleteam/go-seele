@@ -212,12 +212,13 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 	return object
 }
 
-// Prepare resets the logs and journal to process a new tx.
-func (s *Statedb) Prepare(txIndex int) {
+// Prepare resets the logs and journal to process a new tx and return the statedb snapshot.
+func (s *Statedb) Prepare(txIndex int) int {
 	s.curTxIndex = uint(txIndex)
 	s.curLogs = nil
 
 	s.clearJournalAndRefund()
+	return s.Snapshot()
 }
 
 func (s *Statedb) clearJournalAndRefund() {

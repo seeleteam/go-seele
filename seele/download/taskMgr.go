@@ -38,8 +38,8 @@ type downloadInfo struct {
 
 // peerHeadInfo header info for ordinary peer
 type peerHeadInfo struct {
-	headers map[uint64]*types.BlockHeader // block height=> block header
-	maxNo   uint64                        //max block height in headers
+	headers map[uint64]*types.BlockHeader // block height => block header
+	maxNo   uint64                        // max block height in headers
 }
 
 func newPeerHeadInfo() *peerHeadInfo {
@@ -85,18 +85,10 @@ func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskM
 
 func (t *taskMgr) run() {
 	defer t.wg.Done()
+
 loopOut:
 	for {
-		t.lock.Lock()
-		startPos := int(t.curNo - t.fromNo)
-		num := 0
-		for (startPos+num < len(t.downloadInfoList)) && (t.downloadInfoList[startPos+num].status == taskStatusWaitProcessing) {
-			num = num + 1
-		}
-
-		results := t.downloadInfoList[startPos : startPos+num]
-		t.curNo = t.curNo + uint64(num)
-		t.lock.Unlock()
+		results := t.getWaitProcessingBlocks()
 		t.downloader.processBlocks(results)
 
 		select {
@@ -105,6 +97,22 @@ loopOut:
 			break loopOut
 		}
 	}
+}
+
+func (t *taskMgr) getWaitProcessingBlocks() []*downloadInfo {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	startPos := int(t.curNo - t.fromNo)
+	num := 0
+	for (startPos+num < len(t.downloadInfoList)) && (t.downloadInfoList[startPos+num].status == taskStatusWaitProcessing) {
+		num = num + 1
+	}
+
+	t.curNo = t.curNo + uint64(num)
+	results := t.downloadInfoList[startPos : startPos+num]
+
+	return results
 }
 
 func (t *taskMgr) close() {
@@ -120,6 +128,7 @@ func (t *taskMgr) close() {
 func (t *taskMgr) getReqHeaderInfo(conn *peerConn) (uint64, int) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	headInfo, ok := t.peersHeaderMap[conn.peerID]
 	if !ok {
 		headInfo = newPeerHeadInfo()
@@ -165,10 +174,12 @@ func (t *taskMgr) getReqHeaderInfo(conn *peerConn) (uint64, int) {
 func (t *taskMgr) getReqBlocks(conn *peerConn) (uint64, int) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	headInfo, ok := t.peersHeaderMap[conn.peerID]
 	if !ok || len(headInfo.headers) == 0 {
 		return 0, 0
 	}
+
 	var startNo uint64
 	var amount int
 	// find the first block that not requested yet and exists in conn
@@ -200,6 +211,7 @@ func (t *taskMgr) getReqBlocks(conn *peerConn) (uint64, int) {
 			if !ok || peerHead.Hash() != masterHead.header.Hash() {
 				break
 			}
+
 			if amount < MaxBlockFetch {
 				amount++
 				masterHead.status = taskStatusDownloading
@@ -219,6 +231,7 @@ func (t *taskMgr) getReqBlocks(conn *peerConn) (uint64, int) {
 func (t *taskMgr) isDone() bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	t.log.Debug("task is done check cur:%d, target:%d", t.curNo, t.toNo)
 	return t.curNo == t.toNo+1
 }
@@ -227,6 +240,7 @@ func (t *taskMgr) isDone() bool {
 func (t *taskMgr) onPeerQuit(peerID string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	for _, masterHead := range t.downloadInfoList[t.curNo-t.fromNo:] {
 		if masterHead.status == taskStatusDownloading && masterHead.peerID == peerID {
 			masterHead.peerID = ""
@@ -278,10 +292,11 @@ func (t *taskMgr) deliverHeaderMsg(peerID string, headers []*types.BlockHeader) 
 func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	for _, b := range blocks {
 		headInfo := t.downloadInfoList[int(b.Header.Height-t.fromNo)]
 		if headInfo.peerID != peerID {
-			t.log.Info("Received block from different peer, discard this block. peerID=%s", peerID)
+			t.log.Info("Received block from different peer, discard this block. headInfo.peerID=%s, peerID=%s", headInfo.peerID, peerID)
 			continue
 		}
 
