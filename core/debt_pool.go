@@ -146,7 +146,9 @@ func (dp *DebtPool) Add(debts []*types.Debt) {
 	defer dp.mutex.Unlock()
 
 	for _, debt := range debts {
-		dp.hashMap[debt.Hash] = debt
+		if debt.Data.Shard == common.LocalShardNumber {
+			dp.hashMap[debt.Hash] = debt
+		}
 	}
 }
 
