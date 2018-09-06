@@ -88,12 +88,12 @@ var (
 		Destination: &amountValue,
 	}
 
-	paloadValue string
-	paloadFlag  = cli.StringFlag{
+	payloadValue string
+	payloadFlag  = cli.StringFlag{
 		Name:        "payload",
 		Value:       "",
 		Usage:       "transaction payload info",
-		Destination: &paloadValue,
+		Destination: &payloadValue,
 	}
 
 	feeValue string

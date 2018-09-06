@@ -127,18 +127,10 @@ func main() {
 			Action: rpcAction("seele", "getBalance"),
 		},
 		{
-			Name:  "sendtx",
-			Usage: "send transaction to node",
-			Flags: []cli.Flag{
-				addressFlag,
-				fromFlag,
-				toFlag,
-				amountFlag,
-				feeFlag,
-				paloadFlag,
-				nonceFlag,
-			},
-			Action: RPCAction(addTxAction),
+			Name:   "sendtx",
+			Usage:  "send transaction to node",
+			Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag),
+			Action: rpcActionEx("seele", "addTx", makeTransaction),
 		},
 		{
 			Name:   "getnonce",
@@ -149,7 +141,7 @@ func main() {
 		{
 			Name:   "call",
 			Usage:  "call contract",
-			Flags:  rpcFlags(toFlag, paloadFlag, heightFlag),
+			Flags:  rpcFlags(toFlag, payloadFlag, heightFlag),
 			Action: rpcAction("seele", "call"),
 		},
 		{
@@ -161,8 +153,8 @@ func main() {
 		{
 			Name:   "getblock",
 			Usage:  "get block by height or hash",
-			Flags:  rpcFlags(heightFlag, hashFlag, fulltxFlag),
-			Action: RPCAction(getBlockAction),
+			Flags:  rpcFlags(hashFlag, heightFlag, fulltxFlag),
+			Action: rpcAction("seele", "getBlock"),
 		},
 		{
 			Name:   "getlogs",
@@ -183,25 +175,16 @@ func main() {
 			Action: rpcAction("debug", "getTxPoolTxCount"),
 		},
 		{
-			Name:  "getblocktxcount",
-			Usage: "get block transaction count by block height or block hash",
-			Flags: []cli.Flag{
-				addressFlag,
-				heightFlag,
-				hashFlag,
-			},
-			Action: RPCAction(getBlockTransactionCountAction),
+			Name:   "getblocktxcount",
+			Usage:  "get block transaction count by block height or block hash",
+			Flags:  rpcFlags(hashFlag, heightFlag),
+			Action: rpcAction("txpool", "getBlockTransactionCount"),
 		},
 		{
-			Name:  "gettxinblock",
-			Usage: "get transaction by block height or block hash with index of the transaction in the block",
-			Flags: []cli.Flag{
-				addressFlag,
-				heightFlag,
-				hashFlag,
-				indexFlag,
-			},
-			Action: RPCAction(getTransactionAction),
+			Name:   "gettxinblock",
+			Usage:  "get transaction by block height or block hash with index of the transaction in the block",
+			Flags:  rpcFlags(hashFlag, heightFlag, indexFlag),
+			Action: rpcAction("txpool", "getTransactionByBlockIndex"),
 		},
 		{
 			Name:   "gettxbyhash",
@@ -260,7 +243,7 @@ func main() {
 				toFlag,
 				amountFlag,
 				feeFlag,
-				paloadFlag,
+				payloadFlag,
 				nonceFlag,
 			},
 			Action: SignTxAction,

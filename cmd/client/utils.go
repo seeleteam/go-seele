@@ -70,8 +70,8 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	}
 
 	payload := []byte(nil)
-	if len(paloadValue) > 0 {
-		if payload, err = hexutil.HexToBytes(paloadValue); err != nil {
+	if len(payloadValue) > 0 {
+		if payload, err = hexutil.HexToBytes(payloadValue); err != nil {
 			return info, fmt.Errorf("invalid payload, %s", err)
 		}
 	}

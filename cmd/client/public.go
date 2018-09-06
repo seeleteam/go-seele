@@ -13,68 +13,53 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/keystore"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
 	"github.com/urfave/cli"
 )
-
-func RPCAction(handler func(client *rpc.Client) (interface{}, error)) func(c *cli.Context) error {
-	return func(c *cli.Context) error {
-		client, err := rpc.DialTCP(context.Background(), addressValue)
-		if err != nil {
-			return err
-		}
-
-		result, err := handler(client)
-		if err != nil {
-			return fmt.Errorf("get error when call rpc %s", err)
-		}
-
-		if result != nil {
-			resultStr, err := json.MarshalIndent(result, "", "\t")
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("%s\n", resultStr)
-		}
-
-		return nil
-	}
-}
 
 func rpcFlags(callArgFlags ...cli.Flag) []cli.Flag {
 	return append([]cli.Flag{addressFlag}, callArgFlags...)
 }
 
-func rpcAction(namespace string, method string) cli.ActionFunc {
-	return func(c *cli.Context) error {
-		// parse the call args from command flags.
-		var args []interface{}
-		for _, flag := range c.Command.Flags {
-			if flag == addressFlag || flag == cli.HelpFlag {
-				continue
-			}
+func parseCallArgs(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
+	var args []interface{}
 
-			if rf, ok := flag.(rpcFlag); ok {
-				v, err := rf.getValue()
-				if err != nil {
-					return err
-				}
-
-				args = append(args, v)
-			} else {
-				args = append(args, c.Generic(flag.GetName()))
-			}
+	for _, flag := range context.Command.Flags {
+		if flag == addressFlag || flag == cli.HelpFlag {
+			continue
 		}
 
-		// dail RPC connection.
+		if rf, ok := flag.(rpcFlag); ok {
+			v, err := rf.getValue()
+			if err != nil {
+				return nil, err
+			}
+
+			args = append(args, v)
+		} else {
+			args = append(args, context.Generic(flag.GetName()))
+		}
+	}
+
+	return args, nil
+}
+
+func rpcAction(namespace string, method string) cli.ActionFunc {
+	return rpcActionEx(namespace, method, parseCallArgs)
+}
+
+func rpcActionEx(namespace string, method string, argsFactory func(*cli.Context, *rpc.Client) ([]interface{}, error)) cli.ActionFunc {
+	return func(c *cli.Context) error {
 		client, err := rpc.DialTCP(context.Background(), addressValue)
 		if err != nil {
 			return err
 		}
 
-		// RPC call
+		args, err := argsFactory(c, client)
+		if err != nil {
+			return err
+		}
+
 		var result interface{}
 		rpcMethod := fmt.Sprintf("%s_%s", namespace, method)
 		if err = client.Call(&result, rpcMethod, args...); err != nil {
@@ -95,36 +80,7 @@ func rpcAction(namespace string, method string) cli.ActionFunc {
 	}
 }
 
-func getBlockAction(client *rpc.Client) (interface{}, error) {
-	var result map[string]interface{}
-	var err error
-
-	if hashValue != "" {
-		err = client.Call(&result, "seele_getBlockByHash", hashValue, fulltxValue)
-	} else {
-		err = client.Call(&result, "seele_getBlockByHeight", heightValue, fulltxValue)
-	}
-
-	return result, err
-}
-
-func addTxAction(client *rpc.Client) (interface{}, error) {
-	tx, err := makeTransaction(client)
-	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		fmt.Println("failed to send transaction")
-		return nil, err
-	}
-
-	fmt.Println("transaction sent successfully")
-	return tx, nil
-}
-
-func makeTransaction(client *rpc.Client) (*types.Transaction, error) {
+func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
 	pass, err := common.GetPassword()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get password %s", err)
@@ -140,5 +96,10 @@ func makeTransaction(client *rpc.Client) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	return util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{*tx}, nil
 }

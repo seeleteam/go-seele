@@ -29,6 +29,15 @@ func NewPrivateTransactionPoolAPI(s *SeeleService) *PrivateTransactionPoolAPI {
 	return &PrivateTransactionPoolAPI{s}
 }
 
+// GetBlockTransactionCount returns the count of transactions in the block with the given block hash or height.
+func (api *PrivateTransactionPoolAPI) GetBlockTransactionCount(blockHash string, height int64) (int, error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockTransactionCountByHash(blockHash)
+	}
+
+	return api.GetBlockTransactionCountByHeight(height)
+}
+
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
 func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
 	block, err := getBlock(api.s.chain, height)
@@ -54,6 +63,15 @@ func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash s
 	}
 
 	return len(block.Transactions), nil
+}
+
+// GetTransactionByBlockIndex returns the transaction in the block with the given block hash/height and index.
+func (api *PrivateTransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height int64, index uint) (map[string]interface{}, error) {
+	if len(hashHex) > 0 {
+		return api.GetTransactionByBlockHashAndIndex(hashHex, index)
+	}
+
+	return api.GetTransactionByBlockHeightAndIndex(height, index)
 }
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
