@@ -56,6 +56,22 @@ func (api *PrivateDebugAPI) GetTxPoolTxCount() (uint64, error) {
 	return uint64(txPool.GetPendingTxCount()), nil
 }
 
+// GetPendingTransactions returns all pending transactions
+func (api *PrivateDebugAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
+	pendingTxs := api.s.TxPool().GetTransactions(true, true)
+	transactions := make([]map[string]interface{}, 0)
+	for _, tx := range pendingTxs {
+		transactions = append(transactions, PrintableOutputTx(tx))
+	}
+
+	return transactions, nil
+}
+
+// GetPendingDebts returns all pending debts
+func (api *PrivateDebugAPI) GetPendingDebts() ([]*types.Debt, error) {
+	return api.s.DebtPool().GetAll(), nil
+}
+
 // TpsInfo tps detail info
 type TpsInfo struct {
 	StartHeight uint64
