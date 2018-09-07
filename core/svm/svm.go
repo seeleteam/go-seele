@@ -34,7 +34,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
 		receipt, err = processSystemContract(ctx, contract, snapshot)
-	} else if ctx.Tx.IsCrossShardTx() {
+	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() {
 		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
 		receipt, err = processEvmContract(ctx)

@@ -95,33 +95,42 @@ func Test_Download_WaitMsg(t *testing.T) {
 	cancelCh = make(chan struct{})
 	blocksMsgHeader := newBlocksMsgBody(magic)
 	payload = common.SerializePanic(blocksMsgHeader)
-	msg = newMessage(BlockHeadersMsg, payload)
+	msg = newMessage(BlocksMsg, payload)
 	pc = testPeerConn()
 
 	go func() {
 		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
-		assert.Equal(t, ret, blocksMsgHeader.Blocks)
+		blocks := ret.([]*types.Block)
+		for i, b := range blocks {
+			if !b.HeaderHash.Equal(blocksMsgHeader.Blocks[i].HeaderHash) {
+				t.Fatal("not equal")
+			}
+		}
 	}()
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(time.Second)
 	pc.waitingMsgMap[BlocksMsg] <- msg
 
 	// BlocksMsg sent by deliverMsg
-	msgCode = BlocksMsg
-	cancelCh = make(chan struct{})
-	pc = testPeerConn()
-
+	pc2 := testPeerConn()
 	go func() {
-		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
+		cancelCh2 := make(chan struct{})
+		ret2, err := pc2.waitMsg(magic, BlocksMsg, cancelCh2)
 		assert.Equal(t, err, nil)
-		assert.Equal(t, ret != nil, true)
-		assert.Equal(t, ret, blocksMsgHeader.Blocks)
+		assert.Equal(t, ret2 != nil, true)
+		blocks := ret2.([]*types.Block)
+		for i, b := range blocks {
+			if !b.HeaderHash.Equal(blocksMsgHeader.Blocks[i].HeaderHash) {
+				t.Fatal("not equal")
+			}
+		}
 	}()
 
-	time.Sleep(100 * time.Millisecond)
-	pc.deliverMsg(msgCode, msg)
+	msg2 := newMessage(BlocksMsg, payload)
+	time.Sleep(time.Second)
+	pc2.deliverMsg(msgCode, msg2)
 }
 
 func testPeerConn() *peerConn {
