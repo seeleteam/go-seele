@@ -73,7 +73,7 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	return addr
 }
 
-func (id *Address) IsContract() bool {
+func (id *Address) IsEVMContract() bool {
 	return id.Type() == AddressTypeContract
 }
 

@@ -68,7 +68,7 @@ func GetDebtShareFee(fee *big.Int) *big.Int {
 }
 
 func NewDebt(tx *Transaction) *Debt {
-	if tx == nil || tx.Data.To.IsEmpty() {
+	if tx == nil || tx.Data.To.IsEmpty() || tx.Data.To.IsReserved() {
 		return nil
 	}
 
@@ -85,7 +85,7 @@ func NewDebt(tx *Transaction) *Debt {
 		Fee:     GetDebtShareFee(tx.Data.Fee),
 	}
 
-	if tx.Data.To.IsContract() {
+	if tx.Data.To.IsEVMContract() {
 		data.Code = tx.Data.Payload
 	}
 

@@ -106,14 +106,16 @@ func GetTxFeeShare(fee *big.Int) *big.Int {
 	mod := big.NewInt(0).Mod(fee, big.NewInt(10))
 	unit := big.NewInt(0).Div(fee, big.NewInt(10))
 
-	first := big.NewInt(0).Mul(unit, big.NewInt(1))
-
 	// give mod value to transaction fee share
-	return big.NewInt(0).Add(first, mod)
+	return big.NewInt(0).Add(unit, mod)
 }
 
 func (tx *Transaction) IsCrossShardTx() bool {
 	if tx.Data.To.IsEmpty() {
+		return false
+	}
+
+	if tx.Data.To.IsReserved() {
 		return false
 	}
 
