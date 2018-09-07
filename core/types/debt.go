@@ -14,7 +14,7 @@ import (
 )
 
 // DebtSize debt serialized size
-const DebtSize = 94
+const DebtSize = 96
 
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction

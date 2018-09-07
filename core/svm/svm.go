@@ -32,12 +32,10 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	var receipt *types.Receipt
 	snapshot := ctx.Statedb.Prepare(ctx.TxIndex)
 
-	if ctx.Tx.IsCrossShardTx() {
-		return processCrossShardTransaction(ctx, snapshot)
-	}
-
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
 		receipt, err = processSystemContract(ctx, contract, snapshot)
+	} else if ctx.Tx.IsCrossShardTx() {
+		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
 		receipt, err = processEvmContract(ctx)
 	}
@@ -57,8 +55,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, error) {
 	receipt := &types.Receipt{
-		TxHash:          ctx.Tx.Hash,
-		ContractAddress: ctx.Tx.Data.To.Bytes(),
+		TxHash: ctx.Tx.Hash,
 	}
 
 	// Add from nonce
@@ -73,12 +70,12 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 	ctx.Statedb.SubBalance(sender, amount)
 
 	// check fee
-	if ctx.Statedb.GetBalance(ctx.Tx.Data.From).Cmp(ctx.Tx.Data.Fee) < 0 {
+	if ctx.Statedb.GetBalance(sender).Cmp(ctx.Tx.Data.Fee) < 0 {
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
 
 	// handle fee
-	ctx.Statedb.SubBalance(ctx.Tx.Data.From, ctx.Tx.Data.Fee)
+	ctx.Statedb.SubBalance(sender, ctx.Tx.Data.Fee)
 	txFee := types.GetTxFeeShare(ctx.Tx.Data.Fee)
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, txFee)
 
@@ -88,8 +85,7 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 func processSystemContract(ctx *Context, contract system.Contract, snapshot int) (*types.Receipt, error) {
 	var err error
 	receipt := &types.Receipt{
-		TxHash:          ctx.Tx.Hash,
-		ContractAddress: ctx.Tx.Data.To.Bytes(),
+		TxHash: ctx.Tx.Hash,
 	}
 
 	// Add from nonce
@@ -114,8 +110,7 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int)
 func processEvmContract(ctx *Context) (*types.Receipt, error) {
 	var err error
 	receipt := &types.Receipt{
-		TxHash:          ctx.Tx.Hash,
-		ContractAddress: ctx.Tx.Data.To.Bytes(),
+		TxHash: ctx.Tx.Hash,
 	}
 
 	statedb := &evm.StateDB{Statedb: ctx.Statedb}
