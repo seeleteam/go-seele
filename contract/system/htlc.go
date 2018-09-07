@@ -148,6 +148,7 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 	}
 
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	context.statedb.AddBalance(info.Tx.Data.To, info.Tx.Data.Amount)
 
 	return value, nil
 }
@@ -175,7 +176,7 @@ func refund(bytes []byte, context *Context) ([]byte, error) {
 	}
 
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
-
+	context.statedb.AddBalance(info.Tx.Data.From, info.Tx.Data.Amount)
 	return value, nil
 }
 

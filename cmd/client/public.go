@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -20,6 +19,19 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
 	"github.com/urfave/cli"
+)
+
+var (
+	errInvalidCommand = errors.New("Faild to execute, invalid command")
+
+	systemContract = map[string]map[string]func(client *rpc.Client) (interface{}, interface{}, error){
+		"htlc": map[string]func(client *rpc.Client) (interface{}, interface{}, error){
+			"create":   createHTLC,
+			"withdraw": withdraw,
+			"refund":   refund,
+			"get":      getHTLC,
+		},
+	}
 )
 
 type callArgsFactory func(*cli.Context, *rpc.Client) ([]interface{}, error)
@@ -98,18 +110,39 @@ func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, r
 	}
 }
 
+func rpcActionSystemContract(namespace string, method string, resultHandler callResultHandler) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		client, err := rpc.DialTCP(context.Background(), addressValue)
+		if err != nil {
+			return err
+		}
+
+		functions, ok := systemContract[namespace]
+		if !ok {
+			return errInvalidCommand
+		}
+
+		function, ok := functions[method]
+		if !ok {
+			return errInvalidCommand
+		}
+
+		printdata, arg, err := function(client)
+		if err != nil {
+			return err
+		}
+
+		var result interface{}
+		if err = client.Call(&result, "seele_addTx", arg); err != nil {
+			return fmt.Errorf("Failed to call rpc, %s", err)
+		}
+
+		return resultHandler([]interface{}{}, printdata)
+	}
+}
+
 func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
-	pass, err := common.GetPassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get password %s", err)
-	}
-
-	key, err := keystore.GetKey(fromValue, pass)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
-	}
-
-	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +153,25 @@ func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, e
 	}
 
 	return []interface{}{*tx}, nil
+}
+
+func makeTransactionData(client *rpc.Client) (*keystore.Key, *types.TransactionData, error) {
+	pass, err := common.GetPassword()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get password %s", err)
+	}
+
+	key, err := keystore.GetKey(fromValue, pass)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
+	}
+
+	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return key, txd, nil
 }
 
 func onTxAdded(inputs []interface{}, result interface{}) error {
@@ -141,86 +193,56 @@ func onTxAdded(inputs []interface{}, result interface{}) error {
 	return nil
 }
 
-// HTLCTransaction generate HTLC transaction
-func HTLCTransaction(client *rpc.Client) (*keystore.Key, *types.TransactionData, error) {
-	pass, err := common.GetPassword()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get password %s", err)
-	}
-
-	key, err := keystore.GetKey(fromValue, pass)
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
-	}
-
-	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
+// CreateHTLC create HTLC
+func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return key, txd, nil
-}
-
-// CreateHTLC create HTLC
-func CreateHTLC(client *rpc.Client) (interface{}, error) {
-	key, txd, err := MakeTransaction(client)
-	if err != nil {
-		return nil, err
-	}
-
 	hashLockBytes, err := common.HexToHash(hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
-	}
-
-	timeLockNum, err := strconv.ParseInt(timeLockValue, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("Invalid timelock err %s, need int64", err)
+		return nil, nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
 	}
 
 	var data system.HashTimeLock
 	data.HashLock = hashLockBytes
-	data.TimeLock = timeLockNum
+	data.TimeLock = timeLockValue
 	data.To = txd.To
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txd.Payload = append([]byte{system.CmdNewContract}, dataBytes...)
 	txd.To = system.HashTimeLockContractAddress
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		return nil, errors.New("failed to send transaction")
+		return nil, nil, err
 	}
 
 	output := make(map[string]interface{})
 	output["Tx"] = *tx
 	output["HashLock"] = hashValue
 	output["TimeLock"] = timeLockValue
-	return output, err
+	return output, tx, err
 }
 
-// Withdraw obtain seele from transaction
-func Withdraw(client *rpc.Client) (interface{}, error) {
-	key, txd, err := MakeTransaction(client)
+// withdraw obtain seele from transaction
+func withdraw(client *rpc.Client) (interface{}, interface{}, error) {
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txHashBytes, err := common.HexToHash(hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
+		return nil, nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
 	}
 
 	preimageBytes, err := hexutil.HexToBytes(preimageValue)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
+		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
 	var data system.Withdrawing
@@ -228,84 +250,69 @@ func Withdraw(client *rpc.Client) (interface{}, error) {
 	data.Preimage = preimageBytes
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txd.To = system.HashTimeLockContractAddress
 	txd.Payload = append([]byte{system.CmdWithdraw}, dataBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		return nil, errors.New("failed to send transaction")
+		return nil, nil, err
 	}
 
 	output := make(map[string]interface{})
 	output["Tx"] = *tx
 	output["hash"] = hashValue
 	output["preimage"] = preimageValue
-	return output, err
+	return output, tx, err
 }
 
-// Refund used to refund seele from HTLC
-func Refund(client *rpc.Client) (interface{}, error) {
-	key, txd, err := MakeTransaction(client)
+// refund used to refund seele from HTLC
+func refund(client *rpc.Client) (interface{}, interface{}, error) {
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txHashBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
+		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
 	txd.To = system.HashTimeLockContractAddress
 	txd.Payload = append([]byte{system.CmdRefund}, txHashBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		return nil, errors.New("failed to send transaction")
+		return nil, nil, err
 	}
 
 	output := make(map[string]interface{})
 	output["Tx"] = *tx
 	output["hash"] = hashValue
-	return output, err
+	return output, tx, err
 }
 
-// GetHTLC used to get HTLC
-func GetHTLC(client *rpc.Client) (interface{}, error) {
-	key, txd, err := MakeTransaction(client)
+// getHTLC used to get HTLC
+func getHTLC(client *rpc.Client) (interface{}, interface{}, error) {
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txHashBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
+		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
 	txd.To = system.HashTimeLockContractAddress
 	txd.Payload = append([]byte{system.CmdGetContract}, txHashBytes...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		return nil, errors.New("failed to send transaction")
+		return nil, nil, err
 	}
 
 	output := make(map[string]interface{})
 	output["Tx"] = *tx
 	output["hash"] = hashValue
-	return output, err
+	return output, tx, err
 }

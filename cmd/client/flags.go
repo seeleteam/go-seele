@@ -184,17 +184,17 @@ var (
 		Destination: &dumpFileValue,
 	}
 
-	timeLockValue string
-	timeLockFlag  = cli.StringFlag{
+	timeLockValue int64
+	timeLockFlag  = cli.Int64Flag{
 		Name:        "time",
-		Usage:       "time lock in the transaction",
+		Usage:       "time lock in the HTLC",
 		Destination: &timeLockValue,
 	}
 
 	preimageValue string
 	preimageFlag  = cli.StringFlag{
 		Name:        "preimage",
-		Usage:       "preimage of hash in the transaction",
+		Usage:       "preimage of hash in the HTLC",
 		Destination: &preimageValue,
 	}
 )
