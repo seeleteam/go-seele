@@ -87,12 +87,12 @@ loopOut:
 
 func (o *odrBackend) getReqInfo() (uint32, chan interface{}, error) {
 	rand2.Seed(time.Now().UnixNano())
-	reqID := rand2.Uint32()
 	ch := make(chan interface{})
 
 	o.lock.Lock()
-	if o.requestMap[reqID] != nil {
-		panic("reqid conflicks")
+	reqID := rand2.Uint32()
+	for o.requestMap[reqID] != nil {
+		reqID = rand2.Uint32()
 	}
 
 	o.requestMap[reqID] = ch

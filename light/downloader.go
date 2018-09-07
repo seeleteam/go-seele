@@ -55,7 +55,9 @@ func (d *Downloader) synchronise(p *peer) error {
 
 	d.cancelCh = make(chan struct{})
 	d.msgCh = make(chan *p2p.Message)
+	d.syncStatus = statusDownloading
 	d.wg.Add(1)
+
 	d.lock.Unlock()
 	go d.doSynchronise(p)
 	return nil
