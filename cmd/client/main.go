@@ -202,7 +202,7 @@ func main() {
 			Name:   "getdebts",
 			Usage:  "get pending debts",
 			Flags:  rpcFlags(),
-			Action: rpcAction("txpool", "getPendingDebts"),
+			Action: rpcAction("privatetxpool", "getPendingDebts"),
 		},
 		{
 			Name:   "getreceipt",
@@ -214,7 +214,7 @@ func main() {
 			Name:   "getpendingtxs",
 			Usage:  "get pending transactions",
 			Flags:  rpcFlags(),
-			Action: rpcAction("txpool", "getPendingTransactions"),
+			Action: rpcAction("privatetxpool", "getPendingTransactions"),
 		},
 		{
 			Name:  "getshardnum",
