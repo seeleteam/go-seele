@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -35,7 +36,7 @@ func getTmpConfig() *node.Config {
 	}
 }
 
-func createTestAPI(t *testing.T) *PublicMonitorAPI {
+func createTestAPI(t *testing.T) (api *PublicMonitorAPI, dispose func()) {
 	conf := getTmpConfig()
 	key, _ := crypto.GenerateKey()
 	testConf := node.Config{
@@ -57,24 +58,23 @@ func createTestAPI(t *testing.T) *PublicMonitorAPI {
 	}
 
 	serviceContext := seele.ServiceContext{
-		DataDir: common.GetTempFolder() + "/n1/",
+		DataDir: filepath.Join(common.GetTempFolder(), "n1"),
 	}
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 	dataDir := ctx.Value("ServiceContext").(seele.ServiceContext).DataDir
-	defer os.RemoveAll(dataDir)
 	log := log.GetLogger("seele")
 
 	seeleNode, err := node.New(&testConf)
 	if err != nil {
 		t.Fatal(err)
-		return nil
+		return
 	}
 
 	seeleService, err := seele.NewSeeleService(ctx, conf, log)
 	if err != nil {
 		t.Fatal(err)
-		return nil
+		return
 	}
 
 	monitorService, _ := NewMonitorService(seeleService, seeleNode, &testConf, log, "run test")
@@ -82,20 +82,23 @@ func createTestAPI(t *testing.T) *PublicMonitorAPI {
 	seeleNode.Register(monitorService)
 	seeleNode.Register(seeleService)
 
-	api := NewPublicMonitorAPI(monitorService)
+	api = NewPublicMonitorAPI(monitorService)
 
 	err = seeleNode.Start()
 	if err != nil {
 		t.Fatal(err)
-		return nil
+		return
 	}
 
 	seeleService.Miner().Start()
 
-	return api
+	return api, func() {
+		api.s.seele.Stop()
+		os.RemoveAll(dataDir)
+	}
 }
 
-func createTestAPIErr(errBranch int) *PublicMonitorAPI {
+func createTestAPIErr(errBranch int) (api *PublicMonitorAPI, dispose func()) {
 	conf := getTmpConfig()
 
 	testConf := node.Config{}
@@ -138,19 +141,18 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 	dataDir := ctx.Value("ServiceContext").(seele.ServiceContext).DataDir
-	defer os.RemoveAll(dataDir)
 	log := log.GetLogger("seele")
 
 	seeleNode, err := node.New(&testConf)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return
 	}
 
 	seeleService, err := seele.NewSeeleService(ctx, conf, log)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return
 	}
 
 	monitorService, _ := NewMonitorService(seeleService, seeleNode, &testConf, log, "run test")
@@ -158,7 +160,7 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 	seeleNode.Register(monitorService)
 	seeleNode.Register(seeleService)
 
-	api := NewPublicMonitorAPI(monitorService)
+	api = NewPublicMonitorAPI(monitorService)
 
 	if errBranch != 1 {
 		seeleNode.Start()
@@ -166,14 +168,18 @@ func createTestAPIErr(errBranch int) *PublicMonitorAPI {
 		seeleService.Miner().Start()
 	}
 
-	return api
+	return api, func() {
+		api.s.seele.Stop()
+		os.RemoveAll(dataDir)
+	}
 }
 
 func Test_PublicMonitorAPI_Allright(t *testing.T) {
-	api := createTestAPI(t)
+	api, dispose := createTestAPI(t)
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
+	defer dispose()
 
 	_, err := api.NodeInfo()
 	if err != nil {
@@ -186,10 +192,12 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 }
 
 func Test_PublicMonitorAPI_Err(t *testing.T) {
-	api := createTestAPIErr(1)
+	api, dispose := createTestAPIErr(1)
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
+	defer dispose()
+
 	if _, err := api.NodeStats(); err == nil {
 		t.Fatalf("error branch is not covered")
 	}
