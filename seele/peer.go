@@ -255,6 +255,10 @@ func (p *peer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num
 	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, buff)
 }
 
+func (p *peer) GetPeerRequestInfo() (uint32, common.Hash, uint64, int) {
+	return 0, common.EmptyHash, 0, 0
+}
+
 func (p *peer) sendBlocks(magic uint32, blocks []*types.Block) error {
 	sendMsg := &downloader.BlocksMsgBody{
 		Magic:  magic,

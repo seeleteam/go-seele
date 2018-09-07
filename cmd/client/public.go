@@ -15,125 +15,94 @@ import (
 	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
-	"github.com/seeleteam/go-seele/seele"
 	"github.com/urfave/cli"
 )
 
-func RPCAction(handler func(client *rpc.Client) (interface{}, error)) func(c *cli.Context) error {
+type callArgsFactory func(*cli.Context, *rpc.Client) ([]interface{}, error)
+type callResultHandler func(inputs []interface{}, result interface{}) error
+
+func rpcFlags(callArgFlags ...cli.Flag) []cli.Flag {
+	return append([]cli.Flag{addressFlag}, callArgFlags...)
+}
+
+func parseCallArgs(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
+	var args []interface{}
+
+	for _, flag := range context.Command.Flags {
+		if flag == addressFlag || flag == cli.HelpFlag {
+			continue
+		}
+
+		if rf, ok := flag.(rpcFlag); ok {
+			v, err := rf.getValue()
+			if err != nil {
+				return nil, err
+			}
+
+			args = append(args, v)
+		} else {
+			args = append(args, context.Generic(flag.GetName()))
+		}
+	}
+
+	return args, nil
+}
+
+func handleCallResult(inputs []interface{}, result interface{}) error {
+	if result == nil {
+		return nil
+	}
+
+	if str, ok := result.(string); ok {
+		fmt.Println(str)
+		return nil
+	}
+
+	encoded, err := json.MarshalIndent(result, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(encoded))
+
+	return nil
+}
+
+func rpcAction(namespace string, method string) cli.ActionFunc {
+	return rpcActionEx(namespace, method, parseCallArgs, handleCallResult)
+}
+
+func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, resultHandler callResultHandler) cli.ActionFunc {
 	return func(c *cli.Context) error {
 		client, err := rpc.DialTCP(context.Background(), addressValue)
 		if err != nil {
 			return err
 		}
 
-		result, err := handler(client)
+		args, err := argsFactory(c, client)
 		if err != nil {
-			return fmt.Errorf("get error when call rpc %s", err)
+			return err
 		}
 
-		if result != nil {
-			resultStr, err := json.MarshalIndent(result, "", "\t")
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("%s\n", resultStr)
+		var result interface{}
+		rpcMethod := fmt.Sprintf("%s_%s", namespace, method)
+		if err = client.Call(&result, rpcMethod, args...); err != nil {
+			return fmt.Errorf("Failed to call rpc, %s", err)
 		}
 
-		return nil
+		return resultHandler(args, result)
 	}
 }
 
-func GetInfoAction(client *rpc.Client) (interface{}, error) {
-	return util.GetInfo(client)
-}
-
-func getBalanceAction(client *rpc.Client) (interface{}, error) {
-	account, err := MakeAddress(accountValue)
-	if err != nil {
-		return nil, err
-	}
-
-	var result seele.GetBalanceResponse
-	err = client.Call(&result, "seele_getBalance", account)
-	return result, err
-}
-
-func GetAccountNonceAction(client *rpc.Client) (interface{}, error) {
-	account, err := MakeAddress(accountValue)
-	if err != nil {
-		return nil, err
-	}
-
-	return util.GetAccountNonce(client, account)
-}
-
-func GetBlockHeightAction(client *rpc.Client) (interface{}, error) {
-	var result uint64
-	err := client.Call(&result, "seele_getBlockHeight")
-	return result, err
-}
-
-func GetBlockAction(client *rpc.Client) (interface{}, error) {
-	var result map[string]interface{}
-	var err error
-
-	if hashValue != "" {
-		err = client.Call(&result, "seele_getBlockByHash", hashValue, fulltxValue)
-	} else {
-		err = client.Call(&result, "seele_getBlockByHeight", heightValue, fulltxValue)
-	}
-
-	return result, err
-}
-
-func GetLogsAction(client *rpc.Client) (interface{}, error) {
-	var result []seele.GetLogsResponse
-	err := client.Call(&result, "seele_getLogs", heightValue, contractValue, topicValue)
-
-	return result, err
-}
-
-func callAction(client *rpc.Client) (interface{}, error) {
-	result := make(map[string]interface{})
-	err := client.Call(&result, "seele_call", toValue, paloadValue, heightValue)
-
-	return result, err
-}
-
-func AddTxAction(client *rpc.Client) (interface{}, error) {
-	tx, err := MakeTransaction(client)
-	if err != nil {
-		return nil, err
-	}
-
-	var result bool
-	if err = client.Call(&result, "seele_addTx", *tx); err != nil || !result {
-		fmt.Println("failed to send transaction")
-		return nil, err
-	}
-
-	fmt.Println("transaction sent successfully")
-	return tx, nil
-}
-
-func MakeAddress(value string) (common.Address, error) {
-	if value == "" {
-		return common.EmptyAddress, nil
-	} else {
-		return common.HexToAddress(value)
-	}
-}
-
-func MakeTransaction(client *rpc.Client) (*types.Transaction, error) {
+func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
 	pass, err := common.GetPassword()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get password %s\n", err)
+		return nil, fmt.Errorf("failed to get password %s", err)
 	}
 
 	key, err := keystore.GetKey(fromValue, pass)
 	if err != nil {
-		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s\n", err)
+		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
 	}
 
 	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
@@ -141,5 +110,29 @@ func MakeTransaction(client *rpc.Client) (*types.Transaction, error) {
 		return nil, err
 	}
 
-	return util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{*tx}, nil
+}
+
+func onTxAdded(inputs []interface{}, result interface{}) error {
+	if !result.(bool) {
+		fmt.Println("failed to send transaction")
+	}
+
+	tx := inputs[0].(types.Transaction)
+
+	fmt.Println("transaction sent successfully")
+
+	encoded, err := json.MarshalIndent(tx, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(encoded))
+
+	return nil
 }

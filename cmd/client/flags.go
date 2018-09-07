@@ -6,8 +6,25 @@
 package main
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"github.com/urfave/cli"
 )
+
+type rpcFlag interface {
+	getValue() (interface{}, error)
+}
+
+type seeleAddressFlag struct {
+	cli.StringFlag
+}
+
+func (flag seeleAddressFlag) getValue() (interface{}, error) {
+	if val := *flag.Destination; len(val) > 0 {
+		return common.HexToAddress(val)
+	}
+
+	return common.EmptyAddress, nil
+}
 
 var (
 	addressValue string
@@ -19,17 +36,19 @@ var (
 	}
 
 	accountValue string
-	accountFlag  = cli.StringFlag{
-		Name:        "account",
-		Value:       "",
-		Usage:       "account address",
-		Destination: &accountValue,
+	accountFlag  = seeleAddressFlag{
+		StringFlag: cli.StringFlag{
+			Name:        "account",
+			Value:       "",
+			Usage:       "account address",
+			Destination: &accountValue,
+		},
 	}
 
 	heightValue int64
 	heightFlag  = cli.Int64Flag{
 		Name:        "height",
-		Value:       0,
+		Value:       -1,
 		Usage:       "block height",
 		Destination: &heightValue,
 	}
@@ -69,12 +88,12 @@ var (
 		Destination: &amountValue,
 	}
 
-	paloadValue string
-	paloadFlag  = cli.StringFlag{
+	payloadValue string
+	payloadFlag  = cli.StringFlag{
 		Name:        "payload",
 		Value:       "",
 		Usage:       "transaction payload info",
-		Destination: &paloadValue,
+		Destination: &payloadValue,
 	}
 
 	feeValue string
