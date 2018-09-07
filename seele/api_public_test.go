@@ -37,13 +37,13 @@ func getTmpConfig() *node.Config {
 func Test_PublicSeeleAPI(t *testing.T) {
 	conf := getTmpConfig()
 	serviceContext := ServiceContext{
-		DataDir: common.GetTempFolder(),
+		DataDir: filepath.Join(common.GetTempFolder(), ".PublicSeeleAPI"),
 	}
 
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
-	defer os.RemoveAll(dataDir)
+
 	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
 	if err != nil {
@@ -51,6 +51,11 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	}
 
 	api := NewPublicSeeleAPI(ss)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dataDir)
+	}()
+
 	var info MinerInfo
 	info, err = api.GetInfo()
 	assert.Equal(t, err, nil)
