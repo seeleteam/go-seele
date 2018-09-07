@@ -53,7 +53,7 @@ type genesisExtraData struct {
 
 // GetGenesis gets the genesis block according to accounts' balance
 func GetGenesis(info GenesisInfo) *Genesis {
-	if info.Difficult == 0 {
+	if info.Difficult <= 0 {
 		info.Difficult = 1
 	}
 
