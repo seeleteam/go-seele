@@ -221,29 +221,3 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 
 	return nil, nil
 }
-
-// PrivateTransactionPoolAPI provides an API to access transaction pool information.
-type PrivateTransactionPoolAPI struct {
-	s *SeeleService
-}
-
-// NewPrivateTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
-func NewPrivateTransactionPoolAPI(s *SeeleService) *PrivateTransactionPoolAPI {
-	return &PrivateTransactionPoolAPI{s}
-}
-
-// GetPendingTransactions returns all pending transactions
-func (api *PrivateTransactionPoolAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
-	pendingTxs := api.s.TxPool().GetTransactions(true, true)
-	transactions := make([]map[string]interface{}, 0)
-	for _, tx := range pendingTxs {
-		transactions = append(transactions, PrintableOutputTx(tx))
-	}
-
-	return transactions, nil
-}
-
-// GetPendingDebts returns all pending debts
-func (api *PrivateTransactionPoolAPI) GetPendingDebts() ([]*types.Debt, error) {
-	return api.s.DebtPool().GetAll(), nil
-}
