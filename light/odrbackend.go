@@ -85,11 +85,7 @@ loopOut:
 	}
 }
 
-func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
-	peerL := o.peers.choosePeers()
-	if len(peerL) == 0 {
-		return 0, nil, nil, errNoMorePeers
-	}
+func (o *odrBackend) getReqInfo() (uint32, chan interface{}, error) {
 	rand2.Seed(time.Now().UnixNano())
 	reqID := rand2.Uint32()
 	ch := make(chan interface{})
@@ -101,12 +97,17 @@ func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
 
 	o.requestMap[reqID] = ch
 	o.lock.Unlock()
-	return reqID, ch, peerL, nil
+	return reqID, ch, nil
 }
 
 // getBlock retrieves block body from network.
 func (o *odrBackend) getBlock(hash common.Hash, no uint64) (*types.Block, error) {
-	reqID, ch, peerL, err := o.getReqInfo()
+	peerL := o.peers.choosePeers(common.LocalShardNumber, hash)
+	if len(peerL) == 0 {
+		return nil, errNoMorePeers
+	}
+
+	reqID, ch, err := o.getReqInfo()
 	if err != nil {
 		return nil, err
 	}

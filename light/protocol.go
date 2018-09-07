@@ -7,6 +7,7 @@ package light
 
 import (
 	"errors"
+	rand2 "math/rand"
 	"sync"
 	"time"
 
@@ -212,7 +213,9 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	}
 
 	if sp.bServerMode {
-		if err := newPeer.sendAnnounce(0, 0); err != nil {
+		rand2.Seed(time.Now().UnixNano())
+		magic := rand2.Uint32()
+		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			sp.log.Error("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
 			return
@@ -297,7 +300,7 @@ handler:
 				break handler
 			}
 
-			if err := peer.sendAnnounce(query.Begin, query.End); err != nil {
+			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				sp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
 			}

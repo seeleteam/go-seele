@@ -75,6 +75,7 @@ func (d *Downloader) doSynchronise(p *peer) {
 	ancestor, err := p.findAncestor()
 	if err != nil {
 		d.log.Info("doSynchronise called, but ancestor not found")
+		return
 	}
 
 	reqID := rand2.Uint32()

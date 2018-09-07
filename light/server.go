@@ -6,6 +6,9 @@
 package light
 
 import (
+	rand2 "math/rand"
+	"time"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
@@ -80,9 +83,17 @@ func (pm *LightProtocol) blockLoop() {
 needQuit:
 	for {
 		select {
-		case newHeader := <-pm.chainHeaderChangeChannel:
-			// todo
-			pm.log.Debug("blockLoop head changed. %s", newHeader)
+		case <-pm.chainHeaderChangeChannel:
+			rand2.Seed(time.Now().UnixNano())
+			magic := rand2.Uint32()
+			pm.peerSet.ForEach(common.LocalShardNumber, func(p *peer) bool {
+				if !p.isSyncing() {
+					p.sendAnnounce(magic, uint64(0), uint64(0))
+				}
+
+				return true
+			})
+			pm.log.Debug("blockLoop head changed. ")
 		case <-pm.quitCh:
 			break needQuit
 		}

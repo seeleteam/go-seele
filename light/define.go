@@ -25,8 +25,10 @@ const (
 
 	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 
-	MaxBlockHashRequest   uint64 = 1024
-	MaxBlockHeaderRequest uint64 = 256
+	MaxBlockHashRequest   uint64 = 1024 // maximum hases to request per message
+	MaxBlockHeaderRequest uint64 = 256  // maximum headers to request per message
+	MaxGapForAnnounce     uint64 = 256  // sends AnnounceQuery message if gap is more than this value
+	MinHashesCached       uint64 = 256  // minimum items cached in peer for client mode
 )
 
 // statusData the structure for peers to exchange status
@@ -53,11 +55,13 @@ type BlockMsgBody struct {
 }
 
 type AnnounceQuery struct {
+	Magic uint32
 	Begin uint64
 	End   uint64
 }
 
 type Announce struct {
+	Magic           uint32
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	CurrentBlockNum uint64
@@ -66,10 +70,12 @@ type Announce struct {
 }
 
 type HeaderHashSyncQuery struct {
+	Magic    uint32
 	BeginNum uint64
 }
 
 type HeaderHashSync struct {
+	Magic           uint32
 	TD              *big.Int
 	CurrentBlock    common.Hash
 	CurrentBlockNum uint64

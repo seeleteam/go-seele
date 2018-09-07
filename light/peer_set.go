@@ -94,9 +94,30 @@ func (p *peerSet) Find(address common.Address) *peer {
 	return p.peerMap[address]
 }
 
-func (p *peerSet) choosePeers() []*peer {
+func (p *peerSet) choosePeers(shard uint, hash common.Hash) (choosePeers []*peer) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	// todo choose peers randomly
-	return nil
+
+	mapLen := len(p.shardPeers[shard])
+	peerL := make([]*peer, mapLen)
+
+	idx := 0
+	for _, v := range p.shardPeers[shard] {
+		peerL[idx] = v
+		idx++
+	}
+
+	common.Shuffle(peerL)
+	cnt := 0
+	for _, p := range peerL {
+		if p.findIdxByHash(hash) >= 0 {
+			cnt++
+			choosePeers = append(choosePeers, p)
+			if cnt >= 3 {
+				return
+			}
+		}
+	}
+
+	return
 }
