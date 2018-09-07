@@ -30,6 +30,7 @@ type Peer interface {
 	Head() (common.Hash, *big.Int)
 	RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error
 	RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error
+	GetPeerRequestInfo() (uint32, common.Hash, uint64, int)
 }
 
 type peerConn struct {
