@@ -73,6 +73,10 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	return addr
 }
 
+func (id *Address) IsContract() bool {
+	return id.Type() == AddressTypeContract
+}
+
 // Type returns the address type
 func (id *Address) Type() AddressType {
 	if id.IsReserved() {

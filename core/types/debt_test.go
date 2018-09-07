@@ -6,12 +6,13 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_NewDebt(t *testing.T) {
@@ -54,4 +55,19 @@ func Test_DebtSize(t *testing.T) {
 	array := []*Debt{d, d}
 	buff := common.SerializePanic(array)
 	assert.Equal(t, len(buff)/2, DebtSize)
+}
+
+func Test_FeeShare(t *testing.T) {
+	for i := 0; i < 100000; i++ {
+		fee := big.NewInt(int64(i))
+
+		txFee := GetTxFeeShare(fee)
+		debtFee := GetDebtShareFee(fee)
+
+		sum := big.NewInt(0).Add(txFee, debtFee)
+
+		if sum.Cmp(fee) != 0 {
+			t.Fatal(fmt.Sprintf("init fee is %d, tx fee is %d, debt fee is %d, sum is %d", fee, txFee, debtFee, sum))
+		}
+	}
 }
