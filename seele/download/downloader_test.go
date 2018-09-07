@@ -290,47 +290,47 @@ func Test_Downloader_GetMaxFetchAncestry(t *testing.T) {
 
 	top = 0
 	maxFetchAncestry := getMaxFetchAncestry(top)
-	assert.Equal(t, maxFetchAncestry, int(top)+1)
+	assert.Equal(t, maxFetchAncestry, top+1)
 
 	top = 1
 	maxFetchAncestry = getMaxFetchAncestry(top)
-	assert.Equal(t, maxFetchAncestry, int(top)+1)
+	assert.Equal(t, maxFetchAncestry, top+1)
 
 	top = uint64(MaxForkAncestry) - 1
 	maxFetchAncestry = getMaxFetchAncestry(top)
-	assert.Equal(t, maxFetchAncestry, int(top)+1)
+	assert.Equal(t, maxFetchAncestry, top+1)
 
 	top = uint64(MaxForkAncestry)
 	maxFetchAncestry = getMaxFetchAncestry(top)
-	assert.Equal(t, maxFetchAncestry, MaxForkAncestry)
+	assert.Equal(t, maxFetchAncestry, uint64(MaxForkAncestry))
 
 	top = uint64(MaxForkAncestry) + 1
 	maxFetchAncestry = getMaxFetchAncestry(top)
-	assert.Equal(t, maxFetchAncestry, MaxForkAncestry)
+	assert.Equal(t, maxFetchAncestry, uint64(MaxForkAncestry))
 }
 
 func Test_Downloader_GetFetchCount(t *testing.T) {
-	var maxFetchAncestry, cmpCount int
+	var maxFetchAncestry, cmpCount uint64
 
 	maxFetchAncestry = 0
 	cmpCount = 0
 	fetchCount := getFetchCount(maxFetchAncestry, cmpCount)
-	assert.Equal(t, fetchCount, 0)
+	assert.Equal(t, fetchCount, uint64(0))
 
-	maxFetchAncestry = MaxHeaderFetch - 1
+	maxFetchAncestry = uint64(MaxHeaderFetch) - 1
 	cmpCount = 0
 	fetchCount = getFetchCount(maxFetchAncestry, cmpCount)
 	assert.Equal(t, fetchCount, maxFetchAncestry)
 
-	maxFetchAncestry = MaxHeaderFetch
+	maxFetchAncestry = uint64(MaxHeaderFetch)
 	cmpCount = 0
 	fetchCount = getFetchCount(maxFetchAncestry, cmpCount)
-	assert.Equal(t, fetchCount, MaxHeaderFetch)
+	assert.Equal(t, fetchCount, uint64(MaxHeaderFetch))
 
-	maxFetchAncestry = MaxHeaderFetch + 1
+	maxFetchAncestry = uint64(MaxHeaderFetch) + 1
 	cmpCount = 0
 	fetchCount = getFetchCount(maxFetchAncestry, cmpCount)
-	assert.Equal(t, fetchCount, MaxHeaderFetch)
+	assert.Equal(t, fetchCount, uint64(MaxHeaderFetch))
 }
 
 func Test_Downloader_RegisterPeerAndUnRegisterPeer(t *testing.T) {

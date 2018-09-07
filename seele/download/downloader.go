@@ -277,7 +277,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 	}
 
 	// Compare the peer and local block head hash and return the ancestor height
-	var cmpCount = 0
+	var cmpCount uint64
 	maxFetchAncestry := getMaxFetchAncestry(top)
 	for {
 		localTop := top - uint64(cmpCount)
@@ -293,7 +293,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 			return 0, err
 		}
 
-		cmpCount += len(headers)
+		cmpCount += uint64(len(headers))
 
 		// Is ancenstor found
 		for i := 0; i < len(headers); i++ {
@@ -322,23 +322,23 @@ func getTop(localHeight, height uint64) uint64 {
 }
 
 // getMaxFetchAncestry gets maximum chain reorganisation
-func getMaxFetchAncestry(top uint64) int {
-	var maxFetchAncestry int
+func getMaxFetchAncestry(top uint64) uint64 {
+	var maxFetchAncestry uint64
 
 	if top >= uint64(MaxForkAncestry) {
-		maxFetchAncestry = MaxForkAncestry
+		maxFetchAncestry = uint64(MaxForkAncestry)
 	} else {
-		maxFetchAncestry = int(top) + 1
+		maxFetchAncestry = top + 1
 	}
 
 	return maxFetchAncestry
 }
 
-func getFetchCount(maxFetchAncestry, cmpCount int) int {
-	var fetchCount = 0
+func getFetchCount(maxFetchAncestry, cmpCount uint64) uint64 {
+	var fetchCount uint64
 
-	if (maxFetchAncestry - cmpCount) >= MaxHeaderFetch {
-		fetchCount = MaxHeaderFetch
+	if (maxFetchAncestry - cmpCount) >= uint64(MaxHeaderFetch) {
+		fetchCount = uint64(MaxHeaderFetch)
 	} else {
 		fetchCount = maxFetchAncestry - cmpCount
 	}
@@ -346,9 +346,9 @@ func getFetchCount(maxFetchAncestry, cmpCount int) int {
 	return fetchCount
 }
 
-func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop uint64, fetchCount int) ([]*types.BlockHeader, error) {
+func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop, fetchCount uint64) ([]*types.BlockHeader, error) {
 	magic := rand2.Uint32()
-	go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, fetchCount, true)
+	go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, int(fetchCount), true)
 
 	msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
 	if err != nil {
