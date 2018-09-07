@@ -18,11 +18,12 @@ import (
 
 func Test_GetTxByHash(t *testing.T) {
 	dbPath := filepath.Join(common.GetTempFolder(), ".GetTxByHash")
-	if common.FileOrFolderExists(dbPath) {
-		os.RemoveAll(dbPath)
-	}
+
 	api := newTestAPI(t, dbPath)
-	defer os.RemoveAll(dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
 
 	// add tx
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
@@ -58,10 +59,12 @@ func Test_GetTxByHash(t *testing.T) {
 
 func Test_GetReceiptByHash(t *testing.T) {
 	dbPath := filepath.Join(common.GetTempFolder(), ".GetReceiptByHash")
-	if common.FileOrFolderExists(dbPath) {
-		os.RemoveAll(dbPath)
-	}
+
 	api := newTestTxPoolAPI(t, dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
 
 	// save receipts to block
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
@@ -147,8 +150,6 @@ func newTestTxPoolAPI(t *testing.T, dbPath string) *TransactionPoolAPI {
 
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
-	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
-	defer os.RemoveAll(dataDir)
 
 	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
