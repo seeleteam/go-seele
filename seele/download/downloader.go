@@ -213,9 +213,11 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	if err != nil {
 		return err
 	}
+
 	d.log.Debug("start task manager from height:%d, target height:%d", ancestor, height)
 	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
+
 	d.lock.Lock()
 	d.syncStatus = statusFetching
 	for _, pConn := range d.peers {
@@ -255,13 +257,19 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 		return nil, err
 	}
 
+	return verifyBlockHeadersMsg(msg, head)
+}
+
+func verifyBlockHeadersMsg(msg interface{}, head common.Hash) (*types.BlockHeader, error) {
 	headers := msg.([]*types.BlockHeader)
 	if len(headers) != 1 {
 		return nil, errInvalidPacketReceived
 	}
+
 	if headers[0].Hash() != head {
 		return nil, errHashNotMatch
 	}
+
 	return headers[0], nil
 }
 
@@ -296,15 +304,8 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 		cmpCount += uint64(len(headers))
 
 		// Is ancenstor found
-		for i := 0; i < len(headers); i++ {
-			cmpHeight := headers[i].Height
-			localHash, err := d.chain.GetStore().GetBlockHash(cmpHeight)
-			if err != nil {
-				return 0, err
-			}
-			if localHash == headers[i].Hash() {
-				return cmpHeight, nil
-			}
+		if found, cmpHeight, err := d.isAncenstorFound(headers); found {
+			return cmpHeight, err
 		}
 	}
 }
@@ -361,6 +362,23 @@ func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop, fetchCount uin
 	}
 
 	return headers, nil
+}
+
+func (d *Downloader) isAncenstorFound(headers []*types.BlockHeader) (bool, uint64, error) {
+	for i := 0; i < len(headers); i++ {
+		cmpHeight := headers[i].Height
+		localHash, err := d.chain.GetStore().GetBlockHash(cmpHeight)
+
+		if err != nil {
+			return true, 0, err
+		}
+
+		if localHash == headers[i].Hash() {
+			return true, cmpHeight, nil
+		}
+	}
+
+	return false, 0, nil
 }
 
 // RegisterPeer add peer to download routine
