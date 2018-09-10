@@ -221,13 +221,15 @@ func (s *SeeleService) Protocols() (protos []p2p.Protocol) {
 }
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
-func (s *SeeleService) Start(srvr *p2p.Server) {
+func (s *SeeleService) Start(srvr *p2p.Server) error {
 	s.p2pServer = srvr
 	s.seeleProtocol.Start()
+
+	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines.
-func (s *SeeleService) Stop() {
+func (s *SeeleService) Stop() error {
 	//TODO
 	// s.txPool.Stop() s.chain.Stop()
 	// retries? leave it to future
@@ -247,6 +249,8 @@ func (s *SeeleService) Stop() {
 		os.RemoveAll(s.accountStateDBPath)
 		s.accountStateDB = nil
 	}
+
+	return nil
 }
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
