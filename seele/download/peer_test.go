@@ -156,6 +156,12 @@ func newBlockHeadersMsgBody(magic uint32) *BlockHeadersMsgBody {
 	}
 }
 
+func newBlockHeadersMsgWithEmptyBody(magic uint32) *BlockHeadersMsgBody {
+	return &BlockHeadersMsgBody{
+		Magic: magic,
+	}
+}
+
 func newTestBlockHeaders() []*types.BlockHeader {
 	return []*types.BlockHeader{
 		newTestBlockHeader(),
