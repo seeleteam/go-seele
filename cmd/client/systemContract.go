@@ -6,6 +6,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,9 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/contract/system"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/urfave/cli"
 )
 
 type handler func(client *rpc.Client) (interface{}, interface{}, error)
@@ -154,4 +157,17 @@ func getHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 	output["Tx"] = *tx
 	output["hash"] = hashValue
 	return output, tx, err
+}
+
+// generateHTLCKey
+func generateHTLCKey(c *cli.Context) error {
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret[:]); err != nil {
+		return err
+	}
+
+	hash := crypto.MustHash(secret)
+	fmt.Println("preimage:", hexutil.BytesToHex(secret[:]))
+	fmt.Println("hash:", hash.ToHex())
+	return nil
 }
