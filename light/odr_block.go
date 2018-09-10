@@ -30,11 +30,11 @@ func (req *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 			lp.log.Debug("Failed to get block, height = %d, error = %v", req.Height, err)
 			return blockResponseCode, &response
 		}
-	}
-
-	if response.Block, err = lp.chain.GetStore().GetBlock(req.Hash); err != nil {
-		lp.log.Debug("Failed to get block, hash = %v, error = %v", req.Hash, err)
-		return blockResponseCode, &response
+	} else {
+		if response.Block, err = lp.chain.GetStore().GetBlock(req.Hash); err != nil {
+			lp.log.Debug("Failed to get block, hash = %v, error = %v", req.Hash, err)
+			return blockResponseCode, &response
+		}
 	}
 
 	return blockResponseCode, &response
