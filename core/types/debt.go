@@ -68,12 +68,24 @@ func GetDebtShareFee(fee *big.Int) *big.Int {
 }
 
 func NewDebt(tx *Transaction) *Debt {
+	return newDebt(tx, true)
+}
+
+func NewDebtWithoutContext(tx *Transaction) *Debt {
+	return newDebt(tx, false)
+}
+
+func newDebt(tx *Transaction, withContext bool) *Debt {
 	if tx == nil || tx.Data.To.IsEmpty() || tx.Data.To.IsReserved() {
 		return nil
 	}
 
 	shard := tx.Data.To.Shard()
-	if shard == common.LocalShardNumber {
+	if withContext && shard == common.LocalShardNumber {
+		return nil
+	}
+
+	if !withContext && tx.Data.From.Shard() == shard {
 		return nil
 	}
 

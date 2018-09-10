@@ -36,8 +36,11 @@ func NewDebtPool(chain blockchain) *DebtPool {
 
 func (dp *DebtPool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
 	reinject := dp.getReinjectDebts(newHeader, lastHeader)
-	dp.Add(reinject)
+	if len(reinject) > 0 {
+		dp.log.Info("reinject %d debts", len(reinject))
+	}
 
+	dp.Add(reinject)
 	dp.removeDebts()
 }
 

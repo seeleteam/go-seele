@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -41,7 +42,19 @@ func parseCallArgs(context *cli.Context, client *rpc.Client) ([]interface{}, err
 
 			args = append(args, v)
 		} else {
-			args = append(args, context.Generic(flag.GetName()))
+			name := flag.GetName()
+			splitName := strings.Split(name, ",")
+
+			var flagValue interface{}
+			for _, n := range splitName {
+				flagName := strings.TrimSpace(n)
+				flagValue = context.Generic(flagName)
+				if flagValue != nil {
+					break
+				}
+			}
+
+			args = append(args, flagValue)
 		}
 	}
 
@@ -133,6 +146,19 @@ func onTxAdded(inputs []interface{}, result interface{}) error {
 	}
 
 	fmt.Println(string(encoded))
+
+	// print corresponding debt if exist
+	debt := types.NewDebtWithoutContext(&tx)
+	if debt != nil {
+		fmt.Println()
+		fmt.Println("It is a cross shard transaction, its debt is:")
+		str, err := json.MarshalIndent(debt, "", "\t")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(str))
+	}
 
 	return nil
 }
