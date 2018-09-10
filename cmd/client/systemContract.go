@@ -162,8 +162,7 @@ func getHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 // generateHTLCKey
 func generateHTLCKey(c *cli.Context) error {
 	secret := make([]byte, 32)
-	_, err := rand.Read(secret[:])
-	if err != nil {
+	if _, err := rand.Read(secret[:]); err != nil {
 		return err
 	}
 
