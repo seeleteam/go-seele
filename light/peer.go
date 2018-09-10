@@ -138,19 +138,6 @@ func (p *peer) findAncestor() (uint64, error) {
 	return 0, errBlockNotFound
 }
 
-// RequestBlocksByHashOrNumber fetches a block according to hash or block number.
-func (p *peer) RequestBlocksByHashOrNumber(reqID uint32, origin common.Hash, num uint64) error {
-	query := &blockQuery{
-		ReqID:  reqID,
-		Hash:   origin,
-		Number: num,
-	}
-
-	buff := common.SerializePanic(query)
-	p.log.Debug("peer send [blockRequestMsgCode] query with size %d byte", len(buff))
-	return p2p.SendMessage(p.rw, blockRequestMsgCode, buff)
-}
-
 func (p *peer) sendDownloadHeadersRequest(reqID uint32, begin uint64) error {
 	query := &DownloadHeaderQuery{
 		ReqID:    reqID,
@@ -187,17 +174,6 @@ func (p *peer) handleDownloadHeadersRequest(msg *DownloadHeaderQuery) error {
 	buff := common.SerializePanic(sendMsg)
 	p.log.Debug("peer send [downloadHeadersResponseCode] query with size %d byte", len(buff))
 	return p2p.SendMessage(p.rw, downloadHeadersResponseCode, buff)
-}
-
-func (p *peer) sendBlock(reqID uint32, block *types.Block) error {
-	sendMsg := &BlockMsgBody{
-		ReqID: reqID,
-		Block: block,
-	}
-	buff := common.SerializePanic(sendMsg)
-
-	p.log.Debug("peer send [blockMsgCode] with length: size:%d byte peerid:%s", len(buff), p.peerStrID)
-	return p2p.SendMessage(p.rw, blockMsgCode, buff)
 }
 
 func (p *peer) sendSyncHashRequest(begin uint64) error {
