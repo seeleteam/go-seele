@@ -143,9 +143,8 @@ func (p *TestPeer) GetPeerRequestInfo() (uint32, common.Hash, uint64, int) {
 
 func newTestPeer() *TestPeer {
 	return &TestPeer{
-		magic: 0,
-		head:  common.EmptyHash,
-		td:    big.NewInt(0),
+		head: common.EmptyHash,
+		td:   big.NewInt(0),
 	}
 }
 

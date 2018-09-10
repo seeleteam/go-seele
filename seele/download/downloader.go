@@ -368,7 +368,6 @@ func (d *Downloader) isAncenstorFound(headers []*types.BlockHeader) (bool, uint6
 	for i := 0; i < len(headers); i++ {
 		cmpHeight := headers[i].Height
 		localHash, err := d.chain.GetStore().GetBlockHash(cmpHeight)
-
 		if err != nil {
 			return true, 0, err
 		}
