@@ -105,6 +105,11 @@ func main() {
 				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
 			},
+			{
+				Name:   "key",
+				Usage:  "generate preimage key and key hash",
+				Action: generateHTLCKey,
+			},
 		},
 	}
 
