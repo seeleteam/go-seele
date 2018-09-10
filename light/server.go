@@ -7,11 +7,8 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
-	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
@@ -20,15 +17,9 @@ import (
 
 // ServiceServer implements light server service.
 type ServiceServer struct {
-	p2pServer      *p2p.Server
-	seeleProtocol  *LightProtocol
-	log            *log.SeeleLog
-	networkID      uint64
-	chain          *core.Blockchain
-	miner          *miner.Miner
-	txPool         *core.TransactionPool
-	accountStateDB database.Database // database used to store account state info.
-	debtPool       *core.DebtPool
+	p2pServer     *p2p.Server
+	seeleProtocol *LightProtocol
+	log           *log.SeeleLog
 }
 
 // NewServiceServer create ServiceServer
@@ -39,14 +30,8 @@ func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.S
 	}
 
 	s := &ServiceServer{
-		log:            log,
-		seeleProtocol:  seeleProtocol,
-		networkID:      service.NetVersion(),
-		chain:          service.BlockChain(),
-		miner:          service.Miner(),
-		txPool:         service.TxPool(),
-		accountStateDB: service.AccountStateDB(),
-		debtPool:       service.DebtPool(),
+		log:           log,
+		seeleProtocol: seeleProtocol,
 	}
 
 	return s, nil
@@ -75,32 +60,7 @@ func (s *ServiceServer) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceServer) APIs() (apis []rpc.API) {
-	return append(apis, []rpc.API{
-		{
-			Namespace: "seele",
-			Version:   "1.0",
-			Service:   NewPublicSeeleAPI(s),
-			Public:    true,
-		},
-		{
-			Namespace: "txpool",
-			Version:   "1.0",
-			Service:   NewTransactionPoolAPI(s),
-			Public:    true,
-		},
-		{
-			Namespace: "network",
-			Version:   "1.0",
-			Service:   NewPrivateNetworkAPI(s),
-			Public:    false,
-		},
-		{
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s),
-			Public:    false,
-		},
-	}...)
+	return
 }
 
 func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
@@ -129,8 +89,3 @@ needQuit:
 
 	event.ChainHeaderChangedEventMananger.RemoveListener(pm.chainHeaderChanged)
 }
-
-func (s *ServiceServer) NetVersion() uint64            { return s.networkID }
-func (s *ServiceServer) Miner() *miner.Miner           { return s.miner }
-func (s *ServiceServer) DebtPool() *core.DebtPool      { return s.debtPool }
-func (s *ServiceServer) TxPool() *core.TransactionPool { return s.txPool }
