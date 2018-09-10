@@ -83,6 +83,8 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 }
 
 func processSystemContract(ctx *Context, contract system.Contract, snapshot int) (*types.Receipt, error) {
+	// must execute to make sure that system contract account is available
+	system.Create(ctx.Statedb)
 	var err error
 	receipt := &types.Receipt{
 		TxHash: ctx.Tx.Hash,

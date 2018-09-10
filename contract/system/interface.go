@@ -54,6 +54,13 @@ var (
 	}
 )
 
+// Create system contract account
+func Create(statedb *state.Statedb) {
+	statedb.CreateAccount(HashTimeLockContractAddress)
+	statedb.CreateAccount(DomainNameContractAddress)
+	statedb.CreateAccount(SubChainContractAddress)
+}
+
 type handler func([]byte, *Context) ([]byte, error)
 
 type cmdInfo struct {
