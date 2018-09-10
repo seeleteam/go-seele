@@ -49,11 +49,12 @@ type ServiceContext struct {
 	DataDir string
 }
 
-func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
-func (s *SeeleService) DebtPool() *core.DebtPool      { return s.debtPool }
-func (s *SeeleService) BlockChain() *core.Blockchain  { return s.chain }
-func (s *SeeleService) NetVersion() uint64            { return s.networkID }
-func (s *SeeleService) Miner() *miner.Miner           { return s.miner }
+func (s *SeeleService) TxPool() *core.TransactionPool     { return s.txPool }
+func (s *SeeleService) DebtPool() *core.DebtPool          { return s.debtPool }
+func (s *SeeleService) BlockChain() *core.Blockchain      { return s.chain }
+func (s *SeeleService) NetVersion() uint64                { return s.networkID }
+func (s *SeeleService) Miner() *miner.Miner               { return s.miner }
+func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
 }

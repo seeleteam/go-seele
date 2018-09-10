@@ -366,3 +366,7 @@ handler:
 	sp.handleDelPeer(peer.Peer)
 	sp.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
 }
+
+func (p *LightProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
+	//@todo
+}
