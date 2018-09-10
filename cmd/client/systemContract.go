@@ -23,7 +23,8 @@ import (
 type handler func(client *rpc.Client) (interface{}, interface{}, error)
 
 var (
-	errInvalidCommand = errors.New("Faild to execute, invalid command")
+	errInvalidCommand    = errors.New("invalid command")
+	errInvalidSubcommand = errors.New("invalid subcommand")
 
 	systemContract = map[string]map[string]handler{
 		"htlc": map[string]handler{
@@ -35,7 +36,7 @@ var (
 	}
 )
 
-// CreateHTLC create HTLC
+// createHTLC create HTLC
 func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 	key, txd, err := makeTransactionData(client)
 	if err != nil {
