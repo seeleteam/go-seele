@@ -356,6 +356,14 @@ handler:
 
 		case downloadHeadersResponseCode:
 			sp.downloader.deliverMsg(peer, msg)
+
+		default:
+			if odrResponseFactories[msg.Code] != nil {
+				bNeedDeliverOdr = true
+			} else if err := sp.handleOdrRequest(peer, msg); err != nil {
+				sp.log.Error("Failed to handle ODR message, code = %v, error = %v", msg.Code, err.Error())
+				break handler
+			}
 		}
 
 		if bNeedDeliverOdr {
@@ -365,4 +373,27 @@ handler:
 
 	sp.handleDelPeer(peer.Peer)
 	sp.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
+}
+
+func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
+	factory, ok := odrRequestFactories[msg.Code]
+	if !ok {
+		return nil
+	}
+
+	request := factory()
+	if err := common.Deserialize(msg.Payload, request); err != nil {
+		return err
+	}
+
+	response, err := request.handleRequest()
+	if err != nil {
+		// e.g. cannot find item in database.
+		sp.log.Debug("Failed to handle request, code=%v, err=%v", msg.Code, err.Error())
+	}
+
+	// serialize handled ODR response to message and send back to remote peer.
+	buff := common.SerializePanic(response)
+	sp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", response.code(), len(buff), peer.peerStrID)
+	return p2p.SendMessage(peer.rw, response.code(), buff)
 }
