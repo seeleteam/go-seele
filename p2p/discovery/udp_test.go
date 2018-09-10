@@ -2,12 +2,14 @@ package discovery
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -139,13 +141,20 @@ func Test_UDP_DeleteNode(t *testing.T) {
 }
 
 func Test_UDP_LoadNodes(t *testing.T) {
+	tempFolder := common.GetTempFolder()
+
 	u := newTestUDP()
 	u.addNode(u.trustNodes[0], false)
 	u.addNode(u.trustNodes[1], false)
-	u.db.SaveNodes(common.GetTempFolder())
+	u.db.SaveNodes(tempFolder)
+	defer func() {
+		if fileFullPath := filepath.Join(tempFolder, NodesBackupFileName); common.FileOrFolderExists(fileFullPath) {
+			os.Remove(fileFullPath)
+		}
+	}()
 
 	assert.Equal(t, len(u.bootstrapNodes), 0)
-	u.loadNodes(common.GetTempFolder())
+	u.loadNodes(tempFolder)
 	assert.Equal(t, len(u.bootstrapNodes), 2)
 
 	// nodes folder doesn't exist

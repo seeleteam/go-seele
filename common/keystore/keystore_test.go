@@ -7,11 +7,12 @@ package keystore
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_KeyStore(t *testing.T) {
@@ -19,6 +20,7 @@ func Test_KeyStore(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	defer os.RemoveAll(dir)
 
 	addr, keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
