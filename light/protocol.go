@@ -18,15 +18,13 @@ import (
 )
 
 const (
-	blockRequestMsgCode         uint16 = 0
-	blockMsgCode                uint16 = 1
-	statusDataMsgCode           uint16 = 2
-	announceRequestCode         uint16 = 3
-	announceCode                uint16 = 4
-	syncHashRequestCode         uint16 = 5
-	syncHashResponseCode        uint16 = 6
-	downloadHeadersRequestCode  uint16 = 7
-	downloadHeadersResponseCode uint16 = 8
+	statusDataMsgCode           uint16 = 0
+	announceRequestCode         uint16 = 1
+	announceCode                uint16 = 2
+	syncHashRequestCode         uint16 = 3
+	syncHashResponseCode        uint16 = 4
+	downloadHeadersRequestCode  uint16 = 5
+	downloadHeadersResponseCode uint16 = 6
 
 	protocolMsgCodeLength uint16 = 9
 	msgWaitTimeout               = time.Second * 120
@@ -49,10 +47,6 @@ type TransactionPool interface {
 
 func codeToStr(code uint16) string {
 	switch code {
-	case blockRequestMsgCode:
-		return "blockRequestMsgCode"
-	case blockMsgCode:
-		return "blockMsgCode"
 	case statusDataMsgCode:
 		return "statusDataMsgCode"
 	case announceRequestCode:
@@ -256,39 +250,6 @@ handler:
 
 		bNeedDeliverOdr := false
 		switch msg.Code {
-		case blockRequestMsgCode:
-			var query blockQuery
-			err := common.Deserialize(msg.Payload, &query)
-			if err != nil {
-				sp.log.Error("failed to deserialize blockRequestMsgCode, quit! %s", err.Error())
-				break handler
-			}
-
-			blockHash := query.Hash
-			var block *types.Block
-
-			if query.Hash == common.EmptyHash {
-				if hash, err := sp.chain.GetStore().GetBlockHash(query.Number); err != nil {
-					sp.log.Warn("failed to get block with height %d, err %s", query.Number, err)
-				} else {
-					blockHash = hash
-				}
-			}
-
-			if block, err = sp.chain.GetStore().GetBlock(blockHash); err != nil {
-				sp.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
-			}
-
-			// block can be nil if not found
-			if err = peer.sendBlock(query.ReqID, block); err != nil {
-				sp.log.Error("HandleMsg GetBlocksMsg sendBlocks err. %s", err)
-				break handler
-			}
-
-		case blockMsgCode:
-			bNeedDeliverOdr = true
-			sp.log.Debug("Received Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
-
 		case announceRequestCode:
 			var query AnnounceQuery
 			err := common.Deserialize(msg.Payload, &query)
@@ -386,14 +347,10 @@ func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 		return err
 	}
 
-	response, err := request.handleRequest()
-	if err != nil {
-		// e.g. cannot find item in database.
-		sp.log.Debug("Failed to handle request, code=%v, err=%v", msg.Code, err.Error())
-	}
-
-	// serialize handled ODR response to message and send back to remote peer.
+	sp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", msg.Code, len(msg.Payload))
+	respCode, response := request.handleRequest(sp)
 	buff := common.SerializePanic(response)
-	sp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", response.code(), len(buff), peer.peerStrID)
-	return p2p.SendMessage(peer.rw, response.code(), buff)
+	sp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", respCode, len(buff), peer.peerStrID)
+
+	return p2p.SendMessage(peer.rw, respCode, buff)
 }
