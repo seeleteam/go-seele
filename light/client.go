@@ -9,7 +9,7 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -123,48 +123,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	return append(apis, []rpc.API{
-		{
-			Namespace: "seele",
-			Version:   "1.0",
-			Service:   NewPublicSeeleAPI(s),
-			Public:    true,
-		},
-		{
-			Namespace: "txpool",
-			Version:   "1.0",
-			Service:   NewTransactionPoolAPI(s),
-			Public:    true,
-		},
-		{
-			Namespace: "network",
-			Version:   "1.0",
-			Service:   NewPrivateNetworkAPI(s),
-			Public:    false,
-		},
-		{
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s),
-			Public:    false,
-		},
-	}...)
-}
-
-func (s *ServiceClient) NetVersion() uint64       { return s.networkID }
-func (s *ServiceClient) DebtPool() *core.DebtPool { return s.debtPool }
-func (s *ServiceClient) TxPool() *LightPool       { return s.txPool }
-func (s *ServiceClient) IsMining() bool {
-	//@todo
-	return false
-}
-
-func (s *ServiceClient) GetCoinbase() common.Address {
-	//@todo
-	return common.EmptyAddress
-}
-
-func (s *ServiceClient) GetThreads() int {
-	//@todo
-	return 0
+	return append(apis, api.GetAPIs(s)...)
 }
