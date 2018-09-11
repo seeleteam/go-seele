@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/fatih/set.v0"
 )
 
 func newTestDebt(amount int64, fee int64) *types.Debt {
@@ -114,8 +115,11 @@ func Test_DebtPool(t *testing.T) {
 	// Test reinject
 	reinject := pool.getReinjectDebts(b2.HeaderHash, b1.HeaderHash)
 	assert.Equal(t, len(reinject), 2)
-	assert.Equal(t, reinject[0].Hash, b1.Debts[0].Hash)
-	assert.Equal(t, reinject[1].Hash, b1.Debts[1].Hash)
+	expectedResult := set.Set{}
+	expectedResult.Add(b1.Debts[0].Hash)
+	expectedResult.Add(b1.Debts[1].Hash)
+	assert.Equal(t, expectedResult.Has(reinject[0].Hash), true)
+	assert.Equal(t, expectedResult.Has(reinject[1].Hash), true)
 
 	// test remove
 	// make b2 be in the block index
