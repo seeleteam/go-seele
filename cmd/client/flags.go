@@ -81,10 +81,10 @@ var (
 		Destination: &toValue,
 	}
 
-	amountValue string
+	amountValue = "0"
 	amountFlag  = cli.StringFlag{
 		Name:        "amount",
-		Usage:       "amount value, unit is fan",
+		Usage:       "amount value, default value is 0 and unit is fan",
 		Destination: &amountValue,
 	}
 
@@ -196,5 +196,12 @@ var (
 		Name:        "preimage",
 		Usage:       "preimage of hash in the HTLC",
 		Destination: &preimageValue,
+	}
+
+	domainNameValue string
+	domainNameFlag  = cli.StringFlag{
+		Name:        "name",
+		Usage:       "domain name",
+		Destination: &domainNameValue,
 	}
 )

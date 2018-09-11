@@ -197,8 +197,13 @@ func sendSystemContractTx(client *rpc.Client, to common.Address, method byte) (o
 		return
 	}
 
+	if len(domainNameValue) == 0 {
+		err = errors.New("domain name value is empty")
+		return
+	}
+
 	txd.To = to
-	txd.Payload = append([]byte{method}, txd.Payload...)
+	txd.Payload = append([]byte{method}, []byte(domainNameValue)...)
 	tx, err = util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return
