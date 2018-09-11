@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/seeleteam/go-seele/api"
+	api2"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
@@ -102,7 +102,7 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 }
 
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
-func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]api.GetLogsResponse, error) {
+func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]api2.GetLogsResponse, error) {
 	// Check input parameters
 	contractAddress, err := common.HexToAddress(contract)
 	if err != nil {
@@ -126,7 +126,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 		return nil, err
 	}
 
-	logs := make([]api.GetLogsResponse, 0)
+	logs := make([]api2.GetLogsResponse, 0)
 	for _, receipt := range receipts {
 		for logIndex, log := range receipt.Logs {
 			// Matches contract address
@@ -140,7 +140,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 				continue
 			}
 
-			logs = append(logs, api.GetLogsResponse{
+			logs = append(logs, api2.GetLogsResponse{
 				Txhash:   receipt.TxHash,
 				LogIndex: uint(logIndex),
 				Log:      log,
