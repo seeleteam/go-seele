@@ -81,10 +81,10 @@ var (
 		Destination: &toValue,
 	}
 
-	amountValue = "0"
+	amountValue string
 	amountFlag  = cli.StringFlag{
 		Name:        "amount",
-		Usage:       "amount value, default value is 0 and unit is fan",
+		Usage:       "amount value, unit is fan",
 		Destination: &amountValue,
 	}
 

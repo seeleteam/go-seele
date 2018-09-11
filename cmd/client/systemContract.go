@@ -28,24 +28,19 @@ var (
 	errInvalidSubcommand = errors.New("invalid subcommand")
 	errInvalidDomainName = errors.New("invalid domain name value")
 
-	systemContract map[string]map[string]handler
+	systemContract = map[string]map[string]handler{
+		"htlc": map[string]handler{
+			"create":   createHTLC,
+			"withdraw": withdraw,
+			"refund":   refund,
+			"get":      getHTLC,
+		},
+		"domain": map[string]handler{
+			"register":     registerDomainName,
+			"getregistrar": domainNameRegister,
+		},
+	}
 )
-
-func init() {
-	systemContract = make(map[string]map[string]handler)
-
-	systemContract["htlc"] = map[string]handler{
-		"create":   createHTLC,
-		"withdraw": withdraw,
-		"refund":   refund,
-		"get":      getHTLC,
-	}
-
-	systemContract["domain"] = map[string]handler{
-		"register":     registerDomainName,
-		"getregistrar": domainNameRegister,
-	}
-}
 
 // createHTLC create HTLC
 func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
@@ -185,6 +180,11 @@ func generateHTLCKey(c *cli.Context) error {
 }
 
 func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
+	amountValue = "0"
+	defer func() {
+		amountValue = ""
+	}()
+
 	if len(domainNameValue) == 0 {
 		return nil, nil, errInvalidDomainName
 	}
@@ -192,6 +192,11 @@ func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 }
 
 func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
+	amountValue = "0"
+	defer func() {
+		amountValue = ""
+	}()
+
 	if len(domainNameValue) == 0 {
 		return nil, nil, errInvalidDomainName
 	}
