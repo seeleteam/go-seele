@@ -53,12 +53,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 		return fmt.Errorf("transaction already exists, hash is %v", tx.Hash.ToHex())
 	}
 
-	pool.pending[tx.Hash] = tx
-
-	request := &odrAddTx{
-		Tx: *tx,
-	}
-
+	request := &odrAddTx{Tx: *tx}
 	if err := pool.odrBackend.sendRequest(request); err != nil {
 		return fmt.Errorf("Failed to send request to peers, %v", err.Error())
 	}
@@ -66,6 +61,8 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	if len(request.Error) > 0 {
 		return errors.New(request.Error)
 	}
+
+	pool.pending[tx.Hash] = tx
 
 	return nil
 }
