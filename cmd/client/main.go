@@ -118,17 +118,17 @@ func main() {
 
 	domainCommands := cli.Command{
 		Name:  "domain",
-		Usage: "register a domain name on seele network",
+		Usage: "domain commands",
 		Subcommands: []cli.Command{
 			{
 				Name:   "register",
-				Usage:  "register a domain name",
+				Usage:  "register a domain name on seele network",
 				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "register", handleCallResult),
 			},
 			{
 				Name:   "getregistrar",
-				Usage:  "get the domain name registrar",
+				Usage:  "get the registrar of domain name ",
 				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "getregistrar", handleCallResult),
 			},
