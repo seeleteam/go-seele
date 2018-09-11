@@ -3,36 +3,20 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package light
+package api
 
 import (
-	"os"
-	"path/filepath"
-	"runtime"
-	"runtime/pprof"
-
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
 // PrivateDebugAPI provides an API to access full node-related information for debugging.
 type PrivateDebugAPI struct {
-	s *ServiceClient
+	s Backend
 }
 
 // NewPrivateDebugAPI creates a new NewPrivateDebugAPI object for rpc service.
-func NewPrivateDebugAPI(s *ServiceClient) *PrivateDebugAPI {
+func NewPrivateDebugAPI(s Backend) *PrivateDebugAPI {
 	return &PrivateDebugAPI{s}
-}
-
-// PrintBlock retrieves a block and returns its pretty printed form, when height is negative the chain head is returned
-func (api *PrivateDebugAPI) PrintBlock(height int64) (*types.Block, error) {
-	block, err := getBlock(api.s.chain, height)
-	if err != nil {
-		return nil, err
-	}
-
-	return block, nil
 }
 
 // GetTxPoolContent returns the transactions contained within the transaction pool
@@ -71,21 +55,22 @@ func (api *PrivateDebugAPI) GetPendingDebts() ([]*types.Debt, error) {
 	return api.s.DebtPool().GetAll(), nil
 }
 
-// DumpHeap dumps the heap usage.
-func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (string, error) {
-	if len(fileName) == 0 {
-		fileName = "heap.dump"
+// PrintableOutputTx converts the given tx to the RPC output
+func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
+	toAddr := ""
+	if !tx.Data.To.IsEmpty() {
+		toAddr = tx.Data.To.ToHex()
 	}
 
-	if gcBeforeDump {
-		runtime.GC()
+	transaction := map[string]interface{}{
+		"hash":         tx.Hash.ToHex(),
+		"from":         tx.Data.From.ToHex(),
+		"to":           toAddr,
+		"amount":       tx.Data.Amount,
+		"accountNonce": tx.Data.AccountNonce,
+		"payload":      tx.Data.Payload,
+		"timestamp":    tx.Data.Timestamp,
+		"fee":          tx.Data.Fee,
 	}
-
-	flie := filepath.Join(common.GetDefaultDataFolder(), fileName)
-	f, err := os.Create(flie)
-	if err != nil {
-		return "", err
-	}
-
-	return flie, pprof.WriteHeapProfile(f)
+	return transaction
 }

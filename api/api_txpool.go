@@ -3,11 +3,13 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package light
+package api
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -21,12 +23,93 @@ var (
 
 // TransactionPoolAPI provides an API to access transaction pool information.
 type TransactionPoolAPI struct {
-	s *ServiceClient
+	s Backend
 }
 
 // NewTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
-func NewTransactionPoolAPI(s *ServiceClient) *TransactionPoolAPI {
+func NewTransactionPoolAPI(s Backend) *TransactionPoolAPI {
 	return &TransactionPoolAPI{s}
+}
+
+// PrintableReceipt converts the given Receipt to the RPC output
+func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
+	result := ""
+	if re.Failed {
+		result = string(re.Result)
+	} else {
+		result = hexutil.BytesToHex(re.Result)
+	}
+	outMap := map[string]interface{}{
+		"result":    result,
+		"poststate": re.PostState.ToHex(),
+		"txhash":    re.TxHash.ToHex(),
+		"contract":  "0x",
+		"failed":    re.Failed,
+		"usedGas":   re.UsedGas,
+		"totalFee":  re.TotalFee,
+	}
+
+	if len(re.ContractAddress) > 0 {
+		contractAddr, err := common.NewAddress(re.ContractAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		outMap["contract"] = contractAddr.ToHex()
+	}
+
+	if len(re.Logs) > 0 {
+		var logOuts []map[string]interface{}
+
+		for _, log := range re.Logs {
+			logOut, err := printableLog(log)
+			if err != nil {
+				return nil, err
+			}
+
+			logOuts = append(logOuts, logOut)
+		}
+
+		outMap["logs"] = logOuts
+	}
+
+	return outMap, nil
+}
+
+func printableLog(log *types.Log) (map[string]interface{}, error) {
+	if (len(log.Data) % 32) > 0 {
+		return nil, fmt.Errorf("invalid log data length %v", len(log.Data))
+	}
+
+	outMap := map[string]interface{}{
+		"address": log.Address.ToHex(),
+	}
+
+	// data
+	dataLen := len(log.Data) / 32
+	if dataLen > 0 {
+		var data []string
+		for i := 0; i < dataLen; i++ {
+			data = append(data, hexutil.BytesToHex(log.Data[i*32:(i+1)*32]))
+		}
+		outMap["data"] = data
+	}
+
+	// topics
+	switch len(log.Topics) {
+	case 0:
+		// do not print empty topic
+	case 1:
+		outMap["topic"] = log.Topics[0].ToHex()
+	default:
+		var topics []string
+		for _, t := range log.Topics {
+			topics = append(topics, t.ToHex())
+		}
+		outMap["topics"] = fmt.Sprintf("[%v]", strings.Join(topics, ", "))
+	}
+
+	return outMap, nil
 }
 
 // GetBlockTransactionCount returns the count of transactions in the block with the given block hash or height.
@@ -40,7 +123,7 @@ func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
-	block, err := getBlock(api.s.chain, height)
+	block, err := getBlock(api.s.Chain(), height)
 	if err != nil {
 		return 0, err
 	}
@@ -50,7 +133,7 @@ func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (i
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
-	store := api.s.chain.GetStore()
+	store := api.s.Chain().GetStore()
 	hashByte, err := hexutil.HexToBytes(blockHash)
 	if err != nil {
 		return 0, err
@@ -76,7 +159,7 @@ func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
-	block, err := getBlock(api.s.chain, height)
+	block, err := getBlock(api.s.Chain(), height)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +174,7 @@ func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64,
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
-	store := api.s.chain.GetStore()
+	store := api.s.Chain().GetStore()
 	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
 		return nil, err
@@ -119,7 +202,7 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 	}
 	hash := common.BytesToHash(hashByte)
 
-	store := api.s.chain.GetStore()
+	store := api.s.Chain().GetStore()
 	receipt, err := store.GetReceiptByTxHash(hash)
 	if err != nil {
 		return nil, err
@@ -129,7 +212,7 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
 func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
-	store := api.s.chain.GetStore()
+	store := api.s.Chain().GetStore()
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
 		return nil, err
@@ -150,7 +233,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	// Try to get finalized transaction
 	txIndex, err := store.GetTxIndex(hash)
 	if err != nil {
-		api.s.log.Info(err.Error())
+		api.s.Log().Info(err.Error())
 		return nil, errTransactionNotFound
 	}
 
@@ -197,10 +280,10 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 		return output, nil
 	}
 
-	store := api.s.chain.GetStore()
+	store := api.s.Chain().GetStore()
 	debtIndex, err := store.GetDebtIndex(hash)
 	if err != nil {
-		api.s.log.Info(err.Error())
+		api.s.Log().Info(err.Error())
 		return nil, errDebtNotFound
 	}
 
