@@ -312,10 +312,13 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		HeaderHash:   block.HeaderHash,
 		Header:       block.Header.Clone(),
 		Transactions: make([]*types.Transaction, len(block.Transactions)),
-		Debts:        make([]*types.Debt, len(block.Debts)),
 	}
 	copy(currentBlock.Transactions, block.Transactions)
-	copy(currentBlock.Debts, block.Debts)
+
+	if block.Debts != nil {
+		currentBlock.Debts = make([]*types.Debt, len(block.Debts))
+		copy(currentBlock.Debts, block.Debts)
+	}
 
 	var previousTd *big.Int
 	if previousTd, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
