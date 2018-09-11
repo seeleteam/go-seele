@@ -12,7 +12,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -21,18 +20,18 @@ import (
 
 // PublicSeeleAPI provides an API to access full node-related information.
 type PublicSeeleAPI struct {
-	s *ServiceServer
+	s *ServiceClient
 }
 
 const maxSizeLimit = 64
 
 // NewPublicSeeleAPI creates a new PublicSeeleAPI object for rpc service.
-func NewPublicSeeleAPI(s *ServiceServer) *PublicSeeleAPI {
+func NewPublicSeeleAPI(s *ServiceClient) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
 // MinerInfo miner simple info
-type MinerInfo struct {
+type GetMinerInfo struct {
 	Coinbase           common.Address
 	CurrentBlockHeight uint64
 	HeaderHash         common.Hash
@@ -74,12 +73,12 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 	}
 
 	// Get the statedb by the given block height
-	statedb, err := state.NewStatedb(block.Header.StateHash, api.s.accountStateDB)
+	statedb, err := state.NewStatedb(block.Header.StateHash, api.s.lightDB)
 	if err != nil {
 		return nil, err
 	}
 
-	coinbase := api.s.miner.GetCoinbase()
+	coinbase := api.s.GetCoinbase()
 	from := crypto.MustGenerateShardAddress(coinbase.Shard())
 	statedb.CreateAccount(*from)
 	statedb.SetBalance(*from, common.SeeleToFan)
@@ -106,40 +105,40 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 }
 
 // GetInfo gets the account address that mining rewards will be send to.
-func (api *PublicSeeleAPI) GetInfo() (MinerInfo, error) {
+func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
 	block := api.s.chain.CurrentBlock()
 
 	var status string
-	if api.s.miner.IsMining() {
+	if api.s.IsMining() {
 		status = "Running"
 	} else {
 		status = "Stopped"
 	}
 
-	return MinerInfo{
-		Coinbase:           api.s.miner.GetCoinbase(),
+	return GetMinerInfo{
+		Coinbase:           api.s.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
 		Shard:              common.LocalShardNumber,
 		MinerStatus:        status,
-		MinerThread:        api.s.miner.GetThreads(),
+		MinerThread:        api.s.GetThreads(),
 	}, nil
 }
 
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.Equal(common.EmptyAddress) {
-		account = api.s.Miner().GetCoinbase()
+		account = api.s.GetCoinbase()
 	}
 
-	state, err := api.s.chain.GetCurrentState()
+	balance, err := api.s.chain.GetCurrentStateBalance(account)
 	if err != nil {
 		return nil, err
 	}
 
 	return &GetBalanceResponse{
 		Account: account,
-		Balance: state.GetBalance(account),
+		Balance: balance,
 	}, nil
 }
 
@@ -165,15 +164,15 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
 	if account.Equal(common.EmptyAddress) {
-		account = api.s.Miner().GetCoinbase()
+		account = api.s.GetCoinbase()
 	}
 
-	state, err := api.s.chain.GetCurrentState()
+	nonce, err := api.s.chain.GetCurrentStateNonce()
 	if err != nil {
 		return 0, err
 	}
 
-	return state.GetNonce(account), nil
+	return nonce, nil
 }
 
 // GetBlockHeight get the block height of the chain head
@@ -458,7 +457,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 }
 
 // getBlock returns block by height,when height is -1 the chain head is returned
-func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
+func getBlock(chain *LightChain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height < 0 {
 		block = chain.CurrentBlock()

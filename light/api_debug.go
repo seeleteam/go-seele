@@ -15,17 +15,17 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-// PrivateDebugAPI provides an API to access full node-related information for debug.
+// PrivateDebugAPI provides an API to access full node-related information for debugging.
 type PrivateDebugAPI struct {
-	s *ServiceServer
+	s *ServiceClient
 }
 
 // NewPrivateDebugAPI creates a new NewPrivateDebugAPI object for rpc service.
-func NewPrivateDebugAPI(s *ServiceServer) *PrivateDebugAPI {
+func NewPrivateDebugAPI(s *ServiceClient) *PrivateDebugAPI {
 	return &PrivateDebugAPI{s}
 }
 
-// PrintBlock retrieves a block and returns its pretty printed form, when height is -1 the chain head is returned
+// PrintBlock retrieves a block and returns its pretty printed form, when height is negative the chain head is returned
 func (api *PrivateDebugAPI) PrintBlock(height int64) (*types.Block, error) {
 	block, err := getBlock(api.s.chain, height)
 	if err != nil {
