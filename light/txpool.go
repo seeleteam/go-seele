@@ -6,6 +6,7 @@
 package light
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -31,7 +32,7 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend) *txPool {
 	}
 }
 
-func (pool *txPool) Add(tx *types.Transaction) error {
+func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	if tx == nil {
 		return nil
 	}
@@ -54,7 +55,17 @@ func (pool *txPool) Add(tx *types.Transaction) error {
 
 	pool.pending[tx.Hash] = tx
 
-	// @todo broadcast tx to peer
+	request := &odrAddTx{
+		Tx: *tx,
+	}
+
+	if err := pool.odrBackend.sendRequest(request); err != nil {
+		return fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	}
+
+	if len(request.Error) > 0 {
+		return errors.New(request.Error)
+	}
 
 	return nil
 }

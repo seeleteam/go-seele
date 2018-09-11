@@ -43,8 +43,7 @@ type BlockChain interface {
 }
 
 type TransactionPool interface {
-	//AddRemotes(txs []*types.Transaction) []error
-	//Status(hashes []common.Hash) []core.TxStatus
+	AddTransaction(tx *types.Transaction) error
 }
 
 func codeToStr(code uint16) string {
