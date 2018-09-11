@@ -315,6 +315,11 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	}
 	copy(currentBlock.Transactions, block.Transactions)
 
+	if block.Debts != nil {
+		currentBlock.Debts = make([]*types.Debt, len(block.Debts))
+		copy(currentBlock.Debts, block.Debts)
+	}
+
 	var previousTd *big.Int
 	if previousTd, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
 		return err
