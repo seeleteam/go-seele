@@ -5,6 +5,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -19,11 +20,11 @@ type Backend interface {
 	NetVersion() uint64
 	GetProtocolVersion() (uint, error)
 
-	TxPool() Pool
+	TxPoolInterface() Pool
 	DebtPool() *core.DebtPool
 
 	Chain() Chain
-	GetCoinbase() common.Address
+	GetMinerCoinbase() common.Address
 	IsMining() bool
 	GetThreads() int
 
@@ -89,7 +90,6 @@ type Pool interface {
 
 type Chain interface {
 	CurrentBlock() *types.Block
-	GetCurrentStateBalance(account common.Address) (*big.Int, error)
-	GetCurrentStateNonce() (uint64, error)
+	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 }

@@ -36,7 +36,7 @@ func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
 	}
 
 	return GetMinerInfo{
-		Coinbase:           api.s.GetCoinbase(),
+		Coinbase:           api.s.GetMinerCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
 		Shard:              common.LocalShardNumber,
@@ -45,34 +45,35 @@ func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
 	}, nil
 }
 
+// GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.Equal(common.EmptyAddress) {
-		account = api.s.GetCoinbase()
+		account = api.s.GetMinerCoinbase()
 	}
 
-	balance, err := api.s.Chain().GetCurrentStateBalance(account)
+	state, err := api.s.Chain().GetCurrentState()
 	if err != nil {
 		return nil, err
 	}
 
 	return &GetBalanceResponse{
 		Account: account,
-		Balance: balance,
+		Balance: state.GetBalance(account),
 	}, nil
 }
 
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
 	if account.Equal(common.EmptyAddress) {
-		account = api.s.GetCoinbase()
+		account = api.s.GetMinerCoinbase()
 	}
 
-	nonce, err := api.s.Chain().GetCurrentStateNonce()
+	state, err := api.s.Chain().GetCurrentState()
 	if err != nil {
 		return 0, err
 	}
 
-	return nonce, nil
+	return state.GetNonce(account), nil
 }
 
 // GetBlockHeight get the block height of the chain head
@@ -224,4 +225,24 @@ func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) 
 // @todo AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	return false, nil
+}
+
+// PrintableOutputTx converts the given tx to the RPC output
+func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
+	toAddr := ""
+	if !tx.Data.To.IsEmpty() {
+		toAddr = tx.Data.To.ToHex()
+	}
+
+	transaction := map[string]interface{}{
+		"hash":         tx.Hash.ToHex(),
+		"from":         tx.Data.From.ToHex(),
+		"to":           toAddr,
+		"amount":       tx.Data.Amount,
+		"accountNonce": tx.Data.AccountNonce,
+		"payload":      tx.Data.Payload,
+		"timestamp":    tx.Data.Timestamp,
+		"fee":          tx.Data.Fee,
+	}
+	return transaction
 }

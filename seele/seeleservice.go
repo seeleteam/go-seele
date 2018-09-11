@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
@@ -49,10 +50,7 @@ type ServiceContext struct {
 	DataDir string
 }
 
-func (s *SeeleService) TxPool() *core.TransactionPool     { return s.txPool }
-func (s *SeeleService) DebtPool() *core.DebtPool          { return s.debtPool }
 func (s *SeeleService) BlockChain() *core.Blockchain      { return s.chain }
-func (s *SeeleService) NetVersion() uint64                { return s.networkID }
 func (s *SeeleService) Miner() *miner.Miner               { return s.miner }
 func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
 func (s *SeeleService) Downloader() *downloader.Downloader {
@@ -206,6 +204,7 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
+	apis = append(apis, api.GetAPIs(s)...)
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",
@@ -214,21 +213,9 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Public:    true,
 		},
 		{
-			Namespace: "txpool",
-			Version:   "1.0",
-			Service:   NewTransactionPoolAPI(s),
-			Public:    true,
-		},
-		{
 			Namespace: "download",
 			Version:   "1.0",
 			Service:   downloader.NewPrivatedownloaderAPI(s.seeleProtocol.downloader),
-			Public:    false,
-		},
-		{
-			Namespace: "network",
-			Version:   "1.0",
-			Service:   NewPrivateNetworkAPI(s),
 			Public:    false,
 		},
 		{
