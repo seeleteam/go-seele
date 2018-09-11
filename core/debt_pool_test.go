@@ -115,9 +115,7 @@ func Test_DebtPool(t *testing.T) {
 	// Test reinject
 	reinject := pool.getReinjectDebts(b2.HeaderHash, b1.HeaderHash)
 	assert.Equal(t, len(reinject), 2)
-	expectedResult := set.Set{}
-	expectedResult.Add(b1.Debts[0].Hash)
-	expectedResult.Add(b1.Debts[1].Hash)
+	expectedResult := set.New(b1.Debts[0].Hash, b1.Debts[1].Hash)
 	assert.Equal(t, expectedResult.Has(reinject[0].Hash), true)
 	assert.Equal(t, expectedResult.Has(reinject[1].Hash), true)
 
