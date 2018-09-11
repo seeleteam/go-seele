@@ -198,6 +198,7 @@ func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
 	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar, []byte(domainNameValue))
 }
 
+// sendSystemContractTx send system contract transaction
 func sendSystemContractTx(client *rpc.Client, to common.Address, method byte, payload []byte) (map[string]interface{}, *types.Transaction, error) {
 	key, txd, err := makeTransactionData(client)
 	if err != nil {
