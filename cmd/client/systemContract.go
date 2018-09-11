@@ -180,25 +180,21 @@ func generateHTLCKey(c *cli.Context) error {
 
 func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-	defer func() {
-		amountValue = ""
-	}()
 
 	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
 		return nil, nil, err
 	}
+
 	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName, []byte(domainNameValue))
 }
 
 func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-	defer func() {
-		amountValue = ""
-	}()
 
 	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
 		return nil, nil, err
 	}
+
 	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar, []byte(domainNameValue))
 }
 
