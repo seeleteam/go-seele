@@ -8,15 +8,19 @@ package light
 const (
 	blockRequestCode  = uint16(10)
 	blockResponseCode = uint16(11)
+	addTxRequestCode  = uint16(12)
+	addTxResponseCode = uint16(13)
 )
 
 var (
 	odrRequestFactories = map[uint16]func() odrRequest{
 		blockRequestCode: func() odrRequest { return &odrBlock{} },
+		addTxRequestCode: func() odrRequest { return &odrAddTx{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
 		blockResponseCode: func() odrResponse { return &odrBlock{} },
+		addTxResponseCode: func() odrResponse { return &odrAddTx{} },
 	}
 )
 
