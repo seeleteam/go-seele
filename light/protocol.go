@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -36,6 +37,7 @@ var (
 
 type BlockChain interface {
 	CurrentBlock() *types.Block
+	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 	WriteHeader(*types.BlockHeader) error
 }
