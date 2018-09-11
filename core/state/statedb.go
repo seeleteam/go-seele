@@ -345,3 +345,8 @@ func (s *Statedb) AddRefund(gas uint64) {
 func (s *Statedb) GetRefund() uint64 {
 	return s.refund
 }
+
+// Trie retrieves the low level trie of statedb to support low level trie ops.
+func (s *Statedb) Trie() *trie.Trie {
+	return s.trie
+}

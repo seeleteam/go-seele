@@ -22,7 +22,17 @@ func (req *odrTrie) code() uint16 {
 }
 
 func (req *odrTrie) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	// @todo
+	statedb, err := lp.chain.GetState(req.Root)
+	if err != nil {
+		req.Error = err.Error()
+		return trieResponseCode, req
+	}
+
+	if req.Proof, err = statedb.Trie().GetProof(req.Key); err != nil {
+		req.Error = err.Error()
+		return trieResponseCode, req
+	}
+
 	return trieResponseCode, req
 }
 
