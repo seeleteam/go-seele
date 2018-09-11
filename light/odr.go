@@ -10,17 +10,21 @@ const (
 	blockResponseCode = uint16(11)
 	addTxRequestCode  = uint16(12)
 	addTxResponseCode = uint16(13)
+	trieRequestCode   = uint16(14)
+	trieResponseCode  = uint16(15)
 )
 
 var (
 	odrRequestFactories = map[uint16]func() odrRequest{
 		blockRequestCode: func() odrRequest { return &odrBlock{} },
 		addTxRequestCode: func() odrRequest { return &odrAddTx{} },
+		trieRequestCode:  func() odrRequest { return &odrTrie{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
 		blockResponseCode: func() odrResponse { return &odrBlock{} },
 		addTxResponseCode: func() odrResponse { return &odrAddTx{} },
+		trieResponseCode:  func() odrResponse { return &odrTrie{} },
 	}
 )
 

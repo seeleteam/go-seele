@@ -34,6 +34,10 @@ func (bc *LightChain) GetCurrentState() (*state.Statedb, error) {
 	return nil, nil
 }
 
+func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
+	return nil, nil
+}
+
 func (bc *LightChain) GetStore() store.BlockchainStore {
 	return nil
 }
