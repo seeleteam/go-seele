@@ -26,6 +26,7 @@ type handler func(client *rpc.Client) (interface{}, interface{}, error)
 var (
 	errInvalidCommand    = errors.New("invalid command")
 	errInvalidSubcommand = errors.New("invalid subcommand")
+	errInvalidDomainName = errors.New("invalid domain name value")
 
 	systemContract map[string]map[string]handler
 )
@@ -184,31 +185,33 @@ func generateHTLCKey(c *cli.Context) error {
 }
 
 func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName)
+	if len(domainNameValue) == 0 {
+		return nil, nil, errInvalidDomainName
+	}
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName, []byte(domainNameValue))
 }
 
 func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar)
+	if len(domainNameValue) == 0 {
+		return nil, nil, errInvalidDomainName
+	}
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar, []byte(domainNameValue))
 }
 
-func sendSystemContractTx(client *rpc.Client, to common.Address, method byte) (output types.Transaction, tx *types.Transaction, err error) {
+func sendSystemContractTx(client *rpc.Client, to common.Address, method byte, payload []byte) (map[string]interface{}, *types.Transaction, error) {
 	key, txd, err := makeTransactionData(client)
 	if err != nil {
-		return
-	}
-
-	if len(domainNameValue) == 0 {
-		err = errors.New("domain name value is empty")
-		return
+		return nil, nil, err
 	}
 
 	txd.To = to
-	txd.Payload = append([]byte{method}, []byte(domainNameValue)...)
-	tx, err = util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	txd.Payload = append([]byte{method}, payload...)
+	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	output = *tx
-	return
+	output := make(map[string]interface{})
+	output["Tx"] = *tx
+	return output, tx, err
 }

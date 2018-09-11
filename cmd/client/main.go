@@ -122,7 +122,7 @@ func main() {
 		Subcommands: []cli.Command{
 			{
 				Name:   "register",
-				Usage:  "register a domain name on seele network",
+				Usage:  "register a domain name",
 				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "register", handleCallResult),
 			},
