@@ -46,6 +46,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	}
 
 	if err != nil {
+		ctx.Statedb.RevertToSnapshot(snapshot)
 		receipt.Failed = true
 		receipt.Result = []byte(err.Error())
 	}
