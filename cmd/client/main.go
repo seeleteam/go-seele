@@ -106,6 +106,14 @@ func main() {
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
 			},
 			{
+				Name:  "decode",
+				Usage: "decode HTLC contract information",
+				Flags: []cli.Flag{
+					payloadFlag,
+				},
+				Action: decodeHTLC,
+			},
+			{
 				Name:   "key",
 				Usage:  "generate preimage key and key hash",
 				Action: generateHTLCKey,

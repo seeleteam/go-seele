@@ -178,6 +178,16 @@ func generateHTLCKey(c *cli.Context) error {
 	return nil
 }
 
+// decodeHTLC decode htlc information
+func decodeHTLC(c *cli.Context) error {
+	result, err := system.DecodeHTLC(payloadValue)
+	if err != nil {
+		return err
+	}
+
+	return handleCallResult(nil, result)
+}
+
 func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
 

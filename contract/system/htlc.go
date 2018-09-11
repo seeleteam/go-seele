@@ -12,6 +12,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -100,14 +101,11 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 		return nil, errNotFutureTime
 	}
 
-	tx := *context.tx
-	copyContext := *context
-	copyContext.tx = &tx
 	var data htlc
-	data.Tx = copyContext.tx
-	data.Tx.Data.To = info.To
+	data.Tx = context.tx
 	data.HashLock = info.HashLock
 	data.TimeLock = info.TimeLock
+	data.To = info.To
 	data.Preimage = []byte{}
 	value, err := json.Marshal(data)
 	if err != nil {
@@ -117,7 +115,7 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 	context.statedb.CreateAccount(HashTimeLockContractAddress)
 	context.statedb.SetData(HashTimeLockContractAddress, data.Tx.Hash, value)
 
-	return data.Tx.Hash.Bytes(), nil
+	return value, nil
 }
 
 // withdraw the seele from contract
@@ -156,7 +154,7 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 	// subtract the amount from the HTLC address
 	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
 	// add the amount to the sender account
-	context.statedb.AddBalance(info.Tx.Data.To, info.Tx.Data.Amount)
+	context.statedb.AddBalance(info.To, info.Tx.Data.Amount)
 
 	return value, nil
 }
@@ -234,7 +232,7 @@ func hashLockMatches(hashLock common.Hash, preimage []byte) bool {
 
 // check if withdraw is available
 func withdrawable(data *htlc, context *Context) error {
-	if !context.tx.Data.From.Equal(data.Tx.Data.To) {
+	if !context.tx.Data.From.Equal(data.To) {
 		return errReceiver
 	}
 
@@ -268,4 +266,19 @@ func refundable(data *htlc, context *Context) error {
 	}
 
 	return nil
+}
+
+// DecodeHTLC decode HTLC information
+func DecodeHTLC(payload string) (interface{}, error) {
+	databytes, err := hexutil.HexToBytes(payload)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to convert hex to bytes, %s", err)
+	}
+
+	var result htlc
+	if err = json.Unmarshal(databytes, &result); err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal, %s", err)
+	}
+
+	return &result, nil
 }
