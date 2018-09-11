@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc2"
-	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
 )
 
@@ -408,7 +408,7 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 func getBalance(address common.Address) (int, bool) {
 	client := getClient(address)
 
-	var result seele.GetBalanceResponse
+	var result api.GetBalanceResponse
 	if err := client.Call(&result, "seele_getBalance", address); err != nil {
 		panic(fmt.Sprintf("failed to get the balance: %s\n", err))
 	}
