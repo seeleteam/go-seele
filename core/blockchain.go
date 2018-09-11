@@ -218,6 +218,11 @@ func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 }
 
+// GetState returns the state DB of the specified root hash.
+func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
+	return state.NewStatedb(root, bc.accountStateDB)
+}
+
 // GetCurrentInfo return the current block and current state info
 func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 	block := bc.CurrentBlock()
