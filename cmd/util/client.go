@@ -49,7 +49,6 @@ func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee 
 			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
 		default:
 			return nil, fmt.Errorf("unsupported address type: %d", to.Type())
-
 		}
 	}
 

@@ -116,6 +116,28 @@ func main() {
 	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
 
+	domainCommands := cli.Command{
+		Name:  "domain",
+		Usage: "system domain name commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "register",
+				Usage:  "register a domain name",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "register", handleCallResult),
+			},
+			{
+				Name:   "owner",
+				Usage:  "get the domain name owner",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "getregistrar", handleCallResult),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(domainCommands.Flags))
+
 	p2pCommands := cli.Command{
 		Name:  "p2p",
 		Usage: "p2p commands",
@@ -154,6 +176,7 @@ func main() {
 		htlcCommands,
 		minerCommands,
 		p2pCommands,
+		domainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",
