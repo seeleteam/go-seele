@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	gasCreateDomainName  = uint64(50000)  // gas used to create a domain name
-	gasDomainNameCreator = uint64(100000) // gas used to query the creator of given domain name
+	gasRegisterDomainName  = uint64(50000)  // gas used to register a domain name
+	gasDomainNameRegistrar = uint64(100000) // gas used to query the registrar of given domain name
 
-	cmdCreateDomainName  = byte(0) // create a domain name
-	cmdDomainNameCreator = byte(1) // query the creator of specified domain name
+	// CmdRegisterDomainName register a domain name
+	CmdRegisterDomainName = byte(0)
+	// CmdDomainNameRegistrar query the registrar of specified domain name
+	CmdDomainNameRegistrar = byte(1)
 )
 
 var (
@@ -26,12 +28,12 @@ var (
 	maxDomainNameLength = len(common.EmptyHash)
 
 	domainNameCommands = map[byte]*cmdInfo{
-		cmdCreateDomainName:  &cmdInfo{gasCreateDomainName, createDomainName},
-		cmdDomainNameCreator: &cmdInfo{gasDomainNameCreator, domainNameCreator},
+		CmdRegisterDomainName:  &cmdInfo{gasRegisterDomainName, registerDomainName},
+		CmdDomainNameRegistrar: &cmdInfo{gasDomainNameRegistrar, domainNameRegistrar},
 	}
 )
 
-func createDomainName(domainName []byte, context *Context) ([]byte, error) {
+func registerDomainName(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
 	if err != nil {
 		return nil, err
@@ -66,7 +68,7 @@ func domainNameToKey(domainName []byte) (common.Hash, error) {
 	return common.BytesToHash(domainName), nil
 }
 
-func domainNameCreator(domainName []byte, context *Context) ([]byte, error) {
+func domainNameRegistrar(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
 	if err != nil {
 		return nil, err

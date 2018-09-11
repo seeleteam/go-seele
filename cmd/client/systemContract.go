@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/contract/system"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc2"
 	"github.com/urfave/cli"
@@ -25,15 +26,24 @@ type handler func(client *rpc.Client) (interface{}, interface{}, error)
 var (
 	errInvalidCommand = errors.New("Faild to execute, invalid command")
 
-	systemContract = map[string]map[string]handler{
-		"htlc": map[string]handler{
-			"create":   createHTLC,
-			"withdraw": withdraw,
-			"refund":   refund,
-			"get":      getHTLC,
-		},
-	}
+	systemContract map[string]map[string]handler
 )
+
+func init() {
+	systemContract = make(map[string]map[string]handler)
+
+	systemContract["htlc"] = map[string]handler{
+		"create":   createHTLC,
+		"withdraw": withdraw,
+		"refund":   refund,
+		"get":      getHTLC,
+	}
+
+	systemContract["domain"] = map[string]handler{
+		"register":     registerDomainName,
+		"getregistrar": domainNameRegister,
+	}
+}
 
 // CreateHTLC create HTLC
 func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
@@ -170,4 +180,29 @@ func generateHTLCKey(c *cli.Context) error {
 	fmt.Println("preimage:", hexutil.BytesToHex(secret[:]))
 	fmt.Println("hash:", hash.ToHex())
 	return nil
+}
+
+func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName)
+}
+
+func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar)
+}
+
+func sendSystemContractTx(client *rpc.Client, to common.Address, method byte) (output types.Transaction, tx *types.Transaction, err error) {
+	key, txd, err := makeTransactionData(client)
+	if err != nil {
+		return
+	}
+
+	txd.To = to
+	txd.Payload = append([]byte{method}, txd.Payload...)
+	tx, err = util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	if err != nil {
+		return
+	}
+
+	output = *tx
+	return
 }
