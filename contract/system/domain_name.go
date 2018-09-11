@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	gasRegisterDomainName  = uint64(50000)  // gas used to register a domain name
-	gasDomainNameRegistrar = uint64(100000) // gas used to query the registrar of given domain name
-
 	// CmdRegisterDomainName register a domain name
 	CmdRegisterDomainName byte = iota
 	// CmdDomainNameRegistrar query the registrar of specified domain name
 	CmdDomainNameRegistrar
+
+	gasRegisterDomainName  = uint64(50000)  // gas used to register a domain name
+	gasDomainNameRegistrar = uint64(100000) // gas used to query the registrar of given domain name
 )
 
 var (
