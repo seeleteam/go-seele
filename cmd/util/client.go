@@ -14,7 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc2"
-	"github.com/seeleteam/go-seele/seele"
+	"github.com/seeleteam/go-seele/api"
 )
 
 // GetAccountNonce get account nonce by account
@@ -24,8 +24,8 @@ func GetAccountNonce(client *rpc.Client, account common.Address) (uint64, error)
 	return nonce, err
 }
 
-func GetInfo(client *rpc.Client) (seele.MinerInfo, error) {
-	var info seele.MinerInfo
+func GetInfo(client *rpc.Client) (api.GetMinerInfo, error) {
+	var info api.GetMinerInfo
 	err := client.Call(&info, "seele_getInfo")
 
 	return info, err
