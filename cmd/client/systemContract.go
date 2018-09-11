@@ -26,7 +26,6 @@ type handler func(client *rpc.Client) (interface{}, interface{}, error)
 var (
 	errInvalidCommand    = errors.New("invalid command")
 	errInvalidSubcommand = errors.New("invalid subcommand")
-	errInvalidDomainName = errors.New("invalid domain name value")
 
 	systemContract = map[string]map[string]handler{
 		"htlc": map[string]handler{
@@ -185,8 +184,8 @@ func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 		amountValue = ""
 	}()
 
-	if len(domainNameValue) == 0 {
-		return nil, nil, errInvalidDomainName
+	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
+		return nil, nil, err
 	}
 	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName, []byte(domainNameValue))
 }
@@ -197,8 +196,8 @@ func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
 		amountValue = ""
 	}()
 
-	if len(domainNameValue) == 0 {
-		return nil, nil, errInvalidDomainName
+	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
+		return nil, nil, err
 	}
 	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar, []byte(domainNameValue))
 }

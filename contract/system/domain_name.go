@@ -16,9 +16,9 @@ const (
 	gasDomainNameRegistrar = uint64(100000) // gas used to query the registrar of given domain name
 
 	// CmdRegisterDomainName register a domain name
-	CmdRegisterDomainName = byte(0)
+	CmdRegisterDomainName byte = iota
 	// CmdDomainNameRegistrar query the registrar of specified domain name
-	CmdDomainNameRegistrar = byte(1)
+	CmdDomainNameRegistrar
 )
 
 var (
@@ -55,14 +55,9 @@ func registerDomainName(domainName []byte, context *Context) ([]byte, error) {
 }
 
 func domainNameToKey(domainName []byte) (common.Hash, error) {
-	nameLen := len(domainName)
-
-	if nameLen == 0 {
-		return common.EmptyHash, errNameEmpty
-	}
-
-	if nameLen > maxDomainNameLength {
-		return common.EmptyHash, errNameTooLong
+	err := ValidateDomainName(domainName)
+	if err != nil {
+		return common.EmptyHash, err
 	}
 
 	return common.BytesToHash(domainName), nil
@@ -75,4 +70,19 @@ func domainNameRegistrar(domainName []byte, context *Context) ([]byte, error) {
 	}
 
 	return context.statedb.GetData(DomainNameContractAddress, key), nil
+}
+
+// ValidateDomainName validate domain name
+func ValidateDomainName(domainName []byte) error {
+	nameLen := len(domainName)
+
+	if nameLen == 0 {
+		return errNameEmpty
+	}
+
+	if nameLen > maxDomainNameLength {
+		return errNameTooLong
+	}
+
+	return nil
 }
