@@ -306,7 +306,7 @@ handler:
 			}
 
 		case announceCode:
-			var query Announce
+			var query AnnounceBody
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				sp.log.Error("failed to deserialize Announce, quit! %s", err)

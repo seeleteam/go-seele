@@ -60,7 +60,7 @@ type AnnounceQuery struct {
 	End   uint64
 }
 
-type Announce struct {
+type AnnounceBody struct {
 	Magic           uint32
 	TD              *big.Int
 	CurrentBlock    common.Hash

@@ -298,7 +298,7 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 	} else {
 		idx := p.findIdxByHash(p.blockHashArr[0])
 		if idx < 0 {
-			p.log.Info("handleSyncHash hash not match")
+			p.log.Info("handleSyncHash hash not match. %s", p.blockHashArr[0].ToHex())
 			p.curSyncMagic = 0
 			return nil
 		}
@@ -343,7 +343,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 	}
 
 	height := head.Header.Height
-	msg := &Announce{
+	msg := &AnnounceBody{
 		Magic:           magic,
 		TD:              localTD,
 		CurrentBlock:    head.HeaderHash,
@@ -376,21 +376,21 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 	return p2p.SendMessage(p.rw, announceCode, buff)
 }
 
-func (p *peer) handleAnnounce(msg *Announce) error {
+func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.curSyncMagic != 0 && p.curSyncMagic != msg.Magic {
+	if p.curSyncMagic != msg.Magic {
 		return nil
+	}
+
+	if len(msg.HeaderArr) == 0 {
+		panic("can not come here")
 	}
 
 	p.curSyncMagic = msg.Magic
 	p.td, p.head, p.headBlockNum = msg.TD, msg.CurrentBlock, msg.CurrentBlockNum
 
 	startNum, bMatch := uint64(0), false
-	if len(msg.HeaderArr) == 0 {
-		panic("can not come here")
-	}
-
 	if len(p.blockHashArr) == 0 {
 		if len(msg.HeaderArr) == 1 {
 			// server only has genesis block
@@ -405,7 +405,7 @@ func (p *peer) handleAnnounce(msg *Announce) error {
 			height := msg.BlockNumArr[idx]
 			block, err := chain.GetStore().GetBlockByHeight(height)
 			if err != nil {
-				panic("load block from chain error")
+				continue
 			}
 
 			if block.HeaderHash == msg.HeaderArr[idx] {
