@@ -40,18 +40,6 @@ type statusData struct {
 	GenesisBlock    common.Hash
 }
 
-type blockQuery struct {
-	ReqID  uint32      // ReqID number for request
-	Hash   common.Hash // Block hash from which to retrieve (excludes Number)
-	Number uint64      // Block hash from which to retrieve (excludes Hash)
-}
-
-// BlocksMsgBody represents a message struct for BlocksMsg
-type BlockMsgBody struct {
-	ReqID uint32
-	Block *types.Block
-}
-
 type AnnounceQuery struct {
 	Begin uint64
 	End   uint64
