@@ -183,4 +183,25 @@ var (
 		Usage:       "heap dump file name, defualt heap.dump",
 		Destination: &dumpFileValue,
 	}
+
+	timeLockValue int64
+	timeLockFlag  = cli.Int64Flag{
+		Name:        "time",
+		Usage:       "time lock in the HTLC",
+		Destination: &timeLockValue,
+	}
+
+	preimageValue string
+	preimageFlag  = cli.StringFlag{
+		Name:        "preimage",
+		Usage:       "preimage of hash in the HTLC",
+		Destination: &preimageValue,
+	}
+
+	domainNameValue string
+	domainNameFlag  = cli.StringFlag{
+		Name:        "name",
+		Usage:       "domain name",
+		Destination: &domainNameValue,
+	}
 )

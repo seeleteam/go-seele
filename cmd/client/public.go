@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -41,7 +42,19 @@ func parseCallArgs(context *cli.Context, client *rpc.Client) ([]interface{}, err
 
 			args = append(args, v)
 		} else {
-			args = append(args, context.Generic(flag.GetName()))
+			name := flag.GetName()
+			splitName := strings.Split(name, ",")
+
+			var flagValue interface{}
+			for _, n := range splitName {
+				flagName := strings.TrimSpace(n)
+				flagValue = context.Generic(flagName)
+				if flagValue != nil {
+					break
+				}
+			}
+
+			args = append(args, flagValue)
 		}
 	}
 
@@ -94,18 +107,39 @@ func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, r
 	}
 }
 
+func rpcActionSystemContract(namespace string, method string, resultHandler callResultHandler) cli.ActionFunc {
+	return func(c *cli.Context) error {
+		client, err := rpc.DialTCP(context.Background(), addressValue)
+		if err != nil {
+			return err
+		}
+
+		functions, ok := systemContract[namespace]
+		if !ok {
+			return errInvalidCommand
+		}
+
+		function, ok := functions[method]
+		if !ok {
+			return errInvalidSubcommand
+		}
+
+		printdata, arg, err := function(client)
+		if err != nil {
+			return err
+		}
+
+		var result bool
+		if err = client.Call(&result, "seele_addTx", arg); err != nil || !result {
+			return fmt.Errorf("Failed to call rpc, %s", err)
+		}
+
+		return resultHandler([]interface{}{}, printdata)
+	}
+}
+
 func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
-	pass, err := common.GetPassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get password %s", err)
-	}
-
-	key, err := keystore.GetKey(fromValue, pass)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
-	}
-
-	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
+	key, txd, err := makeTransactionData(client)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +150,25 @@ func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, e
 	}
 
 	return []interface{}{*tx}, nil
+}
+
+func makeTransactionData(client *rpc.Client) (*keystore.Key, *types.TransactionData, error) {
+	pass, err := common.GetPassword()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get password %s", err)
+	}
+
+	key, err := keystore.GetKey(fromValue, pass)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid sender key file. it should be a private key: %s", err)
+	}
+
+	txd, err := checkParameter(&key.PrivateKey.PublicKey, client)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return key, txd, nil
 }
 
 func onTxAdded(inputs []interface{}, result interface{}) error {
@@ -133,6 +186,19 @@ func onTxAdded(inputs []interface{}, result interface{}) error {
 	}
 
 	fmt.Println(string(encoded))
+
+	// print corresponding debt if exist
+	debt := types.NewDebtWithoutContext(&tx)
+	if debt != nil {
+		fmt.Println()
+		fmt.Println("It is a cross shard transaction, its debt is:")
+		str, err := json.MarshalIndent(debt, "", "\t")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(str))
+	}
 
 	return nil
 }

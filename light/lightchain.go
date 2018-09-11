@@ -30,6 +30,10 @@ func (bc *LightChain) CurrentBlock() *types.Block {
 	return nil
 }
 
+func (bc *LightChain) GetCurrentState() (*state.Statedb, error) {
+	return nil, nil
+}
+
 func (bc *LightChain) GetStore() store.BlockchainStore {
 	return nil
 }

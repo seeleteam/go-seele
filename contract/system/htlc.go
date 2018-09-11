@@ -1,3 +1,8 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package system
 
 import (
@@ -7,7 +12,6 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -20,18 +24,22 @@ const (
 )
 
 const (
-	cmdNewContract byte = iota
-	cmdWithdraw
-	cmdRefund
-	cmdGetContract
+	// CmdNewContract create HTLC
+	CmdNewContract byte = iota
+	// CmdWithdraw withdraw seele from HTLC
+	CmdWithdraw
+	// CmdRefund refund seele from HTLC
+	CmdRefund
+	// CmdGetContract get HTLC
+	CmdGetContract
 )
 
 var (
 	htlcCommands = map[byte]*cmdInfo{
-		cmdNewContract: &cmdInfo{gasNewContract, newHTLC},
-		cmdWithdraw:    &cmdInfo{gasWithdraw, withdraw},
-		cmdRefund:      &cmdInfo{gasRefund, refund},
-		cmdGetContract: &cmdInfo{gasGetContract, getContract},
+		CmdNewContract: &cmdInfo{gasNewContract, newHTLC},
+		CmdWithdraw:    &cmdInfo{gasWithdraw, withdraw},
+		CmdRefund:      &cmdInfo{gasRefund, refund},
+		CmdGetContract: &cmdInfo{gasGetContract, getContract},
 	}
 )
 
@@ -50,7 +58,7 @@ var (
 
 type htlc struct {
 	Tx *types.Transaction
-	hashTimeLock
+	HashTimeLock
 	// Refunded if refunded ture, otherwise false
 	Refunded bool
 	// Withdrawed if withdrawed true, otherwise false
@@ -59,14 +67,18 @@ type htlc struct {
 	Preimage []byte
 }
 
-type hashTimeLock struct {
+// HashTimeLock payload information
+type HashTimeLock struct {
 	// HashLock is used to lock amount until provide preimage of hashlock
 	HashLock common.Hash
 	// TimeLock is used to lock amount a period
 	TimeLock int64
+	// receive address
+	To common.Address
 }
 
-type withdrawing struct {
+// Withdrawing used to withdraw from contract
+type Withdrawing struct {
 	// Hash is the key of data
 	Hash common.Hash
 	// Preimage the hashlock preimage
@@ -75,7 +87,7 @@ type withdrawing struct {
 
 // create a HTLC to transfer value by hash-lock and time-lock
 func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
-	var info hashTimeLock
+	var info HashTimeLock
 	if err := json.Unmarshal(lockbytes, &info); err != nil {
 		return nil, fmt.Errorf("Failed to unmarshal lockbytes, %s", err)
 	}
@@ -88,8 +100,12 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 		return nil, errNotFutureTime
 	}
 
+	tx := *context.tx
+	copyContext := *context
+	copyContext.tx = &tx
 	var data htlc
-	data.Tx = context.tx
+	data.Tx = copyContext.tx
+	data.Tx.Data.To = info.To
 	data.HashLock = info.HashLock
 	data.TimeLock = info.TimeLock
 	data.Preimage = []byte{}
@@ -98,17 +114,15 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal data, %s", err)
 	}
 
-	subBalance(context.statedb, data.Tx.Data.From, data.Tx.Data.Amount)
-
-	context.statedb.CreateAccount(hashTimeLockContractAddress)
-	context.statedb.SetData(hashTimeLockContractAddress, data.Tx.Hash, value)
+	context.statedb.CreateAccount(HashTimeLockContractAddress)
+	context.statedb.SetData(HashTimeLockContractAddress, data.Tx.Hash, value)
 
 	return data.Tx.Hash.Bytes(), nil
 }
 
 // withdraw the seele from contract
 func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
-	var input withdrawing
+	var input Withdrawing
 	if err := json.Unmarshal(jsonWithdraw, &input); err != nil {
 		return nil, err
 	}
@@ -127,7 +141,7 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 		return nil, errHashMismatch
 	}
 
-	if err = withdrawable(&info, context.tx.Data.From, context); err != nil {
+	if err = withdrawable(&info, context); err != nil {
 		return nil, err
 	}
 
@@ -137,10 +151,12 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
-
-	context.statedb.SetData(hashTimeLockContractAddress, info.Tx.Hash, value)
-
-	addBalance(context.statedb, context.tx.Data.From, info.Tx.Data.Amount)
+	// update value with key
+	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to the sender account
+	context.statedb.AddBalance(info.Tx.Data.To, info.Tx.Data.Amount)
 
 	return value, nil
 }
@@ -157,7 +173,7 @@ func refund(bytes []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	if err = refundable(&info, context.tx.Data.From, context); err != nil {
+	if err = refundable(&info, context); err != nil {
 		return nil, err
 	}
 
@@ -167,10 +183,12 @@ func refund(bytes []byte, context *Context) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
 
-	context.statedb.SetData(hashTimeLockContractAddress, info.Tx.Hash, value)
-
-	addBalance(context.statedb, context.tx.Data.From, info.Tx.Data.Amount)
-
+	// update the value with key
+	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to sender account
+	context.statedb.AddBalance(info.Tx.Data.From, info.Tx.Data.Amount)
 	return value, nil
 }
 
@@ -182,7 +200,7 @@ func getContract(bytes []byte, context *Context) ([]byte, error) {
 
 // get the data
 func haveContract(context *Context, hash common.Hash) ([]byte, error) {
-	bytes := context.statedb.GetData(hashTimeLockContractAddress, hash)
+	bytes := context.statedb.GetData(HashTimeLockContractAddress, hash)
 	if bytes == nil {
 		return nil, errNotFound
 	}
@@ -215,8 +233,8 @@ func hashLockMatches(hashLock common.Hash, preimage []byte) bool {
 }
 
 // check if withdraw is available
-func withdrawable(data *htlc, receiver common.Address, context *Context) error {
-	if !receiver.Equal(data.Tx.Data.To) {
+func withdrawable(data *htlc, context *Context) error {
+	if !context.tx.Data.From.Equal(data.Tx.Data.To) {
 		return errReceiver
 	}
 
@@ -232,8 +250,8 @@ func withdrawable(data *htlc, receiver common.Address, context *Context) error {
 }
 
 // check if refund is available
-func refundable(data *htlc, sender common.Address, context *Context) error {
-	if !sender.Equal(data.Tx.Data.From) {
+func refundable(data *htlc, context *Context) error {
+	if !context.tx.Data.From.Equal(data.Tx.Data.From) {
 		return errSender
 	}
 
@@ -250,14 +268,4 @@ func refundable(data *htlc, sender common.Address, context *Context) error {
 	}
 
 	return nil
-}
-
-// add balance to account
-func addBalance(s *state.Statedb, address common.Address, amount *big.Int) {
-	s.AddBalance(address, amount)
-}
-
-// subBalance
-func subBalance(s *state.Statedb, address common.Address, amount *big.Int) {
-	s.SubBalance(address, amount)
 }

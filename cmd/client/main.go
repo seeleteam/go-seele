@@ -77,6 +77,67 @@ func main() {
 	sort.Sort(cli.CommandsByName(minerCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(minerCommands.Flags))
 
+	htlcCommands := cli.Command{
+		Name:  "htlc",
+		Usage: "Hash time lock contract commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "create",
+				Usage:  "create HTLC",
+				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag, hashFlag, timeLockFlag),
+				Action: rpcActionSystemContract("htlc", "create", handleCallResult),
+			},
+			{
+				Name:   "withdraw",
+				Usage:  "withdraw from HTLC",
+				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag, preimageFlag),
+				Action: rpcActionSystemContract("htlc", "withdraw", handleCallResult),
+			},
+			{
+				Name:   "refund",
+				Usage:  "refund from HTLC",
+				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Action: rpcActionSystemContract("htlc", "refund", handleCallResult),
+			},
+			{
+				Name:   "get",
+				Usage:  "get HTLC information",
+				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
+			},
+			{
+				Name:   "key",
+				Usage:  "generate preimage key and key hash",
+				Action: generateHTLCKey,
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
+
+	domainCommands := cli.Command{
+		Name:  "domain",
+		Usage: "system domain name commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "register",
+				Usage:  "register a domain name",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "register", handleCallResult),
+			},
+			{
+				Name:   "owner",
+				Usage:  "get the domain name owner",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "getregistrar", handleCallResult),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(domainCommands.Flags))
+
 	p2pCommands := cli.Command{
 		Name:  "p2p",
 		Usage: "p2p commands",
@@ -112,8 +173,10 @@ func main() {
 	sort.Sort(cli.FlagsByName(p2pCommands.Flags))
 
 	app.Commands = []cli.Command{
+		htlcCommands,
 		minerCommands,
 		p2pCommands,
+		domainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",
