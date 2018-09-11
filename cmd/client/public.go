@@ -108,7 +108,7 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 
 		function, ok := functions[method]
 		if !ok {
-			return errInvalidCommand
+			return errInvalidSubcommand
 		}
 
 		printdata, arg, err := function(client)
@@ -116,8 +116,8 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 			return err
 		}
 
-		var result interface{}
-		if err = client.Call(&result, "seele_addTx", arg); err != nil {
+		var result bool
+		if err = client.Call(&result, "seele_addTx", arg); err != nil || !result {
 			return fmt.Errorf("Failed to call rpc, %s", err)
 		}
 
