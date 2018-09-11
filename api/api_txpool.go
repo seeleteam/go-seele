@@ -222,7 +222,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	output := make(map[string]interface{})
 
 	// Try to get transaction in txpool
-	tx := api.s.TxPool().GetTransaction(hash)
+	tx := api.s.TxPoolInterface().GetTransaction(hash)
 	if tx != nil {
 		addTxInfo(output, tx)
 		output["status"] = "pool"

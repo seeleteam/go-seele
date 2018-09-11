@@ -54,17 +54,8 @@ type ServiceContext struct {
 
 func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
 
-// TxPool get tx pool
-func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
-
-// DebtPool get debt pool
-func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
-
 // BlockChain get blockchain
 func (s *SeeleService) BlockChain() *core.Blockchain { return s.chain }
-
-// NetVersion get networkID
-func (s *SeeleService) NetVersion() uint64 { return s.networkID }
 
 // Miner get miner
 func (s *SeeleService) Miner() *miner.Miner { return s.miner }
@@ -256,21 +247,9 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Public:    true,
 		},
 		{
-			Namespace: "txpool",
-			Version:   "1.0",
-			Service:   NewTransactionPoolAPI(s),
-			Public:    true,
-		},
-		{
 			Namespace: "download",
 			Version:   "1.0",
 			Service:   downloader.NewPrivatedownloaderAPI(s.seeleProtocol.downloader),
-			Public:    false,
-		},
-		{
-			Namespace: "network",
-			Version:   "1.0",
-			Service:   NewPrivateNetworkAPI(s),
 			Public:    false,
 		},
 		{

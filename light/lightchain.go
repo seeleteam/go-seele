@@ -6,8 +6,6 @@
 package light
 
 import (
-	"math/big"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -32,10 +30,6 @@ func (bc *LightChain) CurrentBlock() *types.Block {
 	return nil
 }
 
-func (bc *LightChain) GetCurrentState() (*state.Statedb, error) {
-	return nil, nil
-}
-
 func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
 	return nil, nil
 }
@@ -54,10 +48,7 @@ func (bc *LightChain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	return nil, nil
 }
 
-func (bc *LightChain) GetCurrentStateNonce() (uint64, error) {
-	return 0, nil
-}
-
-func (bc *LightChain) GetCurrentStateBalance(account common.Address) (*big.Int, error) {
+//@todo
+func (bc LightChain) GetCurrentState() (*state.Statedb, error) {
 	return nil, nil
 }
