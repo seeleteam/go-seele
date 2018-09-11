@@ -3,6 +3,7 @@ package discovery
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -38,6 +39,8 @@ func Test_SaveNodes(t *testing.T) {
 	fileFullPath := filepath.Join(common.GetTempFolder(), "nodes.json")
 	db := testNewDatabase()
 	db.SaveNodes(common.GetTempFolder())
+	defer os.Remove(fileFullPath)
+
 	assert.Equal(t, common.FileOrFolderExists(fileFullPath), true)
 	data, err := ioutil.ReadFile(fileFullPath)
 	assert.Equal(t, err, nil)

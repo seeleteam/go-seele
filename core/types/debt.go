@@ -14,13 +14,15 @@ import (
 )
 
 // DebtSize debt serialized size
-const DebtSize = 94
+const DebtSize = 96
 
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction
 	Shard   uint           // target shard
 	Account common.Address // debt for account
 	Amount  *big.Int       // debt amount
+	Fee     *big.Int       // debt fee
+	Code    common.Bytes   // debt contract code
 }
 
 type Debt struct {
@@ -58,8 +60,15 @@ func (d *Debt) Size() int {
 	return DebtSize
 }
 
+func GetDebtShareFee(fee *big.Int) *big.Int {
+	unit := big.NewInt(0).Div(fee, big.NewInt(10))
+
+	share := big.NewInt(0).Mul(unit, big.NewInt(9))
+	return share
+}
+
 func NewDebt(tx *Transaction) *Debt {
-	if tx == nil || tx.Data.To.IsEmpty() {
+	if tx == nil || tx.Data.To.IsEmpty() || tx.Data.To.IsReserved() {
 		return nil
 	}
 
@@ -73,6 +82,11 @@ func NewDebt(tx *Transaction) *Debt {
 		Shard:   shard,
 		Account: tx.Data.To,
 		Amount:  big.NewInt(0).Set(tx.Data.Amount),
+		Fee:     GetDebtShareFee(tx.Data.Fee),
+	}
+
+	if tx.Data.To.IsEVMContract() {
+		data.Code = tx.Data.Payload
 	}
 
 	debt := &Debt{

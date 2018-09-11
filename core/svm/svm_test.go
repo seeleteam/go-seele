@@ -61,7 +61,6 @@ func Test_Porcess_SysContract(t *testing.T) {
 	receipt, err := Process(ctx)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, false, receipt.Failed)
-	assert.Equal(t, ctx.Tx.Data.To.Bytes(), receipt.ContractAddress)
 	assert.Equal(t, ctx.Tx.Hash, receipt.TxHash)
 
 	gasCreateDomainName := uint64(50000) // gas used to create a domain name
@@ -76,7 +75,6 @@ func Test_Porcess_SysContract(t *testing.T) {
 	receipt1, err1 := Process(ctx1)
 	assert.Equal(t, nil, err1)
 	assert.Equal(t, false, receipt1.Failed)
-	assert.Equal(t, ctx1.Tx.Data.To.Bytes(), receipt1.ContractAddress)
 	assert.Equal(t, ctx1.Tx.Hash, receipt1.TxHash)
 
 	gasDomainNameCreator := uint64(100000) // gas used to query the creator of given domain name

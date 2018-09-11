@@ -102,6 +102,30 @@ func GetTransactionsSize(txs []*Transaction) int {
 	return size
 }
 
+func GetTxFeeShare(fee *big.Int) *big.Int {
+	mod := big.NewInt(0).Mod(fee, big.NewInt(10))
+	unit := big.NewInt(0).Div(fee, big.NewInt(10))
+
+	// give mod value to transaction fee share
+	return big.NewInt(0).Add(unit, mod)
+}
+
+func (tx *Transaction) IsCrossShardTx() bool {
+	if tx.Data.To.IsEmpty() {
+		return false
+	}
+
+	if tx.Data.To.IsReserved() {
+		return false
+	}
+
+	if tx.Data.From.Shard() != tx.Data.To.Shard() {
+		return true
+	}
+
+	return false
+}
+
 // Size return the transaction size
 func (tx *Transaction) Size() int {
 	return TransactionPreSize + len(tx.Data.Payload)

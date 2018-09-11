@@ -8,6 +8,7 @@ package downloader
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,12 +122,13 @@ type TestPeer struct {
 
 // Head retrieves a copy of the current head hash and total difficulty.
 func (p *TestPeer) Head() (hash common.Hash, td *big.Int) {
-	return hash, new(big.Int).Set(p.td)
+	return p.head, new(big.Int).Set(p.td)
 }
 
 // RequestHeadersByHashOrNumber fetches a batch of blocks' headers
 func (p *TestPeer) RequestHeadersByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int, reverse bool) error {
 	p.magic = magic
+	p.head = origin
 	return nil
 }
 
@@ -137,6 +139,13 @@ func (p *TestPeer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash,
 
 func (p *TestPeer) GetPeerRequestInfo() (uint32, common.Hash, uint64, int) {
 	return p.magic, common.EmptyHash, 0, 0
+}
+
+func newTestPeer() *TestPeer {
+	return &TestPeer{
+		head: common.EmptyHash,
+		td:   big.NewInt(0),
+	}
 }
 
 func Test_Downloader_CodeToStr(t *testing.T) {
@@ -238,7 +247,56 @@ func Test_Downloader_Synchronise(t *testing.T) {
 	assert.Equal(t, err, errPeerNotFound)
 }
 
-//
+func Test_Downloader_FetchHeight(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+	dl := newTestDownloader(db)
+
+	testPeer1 := newTestPeer()
+	pc1 := newPeerConn(testPeer1, "masterPeer", nil)
+	pc1.peer = testPeer1
+	go func() {
+		header, err := dl.fetchHeight(pc1)
+		assert.Equal(t, err, errHashNotMatch)
+		assert.Equal(t, header == nil, true)
+	}()
+	time.Sleep(1000 * time.Millisecond)
+
+	magic, _, _, _ := pc1.peer.GetPeerRequestInfo()
+	blockHeadersMsgHeader := newBlockHeadersMsgBody(magic)
+	payload := common.SerializePanic(blockHeadersMsgHeader)
+	msg := newMessage(BlockHeadersMsg, payload)
+	testPeer1.head = crypto.MustHash(blockHeadersMsgHeader.Headers[0])
+	pc1.deliverMsg(BlockHeadersMsg, msg)
+}
+
+func Test_Downloader_VerifyBlockHeadersMsg(t *testing.T) {
+	var msg interface{}
+
+	// case 1: errInvalidPacketReceived
+	msg = []*types.BlockHeader{}
+	header, err := verifyBlockHeadersMsg(msg, common.EmptyHash)
+	assert.Equal(t, err, errInvalidPacketReceived)
+	assert.Equal(t, header == nil, true)
+
+	// case 2: errHashNotMatch
+	msg = newTestBlockHeaders()
+	header, err = verifyBlockHeadersMsg(msg, common.EmptyHash)
+	assert.Equal(t, err, errHashNotMatch)
+	assert.Equal(t, header == nil, true)
+
+	// case 3: ok
+	msg = newTestBlockHeaders()
+	header, err = verifyBlockHeadersMsg(msg, crypto.MustHash(msg.([]*types.BlockHeader)[0]))
+	assert.Equal(t, err, nil)
+	assert.Equal(t, header != nil, true)
+	assert.Equal(t, header.PreviousBlockHash, common.StringToHash("PreviousBlockHash"))
+	assert.Equal(t, header.Creator, common.EmptyAddress)
+	assert.Equal(t, header.Difficulty, big.NewInt(1))
+	assert.Equal(t, header.Height, uint64(1))
+	assert.Equal(t, header.Nonce, uint64(1))
+}
+
 func Test_Downloader_FindCommonAncestorHeight(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
@@ -333,16 +391,99 @@ func Test_Downloader_GetFetchCount(t *testing.T) {
 	assert.Equal(t, fetchCount, uint64(MaxHeaderFetch))
 }
 
+func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+	dl := newTestDownloader(db)
+
+	// case 1: received valid header
+	testPeer1 := newTestPeer()
+	pc1 := newPeerConn(testPeer1, "masterPeer", nil)
+	pc1.peer = testPeer1
+	go func() {
+		headers, err := dl.getPeerBlockHaders(pc1, 0, 1)
+		assert.Equal(t, err, nil)
+		assert.Equal(t, len(headers), 1)
+		assert.Equal(t, headers[0].PreviousBlockHash, common.StringToHash("PreviousBlockHash"))
+		assert.Equal(t, headers[0].Creator, common.EmptyAddress)
+		assert.Equal(t, headers[0].Difficulty, big.NewInt(1))
+		assert.Equal(t, headers[0].Height, uint64(1))
+		assert.Equal(t, headers[0].Nonce, uint64(1))
+	}()
+	time.Sleep(500 * time.Millisecond)
+
+	magic, _, _, _ := pc1.peer.GetPeerRequestInfo()
+	blockHeadersMsgHeader := newBlockHeadersMsgBody(magic)
+	payload := common.SerializePanic(blockHeadersMsgHeader)
+	msg := newMessage(BlockHeadersMsg, payload)
+	pc1.deliverMsg(BlockHeadersMsg, msg)
+
+	// case 2: received valid header with empty payload
+	testPeer2 := newTestPeer()
+	pc2 := newPeerConn(testPeer2, "masterPeer", nil)
+	pc2.peer = testPeer2
+	go func() {
+		headers, err := dl.getPeerBlockHaders(pc2, 0, 1)
+		assert.Equal(t, err, errInvalidAncestor)
+		assert.Equal(t, len(headers), 0)
+	}()
+	time.Sleep(500 * time.Millisecond)
+
+	magic, _, _, _ = pc2.peer.GetPeerRequestInfo()
+	blockHeadersMsgHeader = newBlockHeadersMsgWithEmptyBody(magic)
+	payload = common.SerializePanic(blockHeadersMsgHeader)
+	msg = newMessage(BlockHeadersMsg, payload)
+	pc2.deliverMsg(BlockHeadersMsg, msg)
+
+	// case 3: close channel before receiving data
+	testPeer3 := newTestPeer()
+	pc3 := newPeerConn(testPeer3, "masterPeer", nil)
+	pc3.peer = testPeer3
+	go func() {
+		headers, err := dl.getPeerBlockHaders(pc3, 0, 1)
+		assert.Equal(t, err, errPeerQuit)
+		assert.Equal(t, len(headers), 0)
+	}()
+	time.Sleep(500 * time.Millisecond)
+	pc3.close()
+
+	// case 4: cancel channel before receiving data
+	testPeer4 := newTestPeer()
+	pc4 := newPeerConn(testPeer4, "masterPeer", nil)
+	pc4.peer = testPeer4
+	go func() {
+		headers, err := dl.getPeerBlockHaders(pc4, 0, 1)
+		assert.Equal(t, err, errReceivedQuitMsg)
+		assert.Equal(t, len(headers), 0)
+	}()
+	time.Sleep(500 * time.Millisecond)
+	close(dl.cancelCh)
+}
+
+func Test_Downloader_IsAncenstorFound(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+	dl := newTestDownloader(db)
+
+	headers := newTestBlockHeaders()
+	found, cmpHeight, err := dl.isAncenstorFound(headers)
+	assert.Equal(t, found, true)
+	assert.Equal(t, cmpHeight, uint64(0))
+	assert.Equal(t, strings.Contains(err.Error(), "leveldb: not found"), true)
+
+	headers = nil
+	found, cmpHeight, err = dl.isAncenstorFound(headers)
+	assert.Equal(t, found, false)
+	assert.Equal(t, cmpHeight, uint64(0))
+	assert.Equal(t, err, nil)
+}
+
 func Test_Downloader_RegisterPeerAndUnRegisterPeer(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 	dl := newTestDownloader(db)
 
-	testPeer := &TestPeer{
-		magic: 0,
-		head:  common.EmptyHash,
-		td:    big.NewInt(0),
-	}
+	testPeer := newTestPeer()
 
 	// init the peers is empty
 	assert.Equal(t, len(dl.peers), 0)
@@ -419,17 +560,12 @@ func Test_Downloader_PeerDownload(t *testing.T) {
 	dl := newTestDownloader(db)
 	taskMgr := newTestTaskMgr(dl, db)
 
-	testPeer := &TestPeer{
-		magic: 0,
-		head:  common.EmptyHash,
-		td:    big.NewInt(0),
-	}
-
 	// case 1: non-master peer
-	pc := newPeerConn(testPeer, "test", nil)
+	testPeer1 := newTestPeer()
+	pc1 := newPeerConn(testPeer1, "test", nil)
 	go func() {
 		dl.sessionWG.Add(1)
-		dl.peerDownload(pc, taskMgr)
+		dl.peerDownload(pc1, taskMgr)
 	}()
 
 	time.Sleep(300 * time.Millisecond)
@@ -437,30 +573,31 @@ func Test_Downloader_PeerDownload(t *testing.T) {
 
 	// case 2: master peer
 	dl.masterPeer = "masterPeer"
-	pc = newPeerConn(testPeer, "masterPeer", nil)
+	testPeer2 := newTestPeer()
+	pc2 := newPeerConn(testPeer2, "masterPeer", nil)
 	go func() {
 		dl.sessionWG.Add(1)
 		dl.cancelCh = make(chan struct{})
-		dl.peerDownload(pc, taskMgr)
+		dl.peerDownload(pc2, taskMgr)
 	}()
 	time.Sleep(300 * time.Millisecond)
 
 	// case 3: BlockHeadersMsg
-	pc = newPeerConn(testPeer, "masterPeer", nil)
-	pc.peer = testPeer
+	testPeer3 := newTestPeer()
+	pc3 := newPeerConn(testPeer3, "masterPeer", nil)
+	pc3.peer = testPeer3
 	go func() {
 		dl.sessionWG.Add(1)
 		dl.cancelCh = make(chan struct{})
-		dl.peerDownload(pc, taskMgr)
+		dl.peerDownload(pc3, taskMgr)
 	}()
-
 	time.Sleep(100 * time.Millisecond)
 
-	magic, _, _, _ := pc.peer.GetPeerRequestInfo()
+	magic, _, _, _ := pc3.peer.GetPeerRequestInfo()
 	blockHeadersMsgHeader := newBlockHeadersMsgBody(magic)
 	payload := common.SerializePanic(blockHeadersMsgHeader)
 	msg := newMessage(BlockHeadersMsg, payload)
-	pc.deliverMsg(BlockHeadersMsg, msg)
+	pc3.deliverMsg(BlockHeadersMsg, msg)
 }
 
 func Test_Downloader_ProcessBlocks(t *testing.T) {

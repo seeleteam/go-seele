@@ -19,18 +19,18 @@ var (
 	errDebtNotFound        = errors.New("debt not found")
 )
 
-// PrivateTransactionPoolAPI provides an API to access transaction pool information.
-type PrivateTransactionPoolAPI struct {
+// TransactionPoolAPI provides an API to access transaction pool information.
+type TransactionPoolAPI struct {
 	s *SeeleService
 }
 
-// NewPrivateTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
-func NewPrivateTransactionPoolAPI(s *SeeleService) *PrivateTransactionPoolAPI {
-	return &PrivateTransactionPoolAPI{s}
+// NewTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
+func NewTransactionPoolAPI(s *SeeleService) *TransactionPoolAPI {
+	return &TransactionPoolAPI{s}
 }
 
 // GetBlockTransactionCount returns the count of transactions in the block with the given block hash or height.
-func (api *PrivateTransactionPoolAPI) GetBlockTransactionCount(blockHash string, height int64) (int, error) {
+func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height int64) (int, error) {
 	if len(blockHash) > 0 {
 		return api.GetBlockTransactionCountByHash(blockHash)
 	}
@@ -39,7 +39,7 @@ func (api *PrivateTransactionPoolAPI) GetBlockTransactionCount(blockHash string,
 }
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
-func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
+func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
 	block, err := getBlock(api.s.chain, height)
 	if err != nil {
 		return 0, err
@@ -49,7 +49,7 @@ func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHeight(height in
 }
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
-func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
+func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(blockHash)
 	if err != nil {
@@ -66,7 +66,7 @@ func (api *PrivateTransactionPoolAPI) GetBlockTransactionCountByHash(blockHash s
 }
 
 // GetTransactionByBlockIndex returns the transaction in the block with the given block hash/height and index.
-func (api *PrivateTransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height int64, index uint) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height int64, index uint) (map[string]interface{}, error) {
 	if len(hashHex) > 0 {
 		return api.GetTransactionByBlockHashAndIndex(hashHex, index)
 	}
@@ -75,7 +75,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockIndex(hashHex string,
 }
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
-func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
 	block, err := getBlock(api.s.chain, height)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
-func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
@@ -112,7 +112,7 @@ func (api *PrivateTransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex 
 }
 
 // GetReceiptByTxHash get receipt by transaction hash
-func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]interface{}, error) {
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (api *PrivateTransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[str
 }
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
-func (api *PrivateTransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
@@ -181,7 +181,7 @@ func addTxInfo(output map[string]interface{}, tx *types.Transaction) {
 }
 
 // GetDebtByHash return the debt info by debt hash
-func (api *PrivateTransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interface{}, error) {
+func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interface{}, error) {
 	hashByte, err := hexutil.HexToBytes(debtHash)
 	if err != nil {
 		return nil, err
@@ -220,19 +220,4 @@ func (api *PrivateTransactionPoolAPI) GetDebtByHash(debtHash string) (map[string
 	}
 
 	return nil, nil
-}
-
-// GetPendingTransactions returns all pending transactions
-func (api *PrivateTransactionPoolAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
-	pendingTxs := api.s.TxPool().GetTransactions(true, true)
-	var transactions []map[string]interface{}
-	for _, tx := range pendingTxs {
-		transactions = append(transactions, PrintableOutputTx(tx))
-	}
-
-	return transactions, nil
-}
-
-func (api *PrivateTransactionPoolAPI) GetPendingDebts() ([]*types.Debt, error) {
-	return api.s.DebtPool().GetAll(), nil
 }

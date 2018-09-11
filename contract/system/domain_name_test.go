@@ -40,7 +40,7 @@ func Test_CreateDomainName(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
-	context := newTestContext(db, domainNameContractAddress)
+	context := newTestContext(db, DomainNameContractAddress)
 
 	// valid name
 	input := []byte{'a', 'b', 'c'}
@@ -50,7 +50,7 @@ func Test_CreateDomainName(t *testing.T) {
 
 	// validate statedb
 	key, _ := domainNameToKey(input)
-	value := context.statedb.GetData(domainNameContractAddress, key)
+	value := context.statedb.GetData(DomainNameContractAddress, key)
 	assert.Equal(t, value, context.tx.Data.From.Bytes())
 
 	// get domain creator with valid name

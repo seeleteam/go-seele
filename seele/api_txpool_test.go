@@ -7,21 +7,23 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_GetTxByHash(t *testing.T) {
 	dbPath := filepath.Join(common.GetTempFolder(), ".GetTxByHash")
-	if common.FileOrFolderExists(dbPath) {
-		os.RemoveAll(dbPath)
-	}
+
 	api := newTestAPI(t, dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
 
 	// add tx
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
@@ -29,7 +31,7 @@ func Test_GetTxByHash(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	// verify pool tx
-	poolAPI := NewPrivateTransactionPoolAPI(api.s)
+	poolAPI := NewTransactionPoolAPI(api.s)
 	outputs, err := poolAPI.GetTransactionByHash(tx1.Hash.ToHex())
 	assert.Equal(t, err, nil)
 	assert.Equal(t, tx1.Hash.ToHex(), outputs["transaction"].(map[string]interface{})["hash"].(string))
@@ -57,10 +59,12 @@ func Test_GetTxByHash(t *testing.T) {
 
 func Test_GetReceiptByHash(t *testing.T) {
 	dbPath := filepath.Join(common.GetTempFolder(), ".GetReceiptByHash")
-	if common.FileOrFolderExists(dbPath) {
-		os.RemoveAll(dbPath)
-	}
+
 	api := newTestTxPoolAPI(t, dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
 
 	// save receipts to block
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
@@ -93,7 +97,7 @@ func Test_GetReceiptByHash(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	// verify block receipt
-	poolAPI := NewPrivateTransactionPoolAPI(api.s)
+	poolAPI := NewTransactionPoolAPI(api.s)
 	outputs, err := poolAPI.GetReceiptByTxHash(tx1.Hash.ToHex())
 	assert.Equal(t, err, nil)
 	assert.Equal(t, outputs["result"], hexutil.BytesToHex(receipts[0].Result))
@@ -138,7 +142,7 @@ func storeStatedb(t *testing.T, s *SeeleService, statedb *state.Statedb) error {
 	return batch.Commit()
 }
 
-func newTestTxPoolAPI(t *testing.T, dbPath string) *PrivateTransactionPoolAPI {
+func newTestTxPoolAPI(t *testing.T, dbPath string) *TransactionPoolAPI {
 	conf := getTmpConfig()
 	serviceContext := ServiceContext{
 		DataDir: dbPath,
@@ -146,12 +150,10 @@ func newTestTxPoolAPI(t *testing.T, dbPath string) *PrivateTransactionPoolAPI {
 
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
-	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
-	defer os.RemoveAll(dataDir)
 
 	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
 	assert.Equal(t, err, nil)
 
-	return NewPrivateTransactionPoolAPI(ss)
+	return NewTransactionPoolAPI(ss)
 }
