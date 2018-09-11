@@ -26,7 +26,7 @@ func (req *odrAddTx) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 }
 
 func (req *odrAddTx) handleResponse(resp interface{}) {
-	if data, ok := resp.(odrAddTx); ok {
+	if data, ok := resp.(*odrAddTx); ok {
 		req.Error = data.Error
 	}
 }
