@@ -37,6 +37,7 @@ func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.S
 		seeleProtocol: seeleProtocol,
 	}
 
+	s.log.Info("Light server started")
 	return s, nil
 }
 
