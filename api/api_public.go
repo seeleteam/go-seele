@@ -91,7 +91,7 @@ func (api *PublicSeeleAPI) GetBlock(hashHex string, height int64, fulltx bool) (
 	return api.GetBlockByHeight(height, fulltx)
 }
 
-// GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
+// GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
 	block, err := getBlock(api.s.ChainBackend(), height)
