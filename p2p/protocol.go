@@ -29,7 +29,7 @@ type Protocol struct {
 	Length uint16
 
 	// AddPeer find a new peer will call this method
-	AddPeer func(peer *Peer, rw MsgReadWriter)
+	AddPeer func(peer *Peer, rw MsgReadWriter) bool
 
 	// DeletePeer this method will be called when a peer is disconnected
 	DeletePeer func(peer *Peer)

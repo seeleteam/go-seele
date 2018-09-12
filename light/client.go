@@ -55,7 +55,6 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("NewServiceClient Create lightDB err. %s", err)
 		return nil, err
 	}
-	leveldb.StartMetrics(s.lightDB, "lightDB", log)
 
 	s.odrBackend = newOdrBackend(log)
 	// initialize and validate genesis
