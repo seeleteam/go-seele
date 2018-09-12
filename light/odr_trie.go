@@ -14,7 +14,6 @@ type odrTrie struct {
 	Root  common.Hash
 	Key   []byte
 	Proof map[string][]byte
-	Error string
 }
 
 func (req *odrTrie) code() uint16 {

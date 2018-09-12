@@ -6,7 +6,6 @@
 package light
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -37,20 +36,15 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
-	statedb, err := pool.chain.GetCurrentState()
-	if err != nil {
-		return fmt.Errorf("Failed to get current state from chain, %v", err.Error())
-	}
-
-	if err := tx.Validate(statedb); err != nil {
-		return fmt.Errorf("Failed to validate tx, %v", err.Error())
+	if err := tx.ValidateWithoutState(true, false); err != nil {
+		return err
 	}
 
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
 	if pool.pending[tx.Hash] != nil {
-		return fmt.Errorf("transaction already exists, hash is %v", tx.Hash.ToHex())
+		return fmt.Errorf("Transaction already exists, hash is %v", tx.Hash.ToHex())
 	}
 
 	request := &odrAddTx{Tx: *tx}
@@ -58,8 +52,8 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 		return fmt.Errorf("Failed to send request to peers, %v", err.Error())
 	}
 
-	if len(request.Error) > 0 {
-		return errors.New(request.Error)
+	if err := request.getError(); err != nil {
+		return err
 	}
 
 	pool.pending[tx.Hash] = tx
