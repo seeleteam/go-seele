@@ -27,7 +27,7 @@ type ServiceClient struct {
 	log           *log.SeeleLog
 	odrBackend    *odrBackend
 
-	txPool  *LightPool
+	txPool  *txPool
 	chain   *LightChain
 	lightDB database.Database // database used to store blocks and account state.
 }
@@ -75,13 +75,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
-	s.txPool, err = newLightPool(s.chain, s.odrBackend)
-	if err != nil {
-		s.lightDB.Close()
-		s.odrBackend.close()
-		log.Error("failed to create transaction pool in NewServiceClient, %s", err)
-		return nil, err
-	}
+	s.txPool = newTxPool(s.chain, s.odrBackend)
 
 	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, true, s.odrBackend, log)
 	if err != nil {

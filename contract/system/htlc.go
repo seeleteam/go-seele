@@ -151,8 +151,11 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
-
+	// update value with key
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to the sender account
 	context.statedb.AddBalance(info.Tx.Data.To, info.Tx.Data.Amount)
 
 	return value, nil
@@ -180,7 +183,11 @@ func refund(bytes []byte, context *Context) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
 
+	// update the value with key
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to sender account
 	context.statedb.AddBalance(info.Tx.Data.From, info.Tx.Data.Amount)
 	return value, nil
 }

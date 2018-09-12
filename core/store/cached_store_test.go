@@ -9,9 +9,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -53,6 +54,65 @@ func Test_cachedStore_PutBlockHash(t *testing.T) {
 	store.DeleteBlockHash(38)
 	hash, _ = cachedStore.GetBlockHash(38)
 	assert.Equal(t, hash, testBlockHash)
+
+	block := newTestFullBlock(2, 3)
+	cachedStore.PutBlock(block, big.NewInt(20), false)
+
+	result, err := cachedStore.GetBlock(block.HeaderHash)
+	if err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, block.HeaderHash, result.HeaderHash)
+	assert.Equal(t, block.Header, result.Header)
+	assert.Equal(t, block.Transactions, result.Transactions)
+	assert.Equal(t, block.Debts, block.Debts)
+}
+
+func getRandomTx() *types.Transaction {
+	fromAddress, fromPrivateKey, err := crypto.GenerateKeyPair()
+	if err != nil {
+		panic(err)
+	}
+
+	tx, err := types.NewTransaction(*fromAddress, *crypto.MustGenerateRandomAddress(), big.NewInt(10), big.NewInt(10), 1)
+	tx.Sign(fromPrivateKey)
+
+	return tx
+}
+
+func newTestFullBlock(debtNum, txNum int) *types.Block {
+	var txs []*types.Transaction
+	for i := 0; i < txNum; i++ {
+		txs = append(txs, getRandomTx())
+	}
+
+	var debts []*types.Debt
+	for i := 0; i < debtNum; i++ {
+		d := types.NewDebt(getRandomTx())
+		debts = append(debts, d)
+	}
+
+	header := &types.BlockHeader{
+		PreviousBlockHash: crypto.MustHash("a"),
+		Creator:           *crypto.MustGenerateRandomAddress(),
+		StateHash:         crypto.MustHash("b"),
+		TxHash:            types.MerkleRootHash(txs),
+		TxDebtHash:        types.DebtMerkleRootHash(types.NewDebts(txs)),
+		DebtHash:          types.DebtMerkleRootHash(debts),
+		Height:            1,
+		Difficulty:        big.NewInt(2),
+		CreateTimestamp:   big.NewInt(3),
+		Nonce:             4,
+		ExtraData:         []byte{0x5},
+	}
+
+	return &types.Block{
+		HeaderHash:   header.Hash(),
+		Header:       header,
+		Transactions: txs,
+		Debts:        debts,
+	}
 }
 
 func Test_cachedStore_DeleteBlockHash(t *testing.T) {

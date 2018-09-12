@@ -6,6 +6,8 @@
 package light
 
 import (
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
@@ -26,6 +28,14 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 
 func (bc *LightChain) CurrentBlock() *types.Block {
 	return nil
+}
+
+func (bc *LightChain) GetCurrentState() (*state.Statedb, error) {
+	return nil, nil
+}
+
+func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
+	return nil, nil
 }
 
 func (bc *LightChain) GetStore() store.BlockchainStore {

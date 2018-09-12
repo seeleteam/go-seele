@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -37,13 +38,14 @@ var (
 
 type BlockChain interface {
 	CurrentBlock() *types.Block
+	GetCurrentState() (*state.Statedb, error)
+	GetState(root common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 	WriteHeader(*types.BlockHeader) error
 }
 
 type TransactionPool interface {
-	//AddRemotes(txs []*types.Transaction) []error
-	//Status(hashes []common.Hash) []core.TxStatus
+	AddTransaction(tx *types.Transaction) error
 }
 
 func codeToStr(code uint16) string {

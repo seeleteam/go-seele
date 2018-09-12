@@ -36,7 +36,7 @@ func Test_DomainNameToKey(t *testing.T) {
 	assert.Equal(t, err, nil)
 }
 
-func Test_CreateDomainName(t *testing.T) {
+func Test_RegisterDomainName(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
@@ -44,7 +44,7 @@ func Test_CreateDomainName(t *testing.T) {
 
 	// valid name
 	input := []byte{'a', 'b', 'c'}
-	result, err := createDomainName(input, context)
+	result, err := registerDomainName(input, context)
 	assert.Equal(t, result, []byte(nil))
 	assert.Equal(t, err, nil)
 
@@ -53,15 +53,15 @@ func Test_CreateDomainName(t *testing.T) {
 	value := context.statedb.GetData(DomainNameContractAddress, key)
 	assert.Equal(t, value, context.tx.Data.From.Bytes())
 
-	// get domain creator with valid name
+	// get domain registrar with valid name
 	input = []byte{'a', 'b', 'c'}
-	result, err = domainNameCreator(input, context)
+	result, err = domainNameRegistrar(input, context)
 	assert.Equal(t, result, context.tx.Data.From.Bytes())
 	assert.Equal(t, err, nil)
 
-	// get domain creator with invalid name
+	// get domain registrar with invalid name
 	input = []byte{'a'}
-	result, err = domainNameCreator(input, context)
+	result, err = domainNameRegistrar(input, context)
 	assert.Equal(t, result, []byte(nil))
 	assert.Equal(t, err, nil)
 }
