@@ -52,6 +52,8 @@ type ServiceContext struct {
 	DataDir string
 }
 
+func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
+
 // TxPool get tx pool
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 
