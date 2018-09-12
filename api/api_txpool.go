@@ -123,7 +123,7 @@ func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
-	block, err := getBlock(api.s.Chain(), height)
+	block, err := getBlock(api.s.ChainBackend(), height)
 	if err != nil {
 		return 0, err
 	}
@@ -133,7 +133,7 @@ func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (i
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	hashByte, err := hexutil.HexToBytes(blockHash)
 	if err != nil {
 		return 0, err
@@ -159,7 +159,7 @@ func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
-	block, err := getBlock(api.s.Chain(), height)
+	block, err := getBlock(api.s.ChainBackend(), height)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64,
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
 		return nil, err
@@ -202,7 +202,7 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 	}
 	hash := common.BytesToHash(hashByte)
 
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	receipt, err := store.GetReceiptByTxHash(hash)
 	if err != nil {
 		return nil, err
@@ -212,7 +212,7 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
 func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	output := make(map[string]interface{})
 
 	// Try to get transaction in txpool
-	tx := api.s.TxPoolInterface().GetTransaction(hash)
+	tx := api.s.TxPoolBackend().GetTransaction(hash)
 	if tx != nil {
 		addTxInfo(output, tx)
 		output["status"] = "pool"
@@ -272,7 +272,7 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 	hash := common.BytesToHash(hashByte)
 
 	output := make(map[string]interface{})
-	debt := api.s.DebtPool().GetDebtByHash(hash)
+	debt := api.s.GetDebtPool().GetDebtByHash(hash)
 	if debt != nil {
 		output["debt"] = debt
 		output["status"] = "pool"
@@ -280,7 +280,7 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 		return output, nil
 	}
 
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	debtIndex, err := store.GetDebtIndex(hash)
 	if err != nil {
 		api.s.Log().Info(err.Error())

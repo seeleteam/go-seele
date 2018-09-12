@@ -26,7 +26,7 @@ func NewPublicSeeleAPI(s Backend) *PublicSeeleAPI {
 
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
-	block := api.s.Chain().CurrentBlock()
+	block := api.s.ChainBackend().CurrentBlock()
 
 	var status string
 	if api.s.IsMining() {
@@ -51,7 +51,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 		account = api.s.GetMinerCoinbase()
 	}
 
-	state, err := api.s.Chain().GetCurrentState()
+	state, err := api.s.ChainBackend().GetCurrentState()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, erro
 		account = api.s.GetMinerCoinbase()
 	}
 
-	state, err := api.s.Chain().GetCurrentState()
+	state, err := api.s.ChainBackend().GetCurrentState()
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +78,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, erro
 
 // GetBlockHeight get the block height of the chain head
 func (api *PublicSeeleAPI) GetBlockHeight() (uint64, error) {
-	block := api.s.Chain().CurrentBlock()
+	block := api.s.ChainBackend().CurrentBlock()
 	return block.Header.Height, nil
 }
 
@@ -94,12 +94,12 @@ func (api *PublicSeeleAPI) GetBlock(hashHex string, height int64, fulltx bool) (
 // GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
-	block, err := getBlock(api.s.Chain(), height)
+	block, err := getBlock(api.s.ChainBackend(), height)
 	if err != nil {
 		return nil, err
 	}
 
-	return rpcOutputBlock(block, fulltx, api.s.Chain().GetStore())
+	return rpcOutputBlock(block, fulltx, api.s.ChainBackend().GetStore())
 }
 
 // getBlock returns block by height,when height is -1 the chain head is returned
@@ -124,7 +124,7 @@ func getBlock(chain Chain, height int64) (*types.Block, error) {
 func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]map[string]interface{}, error) {
 	blocks := make([]types.Block, 0)
 	if height < 0 {
-		block := api.s.Chain().CurrentBlock()
+		block := api.s.ChainBackend().CurrentBlock()
 		blocks = append(blocks, *block)
 	} else {
 		if size > maxSizeLimit {
@@ -137,7 +137,7 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 
 		for i := uint(0); i < size; i++ {
 			var block *types.Block
-			block, err := getBlock(api.s.Chain(), height-int64(i))
+			block, err := getBlock(api.s.ChainBackend(), height-int64(i))
 			if err != nil {
 				return nil, err
 			}
@@ -145,13 +145,13 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 		}
 	}
 
-	return rpcOutputBlocks(blocks, fulltx, api.s.Chain().GetStore())
+	return rpcOutputBlocks(blocks, fulltx, api.s.ChainBackend().GetStore())
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	store := api.s.Chain().GetStore()
+	store := api.s.ChainBackend().GetStore()
 	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
 		return nil, err

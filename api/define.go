@@ -17,17 +17,16 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	GetP2pServer() *p2p.Server
-	NetVersion() uint64
+	GetNetVersion() uint64
 	GetProtocolVersion() (uint, error)
-
-	TxPoolInterface() Pool
-	DebtPool() *core.DebtPool
-
-	Chain() Chain
-	GetMinerCoinbase() common.Address
-	IsMining() bool
 	GetThreads() int
+	GetMinerCoinbase() common.Address
+	GetDebtPool() *core.DebtPool
 
+	IsMining() bool
+
+	TxPoolBackend() Pool
+	ChainBackend() Chain
 	Log() *log.SeeleLog
 }
 
