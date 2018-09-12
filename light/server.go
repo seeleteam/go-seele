@@ -52,7 +52,7 @@ func (s *ServiceServer) Start(srvr *p2p.Server) error {
 	s.p2pServer = srvr
 
 	s.seeleProtocol.Start()
-	s.seeleProtocol.blockLoop()
+	go s.seeleProtocol.blockLoop()
 	return nil
 }
 
