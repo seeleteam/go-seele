@@ -113,13 +113,11 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	return s, nil
 }
 
-func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) error {
-	var err error
+func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) (err error) {
 	s.chainDBPath = filepath.Join(serviceContext.DataDir, BlockChainDir)
 	s.log.Info("NewSeeleService BlockChain datadir is %s", s.chainDBPath)
 
-	s.chainDB, err = leveldb.NewLevelDB(s.chainDBPath)
-	if err != nil {
+	if s.chainDB, err = leveldb.NewLevelDB(s.chainDBPath); err != nil {
 		s.log.Error("NewSeeleService Create BlockChain err. %s", err)
 		return err
 	}
@@ -127,13 +125,11 @@ func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) error {
 	return nil
 }
 
-func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) error {
-	var err error
+func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) (err error) {
 	s.accountStateDBPath = filepath.Join(serviceContext.DataDir, AccountStateDir)
 	s.log.Info("NewSeeleService account state datadir is %s", s.accountStateDBPath)
 
-	s.accountStateDB, err = leveldb.NewLevelDB(s.accountStateDBPath)
-	if err != nil {
+	if s.accountStateDB, err = leveldb.NewLevelDB(s.accountStateDBPath); err != nil {
 		s.Stop()
 		s.log.Error("NewSeeleService Create BlockChain err: failed to create account state DB, %s", err)
 		return err
@@ -142,21 +138,18 @@ func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) error 
 	return nil
 }
 
-func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config) error {
-	var err error
+func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config) (err error) {
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
 	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
 
-	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
-	if err != nil {
+	if err = genesis.InitializeAndValidate(bcStore, s.accountStateDB); err != nil {
 		s.Stop()
 		s.log.Error("NewSeeleService genesis.Initialize err. %s", err)
 		return err
 	}
 
 	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile)
-	if err != nil {
+	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile); err != nil {
 		s.Stop()
 		s.log.Error("failed to init chain in NewSeeleService. %s", err)
 		return err
@@ -165,10 +158,8 @@ func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf 
 	return nil
 }
 
-func (s *SeeleService) initPool(conf *node.Config) error {
-	var err error
-	s.lastHeader, err = s.chain.GetStore().GetHeadBlockHash()
-	if err != nil {
+func (s *SeeleService) initPool(conf *node.Config) (err error) {
+	if s.lastHeader, err = s.chain.GetStore().GetHeadBlockHash(); err != nil {
 		s.Stop()
 		return fmt.Errorf("failed to get chain header, %s", err)
 	}
