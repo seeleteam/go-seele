@@ -28,8 +28,8 @@ var (
 			"get":      getHTLC,
 		},
 		"domain": map[string]handler{
-			"create": createDomainName,
-			"get":    getDomainNameOwner,
+			"create":   createDomainName,
+			"getOwner": getDomainNameOwner,
 		},
 	}
 )

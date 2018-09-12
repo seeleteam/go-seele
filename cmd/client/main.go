@@ -143,10 +143,10 @@ func main() {
 				Action: rpcActionSystemContract("domain", "create", handleCallResult),
 			},
 			{
-				Name:   "get",
+				Name:   "owner",
 				Usage:  "get the domain name owner",
 				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
-				Action: rpcActionSystemContract("domain", "get", handleCallResult),
+				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
 			},
 		},
 	}
