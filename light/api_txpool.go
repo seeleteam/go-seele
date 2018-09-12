@@ -21,11 +21,11 @@ var (
 
 // TransactionPoolAPI provides an API to access transaction pool information.
 type TransactionPoolAPI struct {
-	s *ServiceServer
+	s *ServiceClient
 }
 
 // NewTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
-func NewTransactionPoolAPI(s *ServiceServer) *TransactionPoolAPI {
+func NewTransactionPoolAPI(s *ServiceClient) *TransactionPoolAPI {
 	return &TransactionPoolAPI{s}
 }
 

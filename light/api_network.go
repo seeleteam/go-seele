@@ -9,11 +9,11 @@ import "github.com/seeleteam/go-seele/p2p"
 
 // PrivateNetworkAPI provides an API to access network information.
 type PrivateNetworkAPI struct {
-	s *ServiceServer
+	s *ServiceClient
 }
 
 // NewPrivateNetworkAPI creates a new PrivateNetworkAPI object for rpc service.
-func NewPrivateNetworkAPI(s *ServiceServer) *PrivateNetworkAPI {
+func NewPrivateNetworkAPI(s *ServiceClient) *PrivateNetworkAPI {
 	return &PrivateNetworkAPI{s}
 }
 
