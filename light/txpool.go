@@ -60,3 +60,18 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 
 	return nil
 }
+
+// @todo GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
+func (pool *txPool) GetTransaction(txHash common.Hash) *types.Transaction {
+	return nil
+}
+
+// @todo GetTransactions return the transactions in the transaction pool.
+func (pool *txPool) GetTransactions(processing, pending bool) []*types.Transaction {
+	return nil
+}
+
+// @todo GetPendingTxCount return the total number of pending transactions in the transaction pool.
+func (pool *txPool) GetPendingTxCount() int {
+	return 0
+}
