@@ -12,7 +12,7 @@ func (s *SeeleService) TxPoolBackend() api.Pool { return s.txPool }
 
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 
-func (s *SeeleService) GetDebtPool() *core.DebtPool { return s.debtPool }
+func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
 
 func (s *SeeleService) GetProtocolVersion() (uint, error) {
 	return s.seeleProtocol.Protocol.Version, nil

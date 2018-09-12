@@ -272,7 +272,7 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 	hash := common.BytesToHash(hashByte)
 
 	output := make(map[string]interface{})
-	debt := api.s.GetDebtPool().GetDebtByHash(hash)
+	debt := api.s.DebtPool().GetDebtByHash(hash)
 	if debt != nil {
 		output["debt"] = debt
 		output["status"] = "pool"

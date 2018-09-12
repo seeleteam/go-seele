@@ -21,10 +21,10 @@ type Backend interface {
 	GetProtocolVersion() (uint, error)
 	GetThreads() int
 	GetMinerCoinbase() common.Address
-	GetDebtPool() *core.DebtPool
 
 	IsMining() bool
 
+	DebtPool() *core.DebtPool
 	TxPoolBackend() Pool
 	ChainBackend() Chain
 	Log() *log.SeeleLog

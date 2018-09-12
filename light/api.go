@@ -10,7 +10,7 @@ import (
 
 func (s *ServiceClient) TxPoolBackend() api.Pool { return s.txPool }
 
-func (s *ServiceClient) GetDebtPool() *core.DebtPool { return s.debtPool }
+func (s *ServiceClient) DebtPool() *core.DebtPool { return s.debtPool }
 
 func (s *ServiceClient) GetProtocolVersion() (uint, error) {
 	return s.seeleProtocol.Protocol.Version, nil

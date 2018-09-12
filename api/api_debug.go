@@ -52,5 +52,5 @@ func (api *PrivateDebugAPI) GetPendingTransactions() ([]map[string]interface{}, 
 
 // GetPendingDebts returns all pending debts
 func (api *PrivateDebugAPI) GetPendingDebts() ([]*types.Debt, error) {
-	return api.s.GetDebtPool().GetAll(), nil
+	return api.s.DebtPool().GetAll(), nil
 }
