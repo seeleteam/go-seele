@@ -8,6 +8,7 @@ package seele
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/api"
@@ -34,12 +35,14 @@ type SeeleService struct {
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
 
-	txPool         *core.TransactionPool
-	debtPool       *core.DebtPool
-	chain          *core.Blockchain
-	chainDB        database.Database // database used to store blocks.
-	accountStateDB database.Database // database used to store account state info.
-	miner          *miner.Miner
+	txPool             *core.TransactionPool
+	debtPool           *core.DebtPool
+	chain              *core.Blockchain
+	chainDB            database.Database // database used to store blocks.
+	chainDBPath        string
+	accountStateDB     database.Database // database used to store account state info.
+	accountStateDBPath string
+	miner              *miner.Miner
 
 	lastHeader               common.Hash
 	chainHeaderChangeChannel chan common.Hash
@@ -53,6 +56,8 @@ type ServiceContext struct {
 func (s *SeeleService) BlockChain() *core.Blockchain      { return s.chain }
 func (s *SeeleService) Miner() *miner.Miner               { return s.miner }
 func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
+
+// Downloader get downloader
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
 }
@@ -67,58 +72,28 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
 
 	// Initialize blockchain DB.
-	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
-	log.Info("NewSeeleService BlockChain datadir is %s", chainDBPath)
-	s.chainDB, err = leveldb.NewLevelDB(chainDBPath)
-	if err != nil {
-		log.Error("NewSeeleService Create BlockChain err. %s", err)
+	if err = s.initBlockchainDB(&serviceContext); err != nil {
 		return nil, err
 	}
+
 	leveldb.StartMetrics(s.chainDB, "chaindb", log)
 
 	// Initialize account state info DB.
-	accountStateDBPath := filepath.Join(serviceContext.DataDir, AccountStateDir)
-	log.Info("NewSeeleService account state datadir is %s", accountStateDBPath)
-	s.accountStateDB, err = leveldb.NewLevelDB(accountStateDBPath)
-	if err != nil {
-		s.chainDB.Close()
-		log.Error("NewSeeleService Create BlockChain err: failed to create account state DB, %s", err)
+	if err = s.initAccountStateDB(&serviceContext); err != nil {
 		return nil, err
 	}
 
 	// initialize and validate genesis
-	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
-	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
-
-	err = genesis.InitializeAndValidate(bcStore, s.accountStateDB)
-	if err != nil {
-		s.chainDB.Close()
-		s.accountStateDB.Close()
-		log.Error("NewSeeleService genesis.Initialize err. %s", err)
+	if err = s.initGenesisAndChain(&serviceContext, conf); err != nil {
 		return nil, err
 	}
 
-	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile)
-	if err != nil {
-		s.chainDB.Close()
-		s.accountStateDB.Close()
-		log.Error("failed to init chain in NewSeeleService. %s", err)
+	if err = s.initPool(conf); err != nil {
 		return nil, err
 	}
 
-	err = s.initPool(conf)
-	if err != nil {
-		s.chainDB.Close()
-		s.accountStateDB.Close()
-		log.Error("failed to create transaction pool in NewSeeleService, %s", err)
-		return nil, err
-	}
-
-	s.seeleProtocol, err = NewSeeleProtocol(s, log)
-	if err != nil {
-		s.chainDB.Close()
-		s.accountStateDB.Close()
+	if s.seeleProtocol, err = NewSeeleProtocol(s, log); err != nil {
+		s.Stop()
 		log.Error("failed to create seeleProtocol in NewSeeleService, %s", err)
 		return nil, err
 	}
@@ -128,10 +103,54 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	return s, nil
 }
 
-func (s *SeeleService) initPool(conf *node.Config) error {
-	var err error
-	s.lastHeader, err = s.chain.GetStore().GetHeadBlockHash()
-	if err != nil {
+func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) (err error) {
+	s.chainDBPath = filepath.Join(serviceContext.DataDir, BlockChainDir)
+	s.log.Info("NewSeeleService BlockChain datadir is %s", s.chainDBPath)
+
+	if s.chainDB, err = leveldb.NewLevelDB(s.chainDBPath); err != nil {
+		s.log.Error("NewSeeleService Create BlockChain err. %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) (err error) {
+	s.accountStateDBPath = filepath.Join(serviceContext.DataDir, AccountStateDir)
+	s.log.Info("NewSeeleService account state datadir is %s", s.accountStateDBPath)
+
+	if s.accountStateDB, err = leveldb.NewLevelDB(s.accountStateDBPath); err != nil {
+		s.Stop()
+		s.log.Error("NewSeeleService Create BlockChain err: failed to create account state DB, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config) (err error) {
+	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
+	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
+
+	if err = genesis.InitializeAndValidate(bcStore, s.accountStateDB); err != nil {
+		s.Stop()
+		s.log.Error("NewSeeleService genesis.Initialize err. %s", err)
+		return err
+	}
+
+	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
+	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile); err != nil {
+		s.Stop()
+		s.log.Error("failed to init chain in NewSeeleService. %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *SeeleService) initPool(conf *node.Config) (err error) {
+	if s.lastHeader, err = s.chain.GetStore().GetHeadBlockHash(); err != nil {
+		s.Stop()
 		return fmt.Errorf("failed to get chain header, %s", err)
 	}
 
@@ -179,26 +198,39 @@ func (s *SeeleService) MonitorChainHeaderChange() {
 // network protocols to start.
 func (s *SeeleService) Protocols() (protos []p2p.Protocol) {
 	protos = append(protos, s.seeleProtocol.Protocol)
-	return
+	return protos
 }
 
 // Start implements node.Service, starting goroutines needed by SeeleService.
 func (s *SeeleService) Start(srvr *p2p.Server) error {
 	s.p2pServer = srvr
-
 	s.seeleProtocol.Start()
+
 	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines.
 func (s *SeeleService) Stop() error {
-	s.seeleProtocol.Stop()
-
 	//TODO
 	// s.txPool.Stop() s.chain.Stop()
 	// retries? leave it to future
-	s.chainDB.Close()
-	s.accountStateDB.Close()
+	if s.seeleProtocol != nil {
+		s.seeleProtocol.Stop()
+		s.seeleProtocol = nil
+	}
+
+	if s.chainDB != nil {
+		s.chainDB.Close()
+		os.RemoveAll(s.chainDBPath)
+		s.chainDB = nil
+	}
+
+	if s.accountStateDB != nil {
+		s.accountStateDB.Close()
+		os.RemoveAll(s.accountStateDBPath)
+		s.accountStateDB = nil
+	}
+
 	return nil
 }
 

@@ -15,7 +15,6 @@ type odrBlock struct {
 	Hash   common.Hash  // Block hash from which to retrieve (excludes Height)
 	Height uint64       // Block hash from which to retrieve (excludes Hash)
 	Block  *types.Block // Retrieved block
-	Error  string
 }
 
 func (req *odrBlock) code() uint16 {
