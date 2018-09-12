@@ -64,7 +64,22 @@ var startCmd = &cobra.Command{
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
 		if strings.ToLower(nCfg.BasicConfig.SyncMode) == "light" {
-			//todo light mode
+			lightService, err := light.NewServiceClient(ctx, nCfg, slog)
+			if err != nil {
+				fmt.Println("Create light service error.", err.Error())
+				return
+			}
+
+			if err := seeleNode.Register(lightService); err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			err = seeleNode.Start()
+			if err != nil {
+				fmt.Printf("got error when start node: %s\n", err)
+				return
+			}
 		} else {
 			// fullnode mode
 			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog)
