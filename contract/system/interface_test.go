@@ -94,7 +94,7 @@ func Test_Run(t *testing.T) {
 
 	arrayByte, err = c.Run([]byte{CmdCreateDomainName, byte(1), byte(2)}, context)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, arrayByte == nil, true)
+	assert.Equal(t, arrayByte, context.tx.Data.From.Bytes())
 
 	// byte(123) is invalid command
 	arrayByte, err = c.Run([]byte{byte(123)}, context)

@@ -45,7 +45,7 @@ func Test_CreateDomainName(t *testing.T) {
 	// valid name
 	input := []byte{'a', 'b', 'c'}
 	result, err := createDomainName(input, context)
-	assert.Equal(t, result, []byte(nil))
+	assert.Equal(t, result, context.tx.Data.From.Bytes())
 	assert.Equal(t, err, nil)
 
 	// validate statedb
@@ -63,5 +63,5 @@ func Test_CreateDomainName(t *testing.T) {
 	input = []byte{'a'}
 	result, err = getDomainNameOwner(input, context)
 	assert.Equal(t, result, []byte(nil))
-	assert.Equal(t, err, nil)
+	assert.Equal(t, err, errNotFound)
 }
