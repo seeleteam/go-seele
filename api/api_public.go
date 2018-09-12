@@ -102,7 +102,7 @@ func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[stri
 	return rpcOutputBlock(block, fulltx, api.s.ChainBackend().GetStore())
 }
 
-// getBlock returns block by height,when height is -1 the chain head is returned
+// getBlock returns block by height,when height is less than 0 the chain head is returned
 func getBlock(chain Chain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height < 0 {
