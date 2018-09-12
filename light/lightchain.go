@@ -6,23 +6,49 @@
 package light
 
 import (
+	"math/big"
+	"sync"
+
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/miner/pow"
 )
 
+// LightChain represents a canonical chain that by default only handles block headers.
 type LightChain struct {
-	odrBackend *odrBackend
-	log        *log.SeeleLog
+	mutex       sync.RWMutex
+	bcStore     store.BlockchainStore
+	odrBackend  *odrBackend
+	engine      core.ConsensusEngine
+	canonicalTD *big.Int
+	log         *log.SeeleLog
 }
 
 func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odrBackend *odrBackend) (*LightChain, error) {
 	chain := &LightChain{
+		bcStore:    bcStore,
 		odrBackend: odrBackend,
+		engine:     &pow.Engine{},
+		log:        log.GetLogger("LightChain"),
 	}
+
+	currentHeaderHash, err := bcStore.GetHeadBlockHash()
+	if err != nil {
+		return nil, err
+	}
+
+	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
+	if err != nil {
+		return nil, err
+	}
+
+	chain.canonicalTD = td
+
 	return chain, nil
 }
 
@@ -42,6 +68,38 @@ func (bc *LightChain) GetStore() store.BlockchainStore {
 	return nil
 }
 
-func (bc *LightChain) WriteHeader(*types.BlockHeader) error {
+// WriteHeader writes the specified block header to the blockchain.
+func (bc *LightChain) WriteHeader(header *types.BlockHeader) error {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+
+	if err := core.ValidateBlockHeader(header, bc.engine, bc.bcStore); err != nil {
+		return err
+	}
+
+	previousTd, err := bc.bcStore.GetBlockTotalDifficulty(header.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	currentTd := new(big.Int).Add(previousTd, header.Difficulty)
+	isHead := currentTd.Cmp(bc.canonicalTD) > 0
+
+	if err := bc.bcStore.PutBlockHeader(header.Hash(), header, currentTd, isHead); err != nil {
+		return err
+	}
+
+	if isHead {
+		if err := core.DeleteLargerHeightBlocks(bc.bcStore, header.Height+1, nil); err != nil {
+			return err
+		}
+
+		if err := core.OverwriteStaleBlocks(bc.bcStore, header.PreviousBlockHash, nil); err != nil {
+			return err
+		}
+
+		bc.canonicalTD = currentTd
+	}
+
 	return nil
 }
