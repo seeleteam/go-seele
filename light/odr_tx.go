@@ -9,8 +9,7 @@ import "github.com/seeleteam/go-seele/core/types"
 
 type odrAddTx struct {
 	odrItem
-	Tx    types.Transaction
-	Error string
+	Tx types.Transaction
 }
 
 func (req *odrAddTx) code() uint16 {

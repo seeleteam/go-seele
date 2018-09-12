@@ -5,6 +5,8 @@
 
 package light
 
+import "errors"
+
 const (
 	blockRequestCode  = uint16(10)
 	blockResponseCode = uint16(11)
@@ -37,10 +39,12 @@ type odrRequest interface {
 
 type odrResponse interface {
 	getRequestID() uint32 // get the random request ID.
+	getError() error      // get the response error if any.
 }
 
 type odrItem struct {
-	ReqID uint32
+	ReqID uint32 // random request ID that generated dynamically
+	Error string // response error
 }
 
 func (item *odrItem) getRequestID() uint32 {
@@ -49,4 +53,12 @@ func (item *odrItem) getRequestID() uint32 {
 
 func (item *odrItem) setRequestID(requestID uint32) {
 	item.ReqID = requestID
+}
+
+func (item *odrItem) getError() error {
+	if len(item.Error) == 0 {
+		return nil
+	}
+
+	return errors.New(item.Error)
 }
