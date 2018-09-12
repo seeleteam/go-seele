@@ -25,8 +25,8 @@ var (
 			"get":      getHTLC,
 		},
 		"domain": map[string]handler{
-			"register":     registerDomainName,
-			"getregistrar": domainNameRegister,
+			"create": createDomainName,
+			"get":    getDomainNameOwner,
 		},
 	}
 )

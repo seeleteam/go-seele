@@ -13,24 +13,26 @@ import (
 	"github.com/seeleteam/go-seele/rpc2"
 )
 
-func registerDomainName(client *rpc.Client) (interface{}, interface{}, error) {
+// createDomainName create a domain name
+func createDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
 
 	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
 		return nil, nil, err
 	}
 
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdRegisterDomainName, []byte(domainNameValue))
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdCreateDomainName, []byte(domainNameValue))
 }
 
-func domainNameRegister(client *rpc.Client) (interface{}, interface{}, error) {
+// getDomainNameOwner get domain name owner
+func getDomainNameOwner(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
 
 	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
 		return nil, nil, err
 	}
 
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdDomainNameRegistrar, []byte(domainNameValue))
+	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdGetDomainNameOwner, []byte(domainNameValue))
 }
 
 // sendSystemContractTx send system contract transaction
