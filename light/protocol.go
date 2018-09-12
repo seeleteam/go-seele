@@ -175,10 +175,10 @@ func (sp *LightProtocol) synchronise(p *peer) {
 	}
 }
 
-func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
+func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
 	if sp.peerSet.Find(p2pPeer.Node.ID) != nil {
 		sp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
-		return
+		return false
 	}
 
 	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
@@ -187,23 +187,21 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
-		return
+		return false
 	}
 
 	genesisBlock, err := sp.chain.GetStore().GetBlockByHeight(0)
 	if err != nil {
-		return
+		return false
 	}
 
 	if err := newPeer.handShake(sp.networkID, localTD, head, block.Header.Height, genesisBlock.HeaderHash); err != nil {
 		sp.log.Error("handleAddPeer err. %s", err)
-		if sp.bServerMode {
-			// todo. light protocol need quit, but seeleprotocol can run normally.
-		} else {
+		if !sp.bServerMode {
 			// just quit connection.
 			newPeer.Disconnect(DiscHandShakeErr)
 		}
-		return
+		return false
 	}
 
 	if sp.bServerMode {
@@ -212,13 +210,14 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			sp.log.Error("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
-			return
+			return false
 		}
 	}
 
 	sp.log.Info("add peer %s -> %s to LightProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
 	sp.peerSet.Add(newPeer)
 	go sp.handleMsg(newPeer)
+	return true
 }
 
 func (sp *LightProtocol) handleGetPeer(address common.Address) interface{} {
