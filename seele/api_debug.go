@@ -13,6 +13,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -97,4 +98,14 @@ func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (string
 	}
 
 	return flie, pprof.WriteHeapProfile(f)
+}
+
+// GetGenesisInfo get genesis infomation
+func (api *PrivateDebugAPI) GetGenesisInfo() (*core.GenesisInfo, error) {
+	return api.s.p2pServer.GetGenesisInfo(), nil
+}
+
+// GetSelfNode get sel node ip and port
+func (api *PrivateDebugAPI) GetSelfNode() (string, error) {
+	return fmt.Sprintf("%s:%d", api.s.p2pServer.SelfNode.IP.String(), api.s.p2pServer.SelfNode.UDPPort), nil
 }

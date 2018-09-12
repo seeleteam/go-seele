@@ -585,6 +585,11 @@ func (srv *Server) Stop() {
 	srv.Wait()
 }
 
+// GetGenesisInfo get genesis infomation
+func (srv *Server) GetGenesisInfo() *core.GenesisInfo {
+	return &srv.genesis
+}
+
 // PeerInfos array of PeerInfo for sort alphabetically by node identifier
 type PeerInfos []PeerInfo
 
