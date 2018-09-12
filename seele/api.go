@@ -8,21 +8,21 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 )
 
-func (s *SeeleService) TxPoolInterface() api.Pool { return s.txPool }
+func (s *SeeleService) TxPoolBackend() api.Pool { return s.txPool }
 
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 
-func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
+func (s *SeeleService) GetDebtPool() *core.DebtPool { return s.debtPool }
 
 func (s *SeeleService) GetProtocolVersion() (uint, error) {
 	return s.seeleProtocol.Protocol.Version, nil
 }
 
-func (s *SeeleService) NetVersion() uint64 { return s.networkID }
+func (s *SeeleService) GetNetVersion() uint64 { return s.networkID }
 
 func (s *SeeleService) GetP2pServer() *p2p.Server { return s.p2pServer }
 
-func (s *SeeleService) Chain() api.Chain { return s.chain }
+func (s *SeeleService) ChainBackend() api.Chain { return s.chain }
 
 func (s *SeeleService) IsMining() bool { return s.miner.IsMining() }
 

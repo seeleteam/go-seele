@@ -29,7 +29,7 @@ func (n *PrivateNetworkAPI) GetPeerCount() (int, error) {
 
 // GetNetworkVersion returns the network version
 func (n *PrivateNetworkAPI) GetNetworkVersion() (uint64, error) {
-	return n.s.NetVersion(), nil
+	return n.s.GetNetVersion(), nil
 }
 
 // GetProtocolVersion returns the current seele protocol version this node supports
