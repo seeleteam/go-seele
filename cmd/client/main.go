@@ -84,25 +84,25 @@ func main() {
 			{
 				Name:   "create",
 				Usage:  "create HTLC",
-				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag, hashFlag, timeLockFlag),
+				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, nonceFlag, hashFlag, timeLockFlag),
 				Action: rpcActionSystemContract("htlc", "create", handleCallResult),
 			},
 			{
 				Name:   "withdraw",
 				Usage:  "withdraw from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag, preimageFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag, preimageFlag),
 				Action: rpcActionSystemContract("htlc", "withdraw", handleCallResult),
 			},
 			{
 				Name:   "refund",
 				Usage:  "refund from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "refund", handleCallResult),
 			},
 			{
 				Name:   "get",
 				Usage:  "get HTLC information",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
 			},
 			{
@@ -117,6 +117,14 @@ func main() {
 				Name:   "key",
 				Usage:  "generate preimage key and key hash",
 				Action: generateHTLCKey,
+			},
+			{
+				Name:  "time",
+				Usage: "generate unix timestamp",
+				Flags: []cli.Flag{
+					timeLockFlag,
+				},
+				Action: generateHTLCTime,
 			},
 		},
 	}

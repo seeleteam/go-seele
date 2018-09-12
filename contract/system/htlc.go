@@ -6,6 +6,8 @@
 package system
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +16,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -71,7 +72,7 @@ type htlc struct {
 // HashTimeLock payload information
 type HashTimeLock struct {
 	// HashLock is used to lock amount until provide preimage of hashlock
-	HashLock common.Hash
+	HashLock []byte
 	// TimeLock is used to lock amount a period
 	TimeLock int64
 	// receive address
@@ -225,9 +226,9 @@ func isFutureTimeLock(timelock, now int64) bool {
 }
 
 // check if the preimage hash is equal to the hashLock
-func hashLockMatches(hashLock common.Hash, preimage []byte) bool {
-	hashbytes := crypto.MustHash(preimage)
-	return hashbytes.Equal(hashLock)
+func hashLockMatches(hashLock []byte, preimage []byte) bool {
+	hashbytes := Sha256Hash(preimage)
+	return bytes.Equal(hashLock, hashbytes)
 }
 
 // check if withdraw is available
@@ -281,4 +282,10 @@ func DecodeHTLC(payload string) (interface{}, error) {
 	}
 
 	return &result, nil
+}
+
+// Sha256Hash used consist with solidity HTLC contract sha function
+func Sha256Hash(x []byte) []byte {
+	h := sha256.Sum256(x)
+	return h[:]
 }
