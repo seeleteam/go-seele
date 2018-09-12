@@ -47,7 +47,7 @@ func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
 
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
-	if account.Equal(common.EmptyAddress) {
+	if account.IsEmpty() {
 		account = api.s.GetMinerCoinbase()
 	}
 
@@ -220,11 +220,6 @@ func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) 
 		}
 	}
 	return fields, nil
-}
-
-// @todo AddTx add a tx to miner
-func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
-	return false, nil
 }
 
 // PrintableOutputTx converts the given tx to the RPC output

@@ -232,7 +232,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 	return outMap, nil
 }
 
-// getBlock returns block by height,when height is -1 the chain head is returned
+// getBlock returns block by height,when height is less than 0 the chain head is returned
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height < 0 {

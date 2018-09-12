@@ -43,13 +43,6 @@ func (bc *LightChain) WriteHeader(*types.BlockHeader) error {
 }
 
 //@todo
-// ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
-func (bc *LightChain) ApplyTransaction(tx *types.Transaction, txIndex int, coinbase common.Address, statedb *state.Statedb,
-	blockHeader *types.BlockHeader) (*types.Receipt, error) {
-	return nil, nil
-}
-
-//@todo
 func (bc LightChain) GetCurrentState() (*state.Statedb, error) {
 	return nil, nil
 }

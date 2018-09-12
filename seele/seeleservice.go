@@ -23,6 +23,7 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
 	"github.com/seeleteam/go-seele/seele/download"
+	"github.com/seeleteam/go-seele/api"
 )
 
 const chainHeaderChangeBuffSize = 100
@@ -239,6 +240,7 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
+	apis = append(apis, api.GetAPIs(s)...)
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",
