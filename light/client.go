@@ -9,6 +9,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -30,6 +31,7 @@ type ServiceClient struct {
 	txPool  *txPool
 	chain   *LightChain
 	lightDB database.Database // database used to store blocks and account state.
+	debtPool *core.DebtPool
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -75,6 +77,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("failed to init chain in NewServiceClient. %s", err)
 		return nil, err
 	}
+	//@todo s.debtPool = core.NewDebtPool(s.chain)
 
 	s.txPool = newTxPool(s.chain, s.odrBackend)
 
@@ -114,6 +117,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	// todo
-	return
+	return append(apis, api.GetAPIs(s)...)
 }

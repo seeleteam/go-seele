@@ -14,7 +14,21 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/seeleteam/go-seele/node"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/core"
 )
+
+func getTmpConfig() *node.Config {
+	acctAddr := crypto.MustGenerateRandomAddress()
+
+	return &node.Config{
+		SeeleConfig: node.SeeleConfig{
+			TxConf:   *core.DefaultTxPoolConfig(),
+			Coinbase: *acctAddr,
+		},
+	}
+}
 
 func newTestSeeleService() *SeeleService {
 	conf := getTmpConfig()
@@ -71,11 +85,13 @@ func Test_SeeleService_APIs(t *testing.T) {
 	s := newTestSeeleService()
 	apis := s.APIs()
 
-	assert.Equal(t, len(apis), 6)
+	assert.Equal(t, len(apis), 8)
 	assert.Equal(t, apis[0].Namespace, "seele")
 	assert.Equal(t, apis[1].Namespace, "txpool")
-	assert.Equal(t, apis[2].Namespace, "download")
-	assert.Equal(t, apis[3].Namespace, "network")
-	assert.Equal(t, apis[4].Namespace, "debug")
-	assert.Equal(t, apis[5].Namespace, "miner")
+	assert.Equal(t, apis[2].Namespace, "network")
+	assert.Equal(t, apis[3].Namespace, "debug")
+	assert.Equal(t, apis[4].Namespace, "seele")
+	assert.Equal(t, apis[5].Namespace, "download")
+	assert.Equal(t, apis[6].Namespace, "debug")
+	assert.Equal(t, apis[7].Namespace, "miner")
 }

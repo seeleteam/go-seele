@@ -56,10 +56,6 @@ func (bc *LightChain) CurrentBlock() *types.Block {
 	return nil
 }
 
-func (bc *LightChain) GetCurrentState() (*state.Statedb, error) {
-	return nil, nil
-}
-
 func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
 	return nil, nil
 }
@@ -102,4 +98,9 @@ func (bc *LightChain) WriteHeader(header *types.BlockHeader) error {
 	}
 
 	return nil
+}
+
+//@todo
+func (bc LightChain) GetCurrentState() (*state.Statedb, error) {
+	return nil, nil
 }

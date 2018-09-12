@@ -60,7 +60,6 @@ func (s *ServiceServer) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceServer) APIs() (apis []rpc.API) {
-	//todo
 	return
 }
 
