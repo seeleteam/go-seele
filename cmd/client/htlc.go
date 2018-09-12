@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/contract/system"
@@ -21,11 +20,6 @@ import (
 
 // createHTLC create HTLC
 func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
-	key, txd, err := makeTransactionData(client)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	hashLockBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
@@ -34,15 +28,18 @@ func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 	var data system.HashTimeLock
 	data.HashLock = hashLockBytes
 	data.TimeLock = timeLockValue
-	data.To = txd.To
+	toAddr, err := common.HexToAddress(toValue)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data.To = toAddr
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txd.Payload = append([]byte{system.CmdNewContract}, dataBytes...)
-	txd.To = system.HashTimeLockContractAddress
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := sendSystemContractTx(client, system.HashTimeLockContractAddress, system.CmdNewContract, dataBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,11 +54,6 @@ func createHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 // withdraw obtain seele from transaction
 func withdraw(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-	key, txd, err := makeTransactionData(client)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	txHashBytes, err := common.HexToHash(hashValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to convert Hex to Hash %s", err)
@@ -80,9 +72,7 @@ func withdraw(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, err
 	}
 
-	txd.To = system.HashTimeLockContractAddress
-	txd.Payload = append([]byte{system.CmdWithdraw}, dataBytes...)
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := sendSystemContractTx(client, system.HashTimeLockContractAddress, system.CmdWithdraw, dataBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,19 +87,12 @@ func withdraw(client *rpc.Client) (interface{}, interface{}, error) {
 // refund used to refund seele from HTLC
 func refund(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-	key, txd, err := makeTransactionData(client)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	txHashBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
-	txd.To = system.HashTimeLockContractAddress
-	txd.Payload = append([]byte{system.CmdRefund}, txHashBytes...)
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := sendSystemContractTx(client, system.HashTimeLockContractAddress, system.CmdRefund, txHashBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -123,19 +106,12 @@ func refund(client *rpc.Client) (interface{}, interface{}, error) {
 // getHTLC used to get HTLC
 func getHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-	key, txd, err := makeTransactionData(client)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	txHashBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
 	}
 
-	txd.To = system.HashTimeLockContractAddress
-	txd.Payload = append([]byte{system.CmdGetContract}, txHashBytes...)
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := sendSystemContractTx(client, system.HashTimeLockContractAddress, system.CmdGetContract, txHashBytes)
 	if err != nil {
 		return nil, nil, err
 	}

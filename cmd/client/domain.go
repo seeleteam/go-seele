@@ -6,22 +6,23 @@
 package main
 
 import (
-	"github.com/seeleteam/go-seele/cmd/util"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/contract/system"
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc2"
 )
 
 // createDomainName create a domain name
 func createDomainName(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
-
 	if err := system.ValidateDomainName([]byte(domainNameValue)); err != nil {
 		return nil, nil, err
 	}
 
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdCreateDomainName, []byte(domainNameValue))
+	tx, err := sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdCreateDomainName, []byte(domainNameValue))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return tx, tx, err
 }
 
 // getDomainNameOwner get domain name owner
@@ -32,24 +33,10 @@ func getDomainNameOwner(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, err
 	}
 
-	return sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdGetDomainNameOwner, []byte(domainNameValue))
-}
-
-// sendSystemContractTx send system contract transaction
-func sendSystemContractTx(client *rpc.Client, to common.Address, method byte, payload []byte) (map[string]interface{}, *types.Transaction, error) {
-	key, txd, err := makeTransactionData(client)
+	tx, err := sendSystemContractTx(client, system.DomainNameContractAddress, system.CmdGetDomainNameOwner, []byte(domainNameValue))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txd.To = to
-	txd.Payload = append([]byte{method}, payload...)
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	output := make(map[string]interface{})
-	output["Tx"] = *tx
-	return output, tx, err
+	return tx, tx, err
 }
