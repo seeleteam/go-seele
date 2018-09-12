@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
