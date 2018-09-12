@@ -64,9 +64,9 @@ func Test_RequiredGas(t *testing.T) {
 	gas := c.RequiredGas(nil)
 	assert.Equal(t, gas, gasInvalidCommand)
 
-	// CmdRegisterDomainName is valid command
-	gas = c.RequiredGas([]byte{CmdRegisterDomainName})
-	assert.Equal(t, gas, gasRegisterDomainName)
+	// CmdCreateDomainName is valid command
+	gas = c.RequiredGas([]byte{CmdCreateDomainName})
+	assert.Equal(t, gas, gasCreateDomainName)
 
 	// byte(123) is invalid command
 	gas = c.RequiredGas([]byte{byte(123)})
@@ -87,14 +87,14 @@ func Test_Run(t *testing.T) {
 
 	context := newTestContext(db, DomainNameContractAddress)
 
-	// input inclues CmdRegisterDomainName command, but not domain name
-	arrayByte, err = c.Run([]byte{CmdRegisterDomainName}, context)
+	// input inclues CmdCreateDomainName command, but not domain name
+	arrayByte, err = c.Run([]byte{CmdCreateDomainName}, context)
 	assert.Equal(t, err != nil, true)
 	assert.Equal(t, arrayByte == nil, true)
 
-	arrayByte, err = c.Run([]byte{CmdRegisterDomainName, byte(1), byte(2)}, context)
+	arrayByte, err = c.Run([]byte{CmdCreateDomainName, byte(1), byte(2)}, context)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, arrayByte == nil, true)
+	assert.Equal(t, arrayByte, context.tx.Data.From.Bytes())
 
 	// byte(123) is invalid command
 	arrayByte, err = c.Run([]byte{byte(123)}, context)
