@@ -55,9 +55,9 @@ func Test_Process_EVM(t *testing.T) {
 func Test_Process_SysContract(t *testing.T) {
 	// CreateDomainName
 	ctx, _ := newTestContext(big.NewInt(0))
-	byteC, testBytes := []byte{0}, []byte("seele.fan")
-	ctx.Tx.Data.Payload = append(byteC, testBytes...) // 0x007365656c652e66616e
-	ctx.Tx.Data.To = system.DomainNameContractAddress // 0x0000000000000000000000000000000000000101
+	testBytes := []byte("seele.fan")
+	ctx.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
+	ctx.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 
 	receipt, err := Process(ctx)
 	assert.Equal(t, nil, err)
@@ -68,10 +68,9 @@ func Test_Process_SysContract(t *testing.T) {
 	assert.Equal(t, receipt.UsedGas, gasCreateDomainName)
 	assert.Equal(t, new(big.Int).SetUint64(receipt.TotalFee), new(big.Int).Add(usedGasFee(gasCreateDomainName), ctx.Tx.Data.Fee))
 
-	// DomainNameCreator
+	// DomainNameOwner
 	ctx1 := ctx
-	byteD := []byte{1}
-	ctx1.Tx.Data.Payload = append(byteD, testBytes...) // 0x017365656c652e66616e
+	ctx1.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner}, testBytes...) // 0x017365656c652e66616e
 
 	receipt1, err1 := Process(ctx1)
 	assert.Equal(t, nil, err1)
@@ -84,15 +83,18 @@ func Test_Process_SysContract(t *testing.T) {
 
 	// Do not transfer the amount of the run error
 	ctx2 := ctx1
-	ctx2.Tx.Data.Payload = append(byteC, testBytes...) // 0x007365656c652e66616e
+	ctx2.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner + 1}, testBytes...) // 0x007365656c652e66616e
 	ctx2.Tx.Data.Amount = big.NewInt(7)
 
-	oriBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	fromOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	toOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
 	receipt2, err2 := Process(ctx2)
-	curBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	fromCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	toCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
 	assert.Equal(t, nil, err2)
 	assert.Equal(t, true, receipt2.Failed)
-	assert.Equal(t, curBalance.Add(curBalance, new(big.Int).SetUint64(receipt2.TotalFee)), oriBalance)
+	assert.Equal(t, fromCurrentBalance.Add(fromCurrentBalance, new(big.Int).SetUint64(receipt2.TotalFee)), fromOriginalBalance)
+	assert.Equal(t, toOriginalBalance, toCurrentBalance)
 }
 
 func Test_Process_ErrInsufficientBalance(t *testing.T) {
