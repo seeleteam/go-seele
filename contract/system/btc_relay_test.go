@@ -111,7 +111,7 @@ func Test_storeBlockHeader(t *testing.T) {
 	req, _ := newTestRelayRequest(t)
 	req.PreviousBlockHex = req.BlockHeaderHex
 	req.BlockHeaderHex = crypto.MustGenerateRandomAddress().ToHex()
-	req.Txs = []string{crypto.MustGenerateRandomAddress().ToHex()}
+	req.TxHexs = []string{crypto.MustGenerateRandomAddress().ToHex()}
 	req.Height++
 	reqBytes, err := json.Marshal(req)
 	assert.NoError(t, err)
@@ -127,7 +127,7 @@ func Test_storeBlockHeader(t *testing.T) {
 	assert.Equal(t, req.BlockHeaderHex, block.BlockHeaderHex)
 	assert.Equal(t, req.Height, block.Height)
 	assert.Equal(t, req.PreviousBlockHex, block.PreviousBlockHex)
-	assert.Equal(t, req.Txs, block.Txs)
+	assert.Equal(t, req.TxHexs, block.TxHexs)
 
 	// invalid request
 	ok2, err2 := storeBlockHeader([]byte{0, 1, 2, 3}, ctx)
@@ -191,7 +191,7 @@ func newTestRelayContext(t *testing.T) *Context {
 	for height := uint64(0); height < 10; height++ {
 		req.PreviousBlockHex = req.BlockHeaderHex
 		req.BlockHeaderHex = crypto.MustGenerateRandomAddress().ToHex()
-		req.Txs = []string{crypto.MustGenerateRandomAddress().ToHex()}
+		req.TxHexs = []string{crypto.MustGenerateRandomAddress().ToHex()}
 		req.Height = height
 		reqBytes, _ := json.Marshal(req)
 		storeBlockHeader(reqBytes, ctx)
@@ -206,7 +206,7 @@ func newTestRelayRequest(t *testing.T) (*RelayRequest, []byte) {
 			BlockHeaderHex:   "0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206",
 			Height:           10,
 			PreviousBlockHex: "0x2a53daccb2587168ee58e385e7ba274de1ae37c5d21b6b709a81d019fa2a65b4",
-			Txs:              []string{"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"},
+			TxHexs:           []string{"0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"},
 		},
 		TxHex:        "0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
 		RelayAddress: common.EmptyAddress,

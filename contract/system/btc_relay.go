@@ -25,12 +25,14 @@ const (
 	CmdGetBlockHeader
 )
 
+const btcConfirm = 6
+
 var (
 	brCommands = map[byte]*cmdInfo{
-		CmdVerifyTx:         &cmdInfo{100, verifyTx},
-		CmdRelayTx:          &cmdInfo{500, relayTx},
-		CmdStoreBlockHeader: &cmdInfo{0, storeBlockHeader},
-		CmdGetBlockHeader:   &cmdInfo{20, getBlockHeader},
+		CmdVerifyTx:         &cmdInfo{1000, verifyTx},
+		CmdRelayTx:          &cmdInfo{3000, relayTx},
+		CmdStoreBlockHeader: &cmdInfo{10000, storeBlockHeader},
+		CmdGetBlockHeader:   &cmdInfo{200, getBlockHeader},
 	}
 
 	// function result
@@ -49,12 +51,12 @@ type BTCBlock struct {
 	BlockHeaderHex   string
 	Height           uint64
 	PreviousBlockHex string
-	Txs              []string
+	TxHexs           []string
 	Relayer          common.Address
 }
 
 func (b *BTCBlock) String() string {
-	return fmt.Sprintf("Block[BlockHeaderHex=%v, Height=%v, PreviousBlockHex=%v, Txs=%v]", b.BlockHeaderHex, b.Height, b.PreviousBlockHex, b.Txs)
+	return fmt.Sprintf("Block[BlockHeaderHex=%v, Height=%v, PreviousBlockHex=%v, TxHexs=%v]", b.BlockHeaderHex, b.Height, b.PreviousBlockHex, b.TxHexs)
 }
 
 // RelayRequest is a request structure using btc-relay
@@ -90,7 +92,7 @@ func verifyTx(request []byte, ctx *Context) ([]byte, error) {
 		return failure, nil
 	}
 
-	if preBlockHeight < 6 || btcBlock.Height < preBlockHeight-6 {
+	if preBlockHeight < btcConfirm || btcBlock.Height < preBlockHeight-btcConfirm {
 		return failure, fmt.Errorf("Confirmation need more than 6, latestHeight[%d], queryHeight[%d]", preBlockHeight, btcBlock.Height)
 	}
 
@@ -98,8 +100,8 @@ func verifyTx(request []byte, ctx *Context) ([]byte, error) {
 	ctx.statedb.AddBalance(btcBlock.Relayer, amount)
 	ctx.statedb.SubBalance(BTCRelayContractAddress, amount)
 
-	for _, tx := range btcBlock.Txs {
-		if relayRequest.TxHex == tx {
+	for _, txHex := range btcBlock.TxHexs {
+		if relayRequest.TxHex == txHex {
 			return success, nil
 		}
 	}
