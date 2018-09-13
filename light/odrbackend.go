@@ -84,7 +84,7 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 }
 
 func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
-	peerL := o.peers.choosePeers()
+	peerL := o.peers.choosePeers(common.LocalShardNumber)
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}

@@ -5,18 +5,28 @@
 
 package light
 
+import "errors"
+
 const (
 	blockRequestCode  = uint16(10)
 	blockResponseCode = uint16(11)
+	addTxRequestCode  = uint16(12)
+	addTxResponseCode = uint16(13)
+	trieRequestCode   = uint16(14)
+	trieResponseCode  = uint16(15)
 )
 
 var (
 	odrRequestFactories = map[uint16]func() odrRequest{
 		blockRequestCode: func() odrRequest { return &odrBlock{} },
+		addTxRequestCode: func() odrRequest { return &odrAddTx{} },
+		trieRequestCode:  func() odrRequest { return &odrTrie{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
 		blockResponseCode: func() odrResponse { return &odrBlock{} },
+		addTxResponseCode: func() odrResponse { return &odrAddTx{} },
+		trieResponseCode:  func() odrResponse { return &odrTrie{} },
 	}
 )
 
@@ -29,10 +39,12 @@ type odrRequest interface {
 
 type odrResponse interface {
 	getRequestID() uint32 // get the random request ID.
+	getError() error      // get the response error if any.
 }
 
 type odrItem struct {
-	ReqID uint32
+	ReqID uint32 // random request ID that generated dynamically
+	Error string // response error
 }
 
 func (item *odrItem) getRequestID() uint32 {
@@ -41,4 +53,12 @@ func (item *odrItem) getRequestID() uint32 {
 
 func (item *odrItem) setRequestID(requestID uint32) {
 	item.ReqID = requestID
+}
+
+func (item *odrItem) getError() error {
+	if len(item.Error) == 0 {
+		return nil
+	}
+
+	return errors.New(item.Error)
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -21,7 +22,7 @@ import (
 )
 
 func Test_Process_EVM(t *testing.T) {
-	ctx, err := newTestContext(t, big.NewInt(0))
+	ctx, err := newTestContext(big.NewInt(0))
 	assert.Equal(t, err, nil)
 
 	receipt, err := Process(ctx)
@@ -51,12 +52,12 @@ func Test_Process_EVM(t *testing.T) {
 	assert.Equal(t, logs, receipt.Logs)
 }
 
-func Test_Porcess_SysContract(t *testing.T) {
+func Test_Process_SysContract(t *testing.T) {
 	// CreateDomainName
-	ctx, _ := newTestContext(t, big.NewInt(0))
-	byteD := []byte{0}
-	ctx.Tx.Data.Payload = append(byteD, []byte("seele.fan")...) // 0x007365656c652e66616e
-	ctx.Tx.Data.To = common.BytesToAddress([]byte{1, 1})        // 0x0000000000000000000000000000000000000101
+	ctx, _ := newTestContext(big.NewInt(0))
+	testBytes := []byte("seele.fan")
+	ctx.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
+	ctx.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 
 	receipt, err := Process(ctx)
 	assert.Equal(t, nil, err)
@@ -67,10 +68,9 @@ func Test_Porcess_SysContract(t *testing.T) {
 	assert.Equal(t, receipt.UsedGas, gasCreateDomainName)
 	assert.Equal(t, new(big.Int).SetUint64(receipt.TotalFee), new(big.Int).Add(usedGasFee(gasCreateDomainName), ctx.Tx.Data.Fee))
 
-	// DomainNameCreator
+	// DomainNameOwner
 	ctx1 := ctx
-	byteD = []byte{1}
-	ctx1.Tx.Data.Payload = append(byteD, []byte("seele.fan")...) // 0x017365656c652e66616e
+	ctx1.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner}, testBytes...) // 0x017365656c652e66616e
 
 	receipt1, err1 := Process(ctx1)
 	assert.Equal(t, nil, err1)
@@ -80,17 +80,32 @@ func Test_Porcess_SysContract(t *testing.T) {
 	gasDomainNameCreator := uint64(100000) // gas used to query the creator of given domain name
 	assert.Equal(t, receipt1.UsedGas, gasDomainNameCreator)
 	assert.Equal(t, new(big.Int).SetUint64(receipt1.TotalFee), new(big.Int).Add(usedGasFee(gasDomainNameCreator), ctx1.Tx.Data.Fee))
+
+	// Do not transfer the amount of the run error
+	ctx2 := ctx1
+	ctx2.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner + 1}, testBytes...) // 0x007365656c652e66616e
+	ctx2.Tx.Data.Amount = big.NewInt(7)
+
+	fromOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	toOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
+	receipt2, err2 := Process(ctx2)
+	fromCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
+	toCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
+	assert.Equal(t, nil, err2)
+	assert.Equal(t, true, receipt2.Failed)
+	assert.Equal(t, fromCurrentBalance.Add(fromCurrentBalance, new(big.Int).SetUint64(receipt2.TotalFee)), fromOriginalBalance)
+	assert.Equal(t, toOriginalBalance, toCurrentBalance)
 }
 
 func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	// get the tx total fee
-	ctx, _ := newTestContext(t, big.NewInt(1))
+	ctx, _ := newTestContext(big.NewInt(1))
 	receipt, err := Process(ctx)
 	assert.Equal(t, err, nil)
 	totalFee := receipt.TotalFee
 
 	// cannot apply the tx
-	ctx1, _ := newTestContext(t, big.NewInt(1))
+	ctx1, _ := newTestContext(big.NewInt(1))
 	balanceF1 := big.NewInt(0)
 	ctx1.Statedb.SetBalance(ctx1.Tx.Data.From, balanceF1)
 	receipt1, err1 := Process(ctx1)
@@ -98,7 +113,7 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	assert.Empty(t, receipt1)
 
 	// can apply the tx but not enough fee
-	ctx2, _ := newTestContext(t, big.NewInt(1))
+	ctx2, _ := newTestContext(big.NewInt(1))
 	balanceF2 := big.NewInt(0).Sub(big.NewInt(0).SetUint64(totalFee), ctx2.Tx.Data.Fee)
 	ctx2.Statedb.SetBalance(ctx2.Tx.Data.From, balanceF2)
 	receipt2, err2 := Process(ctx2)
@@ -170,7 +185,7 @@ func newTestBlockHeader(coinbase common.Address) *types.BlockHeader {
 
 var fromBalance = uint64(1000 * common.SeeleToFan.Uint64())
 
-func newTestContext(t *testing.T, amount *big.Int) (*Context, error) {
+func newTestContext(amount *big.Int) (*Context, error) {
 	statedb, bcStore, address, dispose := preprocessContract(fromBalance, 38)
 	defer dispose()
 
@@ -191,7 +206,7 @@ func newTestContext(t *testing.T, amount *big.Int) (*Context, error) {
 }
 
 func Benchmark_CreateContract_EVM(b *testing.B) {
-	ctx, _ := newTestContext(nil, big.NewInt(0))
+	ctx, _ := newTestContext(big.NewInt(0))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -200,7 +215,7 @@ func Benchmark_CreateContract_EVM(b *testing.B) {
 }
 
 func Benchmark_CallContract_EVM(b *testing.B) {
-	ctx, _ := newTestContext(nil, big.NewInt(0))
+	ctx, _ := newTestContext(big.NewInt(0))
 	receipt, _ := Process(ctx)
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
 

@@ -84,37 +84,75 @@ func main() {
 			{
 				Name:   "create",
 				Usage:  "create HTLC",
-				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag, hashFlag, timeLockFlag),
+				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, nonceFlag, hashFlag, timeLockFlag),
 				Action: rpcActionSystemContract("htlc", "create", handleCallResult),
 			},
 			{
 				Name:   "withdraw",
 				Usage:  "withdraw from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag, preimageFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag, preimageFlag),
 				Action: rpcActionSystemContract("htlc", "withdraw", handleCallResult),
 			},
 			{
 				Name:   "refund",
 				Usage:  "refund from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "refund", handleCallResult),
 			},
 			{
 				Name:   "get",
 				Usage:  "get HTLC information",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
+			},
+			{
+				Name:  "decode",
+				Usage: "decode HTLC contract information",
+				Flags: []cli.Flag{
+					payloadFlag,
+				},
+				Action: decodeHTLC,
 			},
 			{
 				Name:   "key",
 				Usage:  "generate preimage key and key hash",
 				Action: generateHTLCKey,
 			},
+			{
+				Name:  "time",
+				Usage: "generate unix timestamp",
+				Flags: []cli.Flag{
+					timeLockFlag,
+				},
+				Action: generateHTLCTime,
+			},
 		},
 	}
 
 	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
+
+	domainCommands := cli.Command{
+		Name:  "domain",
+		Usage: "system domain name commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "register",
+				Usage:  "register a domain name",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "create", handleCallResult),
+			},
+			{
+				Name:   "owner",
+				Usage:  "get the domain name owner",
+				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(domainCommands.Flags))
 
 	p2pCommands := cli.Command{
 		Name:  "p2p",
@@ -154,6 +192,7 @@ func main() {
 		htlcCommands,
 		minerCommands,
 		p2pCommands,
+		domainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",

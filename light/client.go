@@ -9,6 +9,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -17,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // ServiceClient implements service for light mode.
@@ -27,14 +29,10 @@ type ServiceClient struct {
 	log           *log.SeeleLog
 	odrBackend    *odrBackend
 
-	txPool  *LightPool
-	chain   *LightChain
-	lightDB database.Database // database used to store blocks and account state.
-}
-
-// ServiceContext is a collection of service configuration inherited from node
-type ServiceContext struct {
-	DataDir string
+	txPool   *txPool
+	chain    *LightChain
+	lightDB  database.Database // database used to store blocks and account state.
+	debtPool *core.DebtPool
 }
 
 // NewServiceClient create ServiceClient
@@ -44,7 +42,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		networkID: conf.P2PConfig.NetworkID,
 	}
 
-	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
 	// Initialize blockchain DB.
 	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
 	log.Info("NewServiceClient BlockChain datadir is %s", chainDBPath)
@@ -53,7 +51,6 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("NewServiceClient Create lightDB err. %s", err)
 		return nil, err
 	}
-	leveldb.StartMetrics(s.lightDB, "lightDB", log)
 
 	s.odrBackend = newOdrBackend(log)
 	// initialize and validate genesis
@@ -75,14 +72,9 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("failed to init chain in NewServiceClient. %s", err)
 		return nil, err
 	}
+	//@todo s.debtPool = core.NewDebtPool(s.chain)
 
-	s.txPool, err = newLightPool(s.chain, s.odrBackend)
-	if err != nil {
-		s.lightDB.Close()
-		s.odrBackend.close()
-		log.Error("failed to create transaction pool in NewServiceClient, %s", err)
-		return nil, err
-	}
+	s.txPool = newTxPool(s.chain, s.odrBackend)
 
 	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, true, s.odrBackend, log)
 	if err != nil {
@@ -93,6 +85,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	}
 
 	s.odrBackend.start(s.seeleProtocol.peerSet)
+	log.Info("Light mode started.")
 	return s, nil
 }
 
@@ -120,6 +113,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	// todo
-	return
+	return append(apis, api.GetAPIs(s)...)
 }

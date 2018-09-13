@@ -12,11 +12,17 @@ import (
 )
 
 const (
-	gasCreateDomainName  = uint64(50000)  // gas used to create a domain name
-	gasDomainNameCreator = uint64(100000) // gas used to query the creator of given domain name
+	// CmdCreateDomainName create a domain
+	CmdCreateDomainName byte = iota
+	// CmdGetDomainNameOwner query the registrar of specified domain name
+	CmdGetDomainNameOwner
+)
 
-	cmdCreateDomainName  = byte(0) // create a domain name
-	cmdDomainNameCreator = byte(1) // query the creator of specified domain name
+const (
+	// gas used to create a domain name
+	gasCreateDomainName = uint64(50000)
+	// gas used to get the owner of given domain
+	gasGetDomainNameOwner = uint64(100000)
 )
 
 var (
@@ -26,11 +32,12 @@ var (
 	maxDomainNameLength = len(common.EmptyHash)
 
 	domainNameCommands = map[byte]*cmdInfo{
-		cmdCreateDomainName:  &cmdInfo{gasCreateDomainName, createDomainName},
-		cmdDomainNameCreator: &cmdInfo{gasDomainNameCreator, domainNameCreator},
+		CmdCreateDomainName:   &cmdInfo{gasCreateDomainName, createDomainName},
+		CmdGetDomainNameOwner: &cmdInfo{gasGetDomainNameOwner, getDomainNameOwner},
 	}
 )
 
+// createDomainName create a domain name
 func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
 	if err != nil {
@@ -49,28 +56,45 @@ func createDomainName(domainName []byte, context *Context) ([]byte, error) {
 	value := context.tx.Data.From.Bytes()
 	context.statedb.SetData(DomainNameContractAddress, key, value)
 
-	return nil, nil
+	return value, nil
 }
 
-func domainNameToKey(domainName []byte) (common.Hash, error) {
-	nameLen := len(domainName)
-
-	if nameLen == 0 {
-		return common.EmptyHash, errNameEmpty
-	}
-
-	if nameLen > maxDomainNameLength {
-		return common.EmptyHash, errNameTooLong
-	}
-
-	return common.BytesToHash(domainName), nil
-}
-
-func domainNameCreator(domainName []byte, context *Context) ([]byte, error) {
+// getDomainNameOwner get domain name owner
+func getDomainNameOwner(domainName []byte, context *Context) ([]byte, error) {
 	key, err := domainNameToKey(domainName)
 	if err != nil {
 		return nil, err
 	}
 
-	return context.statedb.GetData(DomainNameContractAddress, key), nil
+	databytes := context.statedb.GetData(DomainNameContractAddress, key)
+	if databytes == nil {
+		return nil, errNotFound
+	}
+
+	return databytes, nil
+}
+
+// ValidateDomainName validate domain name
+func ValidateDomainName(domainName []byte) error {
+	nameLen := len(domainName)
+
+	if nameLen == 0 {
+		return errNameEmpty
+	}
+
+	if nameLen > maxDomainNameLength {
+		return errNameTooLong
+	}
+
+	return nil
+}
+
+// domainNameToKey convert domain name to hash
+func domainNameToKey(domainName []byte) (common.Hash, error) {
+	err := ValidateDomainName(domainName)
+	if err != nil {
+		return common.EmptyHash, err
+	}
+
+	return common.BytesToHash(domainName), nil
 }

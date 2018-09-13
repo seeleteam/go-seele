@@ -19,9 +19,21 @@ var (
 	stateBalance0 = big.NewInt(0)
 )
 
+// Trie is used for statedb to store key-value pairs.
+// For full node, it's MPT based on levelDB.
+// For light node, it's a ODR trie with limited functions.
+type Trie interface {
+	Hash() common.Hash
+	Commit(batch database.Batch) common.Hash
+	Get(key []byte) ([]byte, bool)
+	Put(key, value []byte) error
+	DeletePrefix(prefix []byte) bool
+	GetProof(key []byte) (map[string][]byte, error)
+}
+
 // Statedb is used to store accounts into the MPT tree
 type Statedb struct {
-	trie         *trie.Trie
+	trie         Trie
 	stateObjects map[common.Address]*stateObject
 
 	dbErr  error  // dbErr is used for record the database error.
@@ -42,35 +54,16 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 		return nil, err
 	}
 
+	return NewStatedbWithTrie(trie), nil
+}
+
+// NewStatedbWithTrie creates a statedb instance with specified trie.
+func NewStatedbWithTrie(trie Trie) *Statedb {
 	return &Statedb{
 		trie:         trie,
 		stateObjects: make(map[common.Address]*stateObject),
 		curJournal:   newJournal(),
-	}, nil
-}
-
-// GetCopy is a memory copy of state db.
-func (s *Statedb) GetCopy() (*Statedb, error) {
-	copyObjecsFunc := func(src map[common.Address]*stateObject) map[common.Address]*stateObject {
-		dest := make(map[common.Address]*stateObject)
-		for k, v := range src {
-			dest[k] = v
-		}
-		return dest
 	}
-
-	cpyTrie, err := s.trie.ShallowCopy()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Statedb{
-		trie:         cpyTrie,
-		stateObjects: copyObjecsFunc(s.stateObjects),
-
-		dbErr:  s.dbErr,
-		refund: s.refund,
-	}, nil
 }
 
 // setError only records the first error.
@@ -344,4 +337,9 @@ func (s *Statedb) AddRefund(gas uint64) {
 // GetRefund returns the current value of the refund counter.
 func (s *Statedb) GetRefund() uint64 {
 	return s.refund
+}
+
+// Trie retrieves the low level trie of statedb to support low level trie ops.
+func (s *Statedb) Trie() Trie {
+	return s.trie
 }

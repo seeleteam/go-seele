@@ -10,11 +10,11 @@ import (
 	"math/big"
 	"strings"
 
+	api2"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -31,27 +31,25 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
-// MinerInfo miner simple info
-type MinerInfo struct {
-	Coinbase           common.Address
-	CurrentBlockHeight uint64
-	HeaderHash         common.Hash
-	Shard              uint
-	MinerStatus        string
-	MinerThread        int
-}
+// GetInfo gets the account address that mining rewards will be send to.
+func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
+	block := api.s.ChainBackend().CurrentBlock()
 
-// GetBalanceResponse response param for GetBalance api
-type GetBalanceResponse struct {
-	Account common.Address
-	Balance *big.Int
-}
+	var status string
+	if api.s.IsMining() {
+		status = "Running"
+	} else {
+		status = "Stopped"
+	}
 
-// GetLogsResponse response param for GetLogs api
-type GetLogsResponse struct {
-	Txhash   common.Hash
-	LogIndex uint
-	Log      *types.Log
+	return api2.GetMinerInfo{
+		Coinbase:           api.s.GetMinerCoinbase(),
+		CurrentBlockHeight: block.Header.Height,
+		HeaderHash:         block.HeaderHash,
+		Shard:              common.LocalShardNumber,
+		MinerStatus:        status,
+		MinerThread:        api.s.miner.GetThreads(),
+	}, nil
 }
 
 // Call is to execute a given transaction on a statedb of a given block height.
@@ -105,44 +103,6 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 	return result, nil
 }
 
-// GetInfo gets the account address that mining rewards will be send to.
-func (api *PublicSeeleAPI) GetInfo() (MinerInfo, error) {
-	block := api.s.chain.CurrentBlock()
-
-	var status string
-	if api.s.miner.IsMining() {
-		status = "Running"
-	} else {
-		status = "Stopped"
-	}
-
-	return MinerInfo{
-		Coinbase:           api.s.miner.GetCoinbase(),
-		CurrentBlockHeight: block.Header.Height,
-		HeaderHash:         block.HeaderHash,
-		Shard:              common.LocalShardNumber,
-		MinerStatus:        status,
-		MinerThread:        api.s.miner.GetThreads(),
-	}, nil
-}
-
-// GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
-func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
-	if account.Equal(common.EmptyAddress) {
-		account = api.s.Miner().GetCoinbase()
-	}
-
-	state, err := api.s.chain.GetCurrentState()
-	if err != nil {
-		return nil, err
-	}
-
-	return &GetBalanceResponse{
-		Account: account,
-		Balance: state.GetBalance(account),
-	}, nil
-}
-
 // AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	shard := tx.Data.From.Shard()
@@ -162,96 +122,8 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	return true, nil
 }
 
-// GetAccountNonce get account next used nonce
-func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
-	if account.Equal(common.EmptyAddress) {
-		account = api.s.Miner().GetCoinbase()
-	}
-
-	state, err := api.s.chain.GetCurrentState()
-	if err != nil {
-		return 0, err
-	}
-
-	return state.GetNonce(account), nil
-}
-
-// GetBlockHeight get the block height of the chain head
-func (api *PublicSeeleAPI) GetBlockHeight() (uint64, error) {
-	block := api.s.chain.CurrentBlock()
-	return block.Header.Height, nil
-}
-
-// GetBlock returns the requested block.
-func (api *PublicSeeleAPI) GetBlock(hashHex string, height int64, fulltx bool) (map[string]interface{}, error) {
-	if len(hashHex) > 0 {
-		return api.GetBlockByHash(hashHex, fulltx)
-	}
-
-	return api.GetBlockByHeight(height, fulltx)
-}
-
-// GetBlockByHeight returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
-// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
-	block, err := getBlock(api.s.chain, height)
-	if err != nil {
-		return nil, err
-	}
-
-	return rpcOutputBlock(block, fulltx, api.s.chain.GetStore())
-}
-
-// GetBlocks returns the size of requested block. When the blockNr is -1 the chain head is returned.
-//When the size is greater than 64, the size will be set to 64.When it's -1 that the blockNr minus size, the blocks in 64 is returned.
-// When fullTx is true all transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]map[string]interface{}, error) {
-	blocks := make([]types.Block, 0)
-	if height < 0 {
-		block := api.s.chain.CurrentBlock()
-		blocks = append(blocks, *block)
-	} else {
-		if size > maxSizeLimit {
-			size = maxSizeLimit
-		}
-
-		if height+1-int64(size) < 0 {
-			size = uint(height + 1)
-		}
-
-		for i := uint(0); i < size; i++ {
-			var block *types.Block
-			block, err := getBlock(api.s.chain, height-int64(i))
-			if err != nil {
-				return nil, err
-			}
-			blocks = append(blocks, *block)
-		}
-	}
-
-	return rpcOutputBlocks(blocks, fulltx, api.s.chain.GetStore())
-}
-
-// GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
-// detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(hashHex)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := common.BytesToHash(hashByte)
-	block, err := store.GetBlock(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return rpcOutputBlock(block, fulltx, store)
-}
-
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
-func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]GetLogsResponse, error) {
+func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]api2.GetLogsResponse, error) {
 	// Check input parameters
 	contractAddress, err := common.HexToAddress(contract)
 	if err != nil {
@@ -275,7 +147,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 		return nil, err
 	}
 
-	logs := make([]GetLogsResponse, 0)
+	logs := make([]api2.GetLogsResponse, 0)
 	for _, receipt := range receipts {
 		for logIndex, log := range receipt.Logs {
 			// Matches contract address
@@ -289,7 +161,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 				continue
 			}
 
-			logs = append(logs, GetLogsResponse{
+			logs = append(logs, api2.GetLogsResponse{
 				Txhash:   receipt.TxHash,
 				LogIndex: uint(logIndex),
 				Log:      log,
@@ -298,82 +170,6 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 	}
 
 	return logs, nil
-}
-
-// rpcOutputBlock converts the given block to the RPC output which depends on fullTx
-func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (map[string]interface{}, error) {
-	head := b.Header
-	fields := map[string]interface{}{
-		"header": head,
-		"hash":   b.HeaderHash.ToHex(),
-	}
-
-	txs := b.Transactions
-	transactions := make([]interface{}, len(txs))
-	for i, tx := range txs {
-		if fullTx {
-			transactions[i] = PrintableOutputTx(tx)
-		} else {
-			transactions[i] = tx.Hash.ToHex()
-		}
-	}
-	fields["transactions"] = transactions
-
-	totalDifficulty, err := store.GetBlockTotalDifficulty(b.HeaderHash)
-	if err != nil {
-		return nil, err
-	}
-	fields["totalDifficulty"] = totalDifficulty
-
-	debts := types.NewDebts(txs)
-	fields["txDebts"] = getOutputDebts(debts, fullTx)
-	fields["debts"] = getOutputDebts(b.Debts, fullTx)
-
-	return fields, nil
-}
-
-func getOutputDebts(debts []*types.Debt, fullTx bool) []interface{} {
-	outputDebts := make([]interface{}, len(debts))
-	for i, d := range debts {
-		if fullTx {
-			outputDebts[i] = d
-		} else {
-			outputDebts[i] = d.Hash
-		}
-	}
-
-	return outputDebts
-}
-
-func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) ([]map[string]interface{}, error) {
-	fields := make([]map[string]interface{}, 0)
-
-	for i := range b {
-		if field, err := rpcOutputBlock(&b[i], fullTx, store); err == nil {
-			fields = append(fields, field)
-		}
-	}
-	return fields, nil
-}
-
-// PrintableOutputTx converts the given tx to the RPC output
-func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
-	toAddr := ""
-	if !tx.Data.To.IsEmpty() {
-		toAddr = tx.Data.To.ToHex()
-	}
-
-	transaction := map[string]interface{}{
-		"hash":         tx.Hash.ToHex(),
-		"from":         tx.Data.From.ToHex(),
-		"to":           toAddr,
-		"amount":       tx.Data.Amount,
-		"accountNonce": tx.Data.AccountNonce,
-		"payload":      tx.Data.Payload,
-		"timestamp":    tx.Data.Timestamp,
-		"fee":          tx.Data.Fee,
-	}
-	return transaction
 }
 
 // PrintableReceipt converts the given Receipt to the RPC output
@@ -457,7 +253,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 	return outMap, nil
 }
 
-// getBlock returns block by height,when height is -1 the chain head is returned
+// getBlock returns block by height,when height is less than 0 the chain head is returned
 func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 	var block *types.Block
 	if height < 0 {

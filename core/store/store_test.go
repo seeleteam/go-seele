@@ -152,6 +152,7 @@ func Test_blockchainDatabase_Block(t *testing.T) {
 		HeaderHash:   header.Hash(),
 		Header:       header,
 		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
+		Debts:        make([]*types.Debt, 0),
 	}
 
 	bcStore, dispose := newTestBlockchainDatabase()

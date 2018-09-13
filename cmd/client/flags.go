@@ -197,4 +197,11 @@ var (
 		Usage:       "preimage of hash in the HTLC",
 		Destination: &preimageValue,
 	}
+
+	domainNameValue string
+	domainNameFlag  = cli.StringFlag{
+		Name:        "name",
+		Usage:       "domain name",
+		Destination: &domainNameValue,
+	}
 )

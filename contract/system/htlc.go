@@ -6,14 +6,16 @@
 package system
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
 const (
@@ -70,7 +72,7 @@ type htlc struct {
 // HashTimeLock payload information
 type HashTimeLock struct {
 	// HashLock is used to lock amount until provide preimage of hashlock
-	HashLock common.Hash
+	HashLock []byte
 	// TimeLock is used to lock amount a period
 	TimeLock int64
 	// receive address
@@ -100,14 +102,11 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 		return nil, errNotFutureTime
 	}
 
-	tx := *context.tx
-	copyContext := *context
-	copyContext.tx = &tx
 	var data htlc
-	data.Tx = copyContext.tx
-	data.Tx.Data.To = info.To
+	data.Tx = context.tx
 	data.HashLock = info.HashLock
 	data.TimeLock = info.TimeLock
+	data.To = info.To
 	data.Preimage = []byte{}
 	value, err := json.Marshal(data)
 	if err != nil {
@@ -117,7 +116,7 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 	context.statedb.CreateAccount(HashTimeLockContractAddress)
 	context.statedb.SetData(HashTimeLockContractAddress, data.Tx.Hash, value)
 
-	return data.Tx.Hash.Bytes(), nil
+	return value, nil
 }
 
 // withdraw the seele from contract
@@ -151,9 +150,12 @@ func withdraw(jsonWithdraw []byte, context *Context) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
-
+	// update value with key
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
-	context.statedb.AddBalance(info.Tx.Data.To, info.Tx.Data.Amount)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to the sender account
+	context.statedb.AddBalance(info.To, info.Tx.Data.Amount)
 
 	return value, nil
 }
@@ -180,7 +182,11 @@ func refund(bytes []byte, context *Context) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal data into json, %s", err)
 	}
 
+	// update the value with key
 	context.statedb.SetData(HashTimeLockContractAddress, info.Tx.Hash, value)
+	// subtract the amount from the HTLC address
+	context.statedb.SubBalance(context.tx.Data.To, info.Tx.Data.Amount)
+	// add the amount to sender account
 	context.statedb.AddBalance(info.Tx.Data.From, info.Tx.Data.Amount)
 	return value, nil
 }
@@ -220,14 +226,14 @@ func isFutureTimeLock(timelock, now int64) bool {
 }
 
 // check if the preimage hash is equal to the hashLock
-func hashLockMatches(hashLock common.Hash, preimage []byte) bool {
-	hashbytes := crypto.MustHash(preimage)
-	return hashbytes.Equal(hashLock)
+func hashLockMatches(hashLock []byte, preimage []byte) bool {
+	hashbytes := Sha256Hash(preimage)
+	return bytes.Equal(hashLock, hashbytes)
 }
 
 // check if withdraw is available
 func withdrawable(data *htlc, context *Context) error {
-	if !context.tx.Data.From.Equal(data.Tx.Data.To) {
+	if !context.tx.Data.From.Equal(data.To) {
 		return errReceiver
 	}
 
@@ -261,4 +267,25 @@ func refundable(data *htlc, context *Context) error {
 	}
 
 	return nil
+}
+
+// DecodeHTLC decode HTLC information
+func DecodeHTLC(payload string) (interface{}, error) {
+	databytes, err := hexutil.HexToBytes(payload)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to convert hex to bytes, %s", err)
+	}
+
+	var result htlc
+	if err = json.Unmarshal(databytes, &result); err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal, %s", err)
+	}
+
+	return &result, nil
+}
+
+// Sha256Hash used consist with solidity HTLC contract sha function
+func Sha256Hash(x []byte) []byte {
+	h := sha256.Sum256(x)
+	return h[:]
 }
