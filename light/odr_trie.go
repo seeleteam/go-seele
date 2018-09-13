@@ -41,3 +41,12 @@ func (req *odrTrie) handleResponse(resp interface{}) {
 		req.Error = data.Error
 	}
 }
+
+// Get implements the trie.Database interface.
+func (req *odrTrie) Get(key []byte) ([]byte, error) {
+	if req.Proof == nil {
+		return nil, nil
+	}
+
+	return req.Proof[string(key)], nil
+}
