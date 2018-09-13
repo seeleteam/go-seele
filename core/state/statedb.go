@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	trieDbPrefix  = []byte("S")
+	// TrieDbPrefix is the key prefix of trie database in statedb.
+	TrieDbPrefix  = []byte("S")
 	stateBalance0 = big.NewInt(0)
 )
 
@@ -49,7 +50,7 @@ type Statedb struct {
 
 // NewStatedb constructs and returns a statedb instance
 func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
-	trie, err := trie.NewTrie(root, trieDbPrefix, db)
+	trie, err := trie.NewTrie(root, TrieDbPrefix, db)
 	if err != nil {
 		return nil, err
 	}
