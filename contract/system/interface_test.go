@@ -6,6 +6,7 @@
 package system
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -19,8 +20,11 @@ import (
 func newTestContext(db database.Database, contractAddr common.Address) *Context {
 	tx := &types.Transaction{
 		Data: types.TransactionData{
-			From: common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
-			To:   contractAddr,
+			From:         common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+			To:           contractAddr,
+			Amount:       big.NewInt(1),
+			Fee:          big.NewInt(1),
+			AccountNonce: 1,
 		},
 	}
 
@@ -29,6 +33,7 @@ func newTestContext(db database.Database, contractAddr common.Address) *Context 
 		panic(err)
 	}
 
+	statedb.CreateAccount(contractAddr)
 	return NewContext(tx, statedb, newTestBlockHeader())
 }
 
