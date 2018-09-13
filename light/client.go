@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // ServiceClient implements service for light mode.
@@ -28,15 +29,10 @@ type ServiceClient struct {
 	log           *log.SeeleLog
 	odrBackend    *odrBackend
 
-	txPool  *txPool
-	chain   *LightChain
-	lightDB database.Database // database used to store blocks and account state.
+	txPool   *txPool
+	chain    *LightChain
+	lightDB  database.Database // database used to store blocks and account state.
 	debtPool *core.DebtPool
-}
-
-// ServiceContext is a collection of service configuration inherited from node
-type ServiceContext struct {
-	DataDir string
 }
 
 // NewServiceClient create ServiceClient
@@ -46,7 +42,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		networkID: conf.P2PConfig.NetworkID,
 	}
 
-	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
 	// Initialize blockchain DB.
 	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
 	log.Info("NewServiceClient BlockChain datadir is %s", chainDBPath)
@@ -89,6 +85,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	}
 
 	s.odrBackend.start(s.seeleProtocol.peerSet)
+	log.Info("Light mode started.")
 	return s, nil
 }
 
