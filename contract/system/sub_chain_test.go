@@ -40,6 +40,10 @@ func Test_RegisterSubChain(t *testing.T) {
 
 	context := newTestContext(db, SubChainContractAddress)
 
+	owner, err := createDomainName([]byte(regInfo.Name), context)
+	assert.Equal(t, owner != nil, true)
+	assert.Equal(t, err, nil)
+
 	// register with valid reg info
 	result, err := registerSubChain(encoded, context)
 	assert.Equal(t, result, []byte(nil))
