@@ -54,11 +54,6 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	// ensure domain name exist
-	if owner := context.statedb.GetData(DomainNameContractAddress, key); len(owner) == 0 {
-		return nil, errNotFound
-	}
-
 	if value := context.statedb.GetData(SubChainContractAddress, key); len(value) > 0 {
 		return nil, errExists
 	}
