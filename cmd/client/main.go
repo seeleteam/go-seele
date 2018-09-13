@@ -154,6 +154,29 @@ func main() {
 	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(domainCommands.Flags))
 
+	subChainCommands := cli.Command{
+		Name:  "subchain",
+		Usage: "system sub chain commands",
+		Subcommands: []cli.Command{
+			{
+				Name:  "register",
+				Usage: "register a sub chain",
+				Flags: rpcFlags(fromFlag, feeFlag, nonceFlag, subChainNameFlag, subChainVersionFlag, subChainTokenFullNameFlag,
+					subChainTokenShortNameFlag, subChainTokenAmountFlag, subChainStaticNodesFlag, subChainGenesisAccountsFlag, subChainGenesisDifficultyFlag),
+				Action: rpcActionSystemContract("subchain", "register", handleCallResult),
+			},
+			{
+				Name:   "query",
+				Usage:  "query sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, subChainNameFlag),
+				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(subChainCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(subChainCommands.Flags))
+
 	p2pCommands := cli.Command{
 		Name:  "p2p",
 		Usage: "p2p commands",
@@ -193,6 +216,7 @@ func main() {
 		minerCommands,
 		p2pCommands,
 		domainCommands,
+		subChainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",

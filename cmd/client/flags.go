@@ -204,4 +204,60 @@ var (
 		Usage:       "domain name",
 		Destination: &domainNameValue,
 	}
+
+	subChainNameVale string
+	subChainNameFlag = cli.StringFlag{
+		Name:        "name",
+		Usage:       "subchain name",
+		Destination: &subChainNameVale,
+	}
+
+	subChainVersionValue string
+	subChainVersionFlag  = cli.StringFlag{
+		Name:        "version, v",
+		Usage:       "subchain version",
+		Destination: &subChainVersionValue,
+	}
+
+	subChainTokenFullNameValue string
+	subChainTokenFullNameFlag  = cli.StringFlag{
+		Name:        "fullname",
+		Usage:       "subchain token full name",
+		Destination: &subChainTokenFullNameValue,
+	}
+
+	subChainTokenShortNameValue string
+	subChainTokenShortNameFlag  = cli.StringFlag{
+		Name:        "shortname",
+		Usage:       "subchain token short name",
+		Destination: &subChainTokenShortNameValue,
+	}
+
+	subChainTokenAmountValue uint64
+	subChainTokenAmountFlag  = cli.Uint64Flag{
+		Name:        "amount",
+		Usage:       "subchain token amount",
+		Destination: &subChainTokenAmountValue,
+	}
+
+	subChainStaticNodesValue cli.StringSlice
+	subChainStaticNodesFlag  = cli.StringSliceFlag{
+		Name:  "nodes, n",
+		Usage: "subchain token static nodes, for example: -n address:port",
+		Value: &subChainStaticNodesValue,
+	}
+
+	subChainGenesisAccountsValue cli.StringSlice
+	subChainGenesisAccountsFlag  = cli.StringSliceFlag{
+		Name:  "accounts",
+		Usage: "subchain token genesis accounts, for example: -a address:amount",
+		Value: &subChainGenesisAccountsValue,
+	}
+
+	subChainGenesisDifficultyValue uint64
+	subChainGenesisDifficultyFlag  = cli.Uint64Flag{
+		Name:        "difficulty, d",
+		Usage:       "subchain token difficulty",
+		Destination: &subChainGenesisDifficultyValue,
+	}
 )

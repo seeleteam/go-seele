@@ -31,6 +31,10 @@ var (
 			"create":   createDomainName,
 			"getOwner": getDomainNameOwner,
 		},
+		"subchain": map[string]handler{
+			"register": registerSubChain,
+			"query":    querySubChain,
+		},
 	}
 )
 
