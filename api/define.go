@@ -19,7 +19,6 @@ type Backend interface {
 	GetP2pServer() *p2p.Server
 	GetNetVersion() uint64
 	GetProtocolVersion() (uint, error)
-	GetThreads() int
 	GetMinerCoinbase() common.Address
 
 	IsMining() bool
