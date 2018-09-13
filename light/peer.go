@@ -231,10 +231,6 @@ func (p *peer) handleSyncHashRequest(msg *HeaderHashSyncQuery) error {
 
 // findIdxByHash finds index of hash in p.blockHashArr, and returns -1 if not found
 func (p *peer) findIdxByHash(hash common.Hash) int {
-	if len(p.blockHashArr) == 0 {
-		return -1
-	}
-
 	for idx := 0; idx < len(p.blockHashArr); idx++ {
 		if p.blockHashArr[idx] == hash {
 			return idx
@@ -246,10 +242,6 @@ func (p *peer) findIdxByHash(hash common.Hash) int {
 
 // getHashByHeight returns header hash of height, only useful in client mode
 func (p *peer) getHashByHeight(height uint64) (common.Hash, bool) {
-	if len(p.blockHashArr) == 0 {
-		return common.EmptyHash, false
-	}
-
 	if height >= p.blockNumBegin && height < (p.blockNumBegin+uint64(len(p.blockHashArr))) {
 		return p.blockHashArr[height-p.blockNumBegin], true
 	}
@@ -325,6 +317,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 		CurrentBlock:    head.HeaderHash,
 		CurrentBlockNum: height,
 	}
+
 	var numArr []uint64
 	var hashArr []common.Hash
 	for i := uint64(0); ; i++ {
@@ -341,7 +334,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 		numArr = append(numArr, curNum)
 		hashArr = append(hashArr, curBlock.HeaderHash)
-		if curNum == begin {
+		if curNum == begin || len(numArr) >= int(MaxGapForAnnounce) {
 			break
 		}
 	}
