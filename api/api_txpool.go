@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	errTransactionNotFound = errors.New("transaction not found")
-	errDebtNotFound        = errors.New("debt not found")
+	ErrTransactionNotFound = errors.New("transaction not found")
+	ErrDebtNotFound        = errors.New("debt not found")
 )
 
 // TransactionPoolAPI provides an API to access transaction pool information.
@@ -234,7 +234,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	txIndex, err := store.GetTxIndex(hash)
 	if err != nil {
 		api.s.Log().Info(err.Error())
-		return nil, errTransactionNotFound
+		return nil, ErrTransactionNotFound
 	}
 
 	if txIndex != nil {
@@ -261,46 +261,4 @@ func addTxInfo(output map[string]interface{}, tx *types.Transaction) {
 	if debt != nil {
 		output["debt"] = debt
 	}
-}
-
-// GetDebtByHash return the debt info by debt hash
-func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interface{}, error) {
-	hashByte, err := hexutil.HexToBytes(debtHash)
-	if err != nil {
-		return nil, err
-	}
-	hash := common.BytesToHash(hashByte)
-
-	output := make(map[string]interface{})
-	debt := api.s.DebtPool().GetDebtByHash(hash)
-	if debt != nil {
-		output["debt"] = debt
-		output["status"] = "pool"
-
-		return output, nil
-	}
-
-	store := api.s.ChainBackend().GetStore()
-	debtIndex, err := store.GetDebtIndex(hash)
-	if err != nil {
-		api.s.Log().Info(err.Error())
-		return nil, errDebtNotFound
-	}
-
-	if debtIndex != nil {
-		block, err := store.GetBlock(debtIndex.BlockHash)
-		if err != nil {
-			return nil, err
-		}
-
-		output["debt"] = block.Debts[debtIndex.Index]
-		output["status"] = "block"
-		output["blockHash"] = block.HeaderHash.ToHex()
-		output["blockHeight"] = block.Header.Height
-		output["debtIndex"] = debtIndex
-
-		return output, nil
-	}
-
-	return nil, nil
 }

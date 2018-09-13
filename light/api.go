@@ -3,14 +3,11 @@ package light
 import (
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
 
 func (s *ServiceClient) TxPoolBackend() api.Pool { return s.txPool }
-
-func (s *ServiceClient) DebtPool() *core.DebtPool { return s.debtPool }
 
 func (s *ServiceClient) GetProtocolVersion() (uint, error) {
 	return s.seeleProtocol.Protocol.Version, nil

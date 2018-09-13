@@ -98,3 +98,8 @@ func (api *PrivateDebugAPI) DumpHeap(fileName string, gcBeforeDump bool) (string
 
 	return flie, pprof.WriteHeapProfile(f)
 }
+
+// GetPendingDebts returns all pending debts
+func (api *PrivateDebugAPI) GetPendingDebts() ([]*types.Debt, error) {
+	return api.s.DebtPool().GetAll(), nil
+}

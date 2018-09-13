@@ -266,5 +266,11 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
 		},
+		{
+			Namespace: "txpool",
+			Version:   "1.0",
+			Service:   NewTransactionPoolAPI(s),
+			Public:    false,
+		},
 	}...)
 }
