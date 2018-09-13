@@ -4,7 +4,8 @@
     "version": "1.0",
     "dataDir": "node4",
     "address": "0.0.0.0:8026",
-    "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81"
+    "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81",
+    "syncMode": "light"
   },
   "p2p": {
     "address": "0.0.0.0:8056",
@@ -15,7 +16,7 @@
     "networkID": 1
   },
   "log": {
-    "isDebug": false,
+    "isDebug": true,
     "printLog": true
   },
   "httpServer": {
