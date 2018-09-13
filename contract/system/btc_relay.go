@@ -42,7 +42,7 @@ var (
 	// temp storage
 	preBlockHeight uint64
 	keyBlocksHash  = common.BytesToHash([]byte("BTC-Blocks-Hash"))
-	// should change
+	// @todo will change after the relay chain is successfully established.
 	fee uint64 = 1
 )
 
@@ -62,7 +62,8 @@ func (b *BTCBlock) String() string {
 // RelayRequest is a request structure using btc-relay
 type RelayRequest struct {
 	BTCBlock
-	TxHex        string
+	TxHex string
+	// This is used to relay the verification of successful tx to the contract address
 	RelayAddress common.Address
 }
 
