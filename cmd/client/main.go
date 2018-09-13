@@ -139,13 +139,13 @@ func main() {
 			{
 				Name:   "register",
 				Usage:  "register a domain name",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "create", handleCallResult),
 			},
 			{
 				Name:   "owner",
 				Usage:  "get the domain name owner",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
 			},
 		},
@@ -159,16 +159,15 @@ func main() {
 		Usage: "system sub chain commands",
 		Subcommands: []cli.Command{
 			{
-				Name:  "register",
-				Usage: "register a sub chain",
-				Flags: rpcFlags(fromFlag, feeFlag, nonceFlag, subChainNameFlag, subChainVersionFlag, subChainTokenFullNameFlag,
-					subChainTokenShortNameFlag, subChainTokenAmountFlag, subChainStaticNodesFlag, subChainGenesisAccountsFlag, subChainGenesisDifficultyFlag),
+				Name:   "register",
+				Usage:  "register a sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, subChainJSONFileFlag),
 				Action: rpcActionSystemContract("subchain", "register", handleCallResult),
 			},
 			{
 				Name:   "query",
 				Usage:  "query sub chain",
-				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, subChainNameFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, nameFlag),
 				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
 			},
 		},

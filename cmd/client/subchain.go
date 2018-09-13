@@ -7,66 +7,45 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"math/big"
-	"strings"
+	"io/ioutil"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/rpc2"
+)
+
+var (
+	errInvalidVersion        = errors.New("invalid subchain version")
+	errInvalidTokenFullName  = errors.New("invalid subchain token full name")
+	errInvalidTokenShortName = errors.New("invalid subchain token short name")
+	errInvalidTokenAmount    = errors.New("invalid subchain token amount")
 )
 
 func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
 
-	if err := system.ValidateDomainName([]byte(subChainNameVale)); err != nil {
+	subChain, err := getSubChainFromFile(subChainJSONFileVale)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(subChainVersionValue) == 0 {
-		return nil, nil, errors.New("invalid subchain version")
+	if err := system.ValidateDomainName([]byte(subChain.Name)); err != nil {
+		return nil, nil, err
 	}
 
-	if len(subChainTokenFullNameValue) == 0 {
-		return nil, nil, errors.New("invalid subchain token full name")
+	if len(subChain.Version) == 0 {
+		return nil, nil, errInvalidVersion
 	}
 
-	if len(subChainTokenShortNameValue) == 0 {
-		return nil, nil, errors.New("invalid subchain token short name")
+	if len(subChain.TokenFullName) == 0 {
+		return nil, nil, errInvalidTokenFullName
 	}
 
-	if subChainTokenAmountValue == 0 {
-		return nil, nil, errors.New("invalid subchain token amount")
+	if len(subChain.TokenShortName) == 0 {
+		return nil, nil, errInvalidTokenShortName
 	}
 
-	mapAccounts := make(map[common.Address]*big.Int)
-	for _, account := range subChainGenesisAccountsValue.Value() {
-		arrayAccount := strings.Split(account, ":")
-		if len(arrayAccount) != 2 {
-			return nil, nil, errors.New("invalid genesis account")
-		}
-
-		addr, err := common.HexToAddress(arrayAccount[0])
-		if err != nil {
-			return nil, nil, errors.New("invalid genesis account address")
-		}
-
-		amount, ok := big.NewInt(0).SetString(arrayAccount[1], 10)
-		if !ok {
-			return nil, nil, errors.New("invalid genesis account amount")
-		}
-
-		mapAccounts[addr] = amount
-	}
-
-	subChain := system.SubChainInfo{
-		Name:              subChainNameVale,
-		Version:           subChainVersionValue,
-		StaticNodes:       subChainStaticNodesValue.Value(),
-		TokenFullName:     subChainTokenFullNameValue,
-		TokenShortName:    subChainTokenShortNameValue,
-		TokenAmount:       subChainTokenAmountValue,
-		GenesisDifficulty: subChainGenesisDifficultyValue,
-		GenesisAccounts:   mapAccounts,
+	if subChain.TokenAmount == 0 {
+		return nil, nil, errInvalidTokenAmount
 	}
 
 	subChainBytes, err := json.Marshal(&subChain)
@@ -91,14 +70,25 @@ func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 func querySubChain(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
 
-	if err := system.ValidateDomainName([]byte(subChainNameVale)); err != nil {
+	if err := system.ValidateDomainName([]byte(nameValue)); err != nil {
 		return nil, nil, err
 	}
 
-	tx, err := sendSystemContractTx(client, system.SubChainContractAddress, system.CmdSubChainQuery, []byte(subChainNameVale))
+	tx, err := sendSystemContractTx(client, system.SubChainContractAddress, system.CmdSubChainQuery, []byte(nameValue))
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return tx, tx, err
+}
+
+func getSubChainFromFile(filepath string) (*system.SubChainInfo, error) {
+	var subChain system.SubChainInfo
+	buff, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return &subChain, err
+	}
+
+	err = json.Unmarshal(buff, &subChain)
+	return &subChain, err
 }
