@@ -49,6 +49,8 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
+	// @todo validate the reg info
+
 	key, err := domainNameToKey([]byte(info.Name))
 	if err != nil {
 		return nil, err
