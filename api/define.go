@@ -25,6 +25,8 @@ type Backend interface {
 	TxPoolBackend() Pool
 	ChainBackend() Chain
 	Log() *log.SeeleLog
+
+	AddTx(tx types.Transaction) (bool, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

@@ -220,3 +220,8 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	}
 	return transaction
 }
+
+// AddTx add a tx to miner
+func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
+	return api.s.AddTx(tx)
+}

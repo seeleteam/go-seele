@@ -3,6 +3,7 @@ package light
 import (
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -24,3 +25,12 @@ func (s *ServiceClient) IsMining() bool { return false }
 func (s *ServiceClient) Log() *log.SeeleLog { return s.log }
 
 func (s *ServiceClient) GetMinerCoinbase() common.Address { return common.EmptyAddress }
+
+// AddTx add a tx to miner
+func (s *ServiceClient) AddTx(tx types.Transaction) (bool, error) {
+	if err := s.txPool.AddTransaction(&tx); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
