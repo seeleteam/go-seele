@@ -7,13 +7,16 @@ package system
 
 import (
 	"encoding/json"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 )
 
 const (
-	cmdSubChainRegister byte = iota // register a sub-chain.
-	cmdSubChainQuery
+	// CmdSubChainRegister register a sub-chain
+	CmdSubChainRegister byte = iota
+	// CmdSubChainQuery query a sub-chain.
+	CmdSubChainQuery
 
 	gasSubChainRegister = uint64(100000) // gas to register a sub-chain.
 	gasSubChainQuery    = uint64(200000) // gas to query sub-chain information.
@@ -21,8 +24,8 @@ const (
 
 var (
 	subChainCommands = map[byte]*cmdInfo{
-		cmdSubChainRegister: &cmdInfo{gasSubChainRegister, registerSubChain},
-		cmdSubChainQuery:    &cmdInfo{gasSubChainQuery, querySubChain},
+		CmdSubChainRegister: &cmdInfo{gasSubChainRegister, registerSubChain},
+		CmdSubChainQuery:    &cmdInfo{gasSubChainQuery, querySubChain},
 	}
 )
 
@@ -37,7 +40,7 @@ type SubChainInfo struct {
 	TokenAmount    uint64
 
 	GenesisDifficulty uint64
-	GenesisAccounts   map[common.Address]uint64
+	GenesisAccounts   map[common.Address]*big.Int
 }
 
 func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
