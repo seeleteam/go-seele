@@ -163,7 +163,7 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	stateObj := statedb.getStateObject(addr)
 
 	// Validate state trie of created account
-	trie, err := trie.NewTrie(root1, trieDbPrefix, db)
+	trie, err := trie.NewTrie(root1, TrieDbPrefix, db)
 	assert.Equal(t, err, nil)
 	storageKey := stateObj.dataKey(dataTypeStorage, crypto.MustHash(common.StringToHash("test key")).Bytes()...)
 	storageValue, found := trie.Get(storageKey)
