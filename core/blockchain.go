@@ -214,6 +214,19 @@ func (bc *Blockchain) CurrentBlock() *types.Block {
 	return index.currentBlock
 }
 
+// CurrentHeader returns the HEAD block header of the blockchain.
+func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	index := bc.blockLeaves.GetBestBlockIndex()
+	if index == nil {
+		return nil
+	}
+
+	return index.currentBlock.Header
+}
+
 // GetCurrentState returns the state DB of the current block.
 func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 	block := bc.CurrentBlock()

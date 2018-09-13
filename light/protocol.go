@@ -37,10 +37,10 @@ var (
 )
 
 type BlockChain interface {
-	CurrentBlock() *types.Block
 	GetCurrentState() (*state.Statedb, error)
 	GetState(root common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
+	CurrentHeader() *types.BlockHeader
 	WriteHeader(*types.BlockHeader) error
 }
 
@@ -154,8 +154,13 @@ func (sp *LightProtocol) synchronise(p *peer) {
 		sp.log.Debug("sp.synchronise called.")
 	}
 
-	block := sp.chain.CurrentBlock()
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	hash, err := sp.chain.GetStore().GetHeadBlockHash()
+	if err != nil {
+		sp.log.Error("sp.synchronise GetHeadBlockHash err.[%s]", err)
+		return
+	}
+
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(hash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return
@@ -184,10 +189,19 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	}
 
 	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
+	hash, err := sp.chain.GetStore().GetHeadBlockHash()
+	if err != nil {
+		sp.log.Error("sp.handleAddPeer GetHeadBlockHash err.[%s]", err)
+		return false
+	}
 
-	block := sp.chain.CurrentBlock()
-	head := block.HeaderHash
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
+	header, err := sp.chain.GetStore().GetBlockHeader(hash)
+	if err != nil {
+		sp.log.Error("sp.handleAddPeer GetBlockHeader err.[%s]", err)
+		return false
+	}
+
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(hash)
 	if err != nil {
 		return false
 	}
@@ -197,7 +211,7 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		return false
 	}
 
-	if err := newPeer.handShake(sp.networkID, localTD, head, block.Header.Height, genesisBlock.HeaderHash); err != nil {
+	if err := newPeer.handShake(sp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
 		sp.log.Error("handleAddPeer err. %s", err)
 		if !sp.bServerMode {
 			// just quit connection.
