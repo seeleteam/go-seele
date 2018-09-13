@@ -34,5 +34,5 @@ func (n *PrivateNetworkAPI) GetNetworkVersion() (uint64, error) {
 
 // GetProtocolVersion returns the current seele protocol version this node supports
 func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
-	return n.s.GetProtocolVersion()
+	return n.s.ProtocolBackend().GetProtocolVersion()
 }

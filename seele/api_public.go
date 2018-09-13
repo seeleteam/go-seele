@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"strings"
 
-	api2"github.com/seeleteam/go-seele/api"
+	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
@@ -36,7 +36,7 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	block := api.s.ChainBackend().CurrentBlock()
 
 	var status string
-	if api.s.IsMining() {
+	if api.s.miner.IsMining() {
 		status = "Running"
 	} else {
 		status = "Stopped"
