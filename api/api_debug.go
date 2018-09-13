@@ -5,10 +5,6 @@
 
 package api
 
-import (
-	"github.com/seeleteam/go-seele/core/types"
-)
-
 // PrivateDebugAPI provides an API to access full node-related information for debugging.
 type PrivateDebugAPI struct {
 	s Backend
@@ -48,9 +44,4 @@ func (api *PrivateDebugAPI) GetPendingTransactions() ([]map[string]interface{}, 
 	}
 
 	return transactions, nil
-}
-
-// GetPendingDebts returns all pending debts
-func (api *PrivateDebugAPI) GetPendingDebts() ([]*types.Debt, error) {
-	return api.s.DebtPool().GetAll(), nil
 }
