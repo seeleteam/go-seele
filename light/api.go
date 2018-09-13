@@ -22,13 +22,8 @@ func (s *ServiceClient) GetP2pServer() *p2p.Server { return s.p2pServer }
 
 func (s *ServiceClient) ChainBackend() api.Chain { return s.chain }
 
-//@todo
 func (s *ServiceClient) IsMining() bool { return false }
-
-//@todo
-func (s *ServiceClient) GetThreads() int { return 0 }
 
 func (s *ServiceClient) Log() *log.SeeleLog { return s.log }
 
-//@todo
 func (s *ServiceClient) GetMinerCoinbase() common.Address { return common.EmptyAddress }

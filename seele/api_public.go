@@ -31,6 +31,27 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
+// GetInfo gets the account address that mining rewards will be send to.
+func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
+	block := api.s.ChainBackend().CurrentBlock()
+
+	var status string
+	if api.s.IsMining() {
+		status = "Running"
+	} else {
+		status = "Stopped"
+	}
+
+	return api2.GetMinerInfo{
+		Coinbase:           api.s.GetMinerCoinbase(),
+		CurrentBlockHeight: block.Header.Height,
+		HeaderHash:         block.HeaderHash,
+		Shard:              common.LocalShardNumber,
+		MinerStatus:        status,
+		MinerThread:        api.s.miner.GetThreads(),
+	}, nil
+}
+
 // Call is to execute a given transaction on a statedb of a given block height.
 // It does not affect this statedb and blockchain and is useful for executing and retrieve values.
 func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[string]interface{}, error) {
