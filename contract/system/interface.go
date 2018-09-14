@@ -45,12 +45,15 @@ var (
 	SubChainContractAddress = common.BytesToAddress([]byte{1, 2})
 	// HashTimeLockContractAddress HTLC contract address
 	HashTimeLockContractAddress = common.BytesToAddress([]byte{1, 3})
+	// MasternodeContractAddress masternode contract address
+	MasternodeContractAddress = common.BytesToAddress([]byte{1, 4})
 
 	// Contracts are system contracts
 	contracts = map[common.Address]Contract{
 		DomainNameContractAddress:   &contract{domainNameCommands},
 		SubChainContractAddress:     &contract{subChainCommands},
 		HashTimeLockContractAddress: &contract{htlcCommands},
+		MasternodeContractAddress:   &contract{masternodeCommands},
 	}
 )
 
