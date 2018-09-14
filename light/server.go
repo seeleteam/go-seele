@@ -87,10 +87,7 @@ needQuit:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
 			pm.peerSet.ForEach(common.LocalShardNumber, func(p *peer) bool {
-				if !p.isSyncing() {
-					p.sendAnnounce(magic, uint64(0), uint64(0))
-				}
-
+				p.sendAnnounce(magic, uint64(0), uint64(0))
 				return true
 			})
 			pm.log.Debug("blockLoop head changed. ")

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestPeer(addr string, shard uint) (*Peer, error) {
@@ -36,7 +36,7 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 		return nil, err
 	}
 
-	newPeer := NewPeer(&connection{fd: c}, nil, log.GetLogger("peer"), node)
+	newPeer := NewPeer(&connection{fd: c}, log.GetLogger("peer"), node)
 	return newPeer, nil
 }
 
