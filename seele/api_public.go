@@ -33,7 +33,7 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
-	block := api.s.ChainBackend().CurrentBlock()
+	block := api.s.chain.CurrentBlock()
 
 	var status string
 	if api.s.miner.IsMining() {
@@ -43,7 +43,7 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	}
 
 	return api2.GetMinerInfo{
-		Coinbase:           api.s.GetMinerCoinbase(),
+		Coinbase:           api.s.miner.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
 		HeaderHash:         block.HeaderHash,
 		Shard:              common.LocalShardNumber,

@@ -58,6 +58,10 @@ func (s *SeeleService) AccountStateDB() database.Database { return s.accountStat
 // BlockChain get blockchain
 func (s *SeeleService) BlockChain() *core.Blockchain { return s.chain }
 
+func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
+
+func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
+
 // Miner get miner
 func (s *SeeleService) Miner() *miner.Miner { return s.miner }
 
@@ -240,7 +244,7 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
-	apis = append(apis, api.GetAPIs(s)...)
+	apis = append(apis, api.GetAPIs(NewSeeleBackend(s))...)
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",
