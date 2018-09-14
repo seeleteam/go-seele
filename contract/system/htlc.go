@@ -281,7 +281,15 @@ func DecodeHTLC(payload string) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to unmarshal, %s", err)
 	}
 
-	return &result, nil
+	output := make(map[string]interface{})
+	output["Tx"] = result.Tx
+	output["HashLock"] = hexutil.BytesToHex(result.HashLock)
+	output["Preimage"] = hexutil.BytesToHex(result.Preimage)
+	output["TimeLock"] = result.TimeLock
+	output["To"] = result.To
+	output["Refunded"] = result.Refunded
+	output["Withdrawed"] = result.Withdrawed
+	return output, nil
 }
 
 // Sha256Hash used consist with solidity HTLC contract sha function
