@@ -220,3 +220,22 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	}
 	return transaction
 }
+
+// AddTx add a tx to miner
+func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
+	shard := tx.Data.From.Shard()
+	var err error
+	if shard != common.LocalShardNumber {
+		if err = tx.ValidateWithoutState(true, false); err == nil {
+			api.s.ProtocolBackend().SendDifferentShardTx(&tx, shard)
+		}
+	} else {
+		err = api.s.TxPoolBackend().AddTransaction(&tx)
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

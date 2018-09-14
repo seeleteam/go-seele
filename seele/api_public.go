@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"strings"
 
-	api2"github.com/seeleteam/go-seele/api"
+	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
@@ -36,7 +36,7 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	block := api.s.ChainBackend().CurrentBlock()
 
 	var status string
-	if api.s.IsMining() {
+	if api.s.miner.IsMining() {
 		status = "Running"
 	} else {
 		status = "Stopped"
@@ -101,25 +101,6 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 	}
 
 	return result, nil
-}
-
-// AddTx add a tx to miner
-func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
-	shard := tx.Data.From.Shard()
-	var err error
-	if shard != common.LocalShardNumber {
-		if err = tx.ValidateWithoutState(true, false); err == nil {
-			api.s.seeleProtocol.SendDifferentShardTx(&tx, shard)
-		}
-	} else {
-		err = api.s.txPool.AddTransaction(&tx)
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
