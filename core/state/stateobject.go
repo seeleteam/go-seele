@@ -10,7 +10,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/trie"
 )
 
 var (
@@ -132,7 +131,7 @@ func (s *stateObject) dataKey(dataType byte, prefix ...byte) []byte {
 	return append(key, prefix...)
 }
 
-func (s *stateObject) loadAccount(trie *trie.Trie) (bool, error) {
+func (s *stateObject) loadAccount(trie Trie) (bool, error) {
 	value, ok := trie.Get(s.dataKey(dataTypeAccount))
 	if !ok {
 		return false, nil
@@ -145,7 +144,7 @@ func (s *stateObject) loadAccount(trie *trie.Trie) (bool, error) {
 	return true, nil
 }
 
-func (s *stateObject) loadCode(trie *trie.Trie) []byte {
+func (s *stateObject) loadCode(trie Trie) []byte {
 	// already loaded
 	if s.code != nil {
 		return s.code
@@ -190,7 +189,7 @@ func (s *stateObject) setState(key common.Hash, value []byte) {
 	s.dirtyStorage[key] = value
 }
 
-func (s *stateObject) getState(trie *trie.Trie, key common.Hash) []byte {
+func (s *stateObject) getState(trie Trie, key common.Hash) []byte {
 	if value, ok := s.cachedStorage[key]; ok {
 		return value
 	}
@@ -203,7 +202,7 @@ func (s *stateObject) getState(trie *trie.Trie, key common.Hash) []byte {
 }
 
 // flush update the dirty data of state object to the specified trie if any.
-func (s *stateObject) flush(trie *trie.Trie) error {
+func (s *stateObject) flush(trie Trie) error {
 	// Flush storage change.
 	if len(s.dirtyStorage) > 0 {
 		for k, v := range s.dirtyStorage {

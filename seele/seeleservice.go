@@ -23,6 +23,7 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
 	"github.com/seeleteam/go-seele/seele/download"
+	"github.com/seeleteam/go-seele/api"
 )
 
 const chainHeaderChangeBuffSize = 100
@@ -52,17 +53,10 @@ type ServiceContext struct {
 	DataDir string
 }
 
-// TxPool get tx pool
-func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
-
-// DebtPool get debt pool
-func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
+func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
 
 // BlockChain get blockchain
 func (s *SeeleService) BlockChain() *core.Blockchain { return s.chain }
-
-// NetVersion get networkID
-func (s *SeeleService) NetVersion() uint64 { return s.networkID }
 
 // Miner get miner
 func (s *SeeleService) Miner() *miner.Miner { return s.miner }
@@ -246,6 +240,7 @@ func (s *SeeleService) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *SeeleService) APIs() (apis []rpc.API) {
+	apis = append(apis, api.GetAPIs(s)...)
 	return append(apis, []rpc.API{
 		{
 			Namespace: "seele",
@@ -254,21 +249,9 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Public:    true,
 		},
 		{
-			Namespace: "txpool",
-			Version:   "1.0",
-			Service:   NewTransactionPoolAPI(s),
-			Public:    true,
-		},
-		{
 			Namespace: "download",
 			Version:   "1.0",
 			Service:   downloader.NewPrivatedownloaderAPI(s.seeleProtocol.downloader),
-			Public:    false,
-		},
-		{
-			Namespace: "network",
-			Version:   "1.0",
-			Service:   NewPrivateNetworkAPI(s),
 			Public:    false,
 		},
 		{
@@ -281,6 +264,12 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "miner",
 			Version:   "1.0",
 			Service:   NewPrivateMinerAPI(s),
+			Public:    false,
+		},
+		{
+			Namespace: "txpool",
+			Version:   "1.0",
+			Service:   NewTransactionPoolAPI(s),
 			Public:    false,
 		},
 	}...)

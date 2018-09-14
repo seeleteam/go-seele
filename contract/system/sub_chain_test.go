@@ -7,6 +7,7 @@ package system
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -23,9 +24,9 @@ func Test_RegisterSubChain(t *testing.T) {
 		TokenShortName:    "TC",
 		TokenAmount:       1000000,
 		GenesisDifficulty: 8000,
-		GenesisAccounts: map[common.Address]uint64{
-			common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}): 1000,
-			common.BytesToAddress([]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}): 1000,
+		GenesisAccounts: map[common.Address]*big.Int{
+			common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}): big.NewInt(1000),
+			common.BytesToAddress([]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}): big.NewInt(1000),
 		},
 	}
 

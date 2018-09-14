@@ -9,6 +9,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -17,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/seele"
 )
 
 // ServiceClient implements service for light mode.
@@ -32,11 +34,6 @@ type ServiceClient struct {
 	lightDB database.Database // database used to store blocks and account state.
 }
 
-// ServiceContext is a collection of service configuration inherited from node
-type ServiceContext struct {
-	DataDir string
-}
-
 // NewServiceClient create ServiceClient
 func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *ServiceClient, err error) {
 	s = &ServiceClient{
@@ -44,7 +41,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		networkID: conf.P2PConfig.NetworkID,
 	}
 
-	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
 	// Initialize blockchain DB.
 	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
 	log.Info("NewServiceClient BlockChain datadir is %s", chainDBPath)
@@ -53,7 +50,6 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("NewServiceClient Create lightDB err. %s", err)
 		return nil, err
 	}
-	leveldb.StartMetrics(s.lightDB, "lightDB", log)
 
 	s.odrBackend = newOdrBackend(log)
 	// initialize and validate genesis
@@ -87,6 +83,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 	}
 
 	s.odrBackend.start(s.seeleProtocol.peerSet)
+	log.Info("Light mode started.")
 	return s, nil
 }
 
@@ -114,6 +111,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	// todo
-	return
+	return append(apis, api.GetAPIs(NewLightBackend(s))...)
 }

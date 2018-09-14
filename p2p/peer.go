@@ -42,6 +42,7 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 	protoMap := make(map[string]protocolRW)
 	for _, p := range protocols {
 		protoRW := protocolRW{
+			bQuited:  false,
 			rw:       conn,
 			offset:   offset,
 			Protocol: p,
@@ -154,7 +155,9 @@ func (p *Peer) notifyProtocolsAddPeer() {
 
 			if proto.AddPeer != nil {
 				p.log.Debug("protocol.AddPeer called. protocol:%s", proto.cap())
-				proto.AddPeer(p, &proto)
+				if !proto.AddPeer(p, &proto) {
+					proto.bQuited = true
+				}
 			}
 		}(proto)
 	}
@@ -205,7 +208,9 @@ func (p *Peer) handle(msgRecv *Message) error {
 		return fmt.Errorf(fmt.Sprintf("could not found mapping proto with code %d", msgRecv.Code))
 	}
 
-	protocolTarget.in <- *msgRecv
+	if !protocolTarget.bQuited {
+		protocolTarget.in <- *msgRecv
+	}
 
 	return nil
 }
@@ -233,10 +238,11 @@ func (p *Peer) Disconnect(reason string) {
 
 type protocolRW struct {
 	Protocol
-	offset uint16
-	in     chan Message // read message channel, message will be transferred here when it is a protocol message
-	rw     MsgReadWriter
-	close  chan struct{}
+	bQuited bool
+	offset  uint16
+	in      chan Message // read message channel, message will be transferred here when it is a protocol message
+	rw      MsgReadWriter
+	close   chan struct{}
 }
 
 func (rw *protocolRW) WriteMsg(msg *Message) (err error) {

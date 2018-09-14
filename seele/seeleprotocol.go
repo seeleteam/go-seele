@@ -319,10 +319,10 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	p.broadcastChainHead()
 }
 
-func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
+func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
 	if p.peerSet.Find(p2pPeer.Node.ID) != nil {
 		p.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
-		return
+		return false
 	}
 
 	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
@@ -331,18 +331,18 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	head := block.HeaderHash
 	localTD, err := p.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
-		return
+		return false
 	}
 
 	genesisBlock, err := p.chain.GetStore().GetBlockByHeight(0)
 	if err != nil {
-		return
+		return false
 	}
 
 	if err := newPeer.handShake(p.networkID, localTD, head, genesisBlock.HeaderHash, genesisBlock.Header.Difficulty.Uint64()); err != nil {
 		p.log.Error("handleAddPeer err. %s", err)
 		newPeer.Disconnect(DiscHandShakeErr)
-		return
+		return false
 	}
 
 	p.log.Info("add peer %s -> %s to SeeleProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
@@ -350,6 +350,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
 	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
+	return true
 }
 
 func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
@@ -684,4 +685,8 @@ handler:
 
 	p.handleDelPeer(peer.Peer)
 	p.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
+}
+
+func (p *SeeleProtocol) GetProtocolVersion() (uint, error) {
+	return p.Protocol.Version, nil
 }

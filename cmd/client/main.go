@@ -74,9 +74,6 @@ func main() {
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(minerCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(minerCommands.Flags))
-
 	htlcCommands := cli.Command{
 		Name:  "htlc",
 		Usage: "Hash time lock contract commands",
@@ -84,37 +81,50 @@ func main() {
 			{
 				Name:   "create",
 				Usage:  "create HTLC",
-				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, payloadFlag, nonceFlag, hashFlag, timeLockFlag),
+				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, nonceFlag, hashFlag, timeLockFlag),
 				Action: rpcActionSystemContract("htlc", "create", handleCallResult),
 			},
 			{
 				Name:   "withdraw",
 				Usage:  "withdraw from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag, preimageFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag, preimageFlag),
 				Action: rpcActionSystemContract("htlc", "withdraw", handleCallResult),
 			},
 			{
 				Name:   "refund",
 				Usage:  "refund from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "refund", handleCallResult),
 			},
 			{
 				Name:   "get",
 				Usage:  "get HTLC information",
-				Flags:  rpcFlags(fromFlag, feeFlag, amountFlag, payloadFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
+			},
+			{
+				Name:  "decode",
+				Usage: "decode HTLC contract information",
+				Flags: []cli.Flag{
+					payloadFlag,
+				},
+				Action: decodeHTLC,
 			},
 			{
 				Name:   "key",
 				Usage:  "generate preimage key and key hash",
 				Action: generateHTLCKey,
 			},
+			{
+				Name:  "time",
+				Usage: "generate unix timestamp",
+				Flags: []cli.Flag{
+					timeLockFlag,
+				},
+				Action: generateHTLCTime,
+			},
 		},
 	}
-
-	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
 
 	domainCommands := cli.Command{
 		Name:  "domain",
@@ -123,20 +133,36 @@ func main() {
 			{
 				Name:   "register",
 				Usage:  "register a domain name",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
-				Action: rpcActionSystemContract("domain", "register", handleCallResult),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "create", handleCallResult),
 			},
 			{
 				Name:   "owner",
 				Usage:  "get the domain name owner",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
-				Action: rpcActionSystemContract("domain", "getregistrar", handleCallResult),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
+				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
 			},
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(domainCommands.Flags))
+	subChainCommands := cli.Command{
+		Name:  "subchain",
+		Usage: "system sub chain commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "register",
+				Usage:  "register a sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, subChainJSONFileFlag),
+				Action: rpcActionSystemContract("subchain", "register", handleCallResult),
+			},
+			{
+				Name:   "query",
+				Usage:  "query sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, nameFlag),
+				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
+			},
+		},
+	}
 
 	p2pCommands := cli.Command{
 		Name:  "p2p",
@@ -169,14 +195,12 @@ func main() {
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(p2pCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(p2pCommands.Flags))
-
 	app.Commands = []cli.Command{
 		htlcCommands,
 		minerCommands,
 		p2pCommands,
 		domainCommands,
+		subChainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",
@@ -328,11 +352,21 @@ func main() {
 	}
 
 	// sort commands and flags by name
-	sort.Sort(cli.CommandsByName(app.Commands))
-	sort.Sort(cli.FlagsByName(app.Flags))
+	sortCommands(app.Commands)
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func sortCommands(commands []cli.Command) {
+	sort.Sort(cli.CommandsByName(commands))
+
+	for _, command := range commands {
+		if len(command.Subcommands) > 0 {
+			sortCommands(command.Subcommands)
+		}
+
+		sort.Sort(cli.FlagsByName(command.Flags))
 	}
 }

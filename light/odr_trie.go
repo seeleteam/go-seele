@@ -7,20 +7,21 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/trie"
 )
 
-type odrTrie struct {
+type odrTriePoof struct {
 	odrItem
 	Root  common.Hash
 	Key   []byte
 	Proof map[string][]byte
 }
 
-func (req *odrTrie) code() uint16 {
+func (req *odrTriePoof) code() uint16 {
 	return trieRequestCode
 }
 
-func (req *odrTrie) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	statedb, err := lp.chain.GetState(req.Root)
 	if err != nil {
 		req.Error = err.Error()
@@ -35,9 +36,29 @@ func (req *odrTrie) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	return trieResponseCode, req
 }
 
-func (req *odrTrie) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrTrie); ok {
-		req.Proof = data.Proof
-		req.Error = data.Error
+func (req *odrTriePoof) handleResponse(resp interface{}) {
+	data, ok := resp.(*odrTriePoof)
+	if !ok {
+		return
 	}
+
+	req.Proof = data.Proof
+	req.Error = data.Error
+
+	if len(req.Error) > 0 {
+		return
+	}
+
+	if _, err := trie.VerifyProof(req.Root, req.Key, req.Proof); err != nil {
+		req.Error = err.Error()
+	}
+}
+
+// Get implements the trie.Database interface.
+func (req *odrTriePoof) Get(key []byte) ([]byte, error) {
+	if req.Proof == nil {
+		return nil, nil
+	}
+
+	return req.Proof[string(key)], nil
 }

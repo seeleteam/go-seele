@@ -7,6 +7,7 @@ package light
 
 import (
 	"errors"
+	rand2 "math/rand"
 	"sync"
 	"time"
 
@@ -176,10 +177,10 @@ func (sp *LightProtocol) synchronise(p *peer) {
 	}
 }
 
-func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) {
+func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
 	if sp.peerSet.Find(p2pPeer.Node.ID) != nil {
 		sp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
-		return
+		return false
 	}
 
 	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
@@ -188,36 +189,37 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 	if err != nil {
-		return
+		return false
 	}
 
 	genesisBlock, err := sp.chain.GetStore().GetBlockByHeight(0)
 	if err != nil {
-		return
+		return false
 	}
 
 	if err := newPeer.handShake(sp.networkID, localTD, head, block.Header.Height, genesisBlock.HeaderHash); err != nil {
 		sp.log.Error("handleAddPeer err. %s", err)
-		if sp.bServerMode {
-			// todo. light protocol need quit, but seeleprotocol can run normally.
-		} else {
+		if !sp.bServerMode {
 			// just quit connection.
 			newPeer.Disconnect(DiscHandShakeErr)
 		}
-		return
+		return false
 	}
 
 	if sp.bServerMode {
-		if err := newPeer.sendAnnounce(0, 0); err != nil {
+		rand2.Seed(time.Now().UnixNano())
+		magic := rand2.Uint32()
+		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			sp.log.Error("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
-			return
+			return false
 		}
 	}
 
 	sp.log.Info("add peer %s -> %s to LightProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
 	sp.peerSet.Add(newPeer)
 	go sp.handleMsg(newPeer)
+	return true
 }
 
 func (sp *LightProtocol) handleGetPeer(address common.Address) interface{} {
@@ -260,13 +262,13 @@ handler:
 				break handler
 			}
 
-			if err := peer.sendAnnounce(query.Begin, query.End); err != nil {
+			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				sp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
 			}
 
 		case announceCode:
-			var query Announce
+			var query AnnounceBody
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				sp.log.Error("failed to deserialize Announce, quit! %s", err)
@@ -355,4 +357,12 @@ func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 	sp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", respCode, len(buff), peer.peerStrID)
 
 	return p2p.SendMessage(peer.rw, respCode, buff)
+}
+
+func (p *LightProtocol) GetProtocolVersion() (uint, error) {
+	return p.Protocol.Version, nil
+}
+
+func (p *LightProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
+	//@todo
 }

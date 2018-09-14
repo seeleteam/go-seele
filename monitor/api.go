@@ -36,7 +36,7 @@ func (api *PublicMonitorAPI) NodeInfo() (NodeInfo, error) {
 		Name:       api.s.name,
 		Node:       api.s.node,
 		Port:       0, //api.s.p2pServer.ListenAddr,
-		NetVersion: api.s.seele.NetVersion(),
+		NetVersion: api.s.seele.GetNetVersion(),
 		Protocol:   "1.0",
 		API:        "No",
 		Os:         runtime.GOOS,

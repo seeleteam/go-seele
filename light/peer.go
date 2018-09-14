@@ -50,6 +50,7 @@ type peer struct {
 	protocolManager *LightProtocol
 	rw              p2p.MsgReadWriter // the read write method for this peer
 
+	curSyncMagic  uint32
 	blockNumBegin uint64        // first block number of blockHashArr
 	blockHashArr  []common.Hash // block hashes that should be identical with remote server peer, and is only useful in client mode.
 	log           *log.SeeleLog
@@ -176,8 +177,9 @@ func (p *peer) handleDownloadHeadersRequest(msg *DownloadHeaderQuery) error {
 	return p2p.SendMessage(p.rw, downloadHeadersResponseCode, buff)
 }
 
-func (p *peer) sendSyncHashRequest(begin uint64) error {
+func (p *peer) sendSyncHashRequest(magic uint32, begin uint64) error {
 	sendMsg := &HeaderHashSyncQuery{
+		Magic:    magic,
 		BeginNum: begin,
 	}
 	buff := common.SerializePanic(sendMsg)
@@ -197,6 +199,7 @@ func (p *peer) handleSyncHashRequest(msg *HeaderHashSyncQuery) error {
 
 	height := head.Header.Height
 	syncMsg := &HeaderHashSync{
+		Magic:           msg.Magic,
 		TD:              localTD,
 		CurrentBlock:    head.HeaderHash,
 		CurrentBlockNum: height,
@@ -241,55 +244,194 @@ func (p *peer) findIdxByHash(hash common.Hash) int {
 	return -1
 }
 
+// getHashByHeight returns header hash of height, only useful in client mode
+func (p *peer) getHashByHeight(height uint64) (common.Hash, bool) {
+	if len(p.blockHashArr) == 0 {
+		return common.EmptyHash, false
+	}
+
+	if height >= p.blockNumBegin && height < (p.blockNumBegin+uint64(len(p.blockHashArr))) {
+		return p.blockHashArr[height-p.blockNumBegin], true
+	}
+
+	return common.EmptyHash, false
+}
+
 // handleSyncHash handles HeaderHashSync message, this should only be called by client mode
 func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
 	p.td, p.head, p.headBlockNum = msg.TD, msg.CurrentBlock, msg.CurrentBlockNum
 	if len(msg.HeaderArr) <= 1 {
+		// sync finished this round
+		p.curSyncMagic = 0
 		return nil
 	}
 
 	if len(p.blockHashArr) == 0 {
 		p.blockNumBegin, p.blockHashArr = msg.BeginNum, msg.HeaderArr
+	} else {
+		idx := p.findIdxByHash(p.blockHashArr[0])
+		if idx < 0 {
+			p.log.Info("handleSyncHash hash not match. %s", p.blockHashArr[0].ToHex())
+			p.curSyncMagic = 0
+			return nil
+		}
+
+		p.blockHashArr = append(p.blockHashArr[0:idx], msg.HeaderArr...)
+	}
+
+	lastBlockNum := p.blockNumBegin + uint64(len(p.blockHashArr)) - 1
+	if lastBlockNum == p.headBlockNum {
+		// sync finished this round
+		p.curSyncMagic = 0
 		return nil
 	}
 
-	idx := p.findIdxByHash(p.blockHashArr[0])
-	if idx < 0 {
-		p.log.Info("handleSyncHash hash not match")
-		return nil
+	return p.sendSyncHashRequest(p.curSyncMagic, lastBlockNum)
+}
+
+func (p *peer) sendAnnounceQuery(magic uint32, begin uint64, end uint64) error {
+	query := &AnnounceQuery{
+		Magic: magic,
+		Begin: begin,
+		End:   end,
 	}
 
-	p.blockHashArr = append(p.blockHashArr[0:idx], msg.HeaderArr...)
-	return nil
+	buff := common.SerializePanic(query)
+	p.log.Debug("peer send [announceRequestCode] query with size %d byte", len(buff))
+	return p2p.SendMessage(p.rw, announceRequestCode, buff)
 }
 
 // sendAnnounce sends header hash between [begin,end] selectively,
 // if end equals 0, end should be maximum block number in blockchain.
-func (p *peer) sendAnnounce(begin uint64, end uint64) error {
+func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 	chain := p.protocolManager.chain
 	if end == 0 {
 		end = chain.CurrentBlock().Header.Height
 	}
-	//todo
-	return nil
-}
 
-func (p *peer) handleAnnounce(msg *Announce) error {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.td, p.head, p.headBlockNum = msg.TD, msg.CurrentBlock, msg.CurrentBlockNum
-
-	startNum := uint64(0)
-	if len(p.blockHashArr) == 0 {
-		// todo find common ancestor with local chain, and send AnnounceQuery if gap is big enough
-		//
-	} else {
-		// todo find common ancestor with peer.blockHashArr
+	head := chain.CurrentBlock()
+	localTD, err := chain.GetStore().GetBlockTotalDifficulty(head.HeaderHash)
+	if err != nil {
+		return errReadChain
 	}
 
-	return p.sendSyncHashRequest(startNum)
+	height := head.Header.Height
+	msg := &AnnounceBody{
+		Magic:           magic,
+		TD:              localTD,
+		CurrentBlock:    head.HeaderHash,
+		CurrentBlockNum: height,
+	}
+	var numArr []uint64
+	var hashArr []common.Hash
+	for i := uint64(0); ; i++ {
+		idx := (2 ^ i) - 1
+		curNum := begin
+		if end > idx {
+			curNum = end - idx
+		}
+
+		curBlock, err := chain.GetStore().GetBlockByHeight(curNum)
+		if err != nil {
+			panic("Load block error")
+		}
+
+		numArr = append(numArr, curNum)
+		hashArr = append(hashArr, curBlock.HeaderHash)
+		if curNum == begin {
+			break
+		}
+	}
+
+	msg.BlockNumArr, msg.HeaderArr = numArr, hashArr
+	buff := common.SerializePanic(msg)
+	p.log.Debug("peer send [announceCode] with length: size:%d byte peerid:%s", len(buff), p.peerStrID)
+	return p2p.SendMessage(p.rw, announceCode, buff)
+}
+
+func (p *peer) handleAnnounce(msg *AnnounceBody) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if p.curSyncMagic != msg.Magic {
+		return nil
+	}
+
+	if len(msg.HeaderArr) == 0 {
+		panic("can not come here")
+	}
+
+	p.curSyncMagic = msg.Magic
+	p.td, p.head, p.headBlockNum = msg.TD, msg.CurrentBlock, msg.CurrentBlockNum
+
+	startNum, bMatch := uint64(0), false
+	if len(p.blockHashArr) == 0 {
+		if len(msg.HeaderArr) == 1 {
+			// server only has genesis block
+			p.blockHashArr = append(p.blockHashArr, msg.HeaderArr[0])
+			p.blockNumBegin = msg.BlockNumArr[0]
+			p.curSyncMagic = 0
+			return nil
+		}
+
+		chain := p.protocolManager.chain
+		for idx := len(msg.HeaderArr) - 1; idx >= 0; idx-- {
+			height := msg.BlockNumArr[idx]
+			block, err := chain.GetStore().GetBlockByHeight(height)
+			if err != nil {
+				continue
+			}
+
+			if block.HeaderHash == msg.HeaderArr[idx] {
+				startNum, bMatch = height, true
+				if idx != (len(msg.HeaderArr)-1) && (msg.BlockNumArr[idx+1]-height) > MaxGapForAnnounce {
+					// send announceRequest message because gap is big enough
+					return p.sendAnnounceQuery(p.curSyncMagic, height, msg.BlockNumArr[idx+1])
+				}
+				break
+			}
+		}
+
+		if p.headBlockNum-startNum < MinHashesCached {
+			if p.headBlockNum > MinHashesCached {
+				startNum = p.headBlockNum - MinHashesCached
+			} else {
+				startNum = uint64(0)
+			}
+		}
+	} else {
+		// find common ancestor with peer.blockHashArr
+		if len(msg.HeaderArr) == 1 {
+			// server only has genesis block
+			p.curSyncMagic = 0
+			return nil
+		}
+
+		for idx := len(msg.HeaderArr) - 1; idx >= 0; idx-- {
+			height := msg.BlockNumArr[idx]
+			if cacheHash, bFind := p.getHashByHeight(height); bFind {
+				if cacheHash == msg.HeaderArr[idx] {
+					startNum, bMatch = height, true
+					break
+				}
+			}
+		}
+
+		// todo if not match, should clear local hash, and synchronize again?
+		if startNum == p.blockNumBegin+uint64(len(p.blockHashArr))-1 {
+			// need not sync
+			p.curSyncMagic = 0
+			return nil
+		}
+	}
+
+	if !bMatch {
+		panic("can not come here")
+	}
+
+	return p.sendSyncHashRequest(p.curSyncMagic, startNum)
 }
 
 // handShake exchange networkid td etc between two connected peers.
