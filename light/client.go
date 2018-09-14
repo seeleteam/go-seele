@@ -29,9 +29,11 @@ type ServiceClient struct {
 	log           *log.SeeleLog
 	odrBackend    *odrBackend
 
-	txPool   *txPool
-	chain    *LightChain
-	lightDB  database.Database // database used to store blocks and account state.
+	txPool  *txPool
+	chain   *LightChain
+	lightDB database.Database // database used to store blocks and account state.
+
+	LightBackend *LightBackend
 }
 
 // NewServiceClient create ServiceClient
@@ -82,6 +84,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
+	s.LightBackend = NewLightBackend(s)
 	s.odrBackend.start(s.seeleProtocol.peerSet)
 	log.Info("Light mode started.")
 	return s, nil
@@ -111,5 +114,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	return append(apis, api.GetAPIs(s)...)
+	return append(apis, api.GetAPIs(s.LightBackend)...)
 }
