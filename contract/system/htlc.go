@@ -66,13 +66,13 @@ type htlc struct {
 	// Withdrawed if withdrawed true, otherwise false
 	Withdrawed bool
 	// Preimage is the hashlock preimage
-	Preimage []byte
+	Preimage common.Bytes
 }
 
 // HashTimeLock payload information
 type HashTimeLock struct {
 	// HashLock is used to lock amount until provide preimage of hashlock
-	HashLock []byte
+	HashLock common.Bytes
 	// TimeLock is used to lock amount a period
 	TimeLock int64
 	// receive address
@@ -84,7 +84,7 @@ type Withdrawing struct {
 	// Hash is the key of data
 	Hash common.Hash
 	// Preimage the hashlock preimage
-	Preimage []byte
+	Preimage common.Bytes
 }
 
 // create a HTLC to transfer value by hash-lock and time-lock
@@ -107,7 +107,7 @@ func newHTLC(lockbytes []byte, context *Context) ([]byte, error) {
 	data.HashLock = info.HashLock
 	data.TimeLock = info.TimeLock
 	data.To = info.To
-	data.Preimage = []byte{}
+	data.Preimage = common.Bytes{}
 	value, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to marshal data, %s", err)
@@ -281,15 +281,7 @@ func DecodeHTLC(payload string) (interface{}, error) {
 		return nil, fmt.Errorf("Failed to unmarshal, %s", err)
 	}
 
-	output := make(map[string]interface{})
-	output["Tx"] = result.Tx
-	output["HashLock"] = hexutil.BytesToHex(result.HashLock)
-	output["Preimage"] = hexutil.BytesToHex(result.Preimage)
-	output["TimeLock"] = result.TimeLock
-	output["To"] = result.To
-	output["Refunded"] = result.Refunded
-	output["Withdrawed"] = result.Withdrawed
-	return output, nil
+	return &result, nil
 }
 
 // Sha256Hash used consist with solidity HTLC contract sha function
