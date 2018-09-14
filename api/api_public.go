@@ -24,26 +24,6 @@ func NewPublicSeeleAPI(s Backend) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
-// GetInfo gets the account address that mining rewards will be send to.
-func (api *PublicSeeleAPI) GetInfo() (GetMinerInfo, error) {
-	header := api.s.ChainBackend().CurrentHeader()
-	var status string
-	if api.s.IsMining() {
-		status = "Running"
-	} else {
-		status = "Stopped"
-	}
-
-	return GetMinerInfo{
-		Coinbase:           api.s.GetMinerCoinbase(),
-		CurrentBlockHeight: header.Height,
-		HeaderHash:         header.Hash(),
-		Shard:              common.LocalShardNumber,
-		MinerStatus:        status,
-		MinerThread:        api.s.GetThreads(),
-	}, nil
-}
-
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.IsEmpty() {
