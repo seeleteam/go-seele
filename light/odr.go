@@ -20,13 +20,13 @@ var (
 	odrRequestFactories = map[uint16]func() odrRequest{
 		blockRequestCode: func() odrRequest { return &odrBlock{} },
 		addTxRequestCode: func() odrRequest { return &odrAddTx{} },
-		trieRequestCode:  func() odrRequest { return &odrTrie{} },
+		trieRequestCode:  func() odrRequest { return &odrTriePoof{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
 		blockResponseCode: func() odrResponse { return &odrBlock{} },
 		addTxResponseCode: func() odrResponse { return &odrAddTx{} },
-		trieResponseCode:  func() odrResponse { return &odrTrie{} },
+		trieResponseCode:  func() odrResponse { return &odrTriePoof{} },
 	}
 )
 

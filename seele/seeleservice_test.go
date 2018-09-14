@@ -85,7 +85,7 @@ func Test_SeeleService_APIs(t *testing.T) {
 	s := newTestSeeleService()
 	apis := s.APIs()
 
-	assert.Equal(t, len(apis), 8)
+	assert.Equal(t, len(apis), 9)
 	assert.Equal(t, apis[0].Namespace, "seele")
 	assert.Equal(t, apis[1].Namespace, "txpool")
 	assert.Equal(t, apis[2].Namespace, "network")
@@ -94,4 +94,5 @@ func Test_SeeleService_APIs(t *testing.T) {
 	assert.Equal(t, apis[5].Namespace, "download")
 	assert.Equal(t, apis[6].Namespace, "debug")
 	assert.Equal(t, apis[7].Namespace, "miner")
+	assert.Equal(t, apis[8].Namespace, "txpool")
 }

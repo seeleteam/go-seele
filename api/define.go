@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -19,12 +18,10 @@ type Backend interface {
 	GetP2pServer() *p2p.Server
 	GetNetVersion() uint64
 	GetProtocolVersion() (uint, error)
-	GetThreads() int
 	GetMinerCoinbase() common.Address
 
 	IsMining() bool
 
-	DebtPool() *core.DebtPool
 	TxPoolBackend() Pool
 	ChainBackend() Chain
 	Log() *log.SeeleLog

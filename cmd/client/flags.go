@@ -198,10 +198,17 @@ var (
 		Destination: &preimageValue,
 	}
 
-	domainNameValue string
-	domainNameFlag  = cli.StringFlag{
+	nameValue string
+	nameFlag  = cli.StringFlag{
 		Name:        "name",
-		Usage:       "domain name",
-		Destination: &domainNameValue,
+		Usage:       "domain or subchain name",
+		Destination: &nameValue,
+	}
+
+	subChainJSONFileVale string
+	subChainJSONFileFlag = cli.StringFlag{
+		Name:        "file",
+		Usage:       "subchain json file path",
+		Destination: &subChainJSONFileVale,
 	}
 )

@@ -66,12 +66,12 @@ func getDomainNameOwner(domainName []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	databytes := context.statedb.GetData(DomainNameContractAddress, key)
-	if databytes == nil {
+	owner := context.statedb.GetData(DomainNameContractAddress, key)
+	if len(owner) == 0 {
 		return nil, errNotFound
 	}
 
-	return databytes, nil
+	return owner, nil
 }
 
 // ValidateDomainName validate domain name

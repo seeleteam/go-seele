@@ -32,7 +32,6 @@ type ServiceClient struct {
 	txPool   *txPool
 	chain    *LightChain
 	lightDB  database.Database // database used to store blocks and account state.
-	debtPool *core.DebtPool
 }
 
 // NewServiceClient create ServiceClient
@@ -72,7 +71,6 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		log.Error("failed to init chain in NewServiceClient. %s", err)
 		return nil, err
 	}
-	//@todo s.debtPool = core.NewDebtPool(s.chain)
 
 	s.txPool = newTxPool(s.chain, s.odrBackend)
 

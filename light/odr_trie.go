@@ -9,18 +9,18 @@ import (
 	"github.com/seeleteam/go-seele/common"
 )
 
-type odrTrie struct {
+type odrTriePoof struct {
 	odrItem
 	Root  common.Hash
 	Key   []byte
 	Proof map[string][]byte
 }
 
-func (req *odrTrie) code() uint16 {
+func (req *odrTriePoof) code() uint16 {
 	return trieRequestCode
 }
 
-func (req *odrTrie) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	statedb, err := lp.chain.GetState(req.Root)
 	if err != nil {
 		req.Error = err.Error()
@@ -35,9 +35,18 @@ func (req *odrTrie) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	return trieResponseCode, req
 }
 
-func (req *odrTrie) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrTrie); ok {
+func (req *odrTriePoof) handleResponse(resp interface{}) {
+	if data, ok := resp.(*odrTriePoof); ok {
 		req.Proof = data.Proof
 		req.Error = data.Error
 	}
+}
+
+// Get implements the trie.Database interface.
+func (req *odrTriePoof) Get(key []byte) ([]byte, error) {
+	if req.Proof == nil {
+		return nil, nil
+	}
+
+	return req.Proof[string(key)], nil
 }

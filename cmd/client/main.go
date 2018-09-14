@@ -139,13 +139,13 @@ func main() {
 			{
 				Name:   "register",
 				Usage:  "register a domain name",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "create", handleCallResult),
 			},
 			{
 				Name:   "owner",
 				Usage:  "get the domain name owner",
-				Flags:  rpcFlags(fromFlag, feeFlag, domainNameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, feeFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
 			},
 		},
@@ -153,6 +153,28 @@ func main() {
 
 	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
 	sort.Sort(cli.FlagsByName(domainCommands.Flags))
+
+	subChainCommands := cli.Command{
+		Name:  "subchain",
+		Usage: "system sub chain commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "register",
+				Usage:  "register a sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, subChainJSONFileFlag),
+				Action: rpcActionSystemContract("subchain", "register", handleCallResult),
+			},
+			{
+				Name:   "query",
+				Usage:  "query sub chain",
+				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, nameFlag),
+				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
+			},
+		},
+	}
+
+	sort.Sort(cli.CommandsByName(subChainCommands.Subcommands))
+	sort.Sort(cli.FlagsByName(subChainCommands.Flags))
 
 	p2pCommands := cli.Command{
 		Name:  "p2p",
@@ -193,6 +215,7 @@ func main() {
 		minerCommands,
 		p2pCommands,
 		domainCommands,
+		subChainCommands,
 		{
 			Name:   "getinfo",
 			Usage:  "get node info",
