@@ -129,7 +129,7 @@ func (t *Trie) Hash() common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
 		t.sha.Reset()
-		t.hash(t.root, buf, t.sha, nil)
+		nodeHash(t.root, buf, t.sha, nil, nil)
 		return common.BytesToHash(t.root.Hash())
 	}
 	return common.EmptyHash
@@ -142,13 +142,13 @@ func (t *Trie) Commit(batch database.Batch) common.Hash {
 	if t.root != nil {
 		buf := new(bytes.Buffer)
 		t.sha.Reset()
-		t.hash(t.root, buf, t.sha, batch)
+		nodeHash(t.root, buf, t.sha, batch, t.dbprefix)
 		return common.BytesToHash(t.root.Hash())
 	}
 	return common.EmptyHash
 }
 
-func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch) []byte {
+func nodeHash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch, dbPrefix []byte) []byte {
 	if node == nil {
 		return nil
 	}
@@ -172,7 +172,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 			n.Value,
 		})
 	case *ExtensionNode:
-		nexthash := t.hash(n.NextNode, buf, sha, batch)
+		nexthash := nodeHash(n.NextNode, buf, sha, batch, dbPrefix)
 
 		buf.Reset()
 		rlp.Encode(buf, []interface{}{
@@ -183,7 +183,7 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 	case *BranchNode:
 		var children [numBranchChildren][]byte
 		for i, child := range n.Children {
-			children[i] = t.hash(child, buf, sha, batch)
+			children[i] = nodeHash(child, buf, sha, batch, dbPrefix)
 		}
 
 		buf.Reset()
@@ -207,14 +207,14 @@ func (t *Trie) hash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database
 
 	// persist node if batch specified
 	if batch != nil {
-		batch.Put(append(t.dbprefix, node.Hash()...), buf.Bytes())
+		batch.Put(append(dbPrefix, node.Hash()...), buf.Bytes())
 		node.SetStatus(nodeStatusPersisted)
 	}
 
 	return node.Hash()
 }
 
-func (t *Trie) encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
+func encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 	if node == nil {
 		return
 	}
@@ -228,7 +228,7 @@ func (t *Trie) encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 			n.Value,
 		})
 	case *ExtensionNode:
-		nexthash := t.hash(n.NextNode, buf, sha, nil)
+		nexthash := nodeHash(n.NextNode, buf, sha, nil, nil)
 
 		buf.Reset()
 		rlp.Encode(buf, []interface{}{
@@ -239,7 +239,7 @@ func (t *Trie) encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 	case *BranchNode:
 		var children [numBranchChildren][]byte
 		for i, child := range n.Children {
-			children[i] = t.hash(child, buf, sha, nil)
+			children[i] = nodeHash(child, buf, sha, nil, nil)
 		}
 
 		buf.Reset()
