@@ -15,7 +15,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	common2 "github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/crypto/sha3"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -188,4 +190,31 @@ func randBytes(n int) []byte {
 	r := make([]byte, n)
 	crand.Read(r)
 	return r
+}
+
+func Test_VerifyProof_Fake(t *testing.T) {
+	root := common2.StringToHash("root node hash")
+	key := []byte{1, 2, 3}
+
+	// construct a fake leaf node.
+	noder := &LeafNode{
+		Node: Node{
+			status: nodeStatusUpdated,
+			hash:   root.Bytes(),
+		},
+		Key:   keybytesToHex(key),
+		Value: []byte("999"),
+	}
+
+	// construct fake proof.
+	buf := new(bytes.Buffer)
+	encodeNode(noder, buf, sha3.NewKeccak256())
+	proof := map[string][]byte{
+		string(root.Bytes()): buf.Bytes(),
+	}
+
+	// node hash should mismatch with proof key.
+	result, err := VerifyProof(root, key, proof)
+	assert.Nil(t, result)
+	assert.NotNil(t, err)
 }

@@ -42,5 +42,6 @@ func (req *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 func (req *odrBlock) handleResponse(resp interface{}) {
 	if b, ok := resp.(*odrBlock); ok {
 		req.Block = b.Block
+		req.Error = b.Error
 	}
 }

@@ -7,6 +7,7 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/trie"
 )
 
 type odrTriePoof struct {
@@ -36,9 +37,20 @@ func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 }
 
 func (req *odrTriePoof) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrTriePoof); ok {
-		req.Proof = data.Proof
-		req.Error = data.Error
+	data, ok := resp.(*odrTriePoof)
+	if !ok {
+		return
+	}
+
+	req.Proof = data.Proof
+	req.Error = data.Error
+
+	if len(req.Error) > 0 {
+		return
+	}
+
+	if _, err := trie.VerifyProof(req.Root, req.Key, req.Proof); err != nil {
+		req.Error = err.Error()
 	}
 }
 
