@@ -377,3 +377,11 @@ func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 
 	return p2p.SendMessage(peer.rw, respCode, buff)
 }
+
+func (p *LightProtocol) GetProtocolVersion() (uint, error) {
+	return p.Protocol.Version, nil
+}
+
+func (p *LightProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
+	//@todo
+}

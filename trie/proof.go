@@ -66,8 +66,8 @@ func (t *Trie) GetProof(key []byte) (map[string][]byte, error) {
 		buf := new(bytes.Buffer)
 		var sha = sha3.NewKeccak256()
 		sha.Reset()
-		hash := t.hash(n, buf, sha, nil)
-		t.encodeNode(n, buf, sha)
+		hash := nodeHash(n, buf, sha, nil, nil)
+		encodeNode(n, buf, sha)
 
 		proof[string(hash)] = buf.Bytes()
 	}
@@ -81,15 +81,25 @@ func (t *Trie) GetProof(key []byte) (map[string][]byte, error) {
 func VerifyProof(rootHash common.Hash, key []byte, proof map[string][]byte) (value []byte, err error) {
 	key = keybytesToHex(key)
 	wantHash := rootHash
+	buf := new(bytes.Buffer)
+	sha := sha3.NewKeccak256()
 	for i := 0; ; i++ {
-		buf := proof[string(wantHash[:])]
-		if buf == nil {
+		encoded := proof[string(wantHash[:])]
+		if encoded == nil {
 			return nil, fmt.Errorf("proof node %d (hash %064x) missing", i, wantHash)
 		}
-		n, err := decodeNode(wantHash[:], buf)
+
+		n, err := decodeNode(common.CopyBytes(wantHash.Bytes()), encoded)
 		if err != nil {
 			return nil, fmt.Errorf("bad proof node %d: %v", i, err)
 		}
+
+		// verify node hash against proof key to avoid faked node.
+		n.SetStatus(nodeStatusDirty)
+		if h := nodeHash(n, buf, sha, nil, nil); !bytes.Equal(wantHash.Bytes(), h) {
+			return nil, fmt.Errorf("proof node %d hash mismatch", i)
+		}
+
 		keyrest, cld := get(n, key)
 		switch cld := cld.(type) {
 		case nil:

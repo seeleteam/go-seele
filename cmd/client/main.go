@@ -74,9 +74,6 @@ func main() {
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(minerCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(minerCommands.Flags))
-
 	htlcCommands := cli.Command{
 		Name:  "htlc",
 		Usage: "Hash time lock contract commands",
@@ -129,9 +126,6 @@ func main() {
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(htlcCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(htlcCommands.Flags))
-
 	domainCommands := cli.Command{
 		Name:  "domain",
 		Usage: "system domain name commands",
@@ -151,9 +145,6 @@ func main() {
 		},
 	}
 
-	sort.Sort(cli.CommandsByName(domainCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(domainCommands.Flags))
-
 	subChainCommands := cli.Command{
 		Name:  "subchain",
 		Usage: "system sub chain commands",
@@ -172,9 +163,6 @@ func main() {
 			},
 		},
 	}
-
-	sort.Sort(cli.CommandsByName(subChainCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(subChainCommands.Flags))
 
 	p2pCommands := cli.Command{
 		Name:  "p2p",
@@ -206,9 +194,6 @@ func main() {
 			},
 		},
 	}
-
-	sort.Sort(cli.CommandsByName(p2pCommands.Subcommands))
-	sort.Sort(cli.FlagsByName(p2pCommands.Flags))
 
 	app.Commands = []cli.Command{
 		htlcCommands,
@@ -367,11 +352,21 @@ func main() {
 	}
 
 	// sort commands and flags by name
-	sort.Sort(cli.CommandsByName(app.Commands))
-	sort.Sort(cli.FlagsByName(app.Flags))
+	sortCommands(app.Commands)
 
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func sortCommands(commands []cli.Command) {
+	sort.Sort(cli.CommandsByName(commands))
+
+	for _, command := range commands {
+		if len(command.Subcommands) > 0 {
+			sortCommands(command.Subcommands)
+		}
+
+		sort.Sort(cli.FlagsByName(command.Flags))
 	}
 }

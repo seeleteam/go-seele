@@ -17,13 +17,11 @@ import (
 type Backend interface {
 	GetP2pServer() *p2p.Server
 	GetNetVersion() uint64
-	GetProtocolVersion() (uint, error)
 	GetMinerCoinbase() common.Address
-
-	IsMining() bool
 
 	TxPoolBackend() Pool
 	ChainBackend() Chain
+	ProtocolBackend() Protocol
 	Log() *log.SeeleLog
 }
 
@@ -82,10 +80,16 @@ type Pool interface {
 	GetTransactions(processing, pending bool) []*types.Transaction
 	GetPendingTxCount() int
 	GetTransaction(txHash common.Hash) *types.Transaction
+	AddTransaction(tx *types.Transaction) error
 }
 
 type Chain interface {
 	CurrentHeader() *types.BlockHeader
 	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
+}
+
+type Protocol interface {
+	SendDifferentShardTx(tx *types.Transaction, shard uint)
+	GetProtocolVersion() (uint, error)
 }

@@ -686,3 +686,7 @@ handler:
 	p.handleDelPeer(peer.Peer)
 	p.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
 }
+
+func (p *SeeleProtocol) GetProtocolVersion() (uint, error) {
+	return p.Protocol.Version, nil
+}
