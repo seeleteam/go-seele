@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"strings"
 
-	api2"github.com/seeleteam/go-seele/api"
+	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
@@ -33,8 +33,7 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
-	block := api.s.ChainBackend().CurrentBlock()
-
+	header := api.s.ChainBackend().CurrentHeader()
 	var status string
 	if api.s.IsMining() {
 		status = "Running"
@@ -44,8 +43,8 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 
 	return api2.GetMinerInfo{
 		Coinbase:           api.s.GetMinerCoinbase(),
-		CurrentBlockHeight: block.Header.Height,
-		HeaderHash:         block.HeaderHash,
+		CurrentBlockHeight: header.Height,
+		HeaderHash:         header.Hash(),
 		Shard:              common.LocalShardNumber,
 		MinerStatus:        status,
 		MinerThread:        api.s.miner.GetThreads(),
