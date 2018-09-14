@@ -60,6 +60,10 @@ func codeToStr(code uint16) string {
 		return "syncHashRequestCode"
 	case syncHashResponseCode:
 		return "syncHashResponseCode"
+	case downloadHeadersRequestCode:
+		return "downloadHeadersRequestCode"
+	case downloadHeadersResponseCode:
+		return "downloadHeadersResponseCode"
 	}
 
 	return "unknown"
@@ -113,7 +117,7 @@ func NewLightProtocol(networkID uint64, txPool TransactionPool, chain BlockChain
 }
 
 func (sp *LightProtocol) Start() {
-	sp.log.Debug("SeeleProtocol.Start called!")
+	sp.log.Debug("LightProtocol.Start called!")
 	if !sp.bServerMode {
 		go sp.syncer()
 	}

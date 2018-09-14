@@ -113,7 +113,6 @@ func (c *connection) close() {
 func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	c.rmutux.Lock()
 	defer c.rmutux.Unlock()
-
 	headbuff := make([]byte, headBuffLength)
 	if err = c.readFull(headbuff); err != nil {
 		return &Message{}, err
@@ -143,9 +142,10 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 			return &Message{}, err
 		}
 
+		/*todo disable zip
 		if err = msgRecv.UnZip(); err != nil {
 			return &Message{}, err
-		}
+		}*/
 	}
 	metricsReceiveMessageCountMeter.Mark(1)
 	metricsReceivePortSpeedMeter.Mark(headBuffLength + int64(size))
@@ -157,10 +157,11 @@ func (c *connection) WriteMsg(msg *Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
 
-	if err := msg.Zip(); err != nil {
-		return err
-	}
-
+	/*	todo disable zip
+		if err := msg.Zip(); err != nil {
+				return err
+			}
+	*/
 	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
 	binary.BigEndian.PutUint16(b[headBuffCodeStart:headBuffCodeEnd], msg.Code)

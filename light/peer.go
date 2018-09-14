@@ -355,7 +355,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.curSyncMagic != msg.Magic {
+	if p.curSyncMagic != 0 && p.curSyncMagic != msg.Magic {
 		return nil
 	}
 
