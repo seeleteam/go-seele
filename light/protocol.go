@@ -189,24 +189,25 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	}
 
 	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
-	hash, err := sp.chain.GetStore().GetHeadBlockHash()
+	store := sp.chain.GetStore()
+	hash, err := store.GetHeadBlockHash()
 	if err != nil {
 		sp.log.Error("sp.handleAddPeer GetHeadBlockHash err.[%s]", err)
 		return false
 	}
 
-	header, err := sp.chain.GetStore().GetBlockHeader(hash)
+	header, err := store.GetBlockHeader(hash)
 	if err != nil {
 		sp.log.Error("sp.handleAddPeer GetBlockHeader err.[%s]", err)
 		return false
 	}
 
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(hash)
+	localTD, err := store.GetBlockTotalDifficulty(hash)
 	if err != nil {
 		return false
 	}
 
-	genesisBlock, err := sp.chain.GetStore().GetBlockByHeight(0)
+	genesisBlock, err := store.GetBlockByHeight(0)
 	if err != nil {
 		return false
 	}

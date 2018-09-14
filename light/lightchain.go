@@ -71,7 +71,7 @@ func (bc *LightChain) CurrentHeader() *types.BlockHeader {
 }
 
 func (bc *LightChain) GetStore() store.BlockchainStore {
-	return nil
+	return bc.bcStore
 }
 
 // WriteHeader writes the specified block header to the blockchain.
