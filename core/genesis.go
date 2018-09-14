@@ -37,7 +37,7 @@ type Genesis struct {
 type GenesisInfo struct {
 	// Accounts accounts info for genesis block used for test
 	// map key is account address -> value is account balance
-	Accounts map[common.Address]*big.Int `json:"accounts"`
+	Accounts map[common.Address]*big.Int `json:"accounts,omitempty"`
 
 	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is chosen by total difficult
 	Difficult int64 `json:"difficult"`

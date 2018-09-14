@@ -63,7 +63,7 @@ type Config struct {
 	SubPrivateKey string `json:"privateKey"`
 
 	// PrivateKey private key for p2p module, do not use it as any accounts
-	PrivateKey *ecdsa.PrivateKey
+	PrivateKey *ecdsa.PrivateKey `json:"-"`
 }
 
 // Server manages all p2p peer connections.
