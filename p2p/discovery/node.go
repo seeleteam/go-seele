@@ -149,3 +149,9 @@ func (n *Node) UnmarshalText(json []byte) error {
 	*n = *node
 	return nil
 }
+
+// MarshalText marshal node to josn
+func (n Node) MarshalText() ([]byte, error) {
+	strIP := fmt.Sprintf("%s:%d", n.IP.String(), n.UDPPort)
+	return []byte(strIP), nil
+}
