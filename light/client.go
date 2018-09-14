@@ -29,9 +29,9 @@ type ServiceClient struct {
 	log           *log.SeeleLog
 	odrBackend    *odrBackend
 
-	txPool   *txPool
-	chain    *LightChain
-	lightDB  database.Database // database used to store blocks and account state.
+	txPool  *txPool
+	chain   *LightChain
+	lightDB database.Database // database used to store blocks and account state.
 }
 
 // NewServiceClient create ServiceClient
@@ -111,5 +111,5 @@ func (s *ServiceClient) Stop() error {
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
 func (s *ServiceClient) APIs() (apis []rpc.API) {
-	return append(apis, api.GetAPIs(s)...)
+	return append(apis, api.GetAPIs(NewLightBackend(s))...)
 }
