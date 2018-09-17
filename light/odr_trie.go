@@ -30,9 +30,7 @@ func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 
 	if req.Proof, err = statedb.Trie().GetProof(req.Key); err != nil {
 		req.Error = err.Error()
-		return trieResponseCode, req
 	}
-
 	return trieResponseCode, req
 }
 

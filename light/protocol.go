@@ -69,18 +69,18 @@ func codeToStr(code uint16) string {
 type LightProtocol struct {
 	p2p.Protocol
 
-	bServerMode              bool
-	networkID                uint64
-	txPool                   TransactionPool
-	chain                    BlockChain
-	peerSet                  *peerSet
-	odrBackend               *odrBackend
-	downloader               *Downloader
-	wg                       sync.WaitGroup
-	quitCh                   chan struct{}
-	syncCh                   chan struct{}
-	chainHeaderChangeChannel chan common.Hash
-	log                      *log.SeeleLog
+	bServerMode         bool
+	networkID           uint64
+	txPool              TransactionPool
+	chain               BlockChain
+	peerSet             *peerSet
+	odrBackend          *odrBackend
+	downloader          *Downloader
+	wg                  sync.WaitGroup
+	quitCh              chan struct{}
+	syncCh              chan struct{}
+	chainHeaderChangeCh chan common.Hash
+	log                 *log.SeeleLog
 }
 
 // NewLightProtocol create LightProtocol
