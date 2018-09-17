@@ -136,6 +136,7 @@ func (sp *LightProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
+			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
 		case <-forceSync.C:
 			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
 		case <-sp.quitCh:
