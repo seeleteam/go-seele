@@ -35,7 +35,7 @@ var (
 	ByteFalse = []byte{0}
 
 	depositLimit        = big.NewInt(0).Mul(common.SeeleToFan, big.NewInt(20000))
-	recallDistanceLimit = 8640 // about one day
+	recallDistanceLimit = uint64(8640) // generate blocks in about one day
 )
 
 var (
@@ -110,7 +110,7 @@ func recallCmd(address []byte, context *Context) ([]byte, error) {
 	}
 
 	distance := context.BlockHeader.Height - info.QuitBlock
-	if info.IsQuit && distance > 2000 {
+	if info.IsQuit && distance > recallDistanceLimit {
 		context.statedb.SetData(MasternodeContractAddress, crypto.MustHash(address), nil)
 		context.statedb.SubBalance(MasternodeContractAddress, depositLimit)
 		context.statedb.AddBalance(context.tx.Data.From, depositLimit)
