@@ -36,28 +36,11 @@ type Peer struct {
 }
 
 // NewPeer creates and returns a new peer.
-func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *discovery.Node) *Peer {
+func NewPeer(conn *connection, log *log.SeeleLog, node *discovery.Node) *Peer {
 	closed := make(chan struct{})
-	offset := baseProtoCode
-	protoMap := make(map[string]protocolRW)
-	for _, p := range protocols {
-		protoRW := protocolRW{
-			bQuited:  false,
-			rw:       conn,
-			offset:   offset,
-			Protocol: p,
-			in:       make(chan Message, 1),
-			close:    closed,
-		}
-
-		protoMap[p.cap().String()] = protoRW
-		offset += p.Length
-		log.Debug("NewPeer called, add protocol: %s", p.cap())
-	}
 
 	return &Peer{
 		rw:            conn,
-		protocolMap:   protoMap,
 		disconnection: make(chan string),
 		closed:        closed,
 		log:           log,
@@ -65,6 +48,27 @@ func NewPeer(conn *connection, protocols []Protocol, log *log.SeeleLog, node *di
 		Node:          node,
 		lock:          sync.Mutex{},
 	}
+}
+
+func (p *Peer) setProtocols(protocols []Protocol) {
+	offset := baseProtoCode
+	protoMap := make(map[string]protocolRW)
+	for _, protocol := range protocols {
+		protoRW := protocolRW{
+			bQuited:  false,
+			rw:       p.rw,
+			offset:   offset,
+			Protocol: protocol,
+			in:       make(chan Message, 1),
+			close:    p.closed,
+		}
+
+		protoMap[protocol.cap().String()] = protoRW
+		offset += protocol.Length
+		p.log.Debug("setProtocols called, add protocol: %s", protocol.cap())
+	}
+
+	p.protocolMap = protoMap
 }
 
 func (p *Peer) getShardNumber() uint {

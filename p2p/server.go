@@ -24,6 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	set "gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -328,12 +329,13 @@ func (srv *Server) listenLoop() {
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	srv.log.Info("setup connection with peer %s", dialDest)
-	peer := NewPeer(&connection{fd: fd}, srv.Protocols, srv.log, dialDest)
+	peer := NewPeer(&connection{fd: fd}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.cap())
 	}
 
+	sort.Sort(capsByNameAndVersion(caps))
 	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
 		srv.log.Info("failed to do handshake with peer %s, err info %s", dialDest, err)
@@ -370,53 +372,57 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	return nil
 }
 
-func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) bool {
+func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
 	var genesis core.GenesisInfo
 	err := json.Unmarshal(recvMsg.Params, &genesis)
 	if err != nil {
-		return false
+		return nil, false
 	}
 
 	for key, val := range genesis.Accounts {
 		v, ok := srv.genesis.Accounts[key]
 		if !ok {
-			return false
+			return nil, false
 		}
 		if val.Cmp(v) != 0 {
-			return false
+			return nil, false
 		}
 	}
 
 	if srv.Config.NetworkID != recvMsg.NetworkID {
-		return false
+		return nil, false
 	}
 
-	var caps []Cap
+	localCapSet := set.New()
 	for _, proto := range srv.Protocols {
-		caps = append(caps, proto.cap())
-	}
-	if len(caps) != len(recvMsg.Caps) {
-		return false
+		localCapSet.Add(proto.cap())
 	}
 
-	var str string
-	var tag = true
-	len := len(caps)
-	for i := 0; i < len; i++ {
-		str = caps[i].String()
-		for j := 0; j < len; j++ {
-			if recvMsg.Caps[j].String() != str {
-				tag = false
-				continue
-			}
-			tag = true
-			break
-		}
-		if !tag {
-			break
+	var capNameList []Cap
+	for _, cap := range recvMsg.Caps {
+		if localCapSet.Has(cap) {
+			capNameList = append(capNameList, cap)
 		}
 	}
-	return tag
+
+	if len(capNameList) == 0 {
+		return nil, false
+	}
+
+	return capNameList, true
+}
+
+func (srv *Server) getProtocolsByCaps(capList []Cap) (proList []Protocol) {
+	for _, cap := range capList {
+		for _, pro := range srv.Protocols {
+			if pro.cap().String() == cap.String() {
+				proList = append(proList, pro)
+				break
+			}
+		}
+	}
+
+	return
 }
 
 // doHandShake Communicate each other
@@ -457,9 +463,13 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, errors.New("client nounceCnt is changed")
 		}
 
-		if !srv.peerIsValidate(recvMsg) {
+		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
+		} else {
+			sort.Sort(capsByNameAndVersion(capList))
+			peer.setProtocols(srv.getProtocolsByCaps(capList))
 		}
+
 	} else {
 		// server side. Receive handshake msg first
 		recvWrapMsg, err := peer.rw.ReadMsg()
@@ -472,8 +482,11 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 			return nil, 0, err
 		}
 
-		if !srv.peerIsValidate(recvMsg) {
+		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
+		} else {
+			sort.Sort(capsByNameAndVersion(capList))
+			peer.setProtocols(srv.getProtocolsByCaps(capList))
 		}
 
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt)

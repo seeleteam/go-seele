@@ -37,10 +37,10 @@ var (
 )
 
 type BlockChain interface {
-	CurrentBlock() *types.Block
 	GetCurrentState() (*state.Statedb, error)
 	GetState(root common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
+	CurrentHeader() *types.BlockHeader
 	WriteHeader(*types.BlockHeader) error
 }
 
@@ -60,6 +60,10 @@ func codeToStr(code uint16) string {
 		return "syncHashRequestCode"
 	case syncHashResponseCode:
 		return "syncHashResponseCode"
+	case downloadHeadersRequestCode:
+		return "downloadHeadersRequestCode"
+	case downloadHeadersResponseCode:
+		return "downloadHeadersResponseCode"
 	}
 
 	return "unknown"
@@ -113,7 +117,7 @@ func NewLightProtocol(networkID uint64, txPool TransactionPool, chain BlockChain
 }
 
 func (sp *LightProtocol) Start() {
-	sp.log.Debug("SeeleProtocol.Start called!")
+	sp.log.Debug("LightProtocol.Start called!")
 	if !sp.bServerMode {
 		go sp.syncer()
 	}
@@ -154,8 +158,13 @@ func (sp *LightProtocol) synchronise(p *peer) {
 		sp.log.Debug("sp.synchronise called.")
 	}
 
-	block := sp.chain.CurrentBlock()
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	hash, err := sp.chain.GetStore().GetHeadBlockHash()
+	if err != nil {
+		sp.log.Error("sp.synchronise GetHeadBlockHash err.[%s]", err)
+		return
+	}
+
+	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(hash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return
@@ -184,20 +193,30 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	}
 
 	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
+	store := sp.chain.GetStore()
+	hash, err := store.GetHeadBlockHash()
+	if err != nil {
+		sp.log.Error("sp.handleAddPeer GetHeadBlockHash err.[%s]", err)
+		return false
+	}
 
-	block := sp.chain.CurrentBlock()
-	head := block.HeaderHash
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
+	header, err := store.GetBlockHeader(hash)
+	if err != nil {
+		sp.log.Error("sp.handleAddPeer GetBlockHeader err.[%s]", err)
+		return false
+	}
+
+	localTD, err := store.GetBlockTotalDifficulty(hash)
 	if err != nil {
 		return false
 	}
 
-	genesisBlock, err := sp.chain.GetStore().GetBlockByHeight(0)
+	genesisBlock, err := store.GetBlockByHeight(0)
 	if err != nil {
 		return false
 	}
 
-	if err := newPeer.handShake(sp.networkID, localTD, head, block.Header.Height, genesisBlock.HeaderHash); err != nil {
+	if err := newPeer.handShake(sp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
 		sp.log.Error("handleAddPeer err. %s", err)
 		if !sp.bServerMode {
 			// just quit connection.

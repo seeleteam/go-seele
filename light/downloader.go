@@ -126,6 +126,8 @@ needQuit:
 					d.log.Debug("Downloader.doSynchronise WriteHeader error. %s", err)
 					break needQuit
 				}
+
+				d.log.Debug("Downloader.doSynchronise WriteHeader to chain. Height=%d", head.Height)
 				curHeight = head.Height
 			}
 

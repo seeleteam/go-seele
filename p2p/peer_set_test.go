@@ -8,15 +8,15 @@ package p2p
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func getPeer() *Peer {
 	node := discovery.NewNode(*crypto.MustGenerateRandomAddress(), nil, 0, 1)
-	return NewPeer(nil, nil, nil, node)
+	return NewPeer(nil, nil, node)
 }
 
 func Test_PeerSet(t *testing.T) {

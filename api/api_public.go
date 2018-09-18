@@ -57,8 +57,8 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, erro
 
 // GetBlockHeight get the block height of the chain head
 func (api *PublicSeeleAPI) GetBlockHeight() (uint64, error) {
-	block := api.s.ChainBackend().CurrentBlock()
-	return block.Header.Height, nil
+	header := api.s.ChainBackend().CurrentHeader()
+	return header.Height, nil
 }
 
 // GetBlock returns the requested block.
@@ -82,10 +82,10 @@ func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[stri
 }
 
 // getBlock returns block by height,when height is less than 0 the chain head is returned
-func getBlock(chain Chain, height int64) (*types.Block, error) {
-	var block *types.Block
+func getBlock(chain Chain, height int64) (block *types.Block, err error) {
 	if height < 0 {
-		block = chain.CurrentBlock()
+		header := chain.CurrentHeader()
+		block, err = chain.GetStore().GetBlockByHeight(header.Height)
 	} else {
 		var err error
 		block, err = chain.GetStore().GetBlockByHeight(uint64(height))
@@ -103,7 +103,12 @@ func getBlock(chain Chain, height int64) (*types.Block, error) {
 func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]map[string]interface{}, error) {
 	blocks := make([]types.Block, 0)
 	if height < 0 {
-		block := api.s.ChainBackend().CurrentBlock()
+		header := api.s.ChainBackend().CurrentHeader()
+		block, err := api.s.ChainBackend().GetStore().GetBlockByHeight(header.Height)
+		if err != nil {
+			return nil, err
+		}
+
 		blocks = append(blocks, *block)
 	} else {
 		if size > maxSizeLimit {

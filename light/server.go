@@ -79,6 +79,7 @@ func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
 func (pm *LightProtocol) blockLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
+	pm.chainHeaderChangeCh = make(chan common.Hash, 1)
 	event.ChainHeaderChangedEventMananger.AddAsyncListener(pm.chainHeaderChanged)
 needQuit:
 	for {
@@ -87,10 +88,7 @@ needQuit:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
 			pm.peerSet.ForEach(common.LocalShardNumber, func(p *peer) bool {
-				if !p.isSyncing() {
-					p.sendAnnounce(magic, uint64(0), uint64(0))
-				}
-
+				p.sendAnnounce(magic, uint64(0), uint64(0))
 				return true
 			})
 			pm.log.Debug("blockLoop head changed. ")
@@ -100,4 +98,5 @@ needQuit:
 	}
 
 	event.ChainHeaderChangedEventMananger.RemoveListener(pm.chainHeaderChanged)
+	close(pm.chainHeaderChangeCh)
 }

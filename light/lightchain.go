@@ -58,13 +58,23 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 	return chain, nil
 }
 
-func (bc *LightChain) CurrentBlock() *types.Block {
-	return nil
-}
-
 func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
 	trie := newOdrTrie(bc.odrBackend, root, state.TrieDbPrefix)
 	return state.NewStatedbWithTrie(trie), nil
+}
+
+// CurrentHeader returns the HEAD block header of the blockchain.
+func (bc *LightChain) CurrentHeader() *types.BlockHeader {
+	hash, err := bc.bcStore.GetHeadBlockHash()
+	if err != nil {
+		return nil
+	}
+
+	header, err := bc.bcStore.GetBlockHeader(hash)
+	if err != nil {
+		return nil
+	}
+	return header
 }
 
 func (bc *LightChain) GetStore() store.BlockchainStore {

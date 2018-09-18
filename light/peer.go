@@ -168,7 +168,7 @@ func (p *peer) handleDownloadHeadersRequest(msg *DownloadHeaderQuery) error {
 		Hearders:    headers,
 	}
 
-	if len(headers) > 0 && headers[len(headers)-1].Hash() == chain.CurrentBlock().HeaderHash {
+	if len(headers) > 0 && headers[len(headers)-1].Hash() == chain.CurrentHeader().Hash() {
 		sendMsg.HasFinished = true
 	}
 
@@ -191,17 +191,17 @@ func (p *peer) sendSyncHashRequest(magic uint32, begin uint64) error {
 // handleSyncHashRequest reponses syncHashRequestCode request, this should only be called by server mode.
 func (p *peer) handleSyncHashRequest(msg *HeaderHashSyncQuery) error {
 	chain := p.protocolManager.chain
-	head := chain.CurrentBlock()
-	localTD, err := chain.GetStore().GetBlockTotalDifficulty(head.HeaderHash)
+	header := chain.CurrentHeader()
+	localTD, err := chain.GetStore().GetBlockTotalDifficulty(header.Hash())
 	if err != nil {
 		return errReadChain
 	}
 
-	height := head.Header.Height
+	height := header.Height
 	syncMsg := &HeaderHashSync{
 		Magic:           msg.Magic,
 		TD:              localTD,
-		CurrentBlock:    head.HeaderHash,
+		CurrentBlock:    header.Hash(),
 		CurrentBlockNum: height,
 		BeginNum:        msg.BeginNum,
 	}
@@ -301,20 +301,20 @@ func (p *peer) sendAnnounceQuery(magic uint32, begin uint64, end uint64) error {
 func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 	chain := p.protocolManager.chain
 	if end == 0 {
-		end = chain.CurrentBlock().Header.Height
+		end = chain.CurrentHeader().Height
 	}
 
-	head := chain.CurrentBlock()
-	localTD, err := chain.GetStore().GetBlockTotalDifficulty(head.HeaderHash)
+	header := chain.CurrentHeader()
+	localTD, err := chain.GetStore().GetBlockTotalDifficulty(header.Hash())
 	if err != nil {
 		return errReadChain
 	}
 
-	height := head.Header.Height
+	height := header.Height
 	msg := &AnnounceBody{
 		Magic:           magic,
 		TD:              localTD,
-		CurrentBlock:    head.HeaderHash,
+		CurrentBlock:    header.Hash(),
 		CurrentBlockNum: height,
 	}
 
@@ -348,7 +348,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.curSyncMagic != msg.Magic {
+	if p.curSyncMagic != 0 && p.curSyncMagic != msg.Magic {
 		return nil
 	}
 

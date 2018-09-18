@@ -84,7 +84,7 @@ type Pool interface {
 }
 
 type Chain interface {
-	CurrentBlock() *types.Block
+	CurrentHeader() *types.BlockHeader
 	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 }

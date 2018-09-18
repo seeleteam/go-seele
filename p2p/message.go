@@ -47,7 +47,6 @@ func (msg *Message) Zip() error {
 	}
 
 	buf := new(bytes.Buffer)
-
 	writer := gzip.NewWriter(buf)
 	_, err := writer.Write(msg.Payload)
 	writer.Close()
