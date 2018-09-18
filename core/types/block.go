@@ -6,10 +6,31 @@
 package types
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+)
+
+var (
+	// ErrBlockHeaderNil is returned when the block header is nil.
+	ErrBlockHeaderNil = errors.New("block header is nil")
+
+	// ErrBlockHashMismatch is returned when the block hash does not match the header hash.
+	ErrBlockHashMismatch = errors.New("block header hash mismatch")
+
+	// ErrBlockTxsHashMismatch is returned when the block transactions hash does not match
+	// the transaction root hash in the header.
+	ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch")
+
+	// ErrBlockTxDebtHashMismatch is returned when the calculated tx debts hash of block
+	// does not match the debts root hash in block header.
+	ErrBlockTxDebtHashMismatch = errors.New("block transaction debts hash mismatch")
+
+	// ErrBlockDebtHashMismatch is returned when the calculated debts hash of block
+	// does not match the debts root hash in block header.
+	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
 )
 
 // BlockHeader represents the header of a block in the blockchain.
@@ -117,4 +138,33 @@ func (block *Block) GetShardNumber() uint {
 	}
 
 	return block.Header.Creator.Shard()
+}
+
+// Validate validates state independent fields in a block.
+func (block *Block) Validate() error {
+	// Block must have header
+	if block.Header == nil {
+		return ErrBlockHeaderNil
+	}
+
+	// Validate block header hash
+	if !block.HeaderHash.Equal(block.Header.Hash()) {
+		return ErrBlockHashMismatch
+	}
+
+	// Validate tx merkle root hash
+	if h := MerkleRootHash(block.Transactions); !h.Equal(block.Header.TxHash) {
+		return ErrBlockTxsHashMismatch
+	}
+
+	// Validates debt root hash.
+	if h := DebtMerkleRootHash(NewDebts(block.Transactions)); !h.Equal(block.Header.TxDebtHash) {
+		return ErrBlockTxDebtHashMismatch
+	}
+
+	if h := DebtMerkleRootHash(block.Debts); !h.Equal(block.Header.DebtHash) {
+		return ErrBlockDebtHashMismatch
+	}
+
+	return nil
 }
