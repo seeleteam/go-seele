@@ -7,8 +7,8 @@ package keystore
 
 import (
 	"io/ioutil"
-	"os"
-	"path/filepath"
+
+	"github.com/seeleteam/go-seele/common"
 )
 
 // GetKey get private key from a file
@@ -28,27 +28,5 @@ func StoreKey(fileName, password string, key *Key) error {
 		return err
 	}
 
-	return writeKeyFile(fileName, content)
-}
-
-func writeKeyFile(file string, content []byte) error {
-	// Create the keystore directory with appropriate permissions
-	// in case it is not present yet.
-	const dirPerm = 0700
-	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
-		return err
-	}
-
-	// Atomic write: create a temporary hidden file first then move it into place.
-	f, err := ioutil.TempFile(filepath.Dir(file), "."+filepath.Base(file)+".tmp")
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(content); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return err
-	}
-	f.Close()
-	return os.Rename(f.Name(), file)
+	return common.SaveFile(fileName, content)
 }
