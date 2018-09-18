@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/miner/pow"
+	"github.com/stretchr/testify/assert"
 )
 
 type testAccount struct {
@@ -155,7 +155,7 @@ func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.HeaderHash = common.EmptyHash
 
-	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockHashMismatch)
+	assert.Equal(t, bc.WriteBlock(newBlock), types.ErrBlockHashMismatch)
 }
 
 func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
@@ -168,7 +168,7 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 	newBlock.Header.TxHash = common.EmptyHash
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockTxsHashMismatch)
+	assert.Equal(t, bc.WriteBlock(newBlock), types.ErrBlockTxsHashMismatch)
 }
 
 func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {

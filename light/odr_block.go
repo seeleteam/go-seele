@@ -7,6 +7,7 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -40,8 +41,33 @@ func (req *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 }
 
 func (req *odrBlock) handleResponse(resp interface{}) {
-	if b, ok := resp.(*odrBlock); ok {
-		req.Block = b.Block
-		req.Error = b.Error
+	if data, ok := resp.(*odrBlock); ok {
+		req.Error = data.Error
+		req.Block = data.Block
 	}
+}
+
+// Validate validates the retrieved block.
+func (req *odrBlock) Validate(bcStore store.BlockchainStore) error {
+	if req.Block == nil {
+		return nil
+	}
+
+	var err error
+	if err = req.Block.Validate(); err != nil {
+		return err
+	}
+
+	hash := req.Hash
+	if hash.IsEmpty() {
+		if hash, err = bcStore.GetBlockHash(req.Height); err != nil {
+			return err
+		}
+	}
+
+	if !hash.Equal(req.Block.HeaderHash) {
+		return types.ErrBlockHashMismatch
+	}
+
+	return nil
 }

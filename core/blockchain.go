@@ -38,16 +38,6 @@ const (
 )
 
 var (
-	// ErrBlockHeaderNil is returned when the block header is nil.
-	ErrBlockHeaderNil = errors.New("block header is nil")
-
-	// ErrBlockHashMismatch is returned when the block hash does not match the header hash.
-	ErrBlockHashMismatch = errors.New("block header hash mismatch")
-
-	// ErrBlockTxsHashMismatch is returned when the block transactions hash does not match
-	// the transaction root hash in the header.
-	ErrBlockTxsHashMismatch = errors.New("block transactions root hash mismatch")
-
 	// ErrBlockInvalidParentHash is returned when inserting a new header with invalid parent block hash.
 	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
 
@@ -64,14 +54,6 @@ var (
 	// ErrBlockReceiptHashMismatch is returned when the calculated receipts hash of block
 	// does not match the receipts root hash in block header.
 	ErrBlockReceiptHashMismatch = errors.New("block receipts hash mismatch")
-
-	// ErrBlockDebtHashMismatch is returned when the calculated debts hash of block
-	// does not match the debts root hash in block header.
-	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
-
-	// ErrBlockTxDebtHashMismatch is returned when the calculated tx debts hash of block
-	// does not match the debts root hash in block header.
-	ErrBlockTxDebtHashMismatch = errors.New("block transaction debts hash mismatch")
 
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
@@ -371,15 +353,15 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 // validateBlock validates all blockhain independent fields in the block.
 func (bc *Blockchain) validateBlock(block *types.Block) error {
 	if block == nil {
-		return ErrBlockHeaderNil
+		return types.ErrBlockHeaderNil
 	}
 
 	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore); err != nil {
 		return err
 	}
 
-	if !block.HeaderHash.Equal(block.Header.Hash()) {
-		return ErrBlockHashMismatch
+	if err := block.Validate(); err != nil {
+		return err
 	}
 
 	if types.GetTransactionsSize(block.Transactions) > BlockByteLimit {
@@ -393,28 +375,13 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		}
 	}
 
-	// Validate tx merkle root hash
-	txsHash := types.MerkleRootHash(block.Transactions)
-	if !txsHash.Equal(block.Header.TxHash) {
-		return ErrBlockTxsHashMismatch
-	}
-
-	// Validates debt root hash.
-	if txDebtsRootHash := types.DebtMerkleRootHash(types.NewDebts(block.Transactions)); !txDebtsRootHash.Equal(block.Header.TxDebtHash) {
-		return ErrBlockTxDebtHashMismatch
-	}
-
-	if debtsRootHash := types.DebtMerkleRootHash(block.Debts); !debtsRootHash.Equal(block.Header.DebtHash) {
-		return ErrBlockDebtHashMismatch
-	}
-
 	return nil
 }
 
 // ValidateBlockHeader validates the specified header.
 func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcStore store.BlockchainStore) error {
 	if header == nil {
-		return ErrBlockHeaderNil
+		return types.ErrBlockHeaderNil
 	}
 
 	// Validate timestamp
