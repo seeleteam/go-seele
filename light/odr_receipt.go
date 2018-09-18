@@ -6,14 +6,14 @@
 package light
 
 import (
-	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 type odrtReceipt struct {
 	odrItem
-	receipt types.Receipt
-	Hash   common.Hash
+	Receipt *types.Receipt
+	TxHash  common.Hash
 }
 
 func (req *odrtReceipt) code() uint16 {
@@ -21,9 +21,11 @@ func (req *odrtReceipt) code() uint16 {
 }
 
 func (req *odrtReceipt) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	if receipt, err := lp.chain.GetStore().GetReceiptByTxHash(req.Hash); err != nil {
-		req.receipt = *receipt
+	receipt, err := lp.chain.GetStore().GetReceiptByTxHash(req.TxHash)
+	if err != nil {
 		req.Error = err.Error()
+	} else {
+		req.Receipt = receipt
 	}
 
 	return receiptResponseCode, req
@@ -32,6 +34,6 @@ func (req *odrtReceipt) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 func (req *odrtReceipt) handleResponse(resp interface{}) {
 	if data, ok := resp.(*odrtReceipt); ok {
 		req.Error = data.Error
-		req.receipt = data.receipt
+		req.Receipt = data.Receipt
 	}
 }
