@@ -16,7 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc2"
+	rpc "github.com/seeleteam/go-seele/rpc"
 )
 
 // error infos

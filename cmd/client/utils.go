@@ -15,7 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 const (

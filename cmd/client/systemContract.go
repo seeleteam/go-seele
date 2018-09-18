@@ -11,7 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 type handler func(client *rpc.Client) (interface{}, interface{}, error)
