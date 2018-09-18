@@ -14,6 +14,8 @@ const (
 	addTxResponseCode = uint16(13)
 	trieRequestCode   = uint16(14)
 	trieResponseCode  = uint16(15)
+	receiptRequestCode = uint16(16)
+	receiptResponseCode = uint16(17)
 )
 
 var (
