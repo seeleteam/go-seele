@@ -32,7 +32,7 @@ func Test_SaveFile(t *testing.T) {
 	file := filepath.Join(os.TempDir(), "testsavefile.json")
 	assert.Equal(t, FileOrFolderExists(file), false)
 
-	err := SaveFile(file, []byte("qqq"))
+	err := SaveFile(file, []byte("qq"))
 	if err != nil {
 		panic(err)
 	}
