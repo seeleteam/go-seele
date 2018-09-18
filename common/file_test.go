@@ -33,7 +33,9 @@ func Test_SaveFile(t *testing.T) {
 	assert.Equal(t, FileOrFolderExists(file), false)
 
 	err := SaveFile(file, []byte("qqq"))
-	assert.Equal(t, err, nil)
+	if err != nil {
+		panic(err)
+	}
 	defer os.RemoveAll(file)
 
 	assert.Equal(t, FileOrFolderExists(file), true)
