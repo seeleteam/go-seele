@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 
 	"github.com/seeleteam/go-seele/contract/system"
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 var (

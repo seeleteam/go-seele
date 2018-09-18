@@ -22,7 +22,7 @@ import (
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc2"
+	rpc "github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele/download"
 )
 

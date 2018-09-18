@@ -9,7 +9,7 @@ import (
 	"net"
 	"strings"
 
-	rpc "github.com/seeleteam/go-seele/rpc2"
+	rpc "github.com/seeleteam/go-seele/rpc"
 )
 
 // startRPC is a helper method to start all the various RPC endpoint during node

@@ -11,7 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc2"
+	rpc "github.com/seeleteam/go-seele/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
