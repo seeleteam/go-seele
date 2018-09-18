@@ -19,7 +19,7 @@ func FileOrFolderExists(fileOrFolder string) bool {
 
 // SaveFile save file
 func SaveFile(filePath string, content []byte) error {
-	// Create the keystore directory with appropriate permissions
+	// Create the file directory with appropriate permissions
 	// in case it is not present yet.
 	const dirPerm = 0700
 	if err := os.MkdirAll(filepath.Dir(filePath), dirPerm); err != nil {
