@@ -8,9 +8,9 @@ package light
 import (
 	"testing"
 
-	"github.com/influxdata/influxdb/pkg/testing/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestReceipt() *types.Receipt {
