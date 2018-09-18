@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/p2p/discovery"
 )
 
 const (
@@ -33,7 +34,7 @@ var (
 type SubChainInfo struct {
 	Name        string
 	Version     string
-	StaticNodes []string
+	StaticNodes []*discovery.Node
 
 	TokenFullName  string
 	TokenShortName string
@@ -49,8 +50,6 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 		return nil, err
 	}
 
-	// @todo validate the reg info
-
 	key, err := domainNameToKey([]byte(info.Name))
 	if err != nil {
 		return nil, err
@@ -58,6 +57,11 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 
 	if value := context.statedb.GetData(SubChainContractAddress, key); len(value) > 0 {
 		return nil, errExists
+	}
+
+	// validate the reg info
+	if len(info.Version) == 0 || len(info.TokenFullName) == 0 || len(info.TokenShortName) == 0 || info.TokenAmount == 0 {
+		return nil, errInvalidSubChainInfo
 	}
 
 	value, err := json.MarshalIndent(info, "", "\t")
