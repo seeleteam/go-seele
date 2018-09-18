@@ -37,10 +37,10 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 		return output, nil
 	}
 
-	store := api.s.ChainBackend().GetStore()
+	store := api.s.chain.GetStore()
 	debtIndex, err := store.GetDebtIndex(hash)
 	if err != nil {
-		api.s.Log().Info(err.Error())
+		api.s.log.Info(err.Error())
 		return nil, api2.ErrDebtNotFound
 	}
 

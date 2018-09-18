@@ -14,7 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/contract/system"
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/urfave/cli"
 )
 

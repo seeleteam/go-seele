@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // In this example, our client whishes to track the latest 'block number'

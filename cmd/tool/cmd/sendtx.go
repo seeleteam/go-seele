@@ -18,7 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/rpc2"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
 	"github.com/seeleteam/go-seele/api"
 )

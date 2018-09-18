@@ -14,7 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc2"
+	rpc "github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -73,7 +73,7 @@ func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
 		return
 	}
 
-	pm.chainHeaderChangeChannel <- newHeader
+	pm.chainHeaderChangeCh <- newHeader
 }
 
 func (pm *LightProtocol) blockLoop() {
@@ -84,7 +84,7 @@ func (pm *LightProtocol) blockLoop() {
 needQuit:
 	for {
 		select {
-		case <-pm.chainHeaderChangeChannel:
+		case <-pm.chainHeaderChangeCh:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
 			pm.peerSet.ForEach(common.LocalShardNumber, func(p *peer) bool {
