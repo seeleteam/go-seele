@@ -79,7 +79,7 @@ func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
 func (pm *LightProtocol) blockLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
-	pm.chainHeaderChangeChannel = make(chan common.Hash, 1)
+	pm.chainHeaderChangeCh = make(chan common.Hash, 1)
 	event.ChainHeaderChangedEventMananger.AddAsyncListener(pm.chainHeaderChanged)
 needQuit:
 	for {
@@ -98,5 +98,5 @@ needQuit:
 	}
 
 	event.ChainHeaderChangedEventMananger.RemoveListener(pm.chainHeaderChanged)
-	close(pm.chainHeaderChangeChannel)
+	close(pm.chainHeaderChangeCh)
 }
