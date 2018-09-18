@@ -19,7 +19,6 @@ func Test_RegisterSubChain(t *testing.T) {
 	regInfo := SubChainInfo{
 		Name:              "test",
 		Version:           "3.8",
-		StaticNodes:       []string{"ip1", "ip2"},
 		TokenFullName:     "TestCoin",
 		TokenShortName:    "TC",
 		TokenAmount:       1000000,
