@@ -211,4 +211,18 @@ var (
 		Usage:       "subchain json file path",
 		Destination: &subChainJSONFileVale,
 	}
+
+	configFilePathValue string
+	configFilePathFlag  = cli.StringFlag{
+		Name:        "path",
+		Usage:       "subchain generate config file path",
+		Destination: &configFilePathValue,
+	}
+
+	keyFileValue string
+	keyFileFlag  = cli.StringFlag{
+		Name:        "file",
+		Usage:       "key file",
+		Destination: &keyFileValue,
+	}
 )

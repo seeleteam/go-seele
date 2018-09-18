@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/api"
 )
 
 // GetAccountNonce get account nonce by account
@@ -71,4 +71,12 @@ func SendTx(client *rpc.Client, tx *types.Transaction) (bool, error) {
 	err := client.Call(&result, "seele_addTx", *tx)
 
 	return result, err
+}
+
+// CallContract call contract
+func CallContract(client *rpc.Client, contractID, payLoad string, height int64) (map[string]interface{}, error) {
+	var info map[string]interface{}
+	err := client.Call(&info, "seele_call", contractID, payLoad, height)
+
+	return info, err
 }

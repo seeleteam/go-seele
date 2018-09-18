@@ -161,6 +161,12 @@ func main() {
 				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, nameFlag),
 				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
 			},
+			{
+				Name:   "config",
+				Usage:  "generate sub chain config file",
+				Flags:  rpcFlags(keyFileFlag, nameFlag, configFilePathFlag),
+				Action: createSubChainConfigFile,
+			},
 		},
 	}
 

@@ -5,12 +5,27 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"path/filepath"
+	"time"
 
+	"github.com/seeleteam/go-seele/cmd/util"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/contract/system"
+	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log/comm"
+	"github.com/seeleteam/go-seele/metrics"
+	"github.com/seeleteam/go-seele/node"
+	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -48,7 +63,7 @@ func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, errInvalidTokenAmount
 	}
 
-	subChainBytes, err := json.Marshal(&subChain)
+	subChainBytes, err := json.Marshal(subChain)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,6 +97,51 @@ func querySubChain(client *rpc.Client) (interface{}, interface{}, error) {
 	return tx, tx, err
 }
 
+func createSubChainConfigFile(c *cli.Context) error {
+	var client *rpc.Client
+	if addressValue != "" {
+		c, err := rpc.DialTCP(context.Background(), addressValue)
+		if err != nil {
+			return err
+		}
+
+		client = c
+	}
+
+	subChainInfo, err := getSubChainFromReceipt(client)
+	if err != nil {
+		return err
+	}
+
+	config, err := getConfigFromSubChain(subChainInfo)
+	if err != nil {
+		return err
+	}
+
+	// save accounts file
+	byteAccounts, err := json.MarshalIndent(subChainInfo.GenesisAccounts, "", "\t")
+	if err != nil {
+		return err
+	}
+	err = common.SaveFile(filepath.Join(configFilePathValue, "accounts.json"), byteAccounts)
+	if err != nil {
+		return err
+	}
+
+	// save node file
+	byteNode, err := json.MarshalIndent(config, "", "\t")
+	if err != nil {
+		return err
+	}
+	err = common.SaveFile(filepath.Join(configFilePathValue, "node.json"), byteNode)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("generate subchain config file successful")
+	return nil
+}
+
 func getSubChainFromFile(filepath string) (*system.SubChainInfo, error) {
 	var subChain system.SubChainInfo
 	buff, err := ioutil.ReadFile(filepath)
@@ -91,4 +151,109 @@ func getSubChainFromFile(filepath string) (*system.SubChainInfo, error) {
 
 	err = json.Unmarshal(buff, &subChain)
 	return &subChain, err
+}
+
+func getKeyFromFile() (*keystore.Key, error) {
+	pass, err := common.GetPassword()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get password %s", err)
+	}
+
+	key, err := keystore.GetKey(keyFileValue, pass)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key file. it should be a private key: %s", err)
+	}
+
+	return key, nil
+}
+
+func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
+
+	if err := system.ValidateDomainName([]byte(nameValue)); err != nil {
+		return nil, err
+	}
+	payloadBytes := append([]byte{system.CmdSubChainQuery}, []byte(nameValue)...)
+	mapReceipt, err := util.CallContract(client, system.SubChainContractAddress.ToHex(), hexutil.BytesToHex(payloadBytes), -1)
+	if err != nil {
+		return nil, err
+	}
+
+	resultFlag, ok := mapReceipt["failed"].(bool)
+	if !ok {
+		return nil, errors.New("invalid field failed from transaction receipt")
+	}
+	result, ok := mapReceipt["result"].(string)
+	if !ok {
+		return nil, errors.New("invalid field result from transaction receipt")
+	}
+	if resultFlag {
+		return nil, errors.New(result)
+	}
+
+	bytesSubChainInfo, err := hexutil.HexToBytes(result)
+	if err != nil {
+		return nil, err
+	}
+
+	var subChainInfo system.SubChainInfo
+	err = json.Unmarshal(bytesSubChainInfo, &subChainInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &subChainInfo, nil
+}
+
+func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, error) {
+	key, err := getKeyFromFile()
+	if err != nil {
+		return nil, err
+	}
+
+	config := &util.Config{}
+	config.BasicConfig = node.BasicConfig{
+		Name:     subChainInfo.Name,
+		Version:  subChainInfo.Version,
+		DataDir:  "node1",
+		RPCAddr:  "0.0.0.0:8027",
+		Coinbase: key.Address.ToHex(),
+		SyncMode: "full",
+	}
+
+	config.P2PConfig = p2p.Config{
+		NetworkID:     1,
+		ListenAddr:    "0.0.0.0:8057",
+		StaticNodes:   subChainInfo.StaticNodes,
+		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(key.PrivateKey)),
+	}
+
+	config.LogConfig = comm.LogConfig{
+		PrintLog: true,
+	}
+
+	config.HTTPServer = node.HTTPServer{
+		HTTPAddr:      "127.0.0.1:8036",
+		HTTPCors:      []string{"*"},
+		HTTPWhiteHost: []string{"*"},
+	}
+
+	config.WSServerConfig = node.WSServerConfig{
+		Address:      "127.0.0.1:8046",
+		CrossOrigins: []string{"*"},
+	}
+
+	config.MetricsConfig = &metrics.Config{
+		Addr:     "127.0.0.1:8087",
+		Duration: time.Duration(10),
+		Database: "influxdb",
+		Username: "test",
+		Password: "test123",
+	}
+
+	config.GenesisConfig = core.GenesisInfo{
+		Difficult:   int64(subChainInfo.GenesisDifficulty),
+		ShardNumber: key.Address.Shard(),
+	}
+
+	return config, nil
 }
