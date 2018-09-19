@@ -33,6 +33,7 @@ var (
 	errInvalidTokenFullName  = errors.New("invalid subchain token full name")
 	errInvalidTokenShortName = errors.New("invalid subchain token short name")
 	errInvalidTokenAmount    = errors.New("invalid subchain token amount")
+	errSubChainInfo          = errors.New("failed to get sub-chain information")
 )
 
 func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
@@ -98,14 +99,9 @@ func querySubChain(client *rpc.Client) (interface{}, interface{}, error) {
 }
 
 func createSubChainConfigFile(c *cli.Context) error {
-	var client *rpc.Client
-	if addressValue != "" {
-		c, err := rpc.DialTCP(context.Background(), addressValue)
-		if err != nil {
-			return err
-		}
-
-		client = c
+	client, err := rpc.DialTCP(context.Background(), addressValue)
+	if err != nil {
+		return err
 	}
 
 	subChainInfo, err := getSubChainFromReceipt(client)
@@ -123,7 +119,7 @@ func createSubChainConfigFile(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = common.SaveFile(filepath.Join(configFilePathValue, "accounts.json"), byteAccounts)
+	err = common.SaveFile(filepath.Join(outPutValue, "accounts.json"), byteAccounts)
 	if err != nil {
 		return err
 	}
@@ -133,12 +129,12 @@ func createSubChainConfigFile(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = common.SaveFile(filepath.Join(configFilePathValue, "node.json"), byteNode)
+	err = common.SaveFile(filepath.Join(outPutValue, "node.json"), byteNode)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("generate subchain config file successful")
+	fmt.Println("generate subchain config files successfully")
 	return nil
 }
 
@@ -168,7 +164,6 @@ func getKeyFromFile() (*keystore.Key, error) {
 }
 
 func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
-
 	if err := system.ValidateDomainName([]byte(nameValue)); err != nil {
 		return nil, err
 	}
@@ -180,14 +175,14 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 
 	resultFlag, ok := mapReceipt["failed"].(bool)
 	if !ok {
-		return nil, errors.New("invalid field failed from transaction receipt")
+		return nil, errSubChainInfo
 	}
 	result, ok := mapReceipt["result"].(string)
 	if !ok {
-		return nil, errors.New("invalid field result from transaction receipt")
+		return nil, errSubChainInfo
 	}
 	if resultFlag {
-		return nil, errors.New(result)
+		return nil, fmt.Errorf("failed to get sub-chain information, %s", result)
 	}
 
 	bytesSubChainInfo, err := hexutil.HexToBytes(result)
@@ -214,7 +209,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 	config.BasicConfig = node.BasicConfig{
 		Name:     subChainInfo.Name,
 		Version:  subChainInfo.Version,
-		DataDir:  "node1",
+		DataDir:  subChainInfo.Name,
 		RPCAddr:  "0.0.0.0:8027",
 		Coinbase: key.Address.ToHex(),
 		SyncMode: "full",
