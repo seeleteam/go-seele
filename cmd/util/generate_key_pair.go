@@ -48,3 +48,22 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 
 	return generateKeyPairCmd
 }
+
+// GenerateKey generate key by shard
+func GenerateKey(shard uint) (*common.Address, *ecdsa.PrivateKey, error) {
+	var publicKey *common.Address
+	var privateKey *ecdsa.PrivateKey
+	var err error
+	if shard > common.ShardCount {
+		return nil, nil, fmt.Errorf("not supported shard number, shard number should be [0, %d]", common.ShardCount)
+	} else if shard == 0 {
+		publicKey, privateKey, err = crypto.GenerateKeyPair()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to generate the key pair: %s", err)
+		}
+	} else {
+		publicKey, privateKey = crypto.MustGenerateShardKeyPair(shard)
+	}
+
+	return publicKey, privateKey, nil
+}

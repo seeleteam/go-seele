@@ -218,11 +218,4 @@ var (
 		Usage:       "subchain config file path",
 		Destination: &outPutValue,
 	}
-
-	keyFileValue string
-	keyFileFlag  = cli.StringFlag{
-		Name:        "file",
-		Usage:       "key file",
-		Destination: &keyFileValue,
-	}
 )

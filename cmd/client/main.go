@@ -164,7 +164,7 @@ func main() {
 			{
 				Name:   "config",
 				Usage:  "generate sub chain config file",
-				Flags:  rpcFlags(keyFileFlag, nameFlag, outPutFlag),
+				Flags:  rpcFlags(coinbaseFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag),
 				Action: createSubChainConfigFile,
 			},
 		},

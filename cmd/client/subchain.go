@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/common/keystore"
 	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
@@ -119,8 +119,7 @@ func createSubChainConfigFile(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = common.SaveFile(filepath.Join(outPutValue, "accounts.json"), byteAccounts)
-	if err != nil {
+	if err = common.SaveFile(filepath.Join(outPutValue, "accounts.json"), byteAccounts); err != nil {
 		return err
 	}
 
@@ -129,8 +128,7 @@ func createSubChainConfigFile(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = common.SaveFile(filepath.Join(outPutValue, "node.json"), byteNode)
-	if err != nil {
+	if err = common.SaveFile(filepath.Join(outPutValue, "node.json"), byteNode); err != nil {
 		return err
 	}
 
@@ -147,20 +145,6 @@ func getSubChainFromFile(filepath string) (*system.SubChainInfo, error) {
 
 	err = json.Unmarshal(buff, &subChain)
 	return &subChain, err
-}
-
-func getKeyFromFile() (*keystore.Key, error) {
-	pass, err := common.GetPassword()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get password %s", err)
-	}
-
-	key, err := keystore.GetKey(keyFileValue, pass)
-	if err != nil {
-		return nil, fmt.Errorf("invalid key file. it should be a private key: %s", err)
-	}
-
-	return key, nil
 }
 
 func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
@@ -199,8 +183,36 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 	return &subChainInfo, nil
 }
 
+func getPrivateKey() (*ecdsa.PrivateKey, error) {
+	var privateKey *ecdsa.PrivateKey
+	var err error
+	if len(privateKeyValue) == 0 {
+		_, privateKey, err = util.GenerateKey(shardValue)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		privateKey, err = crypto.LoadECDSAFromString(privateKeyValue)
+		if err != nil {
+			return nil, fmt.Errorf("invalid key: %s", err)
+		}
+
+		publicKey := crypto.GetAddress(&privateKey.PublicKey)
+		if shardValue == 0 || shardValue > common.ShardCount {
+			shardValue = publicKey.Shard()
+		} else if shardValue != publicKey.Shard() {
+			return nil, fmt.Errorf("input shard(%d) is not equal to shard nubmer(%d) obtained from the input privateKey:%s", shardValue, publicKey.Shard(), privateKeyValue)
+		}
+	}
+	return privateKey, nil
+}
+
 func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, error) {
-	key, err := getKeyFromFile()
+	if _, err := common.HexToAddress(coinbaseValue); err != nil {
+		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
+	}
+
+	privateKey, err := getPrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +223,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 		Version:  subChainInfo.Version,
 		DataDir:  subChainInfo.Name,
 		RPCAddr:  "0.0.0.0:8027",
-		Coinbase: key.Address.ToHex(),
+		Coinbase: coinbaseValue,
 		SyncMode: "full",
 	}
 
@@ -219,7 +231,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 		NetworkID:     1,
 		ListenAddr:    "0.0.0.0:8057",
 		StaticNodes:   subChainInfo.StaticNodes,
-		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(key.PrivateKey)),
+		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
 	}
 
 	config.LogConfig = comm.LogConfig{
@@ -247,7 +259,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 
 	config.GenesisConfig = core.GenesisInfo{
 		Difficult:   int64(subChainInfo.GenesisDifficulty),
-		ShardNumber: key.Address.Shard(),
+		ShardNumber: shardValue,
 	}
 
 	return config, nil
