@@ -225,6 +225,10 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 		return nil, err
 	}
 
+	if tx == nil {
+		return nil, nil
+	}
+
 	output := map[string]interface{}{
 		"transaction": PrintableOutputTx(tx),
 	}
