@@ -8,16 +8,17 @@ package light
 import "errors"
 
 const (
-	blockRequestCode     = uint16(10)
-	blockResponseCode    = uint16(11)
-	addTxRequestCode     = uint16(12)
-	addTxResponseCode    = uint16(13)
-	trieRequestCode      = uint16(14)
-	trieResponseCode     = uint16(15)
-	receiptRequestCode   = uint16(16)
-	receiptResponseCode  = uint16(17)
-	txByHashRequestCode  = uint16(18)
-	txByHashResponseCode = uint16(19)
+	blockRequestCode uint16 = 10 + iota
+	blockResponseCode
+	addTxRequestCode
+	addTxResponseCode
+	trieRequestCode
+	trieResponseCode
+	receiptRequestCode
+	receiptResponseCode
+	txByHashRequestCode
+	txByHashResponseCode
+	protocolMsgCodeLength // protocolMsgCodeLength always defined in the end.
 )
 
 var (
