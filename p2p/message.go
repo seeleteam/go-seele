@@ -21,7 +21,12 @@ const (
 	ctlMsgPongCode       uint16 = 4
 )
 
-const zipBytesLimit = 100 * 1024
+const (
+	unZipFlag byte = iota
+	zipFlag
+
+	zipBytesLimit = 100 * 1024
+)
 
 // Message exposed for high level layer to receive
 type Message struct {
@@ -44,7 +49,7 @@ func SendMessage(writer MsgWriter, code uint16, payload []byte) error {
 func (msg *Message) Zip() error {
 	if len(msg.Payload) <= zipBytesLimit {
 		if len(msg.Payload) > 0 {
-			msg.Payload = append([]byte{0}, msg.Payload...)
+			msg.Payload = append([]byte{unZipFlag}, msg.Payload...)
 		}
 		return nil
 	}
@@ -57,7 +62,7 @@ func (msg *Message) Zip() error {
 	if err != nil {
 		return err
 	}
-	msg.Payload = append([]byte{1}, buf.Bytes()...)
+	msg.Payload = append([]byte{zipFlag}, buf.Bytes()...)
 
 	return nil
 }
@@ -70,7 +75,7 @@ func (msg *Message) UnZip() error {
 
 	zipFlag := msg.Payload[0]
 	msg.Payload = msg.Payload[1:]
-	if zipFlag == byte(0) {
+	if zipFlag == unZipFlag {
 		return nil
 	}
 
