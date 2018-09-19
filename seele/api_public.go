@@ -33,7 +33,7 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (*types.Block, error) {
+func (api *PublicSeeleAPI) GetBlockByHash(hashHex string) (*types.Block, error) {
 	store := api.s.chain.GetStore()
 	hashByte, err := hexutil.HexToBytes(hashHex)
 	if err != nil {
@@ -55,7 +55,7 @@ func (api *PublicSeeleAPI) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, 
 
 // GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (*types.Block, error) {
+func (api *PublicSeeleAPI) GetBlockByHeight(height int64) (*types.Block, error) {
 	var block *types.Block
 	var err error
 	if height < 0 {
