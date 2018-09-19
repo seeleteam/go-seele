@@ -57,7 +57,7 @@ func (engine Engine) SetCoinbase(coinbase common.Address) {
 	engine.coinbase = coinbase
 }
 
-func (engine Engine) GetEngineInfo() map[string]interface{} {
+func (engine Engine) GetEngineInfo() interface{} {
 	info := make(map[string]interface{})
 	info["threads"] = engine.threads
 	info["coinbase"] = engine.coinbase
