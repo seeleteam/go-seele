@@ -7,10 +7,17 @@ package pow
 
 import (
 	"errors"
-	"github.com/seeleteam/go-seele/core/store"
+	"math"
 	"math/big"
+	"math/rand"
+	"runtime"
+	"time"
 
+	"github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/log"
 )
 
 var (
@@ -21,7 +28,43 @@ var (
 )
 
 // Engine provides the consensus operations based on POW.
-type Engine struct{}
+type Engine struct {
+	threads  int
+	coinbase common.Address
+	log      *log.SeeleLog
+	hashrate metrics.Meter
+}
+
+func NewEngine() *Engine {
+	return &Engine{
+		threads:  1,
+		coinbase: common.EmptyAddress,
+		log:      log.GetLogger("pow_engine"),
+		hashrate: metrics.NewMeter(),
+	}
+}
+
+func (engine Engine) SetThreadNum(threads uint) {
+	if threads == 0 {
+		engine.threads = runtime.NumCPU()
+		return
+	}
+
+	engine.threads = int(threads)
+}
+
+func (engine Engine) SetCoinbase(coinbase common.Address) {
+	engine.coinbase = coinbase
+}
+
+func (engine Engine) GetEngineInfo() map[string]interface{} {
+	info := make(map[string]interface{})
+	info["threads"] = engine.threads
+	info["coinbase"] = engine.coinbase
+	info["hashrate"] = engine.hashrate.Rate1()
+
+	return info
+}
 
 // ValidateHeader validates the specified header and returns error if validation failed.
 func (engine Engine) ValidateHeader(store store.BlockchainStore, header *types.BlockHeader) error {
@@ -41,10 +84,56 @@ func (engine Engine) ValidateHeader(store store.BlockchainStore, header *types.B
 	return nil
 }
 
-func verifyDifficulty(parent *types.BlockHeader, header *types.BlockHeader) error {
-	timestamp := big.NewInt(0).Sub(header.CreateTimestamp, parent.CreateTimestamp)
+func (engine Engine) Prepare(store store.BlockchainStore, header *types.BlockHeader) error {
+	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
 
-	difficult := getDifficult(timestamp.Uint64(), parent)
+	header.Difficulty = getDifficultWithParent(parent, header)
+	header.Creator = engine.coinbase
+
+	return nil
+}
+
+func (engine Engine) Seal(store store.BlockchainStore, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+	threads := engine.threads
+
+	var step uint64
+	var seed uint64
+	if threads != 0 {
+		step = math.MaxUint64 / uint64(threads)
+	}
+
+	var isNonceFound int32
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < threads; i++ {
+		if threads == 1 {
+			seed = r.Uint64()
+		} else {
+			seed = uint64(r.Int63n(int64(step)))
+		}
+		tSeed := seed + uint64(i)*step
+		var min uint64
+		var max uint64
+		min = uint64(i) * step
+
+		if i != threads-1 {
+			max = min + step - 1
+		} else {
+			max = math.MaxUint64
+		}
+
+		go func(tseed uint64, tmin uint64, tmax uint64) {
+			StartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, engine.hashrate, engine.log)
+		}(tSeed, min, max)
+	}
+
+	return nil
+}
+
+func verifyDifficulty(parent *types.BlockHeader, header *types.BlockHeader) error {
+	difficult := getDifficultWithParent(parent, header)
 	if header.Difficulty.Cmp(difficult) == 0 {
 		return errors.New("invalid difficult")
 	}
@@ -69,6 +158,11 @@ func verifyTarget(header *types.BlockHeader) error {
 // getMiningTarget returns the mining target for the specified difficulty.
 func getMiningTarget(difficulty *big.Int) *big.Int {
 	return new(big.Int).Div(maxUint256, difficulty)
+}
+
+func getDifficultWithParent(parent *types.BlockHeader, header *types.BlockHeader) *big.Int {
+	timestamp := big.NewInt(0).Sub(header.CreateTimestamp, parent.CreateTimestamp)
+	return getDifficult(timestamp.Uint64(), parent)
 }
 
 // getDifficult adjust difficult by parent info
