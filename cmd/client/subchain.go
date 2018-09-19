@@ -183,6 +183,7 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 	return &subChainInfo, nil
 }
 
+// getPrivateKey get private key and validate shard
 func getPrivateKey() (*ecdsa.PrivateKey, error) {
 	var privateKey *ecdsa.PrivateKey
 	var err error
