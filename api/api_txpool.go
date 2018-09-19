@@ -13,6 +13,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -212,53 +213,69 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
 func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
-	store := api.s.ChainBackend().GetStore()
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
 		return nil, err
 	}
 	hash := common.BytesToHash(hashByte)
 
-	output := make(map[string]interface{})
-
-	// Try to get transaction in txpool
-	tx := api.s.TxPoolBackend().GetTransaction(hash)
-	if tx != nil {
-		addTxInfo(output, tx)
-		output["status"] = "pool"
-
-		return output, nil
-	}
-
-	// Try to get finalized transaction
-	txIndex, err := store.GetTxIndex(hash)
+	tx, idx, debt, err := GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
 	if err != nil {
-		api.s.Log().Info(err.Error())
-		return nil, ErrTransactionNotFound
+		api.s.Log().Debug("Failed to get transaction by hash, %v", err.Error())
+		return nil, err
 	}
 
-	if txIndex != nil {
-		block, err := store.GetBlock(txIndex.BlockHash)
-		if err != nil {
-			return nil, err
-		}
-
-		addTxInfo(output, block.Transactions[txIndex.Index])
-		output["status"] = "block"
-		output["blockHash"] = block.HeaderHash.ToHex()
-		output["blockHeight"] = block.Header.Height
-		output["txIndex"] = txIndex.Index
-
-		return output, nil
+	output := map[string]interface{}{
+		"transaction": PrintableOutputTx(tx),
 	}
 
-	return nil, nil
-}
-
-func addTxInfo(output map[string]interface{}, tx *types.Transaction) {
-	output["transaction"] = PrintableOutputTx(tx)
-	debt := types.NewDebt(tx)
 	if debt != nil {
 		output["debt"] = debt
 	}
+
+	if idx == nil {
+		output["status"] = "pool"
+	} else {
+		output["status"] = "block"
+
+		output["blockHash"] = idx.BlockHash.ToHex()
+		output["blockHeight"] = idx.BlockHeight
+		output["txIndex"] = idx.Index
+	}
+
+	return output, nil
+}
+
+// BlockIndex represents the index info in a block.
+type BlockIndex struct {
+	BlockHash   common.Hash
+	BlockHeight uint64
+	Index       uint
+}
+
+// GetTransaction returns the transaction by the given blockchain store and transaction hash.
+func GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *BlockIndex, *types.Debt, error) {
+	// Try to get transaction in tx pool.
+	if tx := pool.GetTransaction(txHash); tx != nil {
+		return tx, nil, types.NewDebt(tx), nil
+	}
+
+	// Try to find transaction in blockchain.
+	txIdx, err := bcStore.GetTxIndex(txHash)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if txIdx == nil {
+		return nil, nil, nil, nil
+	}
+
+	block, err := bcStore.GetBlock(txIdx.BlockHash)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	tx := block.Transactions[txIdx.Index]
+	idx := &BlockIndex{block.HeaderHash, block.Header.Height, txIdx.Index}
+	return tx, idx, types.NewDebt(tx), nil
 }
