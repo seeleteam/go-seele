@@ -76,11 +76,15 @@ type GetLogsResponse struct {
 	Log      *types.Log
 }
 
+type PoolCore interface {
+	AddTransaction(tx *types.Transaction) error
+	GetTransaction(txHash common.Hash) *types.Transaction
+}
+
 type Pool interface {
+	PoolCore
 	GetTransactions(processing, pending bool) []*types.Transaction
 	GetPendingTxCount() int
-	GetTransaction(txHash common.Hash) *types.Transaction
-	AddTransaction(tx *types.Transaction) error
 }
 
 type Chain interface {
