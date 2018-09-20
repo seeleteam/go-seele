@@ -176,10 +176,10 @@ func createTestAPIErr(errBranch int) (api *PublicMonitorAPI, dispose func()) {
 
 func Test_PublicMonitorAPI_Allright(t *testing.T) {
 	api, dispose := createTestAPI(t)
+	defer dispose()
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
-	defer dispose()
 
 	_, err := api.NodeInfo()
 	if err != nil {
@@ -193,10 +193,10 @@ func Test_PublicMonitorAPI_Allright(t *testing.T) {
 
 func Test_PublicMonitorAPI_Err(t *testing.T) {
 	api, dispose := createTestAPIErr(1)
+	defer dispose()
 	if api == nil {
 		t.Fatal("failed to create api")
 	}
-	defer dispose()
 
 	if _, err := api.NodeStats(); err == nil {
 		t.Fatalf("error branch is not covered")

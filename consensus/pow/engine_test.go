@@ -6,8 +6,8 @@
 package pow
 
 import (
-	"fmt"
 	"math/big"
+	"runtime"
 	"testing"
 	"time"
 
@@ -49,39 +49,33 @@ func getDiffWithHeight(interval uint64, diff *big.Int, height uint64) *big.Int {
 		Height:          height,
 	}
 
-	return GetDifficult(interval, header)
+	return getDifficult(interval, header)
 }
 
-func Test_ValidateRewardAmount(t *testing.T) {
-	var engine Engine
-	var height uint64
+func Test_SetThreads(t *testing.T) {
+	engine := NewEngine(1)
 
-	// block height and reward amount is equal
-	err := engine.ValidateRewardAmount(height, GetReward(height))
-	assert.Equal(t, err, nil)
+	assert.Equal(t, engine.threads, 1)
 
-	// block height and reward amount is equal
-	height = blockNumberPerEra
-	err = engine.ValidateRewardAmount(height, GetReward(height))
-	assert.Equal(t, err, nil)
+	engine.SetThreadNum(1)
+	assert.Equal(t, engine.threads, 1)
 
-	// block height and reward amount is not equal
-	height = blockNumberPerEra * 2
-	err = engine.ValidateRewardAmount(height, GetReward(blockNumberPerEra))
-	assert.Equal(t, err.Error(), fmt.Sprintf("invalid reward amount, block height %d, want %s, got %s", height, GetReward(height), GetReward(blockNumberPerEra)))
+	engine.SetThreadNum(2)
+	assert.Equal(t, engine.threads, 2)
+
+	engine.SetThreadNum(0)
+	assert.Equal(t, engine.threads, runtime.NumCPU())
 }
 
-func Test_ValidateHeader(t *testing.T) {
-	var engine Engine
-
+func Test_VerifyTarget(t *testing.T) {
 	// block is validated for difficulty is so low
 	header := newTestBlockHeader(t)
-	err := engine.ValidateHeader(header)
+	err := verifyTarget(header)
 	assert.Equal(t, err, nil)
 
 	// block is not validated for difficulty is so high
 	header.Difficulty = big.NewInt(10000000000)
-	err = engine.ValidateHeader(header)
+	err = verifyTarget(header)
 	assert.Equal(t, err, errBlockNonceInvalid)
 }
 

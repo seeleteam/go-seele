@@ -28,8 +28,6 @@ func (sd *SeeleBackend) ChainBackend() api.Chain { return sd.s.chain }
 
 func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
 
-func (sd *SeeleBackend) GetMinerCoinbase() common.Address { return sd.s.miner.GetCoinbase() }
-
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
 func (sd *SeeleBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
