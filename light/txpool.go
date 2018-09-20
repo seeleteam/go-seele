@@ -18,7 +18,8 @@ type txPool struct {
 	mutex      sync.RWMutex
 	chain      BlockChain
 	odrBackend *odrBackend
-	pending    map[common.Hash]*types.Transaction
+	pendingTxs map[common.Hash]*types.Transaction   // map[txHash]tx
+	minedTxs   map[common.Hash][]*types.Transaction // map[blockHash][]tx
 	log        *log.SeeleLog
 }
 
@@ -26,7 +27,8 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend) *txPool {
 	return &txPool{
 		chain:      chain,
 		odrBackend: odrBackend,
-		pending:    make(map[common.Hash]*types.Transaction),
+		pendingTxs: make(map[common.Hash]*types.Transaction),
+		minedTxs:   make(map[common.Hash][]*types.Transaction),
 		log:        log.GetLogger("lightTxPool"),
 	}
 }
@@ -43,7 +45,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
-	if pool.pending[tx.Hash] != nil {
+	if pool.pendingTxs[tx.Hash] != nil {
 		return fmt.Errorf("Transaction already exists, hash is %v", tx.Hash.ToHex())
 	}
 
@@ -56,22 +58,34 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 		return err
 	}
 
-	pool.pending[tx.Hash] = tx
+	pool.pendingTxs[tx.Hash] = tx
 
 	return nil
 }
 
-// @todo GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
+// GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
 func (pool *txPool) GetTransaction(txHash common.Hash) *types.Transaction {
-	return nil
+	return pool.pendingTxs[txHash]
 }
 
-// @todo GetTransactions return the transactions in the transaction pool.
+// GetTransactions return the transactions in the transaction pool.
 func (pool *txPool) GetTransactions(processing, pending bool) []*types.Transaction {
-	return nil
+	if !pending || len(pool.pendingTxs) == 0 {
+		return nil
+	}
+
+	txs := make([]*types.Transaction, len(pool.pendingTxs))
+	i := 0
+
+	for _, tx := range pool.pendingTxs {
+		txs[i] = tx
+		i++
+	}
+
+	return txs
 }
 
-// @todo GetPendingTxCount return the total number of pending transactions in the transaction pool.
+// GetPendingTxCount return the total number of pending transactions in the transaction pool.
 func (pool *txPool) GetPendingTxCount() int {
-	return 0
+	return len(pool.pendingTxs)
 }
