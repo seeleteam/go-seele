@@ -6,7 +6,6 @@
 package api
 
 import (
-	"errors"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -14,8 +13,6 @@ import (
 )
 
 const maxSizeLimit = 64
-
-var ErrEmptyHash = errors.New("request hash is empty")
 
 // PublicSeeleAPI provides an API to access full node-related information.
 type PublicSeeleAPI struct {
@@ -138,9 +135,6 @@ func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[stri
 	hash, err := common.HexToHash(hashHex)
 	if err != nil {
 		return nil, err
-	}
-	if hash.IsEmpty() {
-		return nil, ErrEmptyHash
 	}
 
 	block, err := api.s.GetBlock(hash, 0)
