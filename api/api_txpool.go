@@ -124,7 +124,7 @@ func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height
 
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
-	block, err := api.s.GetBlockByHeight(height)
+	block, err := api.s.GetBlockByHashOrHeight(common.EmptyHash, height)
 	if err != nil {
 		return 0, err
 	}
@@ -160,7 +160,7 @@ func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
-	block, err := api.s.GetBlockByHeight(height)
+	block, err := api.s.GetBlockByHashOrHeight(common.EmptyHash, height)
 	if err != nil {
 		return nil, err
 	}
