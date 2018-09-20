@@ -1,7 +1,6 @@
 package light
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -34,12 +33,15 @@ func (l *LightBackend) GetMinerCoinbase() common.Address { return common.EmptyAd
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
-func (l *LightBackend) GetBlockByHash(hash common.Hash) (*types.Block, error) {
-	if hash.IsEmpty() {
-		return nil, errors.New("request hash is empty")
+func (l *LightBackend) GetBlockByHashOrHeight(hash common.Hash, height int64) (*types.Block, error) {
+	var request *odrBlock
+	var h uint64
+	if height <= 0 {
+		h = l.s.chain.CurrentHeader().Height
+	} else {
+		h = uint64(height)
 	}
-
-	request := &odrBlock{Hash: hash}
+	request = &odrBlock{Height: h, Hash: hash}
 
 	if err := l.s.odrBackend.sendRequest(request); err != nil {
 		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
@@ -48,28 +50,10 @@ func (l *LightBackend) GetBlockByHash(hash common.Hash) (*types.Block, error) {
 	if err := request.getError(); err != nil {
 		return nil, err
 	}
-
 	return request.Block, nil
 }
 
 //@todo
 func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	return nil, nil
-}
-
-func (l *LightBackend) GetBlockByHeight(height int64) (*types.Block, error) {
-	if height <= 0 {
-		height = 0
-	}
-	request := &odrBlock{Height: uint64(height)}
-
-	if err := l.s.odrBackend.sendRequest(request); err != nil {
-		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
-	}
-
-	if err := request.getError(); err != nil {
-		return nil, err
-	}
-
-	return request.Block, nil
 }

@@ -24,9 +24,8 @@ type Backend interface {
 	ProtocolBackend() Protocol
 	Log() *log.SeeleLog
 
-	GetBlockByHash(hash common.Hash) (*types.Block, error)
+	GetBlockByHashOrHeight(hash common.Hash, height int64) (*types.Block, error)
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
-	GetBlockByHeight(height int64) (*types.Block, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
