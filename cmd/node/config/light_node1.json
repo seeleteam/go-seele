@@ -1,14 +1,14 @@
 {
   "basic":{
-    "name": "seele node4",
+    "name": "light node4",
     "version": "1.0",
-    "dataDir": "node4",
-    "address": "0.0.0.0:8026",
-    "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81",
+    "dataDir": "lightnode1",
+    "address": "0.0.0.0:9026",
+    "syncMode": "light"
   },
   "p2p": {
-    "address": "0.0.0.0:8056",
-    "privateKey": "0xa0cbd83aa6141014bf1ddd4b7da1ca5e3951ae6b0a4ec5811537adacb5b46417",
+    "address": "0.0.0.0:9056",
+    "privateKey": "0x706f157b7a9599cf0c30ee8bf486bc1f2e622303f4ca3b4cc6d7d43b777471c4",
     "staticNodes": [
       "127.0.0.1:8057"
     ],
@@ -19,7 +19,7 @@
     "printLog": true
   },
   "httpServer": {
-    "address": "127.0.0.1:8036",
+    "address": "127.0.0.1:9036",
     "crossorigins": [
       "*"
     ],
@@ -28,7 +28,7 @@
     ]
   },
   "wsserver": {
-    "address": "127.0.0.1:8046",
+    "address": "127.0.0.1:9046",
     "crossorigins": [
       "*"
     ]
