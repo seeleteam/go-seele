@@ -50,7 +50,10 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 		return config, err
 	}
 
-	config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
+	if len(config.BasicConfig.Coinbase) > 0 {
+		config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
+	}
+
 	config.SeeleConfig.TxConf = *core.DefaultTxPoolConfig()
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	comm.LogConfiguration.PrintLog = config.LogConfig.PrintLog
