@@ -218,4 +218,11 @@ var (
 		Usage:       "subchain config file path",
 		Destination: &outPutValue,
 	}
+
+	staticNodesValue cli.StringSlice
+	staticNodesFlag  = cli.StringSliceFlag{
+		Name:  "node, n",
+		Usage: "subchain static node, for example:-n address:port -n address:prot",
+		Value: &staticNodesValue,
+	}
 )
