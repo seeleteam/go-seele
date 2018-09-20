@@ -24,7 +24,7 @@ type Backend interface {
 	ProtocolBackend() Protocol
 	Log() *log.SeeleLog
 
-	GetBlockByHash(hashHex string) (*types.Block, error)
+	GetBlockByHash(hash common.Hash) (*types.Block, error)
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
 	GetBlockByHeight(height int64) (*types.Block, error)
 }

@@ -32,14 +32,36 @@ func (sd *SeeleBackend) GetMinerCoinbase() common.Address { return sd.s.miner.Ge
 
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
-func (sd *SeeleBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
-	return sd.GetBlockByHash(hashHex)
+// GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
+// detail, otherwise only the transaction hash is returned
+func (sd *SeeleBackend) GetBlockByHash(hash common.Hash) (*types.Block, error) {
+	store := sd.s.chain.GetStore()
+	block, err := store.GetBlock(hash)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }
 
 func (sd *SeeleBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
-	return sd.GetBlockTotalDifficulty(hash)
+	store := sd.s.chain.GetStore()
+	return store.GetBlockTotalDifficulty(hash)
 }
 
+// GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
+// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (sd *SeeleBackend) GetBlockByHeight(height int64) (*types.Block, error) {
-	return sd.GetBlockByHeight(height)
+	var block *types.Block
+	var err error
+	if height < 0 {
+		header := sd.s.chain.CurrentHeader()
+		block, err = sd.s.chain.GetStore().GetBlockByHeight(header.Height)
+	} else {
+		block, err = sd.s.chain.GetStore().GetBlockByHeight(uint64(height))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return block, err
 }

@@ -9,6 +9,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -132,7 +133,11 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	block, err := api.s.GetBlockByHash(hashHex)
+	hashByte, err := hexutil.HexToBytes(hashHex)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlockByHash(common.BytesToHash(hashByte))
 	if err != nil {
 		return nil, err
 	}
