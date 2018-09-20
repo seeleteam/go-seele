@@ -34,11 +34,11 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 	code, resp := ob1.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
-	assert.Equal(t, resp.getError(), nil)
+	assert.Nil(t, resp.getError())
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 
 	// case 2: invalid block hash
-	ob2 := newTestOdrBlock(common.BigToHash(big.NewInt(1)))
+	ob2 := newTestOdrBlock(common.StringToHash("1"))
 	code, resp = ob2.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
@@ -52,7 +52,7 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 	code, resp = ob3.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
-	assert.Equal(t, resp.getError(), nil)
+	assert.Nil(t, resp.getError())
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 }
 
@@ -70,18 +70,18 @@ func Test_OdrBlock_Validate(t *testing.T) {
 	// case 1: block is nil
 	testBlockChain := &TestBlockChain{}
 	err := ob1.Validate(testBlockChain.GetStore())
-	assert.Equal(t, err, nil)
+	assert.Nil(t, err)
 
 	// case 2: ErrBlockHashMismatch
 	ob2 := newTestOdrBlockWithBlock(common.EmptyHash)
-	ob2.Hash = common.BigToHash(big.NewInt(1))
+	ob2.Hash = common.StringToHash("1")
 	err = ob2.Validate(testBlockChain.GetStore())
 	assert.Equal(t, err, types.ErrBlockHashMismatch)
 
 	// case 2: ok
 	ob2.Hash = ob2.Block.HeaderHash
 	err = ob2.Validate(testBlockChain.GetStore())
-	assert.Equal(t, err, nil)
+	assert.Nil(t, err)
 }
 
 func newTestOdrBlock(hash common.Hash) *odrBlock {
