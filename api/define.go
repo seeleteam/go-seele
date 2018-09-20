@@ -23,6 +23,10 @@ type Backend interface {
 	ChainBackend() Chain
 	ProtocolBackend() Protocol
 	Log() *log.SeeleLog
+
+	GetBlockByHash(hashHex string) (*types.Block, error)
+	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
+	GetBlockByHeight(height int64) (*types.Block, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
@@ -76,11 +80,15 @@ type GetLogsResponse struct {
 	Log      *types.Log
 }
 
+type PoolCore interface {
+	AddTransaction(tx *types.Transaction) error
+	GetTransaction(txHash common.Hash) *types.Transaction
+}
+
 type Pool interface {
+	PoolCore
 	GetTransactions(processing, pending bool) []*types.Transaction
 	GetPendingTxCount() int
-	GetTransaction(txHash common.Hash) *types.Transaction
-	AddTransaction(tx *types.Transaction) error
 }
 
 type Chain interface {

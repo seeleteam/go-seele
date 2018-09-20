@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/stretchr/testify/assert"
 )
 
 func newMessage(payLoad string) *Message {
@@ -74,7 +74,7 @@ func Test_message(t *testing.T) {
 
 	err := msg1.Zip()
 	assert.Equal(t, err, nil)
-	assert.Equal(t, string(msg1.Payload), randStr1)
+	assert.Equal(t, string(msg1.Payload[1:]), randStr1)
 
 	err = msg1.UnZip()
 	assert.Equal(t, err, nil)

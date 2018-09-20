@@ -211,4 +211,11 @@ var (
 		Usage:       "subchain json file path",
 		Destination: &subChainJSONFileVale,
 	}
+
+	outPutValue string
+	outPutFlag  = cli.StringFlag{
+		Name:        "output,o",
+		Usage:       "subchain config file path",
+		Destination: &outPutValue,
+	}
 )

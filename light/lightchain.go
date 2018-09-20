@@ -58,66 +58,69 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 	return chain, nil
 }
 
-func (bc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
-	trie := newOdrTrie(bc.odrBackend, root, state.TrieDbPrefix)
+// GetState get statedb
+func (lc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
+	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix)
 	return state.NewStatedbWithTrie(trie), nil
 }
 
 // CurrentHeader returns the HEAD block header of the blockchain.
-func (bc *LightChain) CurrentHeader() *types.BlockHeader {
-	hash, err := bc.bcStore.GetHeadBlockHash()
+func (lc *LightChain) CurrentHeader() *types.BlockHeader {
+	hash, err := lc.bcStore.GetHeadBlockHash()
 	if err != nil {
 		return nil
 	}
 
-	header, err := bc.bcStore.GetBlockHeader(hash)
+	header, err := lc.bcStore.GetBlockHeader(hash)
 	if err != nil {
 		return nil
 	}
 	return header
 }
 
-func (bc *LightChain) GetStore() store.BlockchainStore {
-	return bc.bcStore
+// GetStore get underlying store
+func (lc *LightChain) GetStore() store.BlockchainStore {
+	return lc.bcStore
 }
 
 // WriteHeader writes the specified block header to the blockchain.
-func (bc *LightChain) WriteHeader(header *types.BlockHeader) error {
-	bc.mutex.Lock()
-	defer bc.mutex.Unlock()
+func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
+	lc.mutex.Lock()
+	defer lc.mutex.Unlock()
 
-	if err := core.ValidateBlockHeader(header, bc.engine, bc.bcStore); err != nil {
+	if err := core.ValidateBlockHeader(header, lc.engine, lc.bcStore); err != nil {
 		return err
 	}
 
-	previousTd, err := bc.bcStore.GetBlockTotalDifficulty(header.PreviousBlockHash)
+	previousTd, err := lc.bcStore.GetBlockTotalDifficulty(header.PreviousBlockHash)
 	if err != nil {
 		return err
 	}
 
 	currentTd := new(big.Int).Add(previousTd, header.Difficulty)
-	isHead := currentTd.Cmp(bc.canonicalTD) > 0
+	isHead := currentTd.Cmp(lc.canonicalTD) > 0
 
-	if err := bc.bcStore.PutBlockHeader(header.Hash(), header, currentTd, isHead); err != nil {
+	if err := lc.bcStore.PutBlockHeader(header.Hash(), header, currentTd, isHead); err != nil {
 		return err
 	}
 
 	if isHead {
-		if err := core.DeleteLargerHeightBlocks(bc.bcStore, header.Height+1, nil); err != nil {
+		if err := core.DeleteLargerHeightBlocks(lc.bcStore, header.Height+1, nil); err != nil {
 			return err
 		}
 
-		if err := core.OverwriteStaleBlocks(bc.bcStore, header.PreviousBlockHash, nil); err != nil {
+		if err := core.OverwriteStaleBlocks(lc.bcStore, header.PreviousBlockHash, nil); err != nil {
 			return err
 		}
 
-		bc.canonicalTD = currentTd
-		bc.currentHeader = header
+		lc.canonicalTD = currentTd
+		lc.currentHeader = header
 	}
 
 	return nil
 }
 
-func (bc LightChain) GetCurrentState() (*state.Statedb, error) {
-	return bc.GetState(bc.currentHeader.StateHash)
+// GetCurrentState get current state
+func (lc *LightChain) GetCurrentState() (*state.Statedb, error) {
+	return lc.GetState(lc.currentHeader.StateHash)
 }

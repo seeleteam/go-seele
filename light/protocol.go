@@ -28,8 +28,7 @@ const (
 	downloadHeadersRequestCode  uint16 = 5
 	downloadHeadersResponseCode uint16 = 6
 
-	protocolMsgCodeLength uint16 = 18
-	msgWaitTimeout               = time.Second * 120
+	msgWaitTimeout = time.Second * 120
 )
 
 var (
@@ -46,6 +45,7 @@ type BlockChain interface {
 
 type TransactionPool interface {
 	AddTransaction(tx *types.Transaction) error
+	GetTransaction(txHash common.Hash) *types.Transaction
 }
 
 func codeToStr(code uint16) string {
