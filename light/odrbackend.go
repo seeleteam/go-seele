@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -145,4 +146,27 @@ func (o *odrBackend) close() {
 
 	o.wg.Wait()
 	close(o.msgCh)
+}
+
+func (o *odrBackend) GetBlock(height int64, hash common.Hash) (*types.Block, error) {
+
+	var request *odrBlock
+	if hash.IsEmpty() {
+		if height <= 0 {
+			height = 0
+		}
+		request = &odrBlock{Height: uint64(height)}
+	} else {
+		request = &odrBlock{Hash: hash}
+	}
+
+	if err := o.sendRequest(request); err != nil {
+		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	}
+
+	if err := request.getError(); err != nil {
+		return nil, err
+	}
+
+	return request.Block, nil
 }

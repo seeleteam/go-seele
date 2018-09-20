@@ -32,9 +32,9 @@ func (l *LightBackend) GetMinerCoinbase() common.Address { return common.EmptyAd
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
-//@todo
 func (l *LightBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
-	return nil, nil
+	hash := common.StringToHash(hashHex)
+	return l.s.odrBackend.GetBlock(0, hash)
 }
 
 //@todo
@@ -42,7 +42,6 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 	return nil, nil
 }
 
-//@todo
 func (l *LightBackend) GetBlockByHeight(height int64) (*types.Block, error) {
-	return nil, nil
+	return l.s.odrBackend.GetBlock(height, common.EmptyHash)
 }
