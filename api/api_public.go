@@ -6,9 +6,9 @@
 package api
 
 import (
+	"math/big"
+
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -73,43 +73,35 @@ func (api *PublicSeeleAPI) GetBlock(hashHex string, height int64, fulltx bool) (
 // GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
-	block, err := getBlock(api.s.ChainBackend(), height)
+	block, err := api.s.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
 	}
-
-	return rpcOutputBlock(block, fulltx, api.s.ChainBackend().GetStore())
-}
-
-// getBlock returns block by height,when height is less than 0 the chain head is returned
-func getBlock(chain Chain, height int64) (block *types.Block, err error) {
-	if height < 0 {
-		header := chain.CurrentHeader()
-		block, err = chain.GetStore().GetBlockByHeight(header.Height)
-	} else {
-		var err error
-		block, err = chain.GetStore().GetBlockByHeight(uint64(height))
-		if err != nil {
-			return nil, err
-		}
+	totalDifficulty, err := api.s.GetBlockTotalDifficulty(block.HeaderHash)
+	if err != nil {
+		return nil, err
 	}
-
-	return block, nil
+	return rpcOutputBlock(block, fulltx, totalDifficulty)
 }
 
 // GetBlocks returns the size of requested block. When the blockNr is -1 the chain head is returned.
 //When the size is greater than 64, the size will be set to 64.When it's -1 that the blockNr minus size, the blocks in 64 is returned.
 // When fullTx is true all transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]map[string]interface{}, error) {
-	blocks := make([]types.Block, 0)
+	blocks := make([]*types.Block, 0)
+	totalDifficultys := make([]*big.Int, 0)
 	if height < 0 {
 		header := api.s.ChainBackend().CurrentHeader()
 		block, err := api.s.ChainBackend().GetStore().GetBlockByHeight(header.Height)
 		if err != nil {
 			return nil, err
 		}
-
-		blocks = append(blocks, *block)
+		totalDifficulty, err := api.s.GetBlockTotalDifficulty(block.HeaderHash)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+		totalDifficultys = append(totalDifficultys, totalDifficulty)
 	} else {
 		if size > maxSizeLimit {
 			size = maxSizeLimit
@@ -121,37 +113,39 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 
 		for i := uint(0); i < size; i++ {
 			var block *types.Block
-			block, err := getBlock(api.s.ChainBackend(), height-int64(i))
+			block, err := api.s.GetBlockByHeight(height - int64(i))
 			if err != nil {
 				return nil, err
 			}
-			blocks = append(blocks, *block)
+			totalDifficulty, err := api.s.GetBlockTotalDifficulty(block.HeaderHash)
+			if err != nil {
+				return nil, err
+			}
+			totalDifficultys = append(totalDifficultys, totalDifficulty)
+			blocks = append(blocks, block)
 		}
 	}
 
-	return rpcOutputBlocks(blocks, fulltx, api.s.ChainBackend().GetStore())
+	return rpcOutputBlocks(blocks, fulltx, totalDifficultys)
 }
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	store := api.s.ChainBackend().GetStore()
-	hashByte, err := hexutil.HexToBytes(hashHex)
+	block, err := api.s.GetBlockByHash(hashHex)
 	if err != nil {
 		return nil, err
 	}
 
-	hash := common.BytesToHash(hashByte)
-	block, err := store.GetBlock(hash)
+	totalDifficulty, err := api.s.GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		return nil, err
 	}
-
-	return rpcOutputBlock(block, fulltx, store)
+	return rpcOutputBlock(block, fulltx, totalDifficulty)
 }
 
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx
-func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (map[string]interface{}, error) {
+func rpcOutputBlock(b *types.Block, fullTx bool, totalDifficulty *big.Int) (map[string]interface{}, error) {
 	head := b.Header
 	fields := map[string]interface{}{
 		"header": head,
@@ -168,11 +162,6 @@ func rpcOutputBlock(b *types.Block, fullTx bool, store store.BlockchainStore) (m
 		}
 	}
 	fields["transactions"] = transactions
-
-	totalDifficulty, err := store.GetBlockTotalDifficulty(b.HeaderHash)
-	if err != nil {
-		return nil, err
-	}
 	fields["totalDifficulty"] = totalDifficulty
 
 	debts := types.NewDebts(txs)
@@ -195,11 +184,11 @@ func getOutputDebts(debts []*types.Debt, fullTx bool) []interface{} {
 	return outputDebts
 }
 
-func rpcOutputBlocks(b []types.Block, fullTx bool, store store.BlockchainStore) ([]map[string]interface{}, error) {
+func rpcOutputBlocks(b []*types.Block, fullTx bool, d []*big.Int) ([]map[string]interface{}, error) {
 	fields := make([]map[string]interface{}, 0)
 
 	for i := range b {
-		if field, err := rpcOutputBlock(&b[i], fullTx, store); err == nil {
+		if field, err := rpcOutputBlock(b[i], fullTx, d[i]); err == nil {
 			fields = append(fields, field)
 		}
 	}
