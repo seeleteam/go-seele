@@ -33,7 +33,7 @@ func (sd *SeeleBackend) GetMinerCoinbase() common.Address { return sd.s.miner.Ge
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
 // GetBlockByHeightOrHash returns the requested block.
-func (sd *SeeleBackend) GetBlockByHashOrHeight(hash common.Hash, height int64) (*types.Block, error) {
+func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
 	var block *types.Block
 	var err error
 	if hash.IsEmpty() {

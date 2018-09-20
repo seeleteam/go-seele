@@ -33,15 +33,9 @@ func (l *LightBackend) GetMinerCoinbase() common.Address { return common.EmptyAd
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
-func (l *LightBackend) GetBlockByHashOrHeight(hash common.Hash, height int64) (*types.Block, error) {
+func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
 	var request *odrBlock
-	var h uint64
-	if height <= 0 {
-		h = l.s.chain.CurrentHeader().Height
-	} else {
-		h = uint64(height)
-	}
-	request = &odrBlock{Height: h, Hash: hash}
+	request = &odrBlock{Height: height, Hash: hash}
 
 	if err := l.s.odrBackend.sendRequest(request); err != nil {
 		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
