@@ -48,7 +48,6 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 		HeaderHash:         block.HeaderHash,
 		Shard:              common.LocalShardNumber,
 		MinerStatus:        status,
-		MinerThread:        api.s.miner.GetThreads(),
 	}, nil
 }
 

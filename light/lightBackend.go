@@ -2,7 +2,6 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/api"
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -24,7 +23,5 @@ func (l *LightBackend) GetP2pServer() *p2p.Server { return l.s.p2pServer }
 func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
-
-func (l *LightBackend) GetMinerCoinbase() common.Address { return common.EmptyAddress }
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }

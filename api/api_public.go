@@ -6,12 +6,14 @@
 package api
 
 import (
+	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
+var ErrInvalidAccount = errors.New("invalid account")
 const maxSizeLimit = 64
 
 // PublicSeeleAPI provides an API to access full node-related information.
@@ -27,7 +29,7 @@ func NewPublicSeeleAPI(s Backend) *PublicSeeleAPI {
 // GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
 func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
 	if account.IsEmpty() {
-		account = api.s.GetMinerCoinbase()
+		return nil, ErrInvalidAccount
 	}
 
 	state, err := api.s.ChainBackend().GetCurrentState()
@@ -44,7 +46,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 // GetAccountNonce get account next used nonce
 func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
 	if account.Equal(common.EmptyAddress) {
-		account = api.s.GetMinerCoinbase()
+		return 0, ErrInvalidAccount
 	}
 
 	state, err := api.s.ChainBackend().GetCurrentState()

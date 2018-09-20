@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,23 +31,7 @@ func Test_NewMiner(t *testing.T) {
 	checkMinerMembers(miner, defaultMinerAddr, seele, t)
 
 	assert.Equal(t, miner.GetCoinbase(), defaultMinerAddr)
-	assert.Equal(t, miner.GetThreads(), 1)
 	assert.Equal(t, miner.IsMining(), false)
-}
-
-func Test_SetThreads(t *testing.T) {
-	miner := createMiner()
-
-	assert.Equal(t, miner.GetThreads(), 1)
-
-	miner.SetThreads(1)
-	assert.Equal(t, miner.GetThreads(), 1)
-
-	miner.SetThreads(2)
-	assert.Equal(t, miner.GetThreads(), 2)
-
-	miner.SetThreads(0)
-	assert.Equal(t, miner.GetThreads(), runtime.NumCPU())
 }
 
 func Test_SetCoinbase(t *testing.T) {
@@ -87,7 +70,6 @@ func Test_Start(t *testing.T) {
 
 	assert.Equal(t, miner.stopped, int32(0))
 	assert.Equal(t, miner.mining, int32(1))
-	assert.Equal(t, miner.Hashrate(), float64(0))
 	miner.Stop()
 	assert.Equal(t, miner.stopped, int32(1))
 	assert.Equal(t, miner.mining, int32(0))
@@ -106,7 +88,6 @@ func checkMinerMembers(miner *Miner, addr common.Address, seele SeeleBackend, t 
 	assert.Equal(t, miner.seele, seele)
 	assert.Equal(t, miner.isFirstDownloader, int32(1))
 	assert.Equal(t, miner.isFirstBlockPrepared, int32(0))
-	assert.Equal(t, miner.threads, 1)
 	assert.Equal(t, miner.isFirstDownloader, int32(1))
 }
 
