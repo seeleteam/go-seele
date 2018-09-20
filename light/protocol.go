@@ -28,7 +28,7 @@ const (
 	downloadHeadersRequestCode  uint16 = 5
 	downloadHeadersResponseCode uint16 = 6
 
-	protocolMsgCodeLength uint16 = 9
+	protocolMsgCodeLength uint16 = 18
 	msgWaitTimeout               = time.Second * 120
 )
 

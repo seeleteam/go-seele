@@ -184,7 +184,7 @@ func (p *peer) sendSyncHashRequest(magic uint32, begin uint64) error {
 	}
 	buff := common.SerializePanic(sendMsg)
 
-	p.log.Debug("peer send [syncHashRequestCode] with length: size:%d byte peerid:%s", len(buff), p.peerStrID)
+	p.log.Debug("peer send [syncHashRequestCode] with length: size:%d byte peerid:%s begin=%d", len(buff), p.peerStrID, begin)
 	return p2p.SendMessage(p.rw, syncHashRequestCode, buff)
 }
 
@@ -225,7 +225,7 @@ func (p *peer) handleSyncHashRequest(msg *HeaderHashSyncQuery) error {
 	syncMsg.HeaderArr = headerArr
 	buff := common.SerializePanic(syncMsg)
 
-	p.log.Debug("peer send [syncHashResponseCode] with length: size:%d byte peerid:%s", len(buff), p.peerStrID)
+	p.log.Debug("peer send [syncHashResponseCode] with length: size:%d byte peerid:%s BeginNum=%d count=%d", len(buff), p.peerStrID, msg.BeginNum, len(headerArr))
 	return p2p.SendMessage(p.rw, syncHashResponseCode, buff)
 }
 
@@ -264,7 +264,7 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 	if len(p.blockHashArr) == 0 {
 		p.blockNumBegin, p.blockHashArr = msg.BeginNum, msg.HeaderArr
 	} else {
-		idx := p.findIdxByHash(p.blockHashArr[0])
+		idx := p.findIdxByHash(msg.HeaderArr[0])
 		if idx < 0 {
 			p.log.Info("handleSyncHash hash not match. %s", p.blockHashArr[0].ToHex())
 			p.curSyncMagic = 0
@@ -272,6 +272,8 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 		}
 
 		p.blockHashArr = append(p.blockHashArr[0:idx], msg.HeaderArr...)
+		p.log.Debug("peer handleSyncHash. headBlockNum=%d p.blockNumBegin=%d idx=%d idxheight=%d len(p.blockHashArr)=%d",
+			p.headBlockNum, p.blockNumBegin, idx, msg.BeginNum, len(p.blockHashArr))
 	}
 
 	lastBlockNum := p.blockNumBegin + uint64(len(p.blockHashArr)) - 1
@@ -281,6 +283,7 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 		return nil
 	}
 
+	p.log.Debug("peer handleSyncHash. need request more. magic=%d startblock=%d len(p.blockHashArr)=%d", p.curSyncMagic, lastBlockNum, len(p.blockHashArr))
 	return p.sendSyncHashRequest(p.curSyncMagic, lastBlockNum)
 }
 
@@ -320,9 +323,8 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 	var numArr []uint64
 	var hashArr []common.Hash
-	for i := uint64(0); ; i++ {
-		idx := (2 ^ i) - 1
-		curNum := begin
+	for i, power2 := uint64(0), uint64(1); ; i, power2 = i+1, power2*2 {
+		idx, curNum := power2-1, begin
 		if end > idx {
 			curNum = end - idx
 		}
@@ -341,7 +343,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 	msg.BlockNumArr, msg.HeaderArr = numArr, hashArr
 	buff := common.SerializePanic(msg)
-	p.log.Debug("peer send [announceCode] with length: size:%d byte peerid:%s", len(buff), p.peerStrID)
+	p.log.Debug("peer send [announceCode] with magic:%d length:%d bytes peerid:%s num:%d", magic, len(buff), p.peerStrID, len(msg.HeaderArr))
 	return p2p.SendMessage(p.rw, announceCode, buff)
 }
 
@@ -370,16 +372,16 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 		}
 
 		chain := p.protocolManager.chain
-		for idx := len(msg.HeaderArr) - 1; idx >= 0; idx-- {
+		for idx := 0; idx < len(msg.HeaderArr); idx++ {
 			height := msg.BlockNumArr[idx]
-			block, err := chain.GetStore().GetBlockByHeight(height)
+			hash, err := chain.GetStore().GetBlockHash(height)
 			if err != nil {
 				continue
 			}
 
-			if block.HeaderHash == msg.HeaderArr[idx] {
+			if hash == msg.HeaderArr[idx] {
 				startNum, bMatch = height, true
-				if idx != (len(msg.HeaderArr)-1) && (msg.BlockNumArr[idx+1]-height) > MaxGapForAnnounce {
+				if idx != (len(msg.HeaderArr)-1) && msg.BlockNumArr[idx+1] > height && (msg.BlockNumArr[idx+1]-height) > MaxGapForAnnounce {
 					// send announceRequest message because gap is big enough
 					return p.sendAnnounceQuery(p.curSyncMagic, height, msg.BlockNumArr[idx+1])
 				}
@@ -402,7 +404,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 			return nil
 		}
 
-		for idx := len(msg.HeaderArr) - 1; idx >= 0; idx-- {
+		for idx := 0; idx < len(msg.HeaderArr); idx++ {
 			height := msg.BlockNumArr[idx]
 			if cacheHash, bFind := p.getHashByHeight(height); bFind {
 				if cacheHash == msg.HeaderArr[idx] {
@@ -418,6 +420,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 			p.curSyncMagic = 0
 			return nil
 		}
+
 	}
 
 	if !bMatch {
