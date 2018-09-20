@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/miner/pow"
 )
@@ -104,18 +105,22 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 		return err
 	}
 
-	if isHead {
-		if err := core.DeleteLargerHeightBlocks(lc.bcStore, header.Height+1, nil); err != nil {
-			return err
-		}
-
-		if err := core.OverwriteStaleBlocks(lc.bcStore, header.PreviousBlockHash, nil); err != nil {
-			return err
-		}
-
-		lc.canonicalTD = currentTd
-		lc.currentHeader = header
+	if !isHead {
+		return nil
 	}
+
+	if err := core.DeleteLargerHeightBlocks(lc.bcStore, header.Height+1, nil); err != nil {
+		return err
+	}
+
+	if err := core.OverwriteStaleBlocks(lc.bcStore, header.PreviousBlockHash, nil); err != nil {
+		return err
+	}
+
+	lc.canonicalTD = currentTd
+	lc.currentHeader = header
+
+	event.ChainHeaderChangedEventMananger.Fire(header)
 
 	return nil
 }
