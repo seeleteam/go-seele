@@ -33,7 +33,7 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 
 	code, resp := ob1.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
-	assert.Equal(t, resp != nil, true)
+	assert.NotNil(t, resp)
 	assert.Equal(t, resp.getError(), nil)
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 
@@ -41,7 +41,7 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 	ob2 := newTestOdrBlock(common.BigToHash(big.NewInt(1)))
 	code, resp = ob2.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
-	assert.Equal(t, resp != nil, true)
+	assert.NotNil(t, resp)
 	assert.Equal(t, strings.Contains(resp.getError().Error(), "leveldb: not found"), true)
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 
@@ -51,7 +51,7 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 	ob3 := newTestOdrBlock(headerHash)
 	code, resp = ob3.handleRequest(lp)
 	assert.Equal(t, code, blockResponseCode)
-	assert.Equal(t, resp != nil, true)
+	assert.NotNil(t, resp)
 	assert.Equal(t, resp.getError(), nil)
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 }
@@ -62,7 +62,6 @@ func Test_OdrBlock_HandleResponse(t *testing.T) {
 
 	assert.Equal(t, ob.Error, "")
 	assert.Equal(t, ob.Block == nil, true)
-
 }
 
 func Test_OdrBlock_Validate(t *testing.T) {
