@@ -24,6 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/metrics"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/urfave/cli"
 )
@@ -208,12 +209,30 @@ func getPrivateKey() (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+func getStaticNodes() ([]*discovery.Node, error) {
+	var arrayNode []*discovery.Node
+	for _, strNode := range staticNodesValue.Value() {
+		node, err := discovery.NewNodeFromIP(strNode)
+		if err != nil {
+			return nil, err
+		}
+
+		arrayNode = append(arrayNode, node)
+	}
+	return arrayNode, nil
+}
+
 func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, error) {
 	if _, err := common.HexToAddress(coinbaseValue); err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
 	}
 
 	privateKey, err := getPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	staticNodes, err := getStaticNodes()
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +250,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 	config.P2PConfig = p2p.Config{
 		NetworkID:     1,
 		ListenAddr:    "0.0.0.0:8057",
-		StaticNodes:   subChainInfo.StaticNodes,
+		StaticNodes:   append(subChainInfo.StaticNodes, staticNodes...),
 		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
 	}
 
