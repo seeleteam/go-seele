@@ -7,10 +7,10 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/keystore"
@@ -106,19 +106,11 @@ func SignTxAction(c *cli.Context) error {
 	return nil
 }
 
+// GenerateKeyAction generate key by client command
 func GenerateKeyAction(c *cli.Context) error {
-	var publicKey *common.Address
-	var privateKey *ecdsa.PrivateKey
-	var err error
-	if shardValue > common.ShardCount {
-		return fmt.Errorf("not supported shard number, shard number should be [0, %d]\n", common.ShardCount)
-	} else if shardValue == 0 {
-		publicKey, privateKey, err = crypto.GenerateKeyPair()
-		if err != nil {
-			return fmt.Errorf("failed to generate the key pair: %s", err)
-		}
-	} else {
-		publicKey, privateKey = crypto.MustGenerateShardKeyPair(shardValue)
+	publicKey, privateKey, err := util.GenerateKey(shardValue)
+	if err != nil {
+		return err
 	}
 
 	fmt.Printf("public key:  %s\n", publicKey.ToHex())
