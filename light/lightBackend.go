@@ -1,7 +1,11 @@
 package light
 
 import (
+	"math/big"
+
 	"github.com/seeleteam/go-seele/api"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -25,3 +29,18 @@ func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
+
+//@todo
+func (l *LightBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
+	return nil, nil
+}
+
+//@todo
+func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
+	return nil, nil
+}
+
+//@todo
+func (l *LightBackend) GetBlockByHeight(height int64) (*types.Block, error) {
+	return nil, nil
+}
