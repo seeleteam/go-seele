@@ -85,8 +85,8 @@ type Blockchain struct {
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
-	currentBlock *types.Block // HEAD block in canonical chain
-	log          *log.SeeleLog
+	blockLeaves *BlockLeaves
+	log         *log.SeeleLog
 
 	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 }
@@ -134,26 +134,56 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash)
+	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
 	if err != nil {
 		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
 		return nil, err
 	}
 
+	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
+	if err != nil {
+		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
+		return nil, err
+	}
+
+	// Get the state DB of the current block
+	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
+	if err != nil {
+		bc.log.Error("Failed to create state DB, state hash = %v, error = %v", currentBlock.Header.StateHash, err.Error())
+		return nil, err
+	}
+
+	blockIndex := NewBlockIndex(currentState, currentBlock, td)
+	bc.blockLeaves = NewBlockLeaves()
+	bc.blockLeaves.Add(blockIndex)
+
 	return bc, nil
 }
 
-// CurrentBlock returns the HEAD block in the canonical chain.
+// CurrentBlock returns the HEAD block of the blockchain.
 func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	return bc.currentBlock
+	index := bc.blockLeaves.GetBestBlockIndex()
+	if index == nil {
+		return nil
+	}
+
+	return index.currentBlock
 }
 
-// CurrentHeader returns the HEAD block header in the canonical chain.
+// CurrentHeader returns the HEAD block header of the blockchain.
 func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
-	return bc.CurrentBlock().Header
+	bc.lock.RLock()
+	defer bc.lock.RUnlock()
+
+	index := bc.blockLeaves.GetBestBlockIndex()
+	if index == nil {
+		return nil
+	}
+
+	return index.currentBlock.Header
 }
 
 // GetCurrentState returns the state DB of the current block.
@@ -233,19 +263,27 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		return ErrBlockStateHashMismatch
 	}
 
-	// Check if the block is new HEAD block based on block total difficulty.
-	var previousTd, currentTd *big.Int
+	// Update block leaves and write the block into store.
+	currentBlock := &types.Block{
+		HeaderHash:   block.HeaderHash,
+		Header:       block.Header.Clone(),
+		Transactions: make([]*types.Transaction, len(block.Transactions)),
+	}
+	copy(currentBlock.Transactions, block.Transactions)
+
+	if block.Debts != nil {
+		currentBlock.Debts = make([]*types.Debt, len(block.Debts))
+		copy(currentBlock.Debts, block.Debts)
+	}
+
+	var previousTd *big.Int
 	if previousTd, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
 		return err
 	}
 
-	newTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
-
-	if currentTd, err = bc.bcStore.GetBlockTotalDifficulty(bc.currentBlock.HeaderHash); err != nil {
-		return err
-	}
-
-	isHead := newTd.Cmp(currentTd) > 0
+	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
+	blockIndex := NewBlockIndex(blockStatedb, currentBlock, currentTd)
+	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
 
 	/////////////////////////////////////////////////////////////////
 	// PAY ATTENTION TO THE ORDER OF WRITING DATA INTO DB.
@@ -269,7 +307,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		return err
 	}
 
-	if err = bc.bcStore.PutBlock(block, newTd, isHead); err != nil {
+	if err = bc.bcStore.PutBlock(block, currentTd, isHead); err != nil {
 		bc.log.Error("Failed to save block into store, %v", err.Error())
 		return err
 	}
@@ -288,9 +326,11 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
 			return err
 		}
-
-		bc.currentBlock = block.Clone()
 	}
+
+	// update block header after meta info updated
+	bc.blockLeaves.Add(blockIndex)
+	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
 
 	committed = true
 	if isHead {

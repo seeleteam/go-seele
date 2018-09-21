@@ -168,24 +168,3 @@ func (block *Block) Validate() error {
 
 	return nil
 }
-
-// Clone returns a clone of the block.
-func (block *Block) Clone() *Block {
-	cloned := *block
-
-	if block.Header != nil {
-		cloned.Header = block.Header.Clone()
-	}
-
-	if block.Transactions != nil {
-		cloned.Transactions = make([]*Transaction, len(block.Transactions))
-		copy(cloned.Transactions, block.Transactions)
-	}
-
-	if block.Debts != nil {
-		cloned.Debts = make([]*Debt, len(block.Debts))
-		copy(cloned.Debts, block.Debts)
-	}
-
-	return &cloned
-}
