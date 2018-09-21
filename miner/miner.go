@@ -8,21 +8,18 @@ package miner
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
-	"math/rand"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 var (
@@ -45,7 +42,6 @@ type SeeleBackend interface {
 
 // Miner defines base elements of miner
 type Miner struct {
-	coinbase common.Address
 	mining   int32
 	canStart int32
 	stopped  int32
@@ -53,16 +49,16 @@ type Miner struct {
 	wg       sync.WaitGroup
 	stopChan chan struct{}
 	current  *Task
-	recv     chan *Result
+	recv     chan *types.Block
 
 	seele SeeleBackend
 	log   *log.SeeleLog
 
-	isFirstDownloader int32
-
-	threads              int
+	isFirstDownloader    int32
 	isFirstBlockPrepared int32
-	hashrate             metrics.Meter // Meter tracking the average hashrate
+
+	coinbase common.Address
+	engine   consensus.Engine
 }
 
 // NewMiner constructs and returns a miner instance
@@ -73,13 +69,13 @@ func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 		stopped:              0,
 		seele:                seele,
 		wg:                   sync.WaitGroup{},
-		recv:                 make(chan *Result, 1),
+		recv:                 make(chan *types.Block, 1),
 		log:                  log.GetLogger("miner"),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
-		threads:              1,
-		hashrate:             metrics.NewMeter(),
 	}
+
+	miner.engine = pow.NewEngine(1)
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
@@ -87,29 +83,25 @@ func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 	return miner
 }
 
-// GetCoinbase returns the coinbase.
-func (miner *Miner) GetCoinbase() common.Address {
-	return miner.coinbase
+func (miner *Miner) GetEngine() consensus.Engine {
+	return miner.engine
 }
 
 // SetThreads sets the number of mining threads.
 func (miner *Miner) SetThreads(threads uint) {
-	if threads == 0 {
-		miner.threads = runtime.NumCPU()
-		return
+	powEngine := miner.engine.(*pow.Engine)
+	if powEngine != nil {
+		powEngine.SetThreadNum(threads)
 	}
-
-	miner.threads = int(threads)
-}
-
-// GetThreads gets the number of mining threads.
-func (miner *Miner) GetThreads() int {
-	return miner.threads
 }
 
 // SetCoinbase set the coinbase.
 func (miner *Miner) SetCoinbase(coinbase common.Address) {
 	miner.coinbase = coinbase
+}
+
+func (miner *Miner) GetCoinbase() common.Address {
+	return miner.coinbase
 }
 
 // Start is used to start the miner
@@ -130,7 +122,6 @@ func (miner *Miner) Start() error {
 		return nil
 	}
 
-	miner.log.Info("miner start with %d threads", miner.threads)
 	miner.stopChan = make(chan struct{})
 
 	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
@@ -236,11 +227,11 @@ out:
 		select {
 		case result := <-miner.recv:
 			for {
-				if result == nil || result.task != miner.current {
+				if result == nil {
 					break
 				}
 
-				miner.log.Info("found a new mined block, block height:%d, hash:%s", result.block.Header.Height, result.block.HeaderHash.ToHex())
+				miner.log.Info("found a new mined block, block height:%d, hash:%s", result.Header.Height, result.HeaderHash.ToHex())
 				ret := miner.saveBlock(result)
 				if ret != nil {
 					miner.log.Error("failed to save the block, for %s", ret.Error())
@@ -248,7 +239,7 @@ out:
 				}
 
 				miner.log.Info("block and notify p2p saved successfully")
-				event.BlockMinedEventManager.Fire(result.block) // notify p2p to broadcast the block
+				event.BlockMinedEventManager.Fire(result) // notify p2p to broadcast the block
 				break
 			}
 
@@ -283,16 +274,16 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	height := parent.Header.Height
-	difficult := pow.GetDifficult(uint64(timestamp), parent.Header)
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.HeaderHash,
 		Creator:           miner.coinbase,
 		Height:            height + 1,
 		CreateTimestamp:   big.NewInt(timestamp),
-		Difficulty:        difficult,
 	}
 
 	miner.log.Debug("miner a block with coinbase %s", miner.coinbase.ToHex())
+	miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
+
 	miner.current = &Task{
 		header:    header,
 		createdAt: time.Now(),
@@ -311,8 +302,8 @@ func (miner *Miner) prepareNewBlock() error {
 }
 
 // saveBlock saves the block in the given result to the blockchain
-func (miner *Miner) saveBlock(result *Result) error {
-	ret := miner.seele.BlockChain().WriteBlock(result.block)
+func (miner *Miner) saveBlock(result *types.Block) error {
+	ret := miner.seele.BlockChain().WriteBlock(result)
 	return ret
 }
 
@@ -322,43 +313,6 @@ func (miner *Miner) commitTask(task *Task) {
 		return
 	}
 
-	threads := miner.threads
-	miner.log.Debug("miner threads num:%d", threads)
-
-	var step uint64
-	var seed uint64
-	if threads != 0 {
-		step = math.MaxUint64 / uint64(threads)
-	}
-
-	var isNonceFound int32
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < threads; i++ {
-		if threads == 1 {
-			seed = r.Uint64()
-		} else {
-			seed = uint64(r.Int63n(int64(step)))
-		}
-		tSeed := seed + uint64(i)*step
-		var min uint64
-		var max uint64
-		min = uint64(i) * step
-
-		if i != threads-1 {
-			max = min + step - 1
-		} else {
-			max = math.MaxUint64
-		}
-
-		miner.wg.Add(1)
-		go func(tseed uint64, tmin uint64, tmax uint64) {
-			defer miner.wg.Done()
-			StartMining(task, tseed, tmin, tmax, miner.recv, miner.stopChan, &isNonceFound, miner.hashrate, miner.log)
-		}(tSeed, min, max)
-	}
-}
-
-// Hashrate returns the rate of the POW search invocations per second in the last minute.
-func (miner *Miner) Hashrate() float64 {
-	return miner.hashrate.Rate1()
+	block := task.generateBlock()
+	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
 }

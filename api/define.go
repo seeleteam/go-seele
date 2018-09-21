@@ -17,7 +17,6 @@ import (
 type Backend interface {
 	GetP2pServer() *p2p.Server
 	GetNetVersion() uint64
-	GetMinerCoinbase() common.Address
 
 	TxPoolBackend() Pool
 	ChainBackend() Chain
@@ -63,7 +62,6 @@ type GetMinerInfo struct {
 	HeaderHash         common.Hash
 	Shard              uint
 	MinerStatus        string
-	MinerThread        int
 }
 
 // GetBalanceResponse response param for GetBalance api

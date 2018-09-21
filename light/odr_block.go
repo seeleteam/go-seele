@@ -18,7 +18,7 @@ type odrBlock struct {
 	Block  *types.Block // Retrieved block
 }
 
-func (req *odrBlock) code() uint16 {
+func (ob *odrBlock) code() uint16 {
 	return blockRequestCode
 }
 

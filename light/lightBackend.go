@@ -29,8 +29,6 @@ func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
-func (l *LightBackend) GetMinerCoinbase() common.Address { return common.EmptyAddress }
-
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
 func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {

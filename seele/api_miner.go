@@ -53,15 +53,6 @@ func (api *PrivateMinerAPI) Stop() (bool, error) {
 	return true, nil
 }
 
-// Hashrate returns the POW hashrate.
-func (api *PrivateMinerAPI) Hashrate() (uint64, error) {
-	if !api.s.miner.IsMining() {
-		return 0, miner.ErrMinerIsStopped
-	}
-
-	return uint64(api.s.miner.Hashrate()), nil
-}
-
 // SetThreads  API is used to set the number of threads.
 func (api *PrivateMinerAPI) SetThreads(threads uint) (bool, error) {
 	if threads < 0 {
@@ -73,8 +64,8 @@ func (api *PrivateMinerAPI) SetThreads(threads uint) (bool, error) {
 }
 
 // GetThreads  API is used to get the number of threads.
-func (api *PrivateMinerAPI) GetThreads() (int, error) {
-	return api.s.miner.GetThreads(), nil
+func (api *PrivateMinerAPI) GetEngineInfo() (interface{}, error) {
+	return api.s.miner.GetEngine().GetEngineInfo(), nil
 }
 
 // SetCoinbase API is used to set the coinbase.
