@@ -19,6 +19,7 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
+	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 // ServiceClient implements service for light mode.
@@ -64,7 +65,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
-	s.chain, err = newLightChain(bcStore, s.lightDB, s.odrBackend)
+	s.chain, err = newLightChain(bcStore, s.lightDB, s.odrBackend, pow.NewEngine(1))
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()

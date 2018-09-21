@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,7 +66,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "")
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1))
 	if err != nil {
 		panic(err)
 	}
@@ -84,7 +85,7 @@ func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.T
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
-	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
+	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
@@ -181,7 +182,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 	newBlock.Header.Height = 10
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockInvalidHeight)
+	assert.Equal(t, bc.WriteBlock(newBlock), consensus.ErrBlockInvalidHeight)
 }
 
 func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
@@ -268,13 +269,10 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 
 	currentBlock := bc.CurrentBlock()
 	assert.Equal(t, currentBlock, block1)
-	assert.Equal(t, bc.blockLeaves.Count(), 1)
 
 	block2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err = bc.WriteBlock(block2)
 	assert.Equal(t, err, error(nil))
-
-	assert.Equal(t, bc.blockLeaves.Count(), 2)
 }
 
 func Test_BlockChain_InvalidParent(t *testing.T) {
@@ -284,7 +282,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, common.EmptyHash, 1, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidParentHash)
+	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash)
 }
 
 func Test_Blockchain_InvalidHeight(t *testing.T) {
@@ -294,7 +292,7 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), ErrBlockInvalidHeight)
+	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidHeight)
 }
 
 func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
@@ -353,7 +351,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "")
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1))
 	if err != nil {
 		panic(err)
 	}

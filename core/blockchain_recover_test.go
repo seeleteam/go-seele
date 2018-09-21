@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 func newTestRecoveryPointFile() (string, func()) {
@@ -37,7 +38,7 @@ func newTestRecoverableBlockchain(bcStore store.BlockchainStore, stateDB databas
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, stateDB, rpFile)
+	bc, err := NewBlockchain(bcStore, stateDB, rpFile, pow.NewEngine(1))
 	if err != nil {
 		panic(err)
 	}

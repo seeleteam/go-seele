@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm"
@@ -22,7 +23,6 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
-	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 const (
@@ -38,12 +38,6 @@ const (
 )
 
 var (
-	// ErrBlockInvalidParentHash is returned when inserting a new header with invalid parent block hash.
-	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
-
-	// ErrBlockInvalidHeight is returned when inserting a new header with invalid block height.
-	ErrBlockInvalidHeight = errors.New("invalid block height")
-
 	// ErrBlockAlreadyExists is returned when inserted block already exists
 	ErrBlockAlreadyExists = errors.New("block already exists")
 
@@ -68,14 +62,8 @@ var (
 	// ErrBlockCreateTimeNull is returned when block create time is nil
 	ErrBlockCreateTimeNull = errors.New("block must have create time")
 
-	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
-	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
-
 	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
 	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
-
-	// ErrBlockDifficultInvalid is returned when block difficult is invalid
-	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
 
 	// ErrBlockTooManyTxs is returned when block have too many txs
 	ErrBlockTooManyTxs = errors.New("block have too many transactions")
@@ -87,39 +75,28 @@ var (
 	ErrNotSupported = errors.New("not supported function")
 )
 
-// ConsensusEngine is the interface to validate block header for different consensus.
-type ConsensusEngine interface {
-	// ValidateHeader validates the specified header and return error if validation failed.
-	// Generally, need to validate the block nonce.
-	ValidateHeader(blockHeader *types.BlockHeader) error
-
-	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
-	// The amount of miner reward will change over time.
-	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
-}
-
 // Blockchain represents the blockchain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
 // This is a thread safe structure. we must keep all of its parameters are thread safe too.
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
-	engine         ConsensusEngine
+	engine         consensus.Engine
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
-	blockLeaves *BlockLeaves
-	log         *log.SeeleLog
+	currentBlock *types.Block // HEAD block in canonical chain
+	log          *log.SeeleLog
 
 	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
-func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string, engine consensus.Engine) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
-		engine:         &pow.Engine{},
+		engine:         engine,
 		log:            log.GetLogger("blockchain"),
 	}
 
@@ -157,56 +134,26 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
+	bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash)
 	if err != nil {
 		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
 		return nil, err
 	}
 
-	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
-	if err != nil {
-		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
-		return nil, err
-	}
-
-	// Get the state DB of the current block
-	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
-	if err != nil {
-		bc.log.Error("Failed to create state DB, state hash = %v, error = %v", currentBlock.Header.StateHash, err.Error())
-		return nil, err
-	}
-
-	blockIndex := NewBlockIndex(currentState, currentBlock, td)
-	bc.blockLeaves = NewBlockLeaves()
-	bc.blockLeaves.Add(blockIndex)
-
 	return bc, nil
 }
 
-// CurrentBlock returns the HEAD block of the blockchain.
+// CurrentBlock returns the HEAD block in the canonical chain.
 func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	index := bc.blockLeaves.GetBestBlockIndex()
-	if index == nil {
-		return nil
-	}
-
-	return index.currentBlock
+	return bc.currentBlock
 }
 
-// CurrentHeader returns the HEAD block header of the blockchain.
+// CurrentHeader returns the HEAD block header in the canonical chain.
 func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
-	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
-	index := bc.blockLeaves.GetBestBlockIndex()
-	if index == nil {
-		return nil
-	}
-
-	return index.currentBlock.Header
+	return bc.CurrentBlock().Header
 }
 
 // GetCurrentState returns the state DB of the current block.
@@ -286,27 +233,19 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		return ErrBlockStateHashMismatch
 	}
 
-	// Update block leaves and write the block into store.
-	currentBlock := &types.Block{
-		HeaderHash:   block.HeaderHash,
-		Header:       block.Header.Clone(),
-		Transactions: make([]*types.Transaction, len(block.Transactions)),
-	}
-	copy(currentBlock.Transactions, block.Transactions)
-
-	if block.Debts != nil {
-		currentBlock.Debts = make([]*types.Debt, len(block.Debts))
-		copy(currentBlock.Debts, block.Debts)
-	}
-
-	var previousTd *big.Int
+	// Check if the block is new HEAD block based on block total difficulty.
+	var previousTd, currentTd *big.Int
 	if previousTd, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
 		return err
 	}
 
-	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
-	blockIndex := NewBlockIndex(blockStatedb, currentBlock, currentTd)
-	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
+	newTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
+
+	if currentTd, err = bc.bcStore.GetBlockTotalDifficulty(bc.currentBlock.HeaderHash); err != nil {
+		return err
+	}
+
+	isHead := newTd.Cmp(currentTd) > 0
 
 	/////////////////////////////////////////////////////////////////
 	// PAY ATTENTION TO THE ORDER OF WRITING DATA INTO DB.
@@ -330,7 +269,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		return err
 	}
 
-	if err = bc.bcStore.PutBlock(block, currentTd, isHead); err != nil {
+	if err = bc.bcStore.PutBlock(block, newTd, isHead); err != nil {
 		bc.log.Error("Failed to save block into store, %v", err.Error())
 		return err
 	}
@@ -349,11 +288,9 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
 			return err
 		}
-	}
 
-	// update block header after meta info updated
-	bc.blockLeaves.Add(blockIndex)
-	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
+		bc.currentBlock = block.Clone()
+	}
 
 	committed = true
 	if isHead {
@@ -392,7 +329,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 }
 
 // ValidateBlockHeader validates the specified header.
-func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcStore store.BlockchainStore) error {
+func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore) error {
 	if header == nil {
 		return types.ErrBlockHeaderNil
 	}
@@ -412,10 +349,6 @@ func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcSt
 		return ErrBlockExtraDataNotEmpty
 	}
 
-	if err := engine.ValidateHeader(header); err != nil {
-		return err
-	}
-
 	// Do not write the block if already exists.
 	blockHash := header.Hash()
 	exist, err := bcStore.HasBlock(blockHash)
@@ -427,31 +360,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcSt
 		return ErrBlockAlreadyExists
 	}
 
-	// Validate previous block header
-	preHeader, err := bcStore.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil {
-		return ErrBlockInvalidParentHash
-	}
-
-	return validateBlockHeaderInChain(header, preHeader)
-}
-
-// validateBlockHeaderInChain validates the specified block header against with the previous block header.
-func validateBlockHeaderInChain(header, preHeader *types.BlockHeader) error {
-	if header.Height != preHeader.Height+1 {
-		return ErrBlockInvalidHeight
-	}
-
-	if header.CreateTimestamp.Cmp(preHeader.CreateTimestamp) < 0 {
-		return ErrBlockCreateTimeOld
-	}
-
-	difficult := pow.GetDifficult(header.CreateTimestamp.Uint64(), preHeader)
-	if difficult == nil || difficult.Cmp(header.Difficulty) != 0 {
-		return ErrBlockDifficultInvalid
-	}
-
-	return nil
+	return engine.VerifyHeader(bcStore, header)
 }
 
 // GetStore returns the blockchain store instance.
@@ -510,8 +419,9 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 		return nil, types.ErrAmountNegative
 	}
 
-	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
-		return nil, err
+	reward := consensus.GetReward(block.Header.Height)
+	if reward == nil || reward.Cmp(minerRewardTx.Data.Amount) != 0 {
+		return nil, fmt.Errorf("invalid reward amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
 	}
 
 	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {

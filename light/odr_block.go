@@ -14,19 +14,25 @@ import (
 type odrBlock struct {
 	odrItem
 	Hash   common.Hash  // Block hash from which to retrieve (excludes Height)
-	Height uint64       // Block hash from which to retrieve (excludes Hash)
+	Height int64        // Block hash from which to retrieve (excludes Hash)
 	Block  *types.Block // Retrieved block
 }
 
-func (req *odrBlock) code() uint16 {
+func (ob *odrBlock) code() uint16 {
 	return blockRequestCode
 }
 
 func (req *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
+	var h uint64
+	if req.Height <= 0 {
+		h = lp.chain.CurrentHeader().Height
+	} else {
+		h = uint64(req.Height)
+	}
 
 	if req.Hash.IsEmpty() {
-		if req.Block, err = lp.chain.GetStore().GetBlockByHeight(req.Height); err != nil {
+		if req.Block, err = lp.chain.GetStore().GetBlockByHeight(h); err != nil {
 			lp.log.Debug("Failed to get block, height = %d, error = %v", req.Height, err)
 			req.Error = err.Error()
 		}
@@ -60,7 +66,7 @@ func (req *odrBlock) Validate(bcStore store.BlockchainStore) error {
 
 	hash := req.Hash
 	if hash.IsEmpty() {
-		if hash, err = bcStore.GetBlockHash(req.Height); err != nil {
+		if hash, err = bcStore.GetBlockHash(uint64(req.Height)); err != nil {
 			return err
 		}
 	}

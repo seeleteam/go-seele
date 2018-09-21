@@ -12,7 +12,6 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner/pow"
 )
 
 // StartMining starts calculating the nonce for the block.
@@ -27,7 +26,7 @@ func StartMining(block *types.Block, seed uint64, min uint64, max uint64, result
 	var nonce = seed
 	var hashInt big.Int
 	var caltimes = int64(0)
-	target := pow.GetMiningTarget(block.Header.Difficulty)
+	target := getMiningTarget(block.Header.Difficulty)
 
 miner:
 	for {

@@ -30,14 +30,32 @@ func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
 
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
-func (sd *SeeleBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
-	return sd.GetBlockByHash(hashHex)
+// GetBlockByHeightOrHash returns the requested block.
+func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
+	var block *types.Block
+	var err error
+	if hash.IsEmpty() {
+		store := sd.s.chain.GetStore()
+		block, err = store.GetBlock(hash)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if height < 0 {
+			header := sd.s.chain.CurrentHeader()
+			block, err = sd.s.chain.GetStore().GetBlockByHeight(header.Height)
+		} else {
+			block, err = sd.s.chain.GetStore().GetBlockByHeight(uint64(height))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return block, nil
 }
 
 func (sd *SeeleBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
-	return sd.GetBlockTotalDifficulty(hash)
-}
-
-func (sd *SeeleBackend) GetBlockByHeight(height int64) (*types.Block, error) {
-	return sd.GetBlockByHeight(height)
+	store := sd.s.chain.GetStore()
+	return store.GetBlockTotalDifficulty(hash)
 }
