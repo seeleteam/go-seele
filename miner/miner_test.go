@@ -19,6 +19,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 var defaultMinerAddr = common.BytesToAddress([]byte{1})
@@ -128,7 +129,7 @@ func newTestBlockchain(db database.Database) *core.Blockchain {
 		panic(err)
 	}
 
-	bc, err := core.NewBlockchain(bcStore, db, "")
+	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1))
 	if err != nil {
 		panic(err)
 	}

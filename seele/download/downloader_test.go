@@ -22,6 +22,7 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/stretchr/testify/assert"
+	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
@@ -99,7 +100,7 @@ func newTestBlockchain(db database.Database) *core.Blockchain {
 		panic(err)
 	}
 
-	bc, err := core.NewBlockchain(bcStore, db, "")
+	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1))
 	if err != nil {
 		panic(err)
 	}

@@ -23,7 +23,17 @@ var (
 	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
 
-	errBlockNonceInvalid = errors.New("invalid block nonce")
+	// ErrBlockInvalidHeight is returned when block nonce is invalid
+	ErrBlockNonceInvalid = errors.New("invalid block nonce")
+
+	// ErrBlockInvalidHeight is returned when inserting a new header with invalid block height.
+	ErrBlockInvalidHeight = errors.New("invalid block height")
+
+	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
+	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
+
+	// ErrBlockInvalidParentHash is returned when inserting a new header with invalid parent block hash.
+	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
 )
 
 // Engine provides the consensus operations based on POW.
@@ -62,7 +72,15 @@ func (engine *Engine) GetEngineInfo() interface{} {
 func (engine *Engine) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error {
 	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
 	if err != nil {
-		return err
+		return ErrBlockInvalidParentHash
+	}
+
+	if header.Height != parent.Height+1 {
+		return ErrBlockInvalidHeight
+	}
+
+	if header.CreateTimestamp.Cmp(parent.CreateTimestamp) < 0 {
+		return ErrBlockCreateTimeOld
 	}
 
 	if err = verifyDifficulty(parent, header); err != nil {
@@ -140,7 +158,7 @@ func verifyTarget(header *types.BlockHeader) error {
 	target := getMiningTarget(header.Difficulty)
 
 	if hashInt.Cmp(target) > 0 {
-		return errBlockNonceInvalid
+		return ErrBlockNonceInvalid
 	}
 
 	return nil

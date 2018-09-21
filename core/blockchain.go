@@ -22,7 +22,7 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
-	"github.com/seeleteam/go-seele/miner/pow"
+	"github.com/seeleteam/go-seele/consensus"
 )
 
 const (
@@ -38,12 +38,6 @@ const (
 )
 
 var (
-	// ErrBlockInvalidParentHash is returned when inserting a new header with invalid parent block hash.
-	ErrBlockInvalidParentHash = errors.New("invalid parent block hash")
-
-	// ErrBlockInvalidHeight is returned when inserting a new header with invalid block height.
-	ErrBlockInvalidHeight = errors.New("invalid block height")
-
 	// ErrBlockAlreadyExists is returned when inserted block already exists
 	ErrBlockAlreadyExists = errors.New("block already exists")
 
@@ -68,9 +62,6 @@ var (
 	// ErrBlockCreateTimeNull is returned when block create time is nil
 	ErrBlockCreateTimeNull = errors.New("block must have create time")
 
-	// ErrBlockCreateTimeOld is returned when block create time is previous of parent block time
-	ErrBlockCreateTimeOld = errors.New("block time must be later than parent block time")
-
 	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
 	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
 
@@ -87,16 +78,16 @@ var (
 	ErrNotSupported = errors.New("not supported function")
 )
 
-// ConsensusEngine is the interface to validate block header for different consensus.
-type ConsensusEngine interface {
-	// ValidateHeader validates the specified header and return error if validation failed.
-	// Generally, need to validate the block nonce.
-	ValidateHeader(blockHeader *types.BlockHeader) error
-
-	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
-	// The amount of miner reward will change over time.
-	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
-}
+//// ConsensusEngine is the interface to validate block header for different consensus.
+//type ConsensusEngine interface {
+//	// ValidateHeader validates the specified header and return error if validation failed.
+//	// Generally, need to validate the block nonce.
+//	ValidateHeader(blockHeader *types.BlockHeader) error
+//
+//	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
+//	// The amount of miner reward will change over time.
+//	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
+//}
 
 // Blockchain represents the blockchain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.
@@ -104,7 +95,7 @@ type ConsensusEngine interface {
 type Blockchain struct {
 	bcStore        store.BlockchainStore
 	accountStateDB database.Database
-	engine         ConsensusEngine
+	engine         consensus.Engine
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
@@ -115,11 +106,11 @@ type Blockchain struct {
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
-func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string) (*Blockchain, error) {
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string, engine consensus.Engine) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
-		engine:         &pow.Engine{},
+		engine:         engine,
 		log:            log.GetLogger("blockchain"),
 	}
 
@@ -392,7 +383,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 }
 
 // ValidateBlockHeader validates the specified header.
-func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcStore store.BlockchainStore) error {
+func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore) error {
 	if header == nil {
 		return types.ErrBlockHeaderNil
 	}
@@ -412,10 +403,6 @@ func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcSt
 		return ErrBlockExtraDataNotEmpty
 	}
 
-	if err := engine.ValidateHeader(header); err != nil {
-		return err
-	}
-
 	// Do not write the block if already exists.
 	blockHash := header.Hash()
 	exist, err := bcStore.HasBlock(blockHash)
@@ -427,31 +414,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine ConsensusEngine, bcSt
 		return ErrBlockAlreadyExists
 	}
 
-	// Validate previous block header
-	preHeader, err := bcStore.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil {
-		return ErrBlockInvalidParentHash
-	}
-
-	return validateBlockHeaderInChain(header, preHeader)
-}
-
-// validateBlockHeaderInChain validates the specified block header against with the previous block header.
-func validateBlockHeaderInChain(header, preHeader *types.BlockHeader) error {
-	if header.Height != preHeader.Height+1 {
-		return ErrBlockInvalidHeight
-	}
-
-	if header.CreateTimestamp.Cmp(preHeader.CreateTimestamp) < 0 {
-		return ErrBlockCreateTimeOld
-	}
-
-	difficult := pow.GetDifficult(header.CreateTimestamp.Uint64(), preHeader)
-	if difficult == nil || difficult.Cmp(header.Difficulty) != 0 {
-		return ErrBlockDifficultInvalid
-	}
-
-	return nil
+	return engine.VerifyHeader(bcStore, header)
 }
 
 // GetStore returns the blockchain store instance.
@@ -510,8 +473,9 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 		return nil, types.ErrAmountNegative
 	}
 
-	if err := bc.engine.ValidateRewardAmount(block.Header.Height, minerRewardTx.Data.Amount); err != nil {
-		return nil, err
+	reward := consensus.GetReward(block.Header.Height)
+	if reward == nil || reward.Cmp(minerRewardTx.Data.Amount) != 0 {
+		return nil, fmt.Errorf("invalid reward amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
 	}
 
 	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {

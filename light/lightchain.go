@@ -17,7 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner/pow"
+	"github.com/seeleteam/go-seele/consensus"
 )
 
 // LightChain represents a canonical chain that by default only handles block headers.
@@ -25,17 +25,17 @@ type LightChain struct {
 	mutex         sync.RWMutex
 	bcStore       store.BlockchainStore
 	odrBackend    *odrBackend
-	engine        core.ConsensusEngine
+	engine        consensus.Engine
 	currentHeader *types.BlockHeader
 	canonicalTD   *big.Int
 	log           *log.SeeleLog
 }
 
-func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odrBackend *odrBackend) (*LightChain, error) {
+func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odrBackend *odrBackend, engine consensus.Engine) (*LightChain, error) {
 	chain := &LightChain{
 		bcStore:    bcStore,
 		odrBackend: odrBackend,
-		engine:     &pow.Engine{},
+		engine:     engine,
 		log:        log.GetLogger("LightChain"),
 	}
 

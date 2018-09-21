@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 func newTestBlockchainDatabase(db database.Database) store.BlockchainStore {
@@ -35,7 +35,7 @@ func newTestLightChain() (*LightChain, func(), error) {
 	headerHash := header.Hash()
 	bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
 
-	lc, err := newLightChain(bcStore, db, backend)
+	lc, err := newLightChain(bcStore, db, backend, pow.NewEngine(1))
 	return lc, dispose, err
 }
 
@@ -75,7 +75,7 @@ func Test_LightChain_NewLightChain(t *testing.T) {
 	backend := newOdrBackend(log.GetLogger("LightChain"))
 
 	// no block in bcStore
-	lc, err := newLightChain(bcStore, db, backend)
+	lc, err := newLightChain(bcStore, db, backend, pow.NewEngine(1))
 	assert.Equal(t, strings.Contains(err.Error(), "leveldb: not found"), true)
 	assert.Equal(t, lc == nil, true)
 
@@ -84,7 +84,7 @@ func Test_LightChain_NewLightChain(t *testing.T) {
 	headerHash := header.Hash()
 	bcStore.PutBlockHeader(headerHash, header, header.Difficulty, true)
 
-	lc, err = newLightChain(bcStore, db, backend)
+	lc, err = newLightChain(bcStore, db, backend, pow.NewEngine(1))
 	assert.Equal(t, err, nil)
 	assert.Equal(t, lc != nil, true)
 	assert.Equal(t, lc.currentHeader != nil, true)
@@ -110,7 +110,7 @@ func Test_LightChain_WriteHeader(t *testing.T) {
 
 	blockHeader := newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 1)
 	err := lc.WriteHeader(blockHeader)
-	assert.Equal(t, err, core.ErrBlockInvalidHeight)
+	assert.Equal(t, err, pow.ErrBlockInvalidHeight)
 
 	blockHeader = newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 2)
 	err = lc.WriteHeader(blockHeader)
