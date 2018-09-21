@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -58,7 +59,7 @@ func createTestAPI(t *testing.T) (api *PublicMonitorAPI, dispose func()) {
 	}
 
 	serviceContext := seele.ServiceContext{
-		DataDir: filepath.Join(common.GetTempFolder(), "n1"),
+		DataDir: filepath.Join(common.GetTempFolder(), "n1", fmt.Sprintf("%d", time.Now().UnixNano())),
 	}
 
 	ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
