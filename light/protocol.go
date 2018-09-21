@@ -74,7 +74,7 @@ type LightProtocol struct {
 	p2p.Protocol
 
 	bServerMode         bool
-	networkID           uint64
+	networkID           string
 	txPool              TransactionPool
 	chain               BlockChain
 	peerSet             *peerSet
@@ -88,7 +88,7 @@ type LightProtocol struct {
 }
 
 // NewLightProtocol create LightProtocol
-func NewLightProtocol(networkID uint64, txPool TransactionPool, chain BlockChain, serverMode bool, odrBackend *odrBackend, log *log.SeeleLog) (s *LightProtocol, err error) {
+func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain, serverMode bool, odrBackend *odrBackend, log *log.SeeleLog) (s *LightProtocol, err error) {
 	s = &LightProtocol{
 		Protocol: p2p.Protocol{
 			Name:    LightProtoName,

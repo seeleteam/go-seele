@@ -20,7 +20,7 @@ func NewSeeleBackend(s *SeeleService) *SeeleBackend {
 
 func (sd *SeeleBackend) TxPoolBackend() api.Pool { return sd.s.txPool }
 
-func (sd *SeeleBackend) GetNetVersion() uint64 { return sd.s.networkID }
+func (sd *SeeleBackend) GetNetVersion() string { return sd.s.networkID }
 
 func (sd *SeeleBackend) GetP2pServer() *p2p.Server { return sd.s.p2pServer }
 
@@ -58,4 +58,14 @@ func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, 
 func (sd *SeeleBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	store := sd.s.chain.GetStore()
 	return store.GetBlockTotalDifficulty(hash)
+}
+
+// GetReceiptByTxHash get receipt by transaction hash
+func (sd *SeeleBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
+	store := sd.s.chain.GetStore()
+	receipt, err := store.GetReceiptByTxHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
 }

@@ -17,7 +17,7 @@ import (
 const (
 	TestName      = "seele node1"
 	TestVersion   = "1.0"
-	TestNetworkID = 1
+	TestNetworkID = "seele"
 )
 
 var (

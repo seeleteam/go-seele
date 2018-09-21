@@ -27,7 +27,7 @@ type Config struct {
 }
 
 // StartMetricsWithConfig start recording metrics with configure
-func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID uint64, coinBase common.Address) {
+func StartMetricsWithConfig(conf *Config, log *log.SeeleLog, name, version string, networkID string, coinBase common.Address) {
 	if conf == nil {
 		log.Error("failed to start the metrics: the config of metrics is null")
 		return
@@ -55,7 +55,7 @@ func StartMetrics(
 	username string, // database username
 	password string, // database password
 	nodeName string, // name of the node
-	networkID uint64,
+	networkID string,
 	version string,
 	coinBase common.Address,
 	log *log.SeeleLog) {
@@ -70,7 +70,7 @@ func StartMetrics(
 		password,
 		map[string]string{
 			"nodename":  nodeName,
-			"networkid": fmt.Sprint(networkID),
+			"networkid": networkID,
 			"version":   version,
 			"coinbase":  coinBase.ToHex(),
 			"shardid":   fmt.Sprint(common.LocalShardNumber),

@@ -30,7 +30,7 @@ const chainHeaderChangeBuffSize = 100
 
 // SeeleService implements full node service.
 type SeeleService struct {
-	networkID     uint64
+	networkID     string
 	p2pServer     *p2p.Server
 	seeleProtocol *SeeleProtocol
 	log           *log.SeeleLog
@@ -62,7 +62,7 @@ func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 
 func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
 
-func (s *SeeleService) NetVersion() uint64 { return s.networkID }
+func (s *SeeleService) NetVersion() string { return s.networkID }
 
 // Miner get miner
 func (s *SeeleService) Miner() *miner.Miner { return s.miner }

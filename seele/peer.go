@@ -278,7 +278,7 @@ func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
 }
 
 // handShake exchange networkid td etc between two connected peers.
-func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesis common.Hash, difficult uint64) error {
+func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, genesis common.Hash, difficult uint64) error {
 	msg := &statusData{
 		ProtocolVersion: uint32(SeeleVersion),
 		NetworkID:       networkID,
@@ -315,7 +315,7 @@ func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, genesi
 	return nil
 }
 
-func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID uint64, shard uint, difficult uint64) error {
+func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, networkID string, shard uint, difficult uint64) error {
 	if retStatusMsg.NetworkID != networkID {
 		return errNetworkNotMatch
 	}

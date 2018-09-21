@@ -103,7 +103,7 @@ type ProtoHandShake struct {
 	Caps      []Cap
 	NodeID    common.Address
 	Params    []byte
-	NetworkID uint64
+	NetworkID string
 }
 
 type MsgReader interface {

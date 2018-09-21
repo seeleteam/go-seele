@@ -197,17 +197,16 @@ func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string,
 
 // GetReceiptByTxHash get receipt by transaction hash
 func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]interface{}, error) {
-	hashByte, err := hexutil.HexToBytes(txHash)
+	hash, err := common.HexToHash(txHash)
 	if err != nil {
 		return nil, err
 	}
-	hash := common.BytesToHash(hashByte)
 
-	store := api.s.ChainBackend().GetStore()
-	receipt, err := store.GetReceiptByTxHash(hash)
+	receipt, err := api.s.GetReceiptByTxHash(hash)
 	if err != nil {
 		return nil, err
 	}
+
 	return PrintableReceipt(receipt)
 }
 

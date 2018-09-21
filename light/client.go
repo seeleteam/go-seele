@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/api"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -19,12 +20,11 @@ import (
 	"github.com/seeleteam/go-seele/p2p"
 	rpc "github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
-	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 // ServiceClient implements service for light mode.
 type ServiceClient struct {
-	networkID     uint64
+	networkID     string
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol
 	log           *log.SeeleLog

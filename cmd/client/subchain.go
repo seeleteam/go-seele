@@ -248,7 +248,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 	}
 
 	config.P2PConfig = p2p.Config{
-		NetworkID:     1,
+		NetworkID:     "1",
 		ListenAddr:    "0.0.0.0:8057",
 		StaticNodes:   append(subChainInfo.StaticNodes, staticNodes...),
 		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
