@@ -18,54 +18,54 @@ type odrBlock struct {
 	Block  *types.Block // Retrieved block
 }
 
-func (req *odrBlock) code() uint16 {
+func (ob *odrBlock) code() uint16 {
 	return blockRequestCode
 }
 
-func (req *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (ob *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
 
-	if req.Hash.IsEmpty() {
-		if req.Block, err = lp.chain.GetStore().GetBlockByHeight(req.Height); err != nil {
-			lp.log.Debug("Failed to get block, height = %d, error = %v", req.Height, err)
-			req.Error = err.Error()
+	if ob.Hash.IsEmpty() {
+		if ob.Block, err = lp.chain.GetStore().GetBlockByHeight(ob.Height); err != nil {
+			lp.log.Debug("Failed to get block, height = %d, error = %v", ob.Height, err)
+			ob.Error = err.Error()
 		}
 	} else {
-		if req.Block, err = lp.chain.GetStore().GetBlock(req.Hash); err != nil {
-			lp.log.Debug("Failed to get block, hash = %v, error = %v", req.Hash, err)
-			req.Error = err.Error()
+		if ob.Block, err = lp.chain.GetStore().GetBlock(ob.Hash); err != nil {
+			lp.log.Debug("Failed to get block, hash = %v, error = %v", ob.Hash, err)
+			ob.Error = err.Error()
 		}
 	}
 
-	return blockResponseCode, req
+	return blockResponseCode, ob
 }
 
-func (req *odrBlock) handleResponse(resp interface{}) {
+func (ob *odrBlock) handleResponse(resp interface{}) {
 	if data, ok := resp.(*odrBlock); ok {
-		req.Error = data.Error
-		req.Block = data.Block
+		ob.Error = data.Error
+		ob.Block = data.Block
 	}
 }
 
 // Validate validates the retrieved block.
-func (req *odrBlock) Validate(bcStore store.BlockchainStore) error {
-	if req.Block == nil {
+func (ob *odrBlock) Validate(bcStore store.BlockchainStore) error {
+	if ob.Block == nil {
 		return nil
 	}
 
 	var err error
-	if err = req.Block.Validate(); err != nil {
+	if err = ob.Block.Validate(); err != nil {
 		return err
 	}
 
-	hash := req.Hash
+	hash := ob.Hash
 	if hash.IsEmpty() {
-		if hash, err = bcStore.GetBlockHash(req.Height); err != nil {
+		if hash, err = bcStore.GetBlockHash(ob.Height); err != nil {
 			return err
 		}
 	}
 
-	if !hash.Equal(req.Block.HeaderHash) {
+	if !hash.Equal(ob.Block.HeaderHash) {
 		return types.ErrBlockHashMismatch
 	}
 
