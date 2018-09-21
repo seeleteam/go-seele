@@ -12,7 +12,7 @@
     "staticNodes": [
       "127.0.0.1:8057"
     ],
-    "networkID": 1
+    "networkID": "seele"
   },
   "log": {
     "isDebug": false,

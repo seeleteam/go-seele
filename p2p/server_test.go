@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_NewServer(t *testing.T) {
@@ -162,7 +162,7 @@ func Test_PeerInfos(t *testing.T) {
 func testConfig() *Config {
 	return &Config{
 		ListenAddr:    "127.0.0.1:8080",
-		NetworkID:     1,
+		NetworkID:     "seele",
 		SubPrivateKey: "privKey",
 		PrivateKey:    generatePrivKey(),
 	}
@@ -171,7 +171,7 @@ func testConfig() *Config {
 func testInvalidConfig() *Config {
 	return &Config{
 		ListenAddr:    "127.0.0:8080",
-		NetworkID:     1,
+		NetworkID:     "seele",
 		SubPrivateKey: "privKey",
 		PrivateKey:    generatePrivKey(),
 	}

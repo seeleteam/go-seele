@@ -16,7 +16,7 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	GetP2pServer() *p2p.Server
-	GetNetVersion() uint64
+	GetNetVersion() string
 
 	TxPoolBackend() Pool
 	ChainBackend() Chain

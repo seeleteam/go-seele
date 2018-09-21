@@ -28,7 +28,7 @@ func (n *PrivateNetworkAPI) GetPeerCount() (int, error) {
 }
 
 // GetNetworkVersion returns the network version
-func (n *PrivateNetworkAPI) GetNetworkVersion() (uint64, error) {
+func (n *PrivateNetworkAPI) GetNetworkVersion() (string, error) {
 	return n.s.GetNetVersion(), nil
 }
 

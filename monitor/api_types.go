@@ -11,7 +11,7 @@ type NodeInfo struct {
 	Name       string `json:"name"`
 	Node       string `json:"node"`
 	Port       int    `json:"port"`
-	NetVersion uint64 `json:"netVersion"`
+	NetVersion string `json:"netVersion"`
 	Protocol   string `json:"protocol"`
 	API        string `json:"api"`
 	Os         string `json:"os"`
