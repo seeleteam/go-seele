@@ -1,6 +1,7 @@
 package light
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/api"
@@ -30,17 +31,21 @@ func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
-//@todo
-func (l *LightBackend) GetBlockByHash(hashHex string) (*types.Block, error) {
-	return nil, nil
+func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
+	var request *odrBlock
+	request = &odrBlock{Height: height, Hash: hash}
+
+	if err := l.s.odrBackend.sendRequest(request); err != nil {
+		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	}
+
+	if err := request.getError(); err != nil {
+		return nil, err
+	}
+	return request.Block, nil
 }
 
 //@todo
 func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
-	return nil, nil
-}
-
-//@todo
-func (l *LightBackend) GetBlockByHeight(height int64) (*types.Block, error) {
 	return nil, nil
 }

@@ -76,7 +76,7 @@ func (api *PublicSeeleAPI) GetBlock(hashHex string, height int64, fulltx bool) (
 // GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHeight(height int64, fulltx bool) (map[string]interface{}, error) {
-	block, err := api.s.GetBlockByHeight(height)
+	block, err := api.s.GetBlock(common.EmptyHash, height)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 
 		for i := uint(0); i < size; i++ {
 			var block *types.Block
-			block, err := api.s.GetBlockByHeight(height - int64(i))
+			block, err := api.s.GetBlock(common.EmptyHash, height-int64(i))
 			if err != nil {
 				return nil, err
 			}
@@ -135,7 +135,12 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	block, err := api.s.GetBlockByHash(hashHex)
+	hash, err := common.HexToHash(hashHex)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
 	if err != nil {
 		return nil, err
 	}

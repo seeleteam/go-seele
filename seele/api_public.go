@@ -31,46 +31,6 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
-// GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
-// detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHash(hashHex string) (*types.Block, error) {
-	store := api.s.chain.GetStore()
-	hashByte, err := hexutil.HexToBytes(hashHex)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := common.BytesToHash(hashByte)
-	block, err := store.GetBlock(hash)
-	if err != nil {
-		return nil, err
-	}
-	return block, nil
-}
-
-func (api *PublicSeeleAPI) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
-	store := api.s.chain.GetStore()
-	return store.GetBlockTotalDifficulty(hash)
-}
-
-// GetBlockByHeight returns the requested block. When blockNr is less than 0 the chain head is returned. When fullTx is true all
-// transactions in the block are returned in full detail, otherwise only the transaction hash is returned
-func (api *PublicSeeleAPI) GetBlockByHeight(height int64) (*types.Block, error) {
-	var block *types.Block
-	var err error
-	if height < 0 {
-		header := api.s.chain.CurrentHeader()
-		block, err = api.s.chain.GetStore().GetBlockByHeight(header.Height)
-	} else {
-		block, err = api.s.chain.GetStore().GetBlockByHeight(uint64(height))
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return block, err
-}
-
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	block := api.s.chain.CurrentBlock()
