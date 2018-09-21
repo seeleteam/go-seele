@@ -98,3 +98,10 @@ type Protocol interface {
 	SendDifferentShardTx(tx *types.Transaction, shard uint)
 	GetProtocolVersion() (uint, error)
 }
+
+type Store interface {
+	GetBlock(hash common.Hash) (*types.Block, error)
+	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
+	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
+	GetTxIndex(txHash common.Hash) (*types.TxIndex, error)
+}
