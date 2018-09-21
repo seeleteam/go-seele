@@ -45,7 +45,20 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 	return request.Block, nil
 }
 
-//@todo
 func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
-	return nil, nil
+	return l.ChainBackend().GetStore().GetBlockTotalDifficulty(hash)
+}
+
+func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
+	var request *odrtReceipt
+	request = &odrtReceipt{TxHash: hash}
+
+	if err := l.s.odrBackend.sendRequest(request); err != nil {
+		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	}
+
+	if err := request.getError(); err != nil {
+		return nil, err
+	}
+	return request.Receipt, nil
 }

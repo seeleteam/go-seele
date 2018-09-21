@@ -25,6 +25,7 @@ type Backend interface {
 
 	GetBlock(hash common.Hash, height int64) (*types.Block, error)
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
+	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

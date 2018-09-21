@@ -59,3 +59,13 @@ func (sd *SeeleBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, err
 	store := sd.s.chain.GetStore()
 	return store.GetBlockTotalDifficulty(hash)
 }
+
+// GetReceiptByTxHash get receipt by transaction hash
+func (sd *SeeleBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
+	store := sd.s.chain.GetStore()
+	receipt, err := store.GetReceiptByTxHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
+}
