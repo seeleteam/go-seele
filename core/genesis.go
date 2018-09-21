@@ -115,7 +115,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {
-		return errors.New("specific shard number does not match with the shard number in genesis info")
+		return fmt.Errorf("specific shard number %d does not match with the shard number in genesis info %d", data.ShardNumber, genesis.info.ShardNumber)
 	}
 
 	headerHash := genesis.header.Hash()
