@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm"
@@ -22,7 +23,6 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
-	"github.com/seeleteam/go-seele/consensus"
 )
 
 const (
@@ -65,9 +65,6 @@ var (
 	// ErrBlockCreateTimeInFuture is returned when block create time is ahead of 10 seconds of now
 	ErrBlockCreateTimeInFuture = errors.New("future block. block time is ahead 10 seconds of now")
 
-	// ErrBlockDifficultInvalid is returned when block difficult is invalid
-	ErrBlockDifficultInvalid = errors.New("block difficult is invalid")
-
 	// ErrBlockTooManyTxs is returned when block have too many txs
 	ErrBlockTooManyTxs = errors.New("block have too many transactions")
 
@@ -77,17 +74,6 @@ var (
 	// ErrNotSupported is returned when unsupported method invoked.
 	ErrNotSupported = errors.New("not supported function")
 )
-
-//// ConsensusEngine is the interface to validate block header for different consensus.
-//type ConsensusEngine interface {
-//	// ValidateHeader validates the specified header and return error if validation failed.
-//	// Generally, need to validate the block nonce.
-//	ValidateHeader(blockHeader *types.BlockHeader) error
-//
-//	// ValidateRewardAmount validates the specified amount and returns error if validation failed.
-//	// The amount of miner reward will change over time.
-//	ValidateRewardAmount(blockHeight uint64, amount *big.Int) error
-//}
 
 // Blockchain represents the blockchain with a genesis block. The Blockchain manages
 // blocks insertion, deletion, reorganizations and persistence with a given database.

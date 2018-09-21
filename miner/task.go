@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/consensus"
 )
 
 // Task is a mining work for engine, containing block header, transactions, and transaction receipts.

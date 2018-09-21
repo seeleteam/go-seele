@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -18,7 +20,6 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 func newTestBlockchainDatabase(db database.Database) store.BlockchainStore {
@@ -110,7 +111,7 @@ func Test_LightChain_WriteHeader(t *testing.T) {
 
 	blockHeader := newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 1)
 	err := lc.WriteHeader(blockHeader)
-	assert.Equal(t, err, pow.ErrBlockInvalidHeight)
+	assert.Equal(t, err, consensus.ErrBlockInvalidHeight)
 
 	blockHeader = newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 2)
 	err = lc.WriteHeader(blockHeader)

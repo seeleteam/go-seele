@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/fatih/set.v0"
-	"github.com/seeleteam/go-seele/consensus"
 )
 
 func newTestDebt(amount int64, fee int64) *types.Debt {

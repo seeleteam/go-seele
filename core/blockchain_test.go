@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -18,8 +20,6 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
-	"github.com/seeleteam/go-seele/consensus/pow"
-	"github.com/seeleteam/go-seele/consensus"
 )
 
 type testAccount struct {
@@ -182,7 +182,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 	newBlock.Header.Height = 10
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), pow.ErrBlockInvalidHeight)
+	assert.Equal(t, bc.WriteBlock(newBlock), consensus.ErrBlockInvalidHeight)
 }
 
 func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
@@ -285,7 +285,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, common.EmptyHash, 1, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), pow.ErrBlockInvalidParentHash)
+	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash)
 }
 
 func Test_Blockchain_InvalidHeight(t *testing.T) {
@@ -295,7 +295,7 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), pow.ErrBlockInvalidHeight)
+	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidHeight)
 }
 
 func Test_Blockchain_UpdateCanocialHash(t *testing.T) {

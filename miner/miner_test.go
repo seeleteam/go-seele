@@ -12,14 +12,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/seeleteam/go-seele/consensus/pow"
+	"github.com/stretchr/testify/assert"
 )
 
 var defaultMinerAddr = common.BytesToAddress([]byte{1})

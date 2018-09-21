@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/stretchr/testify/assert"
@@ -76,7 +77,7 @@ func Test_VerifyTarget(t *testing.T) {
 	// block is not validated for difficulty is so high
 	header.Difficulty = big.NewInt(10000000000)
 	err = verifyTarget(header)
-	assert.Equal(t, err, ErrBlockNonceInvalid)
+	assert.Equal(t, err, consensus.ErrBlockNonceInvalid)
 }
 
 func newTestBlockHeader(t *testing.T) *types.BlockHeader {
