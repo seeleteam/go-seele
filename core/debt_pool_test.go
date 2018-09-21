@@ -10,11 +10,11 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/fatih/set.v0"
 )
@@ -29,7 +29,7 @@ func newTestDebt(amount int64, fee int64) *types.Debt {
 }
 
 func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64, num int) *types.Block {
-	minerAccount := newTestAccount(pow.GetReward(blockHeight), 0)
+	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}

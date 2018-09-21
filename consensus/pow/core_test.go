@@ -14,7 +14,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/miner/pow"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +39,7 @@ func Test_Worker(t *testing.T) {
 
 	select {
 	case found := <-result:
-		target := pow.GetMiningTarget(block.Header.Difficulty)
+		target := getMiningTarget(block.Header.Difficulty)
 
 		assert.Equal(t, found, block)
 

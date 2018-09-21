@@ -6,7 +6,6 @@
 package pow
 
 import (
-	"errors"
 	"math"
 	"math/big"
 	"math/rand"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -22,8 +22,6 @@ import (
 var (
 	// maxUint256 is a big integer representing 2^256
 	maxUint256 = new(big.Int).Exp(big.NewInt(2), big.NewInt(256), big.NewInt(0))
-
-	errBlockNonceInvalid = errors.New("invalid block nonce")
 )
 
 // Engine provides the consensus operations based on POW.
@@ -62,7 +60,15 @@ func (engine *Engine) GetEngineInfo() interface{} {
 func (engine *Engine) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error {
 	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
 	if err != nil {
-		return err
+		return consensus.ErrBlockInvalidParentHash
+	}
+
+	if header.Height != parent.Height+1 {
+		return consensus.ErrBlockInvalidHeight
+	}
+
+	if header.CreateTimestamp.Cmp(parent.CreateTimestamp) < 0 {
+		return consensus.ErrBlockCreateTimeOld
 	}
 
 	if err = verifyDifficulty(parent, header); err != nil {
@@ -125,8 +131,8 @@ func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop
 
 func verifyDifficulty(parent *types.BlockHeader, header *types.BlockHeader) error {
 	difficult := getDifficult(header.CreateTimestamp.Uint64(), parent)
-	if header.Difficulty.Cmp(difficult) == 0 {
-		return errors.New("invalid difficult")
+	if header.Difficulty.Cmp(difficult) != 0 {
+		return consensus.ErrBlockDifficultInvalid
 	}
 
 	return nil
@@ -140,7 +146,7 @@ func verifyTarget(header *types.BlockHeader) error {
 	target := getMiningTarget(header.Difficulty)
 
 	if hashInt.Cmp(target) > 0 {
-		return errBlockNonceInvalid
+		return consensus.ErrBlockNonceInvalid
 	}
 
 	return nil

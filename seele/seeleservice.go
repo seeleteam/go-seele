@@ -93,6 +93,8 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
+
 	// initialize and validate genesis
 	if err = s.initGenesisAndChain(&serviceContext, conf); err != nil {
 		return nil, err
@@ -107,8 +109,6 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		log.Error("failed to create seeleProtocol in NewSeeleService, %s", err)
 		return nil, err
 	}
-
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
 
 	return s, nil
 }
@@ -149,7 +149,7 @@ func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf 
 	}
 
 	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile); err != nil {
+	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile, s.miner.GetEngine()); err != nil {
 		s.Stop()
 		s.log.Error("failed to init chain in NewSeeleService. %s", err)
 		return err
