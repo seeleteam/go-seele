@@ -55,7 +55,7 @@ type Config struct {
 	ListenAddr string `json:"address"`
 
 	// NetworkID used to define net type, for example main net and test net.
-	NetworkID uint64 `json:"networkID"`
+	NetworkID string `json:"networkID"`
 
 	// static nodes which will be connected to find more nodes when the node started
 	StaticNodes []*discovery.Node `json:"staticNodes"`

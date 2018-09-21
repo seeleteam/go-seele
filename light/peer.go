@@ -431,7 +431,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 }
 
 // handShake exchange networkid td etc between two connected peers.
-func (p *peer) handShake(networkID uint64, td *big.Int, head common.Hash, headBlockNum uint64, genesis common.Hash) error {
+func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBlockNum uint64, genesis common.Hash) error {
 	msg := &statusData{
 		ProtocolVersion: uint32(LightSeeleVersion),
 		NetworkID:       networkID,

@@ -34,7 +34,7 @@ const (
 // statusData the structure for peers to exchange status
 type statusData struct {
 	ProtocolVersion uint32
-	NetworkID       uint64
+	NetworkID       string
 	IsServer        bool // whether server mode
 	TD              *big.Int
 	CurrentBlock    common.Hash

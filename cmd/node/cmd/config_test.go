@@ -28,7 +28,7 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	assert.Equal(t, config.HTTPServer.HTTPAddr, "127.0.0.1:65027", "8")
 
 	assert.Equal(t, config.P2PConfig.ListenAddr, "0.0.0.0:39008", "9")
-	assert.Equal(t, (int)(config.P2PConfig.NetworkID), 1, "10")
+	assert.Equal(t, config.P2PConfig.NetworkID, "seele", "10")
 	assert.Equal(t, len(config.P2PConfig.StaticNodes), 2, "10")
 	assert.Equal(t, config.P2PConfig.StaticNodes[0].UDPPort, 39007, "11")
 	assert.Equal(t, len(config.P2PConfig.StaticNodes[0].IP), 16, "12")

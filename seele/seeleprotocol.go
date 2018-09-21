@@ -69,7 +69,7 @@ type SeeleProtocol struct {
 	p2p.Protocol
 	peerSet *peerSet
 
-	networkID  uint64
+	networkID  string
 	downloader *downloader.Downloader
 	txPool     *core.TransactionPool
 	debtPool   *core.DebtPool

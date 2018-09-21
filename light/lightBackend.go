@@ -21,7 +21,7 @@ func NewLightBackend(s *ServiceClient) *LightBackend {
 
 func (l *LightBackend) TxPoolBackend() api.Pool { return l.s.txPool }
 
-func (l *LightBackend) GetNetVersion() uint64 { return l.s.networkID }
+func (l *LightBackend) GetNetVersion() string { return l.s.networkID }
 
 func (l *LightBackend) GetP2pServer() *p2p.Server { return l.s.p2pServer }
 
