@@ -10,7 +10,7 @@
     "address": "0.0.0.0:9056",
     "privateKey": "0x706f157b7a9599cf0c30ee8bf486bc1f2e622303f4ca3b4cc6d7d43b777471c4",
     "staticNodes": [
-      "10.9.86.36:8057"
+      "127.0.0.1:8057"
     ],
     "networkID": "seele"
   },
