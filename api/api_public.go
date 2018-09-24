@@ -95,7 +95,7 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 	totalDifficultys := make([]*big.Int, 0)
 	if height < 0 {
 		header := api.s.ChainBackend().CurrentHeader()
-		block, err := api.s.ChainBackend().GetStore().GetBlockByHeight(header.Height)
+		block, err := api.s.GetBlock(common.EmptyHash, int64(header.Height))
 		if err != nil {
 			return nil, err
 		}
