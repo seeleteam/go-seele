@@ -10,22 +10,18 @@ import (
 
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/state"
-	"github.com/seeleteam/go-seele/core/types"
 )
 
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
-	state           *state.Statedb
-	currentBlock    *types.Block
+	blockHash       common.Hash
 	totalDifficulty *big.Int
 }
 
 // NewBlockIndex constructs and returns a BlockIndex instance
-func NewBlockIndex(state *state.Statedb, block *types.Block, td *big.Int) *BlockIndex {
+func NewBlockIndex(hash common.Hash, td *big.Int) *BlockIndex {
 	return &BlockIndex{
-		state:           state,
-		currentBlock:    block,
+		blockHash:       hash,
 		totalDifficulty: td,
 	}
 }
@@ -47,13 +43,13 @@ func NewBlockLeaves() *BlockLeaves {
 
 // Remove removes the specified block index from the block leaves
 func (bf *BlockLeaves) Remove(old *BlockIndex) {
-	bf.blockIndexMap.Remove(old.currentBlock.HeaderHash.String())
+	bf.blockIndexMap.Remove(old.blockHash.String())
 	bf.updateBestIndexWhenRemove(old)
 }
 
 // Add adds the specified block index to the block leaves
 func (bf *BlockLeaves) Add(index *BlockIndex) {
-	bf.blockIndexMap.Set(index.currentBlock.HeaderHash.String(), index)
+	bf.blockIndexMap.Set(index.blockHash.String(), index)
 	bf.updateBestIndexWhenAdd(index)
 }
 
@@ -64,16 +60,6 @@ func (bf *BlockLeaves) RemoveByHash(hash common.Hash) {
 	if index != nil {
 		bf.updateBestIndexWhenRemove(index)
 	}
-}
-
-// GetBestBlock gets the current block of the best block index in the block leaves
-func (bf *BlockLeaves) GetBestBlock() *types.Block {
-	return bf.GetBestBlockIndex().currentBlock
-}
-
-// GetBestStateDB gets the state DB of the best block index in the block leaves
-func (bf *BlockLeaves) GetBestStateDB() *state.Statedb {
-	return bf.GetBestBlockIndex().state
 }
 
 // GetBlockIndexByHash gets the block index with the specified hash in the block leaves
@@ -98,7 +84,7 @@ func (bf *BlockLeaves) GetBestBlockIndex() *BlockIndex {
 
 // updateBestIndexWhenRemove updates the best index when removing the given block index from the block leaves
 func (bf *BlockLeaves) updateBestIndexWhenRemove(index *BlockIndex) {
-	if bf.bestIndex != nil && bf.bestIndex.currentBlock.HeaderHash == index.currentBlock.HeaderHash {
+	if bf.bestIndex != nil && bf.bestIndex.blockHash.Equal(index.blockHash) {
 		bf.bestIndex = bf.findBestBlockIndex()
 	}
 }

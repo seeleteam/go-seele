@@ -85,8 +85,9 @@ type Blockchain struct {
 	genesisBlock   *types.Block
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
-	blockLeaves *BlockLeaves
-	log         *log.SeeleLog
+	blockLeaves  *BlockLeaves
+	currentBlock *types.Block
+	log          *log.SeeleLog
 
 	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 }
@@ -134,8 +135,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
-	if err != nil {
+	if bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash); err != nil {
 		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
 		return nil, err
 	}
@@ -146,14 +146,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	// Get the state DB of the current block
-	currentState, err := state.NewStatedb(currentBlock.Header.StateHash, accountStateDB)
-	if err != nil {
-		bc.log.Error("Failed to create state DB, state hash = %v, error = %v", currentBlock.Header.StateHash, err.Error())
-		return nil, err
-	}
-
-	blockIndex := NewBlockIndex(currentState, currentBlock, td)
+	blockIndex := NewBlockIndex(currentHeaderHash, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
 
@@ -165,12 +158,7 @@ func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	index := bc.blockLeaves.GetBestBlockIndex()
-	if index == nil {
-		return nil
-	}
-
-	return index.currentBlock
+	return bc.currentBlock
 }
 
 // CurrentHeader returns the HEAD block header of the blockchain.
@@ -178,12 +166,11 @@ func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
 	bc.lock.RLock()
 	defer bc.lock.RUnlock()
 
-	index := bc.blockLeaves.GetBestBlockIndex()
-	if index == nil {
+	if bc.currentBlock == nil {
 		return nil
 	}
 
-	return index.currentBlock.Header
+	return bc.currentBlock.Header
 }
 
 // GetCurrentState returns the state DB of the current block.
@@ -282,7 +269,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	}
 
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
-	blockIndex := NewBlockIndex(blockStatedb, currentBlock, currentTd)
+	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentTd)
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
 
 	/////////////////////////////////////////////////////////////////
@@ -334,6 +321,8 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	committed = true
 	if isHead {
+		bc.currentBlock = currentBlock
+
 		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
 	}
 
