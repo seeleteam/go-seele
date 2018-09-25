@@ -35,6 +35,7 @@ var (
 	errReadChain = errors.New("Load message from chain err")
 )
 
+// BlockChain define some interfaces related to underlying blockchain
 type BlockChain interface {
 	GetCurrentState() (*state.Statedb, error)
 	GetState(root common.Hash) (*state.Statedb, error)
@@ -43,6 +44,7 @@ type BlockChain interface {
 	WriteHeader(*types.BlockHeader) error
 }
 
+// TransactionPool define some interfaces related to add and get txs
 type TransactionPool interface {
 	AddTransaction(tx *types.Transaction) error
 	GetTransaction(txHash common.Hash) *types.Transaction
@@ -69,7 +71,7 @@ func codeToStr(code uint16) string {
 	return "unknown"
 }
 
-// SeeleProtocol service implementation of seele
+// LightProtocol service implementation of seele
 type LightProtocol struct {
 	p2p.Protocol
 
@@ -116,57 +118,58 @@ func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain
 	return s, nil
 }
 
-func (sp *LightProtocol) Start() {
-	sp.log.Debug("LightProtocol.Start called!")
-	if !sp.bServerMode {
-		go sp.syncer()
+// Start starts data syncer
+func (lp *LightProtocol) Start() {
+	lp.log.Debug("LightProtocol.Start called!")
+	if !lp.bServerMode {
+		go lp.syncer()
 	}
 }
 
 // Stop stops protocol, called when seeleService quits.
-func (sp *LightProtocol) Stop() {
-	close(sp.quitCh)
-	close(sp.syncCh)
-	sp.wg.Wait()
+func (lp *LightProtocol) Stop() {
+	close(lp.quitCh)
+	close(lp.syncCh)
+	lp.wg.Wait()
 }
 
 // syncer try to synchronise with remote peer
-func (sp *LightProtocol) syncer() {
-	defer sp.downloader.Terminate()
-	defer sp.wg.Done()
-	sp.wg.Add(1)
+func (lp *LightProtocol) syncer() {
+	defer lp.downloader.Terminate()
+	defer lp.wg.Done()
+	lp.wg.Add(1)
 
 	forceSync := time.NewTicker(forceSyncInterval)
 	for {
 		select {
-		case <-sp.syncCh:
-			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
+		case <-lp.syncCh:
+			go lp.synchronise(lp.peerSet.bestPeer(common.LocalShardNumber))
 		case <-forceSync.C:
-			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
-		case <-sp.quitCh:
+			go lp.synchronise(lp.peerSet.bestPeer(common.LocalShardNumber))
+		case <-lp.quitCh:
 			return
 		}
 	}
 }
 
-func (sp *LightProtocol) synchronise(p *peer) {
+func (lp *LightProtocol) synchronise(p *peer) {
 	if p == nil {
 		return
 	}
 
 	if common.PrintExplosionLog {
-		sp.log.Debug("sp.synchronise called.")
+		lp.log.Debug("lp.synchronise called.")
 	}
 
-	hash, err := sp.chain.GetStore().GetHeadBlockHash()
+	hash, err := lp.chain.GetStore().GetHeadBlockHash()
 	if err != nil {
-		sp.log.Error("sp.synchronise GetHeadBlockHash err.[%s]", err)
+		lp.log.Error("lp.synchronise GetHeadBlockHash err.[%s]", err)
 		return
 	}
 
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(hash)
+	localTD, err := lp.chain.GetStore().GetBlockTotalDifficulty(hash)
 	if err != nil {
-		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		lp.log.Error("lp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return
 	}
 	_, pTd := p.Head()
@@ -176,33 +179,33 @@ func (sp *LightProtocol) synchronise(p *peer) {
 		return
 	}
 
-	err = sp.downloader.synchronise(p)
+	err = lp.downloader.synchronise(p)
 	if err != nil {
 		if err == ErrIsSynchronising {
-			sp.log.Info("exit synchronise as it is already running.")
+			lp.log.Info("exit synchronise as it is already running.")
 		} else {
-			sp.log.Error("synchronise err. %s", err)
+			lp.log.Error("synchronise err. %s", err)
 		}
 	}
 }
 
-func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
-	if sp.peerSet.Find(p2pPeer.Node.ID) != nil {
-		sp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
+func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
+	if lp.peerSet.Find(p2pPeer.Node.ID) != nil {
+		lp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
 		return false
 	}
 
-	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, sp.log, sp)
-	store := sp.chain.GetStore()
+	newPeer := newPeer(LightSeeleVersion, p2pPeer, rw, lp.log, lp)
+	store := lp.chain.GetStore()
 	hash, err := store.GetHeadBlockHash()
 	if err != nil {
-		sp.log.Error("sp.handleAddPeer GetHeadBlockHash err.[%s]", err)
+		lp.log.Error("lp.handleAddPeer GetHeadBlockHash err.[%s]", err)
 		return false
 	}
 
 	header, err := store.GetBlockHeader(hash)
 	if err != nil {
-		sp.log.Error("sp.handleAddPeer GetBlockHeader err.[%s]", err)
+		lp.log.Error("lp.handleAddPeer GetBlockHeader err.[%s]", err)
 		return false
 	}
 
@@ -216,59 +219,59 @@ func (sp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		return false
 	}
 
-	if err := newPeer.handShake(sp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
-		sp.log.Error("handleAddPeer err. %s", err)
-		if !sp.bServerMode {
+	if err := newPeer.handShake(lp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
+		lp.log.Error("handleAddPeer err. %s", err)
+		if !lp.bServerMode {
 			// just quit connection.
 			newPeer.Disconnect(DiscHandShakeErr)
 		}
 		return false
 	}
 
-	if sp.bServerMode {
+	if lp.bServerMode {
 		rand2.Seed(time.Now().UnixNano())
 		magic := rand2.Uint32()
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
-			sp.log.Error("sendAnnounce err. %s", err)
+			lp.log.Error("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
 			return false
 		}
 	}
 
-	sp.log.Info("add peer %s -> %s to LightProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
-	sp.peerSet.Add(newPeer)
-	go sp.handleMsg(newPeer)
+	lp.log.Info("add peer %s -> %s to LightProtocol.", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr())
+	lp.peerSet.Add(newPeer)
+	go lp.handleMsg(newPeer)
 	return true
 }
 
-func (sp *LightProtocol) handleGetPeer(address common.Address) interface{} {
-	if p := sp.peerSet.peerMap[address]; p != nil {
+func (lp *LightProtocol) handleGetPeer(address common.Address) interface{} {
+	if p := lp.peerSet.peerMap[address]; p != nil {
 		return p.Info()
 	}
 
 	return nil
 }
 
-func (sp *LightProtocol) handleDelPeer(peer *p2p.Peer) {
-	sp.log.Debug("delete peer from peer set. %s", peer.Node)
-	if p := sp.peerSet.Find(peer.Node.ID); p != nil {
+func (lp *LightProtocol) handleDelPeer(peer *p2p.Peer) {
+	lp.log.Debug("delete peer from peer set. %s", peer.Node)
+	if p := lp.peerSet.Find(peer.Node.ID); p != nil {
 		p.close()
 	}
 
-	sp.peerSet.Remove(peer.Node.ID)
+	lp.peerSet.Remove(peer.Node.ID)
 }
 
-func (sp *LightProtocol) handleMsg(peer *peer) {
+func (lp *LightProtocol) handleMsg(peer *peer) {
 handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			sp.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
+			lp.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 
 		if common.PrintExplosionLog {
-			sp.log.Debug("got msg with type:%s", codeToStr(msg.Code))
+			lp.log.Debug("got msg with type:%s", codeToStr(msg.Code))
 		}
 
 		bNeedDeliverOdr := false
@@ -277,12 +280,12 @@ handler:
 			var query AnnounceQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
+				lp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
-				sp.log.Error("failed to sendAnnounce, quit! %s", err)
+				lp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
 			}
 
@@ -290,12 +293,12 @@ handler:
 			var query AnnounceBody
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize Announce, quit! %s", err)
+				lp.log.Error("failed to deserialize Announce, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.handleAnnounce(&query); err != nil {
-				sp.log.Error("failed to handleAnnounce, quit! %s", err)
+				lp.log.Error("failed to handleAnnounce, quit! %s", err)
 				break handler
 			}
 
@@ -303,12 +306,12 @@ handler:
 			var query HeaderHashSyncQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize HeaderHashSyncQuery, quit! %s", err)
+				lp.log.Error("failed to deserialize HeaderHashSyncQuery, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.handleSyncHashRequest(&query); err != nil {
-				sp.log.Error("failed to handleSyncHashRequest, quit! %s", err)
+				lp.log.Error("failed to handleSyncHashRequest, quit! %s", err)
 				break handler
 			}
 
@@ -316,12 +319,12 @@ handler:
 			var query HeaderHashSync
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize syncHashResponseCode, quit! %s", err)
+				lp.log.Error("failed to deserialize syncHashResponseCode, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.handleSyncHash(&query); err != nil {
-				sp.log.Error("failed to syncHashResponseCode, quit! %s", err)
+				lp.log.Error("failed to syncHashResponseCode, quit! %s", err)
 				break handler
 			}
 
@@ -329,37 +332,37 @@ handler:
 			var query DownloadHeaderQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
-				sp.log.Error("failed to deserialize DownloadHeaderQuery, quit! %s", err)
+				lp.log.Error("failed to deserialize DownloadHeaderQuery, quit! %s", err)
 				break handler
 			}
 
 			if err := peer.handleDownloadHeadersRequest(&query); err != nil {
-				sp.log.Error("failed to DownloadHeaderQuery, quit! %s", err)
+				lp.log.Error("failed to DownloadHeaderQuery, quit! %s", err)
 				break handler
 			}
 
 		case downloadHeadersResponseCode:
-			sp.downloader.deliverMsg(peer, msg)
+			lp.downloader.deliverMsg(peer, msg)
 
 		default:
 			if odrResponseFactories[msg.Code] != nil {
 				bNeedDeliverOdr = true
-			} else if err := sp.handleOdrRequest(peer, msg); err != nil {
-				sp.log.Error("Failed to handle ODR message, code = %v, error = %v", msg.Code, err.Error())
+			} else if err := lp.handleOdrRequest(peer, msg); err != nil {
+				lp.log.Error("Failed to handle ODR message, code = %v, error = %v", msg.Code, err.Error())
 				break handler
 			}
 		}
 
 		if bNeedDeliverOdr {
-			sp.odrBackend.msgCh <- msg
+			lp.odrBackend.msgCh <- msg
 		}
 	}
 
-	sp.handleDelPeer(peer.Peer)
-	sp.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
+	lp.handleDelPeer(peer.Peer)
+	lp.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
 }
 
-func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
+func (lp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 	factory, ok := odrRequestFactories[msg.Code]
 	if !ok {
 		return nil
@@ -370,18 +373,20 @@ func (sp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 		return err
 	}
 
-	sp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", msg.Code, len(msg.Payload))
-	respCode, response := request.handleRequest(sp)
+	lp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", msg.Code, len(msg.Payload))
+	respCode, response := request.handleRequest(lp)
 	buff := common.SerializePanic(response)
-	sp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", respCode, len(buff), peer.peerStrID)
+	lp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", respCode, len(buff), peer.peerStrID)
 
 	return p2p.SendMessage(peer.rw, respCode, buff)
 }
 
-func (p *LightProtocol) GetProtocolVersion() (uint, error) {
-	return p.Protocol.Version, nil
+// GetProtocolVersion gets protocol version
+func (lp *LightProtocol) GetProtocolVersion() (uint, error) {
+	return lp.Protocol.Version, nil
 }
 
-func (p *LightProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
+// SendDifferentShardTx send tx to another shard
+func (lp *LightProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
 	//@todo
 }
