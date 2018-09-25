@@ -30,6 +30,9 @@ const (
 
 	// AddressTypeExternal is the address type for external account.
 	AddressTypeExternal = AddressType(1)
+
+
+
 	// AddressTypeContract is the address type for contract account.
 	AddressTypeContract = AddressType(2)
 	// AddressTypeReserved is the reserved address type for system contract.
