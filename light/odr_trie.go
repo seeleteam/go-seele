@@ -10,11 +10,16 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+type proofNode struct {
+	Key   string
+	Value []byte
+}
+
 type odrTriePoof struct {
 	odrItem
 	Root  common.Hash
 	Key   []byte
-	Proof map[string][]byte
+	Proof []proofNode
 }
 
 func (req *odrTriePoof) code() uint16 {
@@ -28,9 +33,16 @@ func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 		return trieResponseCode, req
 	}
 
-	if req.Proof, err = statedb.Trie().GetProof(req.Key); err != nil {
+	proof, err := statedb.Trie().GetProof(req.Key)
+	if err != nil {
 		req.Error = err.Error()
+		return trieResponseCode, req
 	}
+
+	for k, v := range proof {
+		req.Proof = append(req.Proof, proofNode{k, v})
+	}
+
 	return trieResponseCode, req
 }
 
@@ -47,16 +59,12 @@ func (req *odrTriePoof) handleResponse(resp interface{}) {
 		return
 	}
 
-	if _, err := trie.VerifyProof(req.Root, req.Key, req.Proof); err != nil {
+	proof := make(map[string][]byte)
+	for _, n := range req.Proof {
+		proof[n.Key] = n.Value
+	}
+
+	if _, err := trie.VerifyProof(req.Root, req.Key, proof); err != nil {
 		req.Error = err.Error()
 	}
-}
-
-// Get implements the trie.Database interface.
-func (req *odrTriePoof) Get(key []byte) ([]byte, error) {
-	if req.Proof == nil {
-		return nil, nil
-	}
-
-	return req.Proof[string(key)], nil
 }
