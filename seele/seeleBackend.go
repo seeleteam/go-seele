@@ -20,7 +20,9 @@ func NewSeeleBackend(s *SeeleService) *SeeleBackend {
 
 func (sd *SeeleBackend) TxPoolBackend() api.Pool { return sd.s.txPool }
 
-func (sd *SeeleBackend) GetNetVersion() string { return sd.s.networkID }
+func (sd *SeeleBackend) GetNetVersion() string { return sd.s.netVersion }
+
+func (sd *SeeleBackend) GetNetWorkID() string { return sd.s.networkID }
 
 func (sd *SeeleBackend) GetP2pServer() *p2p.Server { return sd.s.p2pServer }
 

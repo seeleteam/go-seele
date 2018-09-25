@@ -25,6 +25,7 @@ import (
 // ServiceClient implements service for light mode.
 type ServiceClient struct {
 	networkID     string
+	netVersion    string
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol
 	log           *log.SeeleLog
@@ -38,8 +39,9 @@ type ServiceClient struct {
 // NewServiceClient create ServiceClient
 func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *ServiceClient, err error) {
 	s = &ServiceClient{
-		log:       log,
-		networkID: conf.P2PConfig.NetworkID,
+		log:        log,
+		networkID:  conf.P2PConfig.NetworkID,
+		netVersion: conf.BasicConfig.Version,
 	}
 
 	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
