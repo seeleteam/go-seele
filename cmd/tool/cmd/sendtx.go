@@ -293,7 +293,7 @@ func send(b *balance) *balance {
 	value.Mul(value, common.SeeleToFan)
 
 	client := getRandClient()
-	tx, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(0), b.nonce, nil)
+	tx, ok := util.Sendtx(client, b.privateKey, addr, value, big.NewInt(1), b.nonce, nil)
 	if ok {
 		// update balance by transaction amount and update nonce
 		b.nonce++
