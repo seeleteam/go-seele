@@ -6,6 +6,7 @@ import (
 
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -61,4 +62,17 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 		return nil, err
 	}
 	return request.Receipt, nil
+}
+
+func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, *types.Debt, error) {
+	request := &odrTxByHash{TxHash: txHash}
+	if err := l.s.odrBackend.sendRequest(request); err != nil {
+		return nil, nil, nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	}
+
+	if err := request.getError(); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return request.Tx, request.BlockIndex, request.Debt, nil
 }

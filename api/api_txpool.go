@@ -134,14 +134,12 @@ func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (i
 
 // GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
-	store := api.s.ChainBackend().GetStore()
-	hashByte, err := hexutil.HexToBytes(blockHash)
+	hash, err := common.HexToHash(blockHash)
 	if err != nil {
 		return 0, err
 	}
 
-	hash := common.BytesToHash(hashByte)
-	block, err := store.GetBlock(hash)
+	block, err := api.s.GetBlock(hash, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -175,14 +173,12 @@ func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64,
 
 // GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
 func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
-	store := api.s.ChainBackend().GetStore()
-	hashByte, err := hexutil.HexToBytes(hashHex)
+	hash, err := common.HexToHash(hashHex)
 	if err != nil {
 		return nil, err
 	}
 
-	hash := common.BytesToHash(hashByte)
-	block, err := store.GetBlock(hash)
+	block, err := api.s.GetBlock(hash, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +214,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	}
 	hash := common.BytesToHash(hashByte)
 
-	tx, idx, debt, err := GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
+	tx, idx, debt, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
 	if err != nil {
 		api.s.Log().Debug("Failed to get transaction by hash, %v", err.Error())
 		return nil, err

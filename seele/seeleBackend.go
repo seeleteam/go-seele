@@ -5,6 +5,7 @@ import (
 
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -68,4 +69,8 @@ func (sd *SeeleBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, er
 		return nil, err
 	}
 	return receipt, nil
+}
+
+func (sd *SeeleBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, *types.Debt, error) {
+	return api.GetTransaction(pool, bcStore, txHash)
 }
