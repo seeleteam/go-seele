@@ -32,7 +32,7 @@ func (n *PrivateNetworkAPI) GetNetVersion() (string, error) {
 	return n.s.GetNetVersion(), nil
 }
 
-// GetNetworkID returns the network ID
+// GetNetworkID returns the network ID, unique mark of seele Network
 func (n *PrivateNetworkAPI) GetNetworkID() (string, error) {
 	return n.s.GetNetWorkID(), nil
 }
