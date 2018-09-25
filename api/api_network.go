@@ -27,9 +27,14 @@ func (n *PrivateNetworkAPI) GetPeerCount() (int, error) {
 	return n.s.GetP2pServer().PeerCount(), nil
 }
 
-// GetNetworkVersion returns the network version
-func (n *PrivateNetworkAPI) GetNetworkVersion() (string, error) {
+// GetNetVersion returns the net version
+func (n *PrivateNetworkAPI) GetNetVersion() (string, error) {
 	return n.s.GetNetVersion(), nil
+}
+
+// GetNetworkID returns the network ID, unique mark of seele Network
+func (n *PrivateNetworkAPI) GetNetworkID() (string, error) {
+	return n.s.GetNetWorkID(), nil
 }
 
 // GetProtocolVersion returns the current seele protocol version this node supports

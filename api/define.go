@@ -17,6 +17,7 @@ import (
 type Backend interface {
 	GetP2pServer() *p2p.Server
 	GetNetVersion() string
+	GetNetWorkID() string
 
 	TxPoolBackend() Pool
 	ChainBackend() Chain

@@ -187,10 +187,16 @@ func main() {
 				Action: rpcAction("network", "getPeersInfo"),
 			},
 			{
-				Name:   "networkversion",
-				Usage:  "get current network version",
+				Name:   "netversion",
+				Usage:  "get current net version",
 				Flags:  rpcFlags(),
-				Action: rpcAction("network", "getNetworkVersion"),
+				Action: rpcAction("network", "getNetVersion"),
+			},
+			{
+				Name:   "networkid",
+				Usage:  "get current network id",
+				Flags:  rpcFlags(),
+				Action: rpcAction("network", "getNetworkID"),
 			},
 			{
 				Name:   "protocolversion",
