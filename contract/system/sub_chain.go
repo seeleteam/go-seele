@@ -42,6 +42,9 @@ type SubChainInfo struct {
 
 	GenesisDifficulty uint64
 	GenesisAccounts   map[common.Address]*big.Int
+
+	// SubChain owner publick key
+	Owner common.Address
 }
 
 func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
