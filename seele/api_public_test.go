@@ -144,3 +144,65 @@ func getFromAddress(statedb *state.Statedb) common.Address {
 	statedb.SetNonce(from, 0)
 	return from
 }
+
+func Test_Call(t *testing.T) {
+	dbPath := filepath.Join(common.GetTempFolder(), ".Call")
+	api := newTestAPI(t, dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
+
+	// Create a contract/solidity/simple_storage.sol contract, get = 5
+	bytecode, _ := hexutil.HexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
+	statedb, _ := api.s.chain.GetCurrentState()
+	from := getFromAddress(statedb)
+	createContractTx, _ := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), 0, bytecode)
+	contractAddressByte := sendTx(t, api, statedb, createContractTx)
+
+	// Get the contract address
+	contractAddressHex := hexutil.BytesToHex(contractAddressByte)
+	contractAddress, err := common.HexToAddress(contractAddressHex)
+	assert.Equal(t, err, nil)
+
+	// The origin statedb
+	statedbOri, err := api.s.chain.GetCurrentState()
+	assert.Equal(t, err, nil)
+
+	// get payload
+	payload := "0x6d4ce63c"
+
+	// Verify the result = 5
+	result := make(map[string]interface{})
+	result, err = api.Call(contractAddress.ToHex(), payload, -1)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000005")
+
+	// It is no diffrence to the origin statedb
+	statedbCur, err := api.s.chain.GetCurrentState()
+	assert.Equal(t, err, nil)
+	assert.Equal(t, statedbOri, statedbCur)
+
+	// set 23 payload
+	bytecode, _ = hexutil.HexToBytes("0x60fe47b10000000000000000000000000000000000000000000000000000000000000017")
+	callContractTx, _ := types.NewMessageTransaction(from, contractAddress, big.NewInt(0), big.NewInt(1), 0, bytecode)
+	_ = sendTx(t, api, statedbCur, callContractTx)
+
+	// Verify the result = 23
+	result, err = api.Call(contractAddress.ToHex(), payload, -1)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000017")
+
+	// Verify the history result = 5
+	height, err := api2.NewPublicSeeleAPI(NewSeeleBackend(api.s)).GetBlockHeight()
+	assert.Equal(t, err, nil)
+	result, err = api.Call(contractAddress.ToHex(), payload, int64(height-1))
+	assert.Equal(t, err, nil)
+	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000005")
+
+	// Verify the invalid contractAddress and payload
+	result, err = api.Call("contractAddress.ToHex()", payload, -1)
+	assert.Equal(t, err == nil, false)
+	result, err = api.Call(contractAddress.ToHex(), "payload", -1)
+	assert.Equal(t, err == nil, false)
+}
