@@ -255,6 +255,61 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		},
 	}
 
+	minerCommands := cli.Command{
+		Name:  "miner",
+		Usage: "miner commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "start",
+				Usage:  "start miner",
+				Flags:  rpcFlags(threadsFlag),
+				Action: rpcAction("miner", "start"),
+			},
+			{
+				Name:   "stop",
+				Usage:  "stop miner",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "stop"),
+			},
+			{
+				Name:   "hashrate",
+				Usage:  "get miner hashrate",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "hashrate"),
+			},
+			{
+				Name:   "getthreads",
+				Usage:  "get miner thread number",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getThreads"),
+			},
+			{
+				Name:   "setthreads",
+				Usage:  "set miner thread number",
+				Flags:  rpcFlags(threadsFlag),
+				Action: rpcAction("miner", "setThreads"),
+			},
+			{
+				Name:   "setcoinbase",
+				Usage:  "set miner coinbase",
+				Flags:  rpcFlags(coinbaseFlag),
+				Action: rpcAction("miner", "setCoinbase"),
+			},
+			{
+				Name:   "getcoinbase",
+				Usage:  "get miner coinbase",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getCoinbase"),
+			},
+			{
+				Name:   "status",
+				Usage:  "get miner status",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "status"),
+			},
+		},
+	}
+
 	// add full node support api
 	if isFullNode {
 		baseCommands = append(baseCommands, []cli.Command{
@@ -296,68 +351,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			},
 		}...)
 
-		// miner commands
-		minerCommands := cli.Command{
-			Name:  "miner",
-			Usage: "miner commands",
-			Subcommands: []cli.Command{
-				{
-					Name:   "start",
-					Usage:  "start miner",
-					Flags:  rpcFlags(threadsFlag),
-					Action: rpcAction("miner", "start"),
-				},
-				{
-					Name:   "stop",
-					Usage:  "stop miner",
-					Flags:  rpcFlags(),
-					Action: rpcAction("miner", "stop"),
-				},
-				{
-					Name:   "hashrate",
-					Usage:  "get miner hashrate",
-					Flags:  rpcFlags(),
-					Action: rpcAction("miner", "hashrate"),
-				},
-				{
-					Name:   "getthreads",
-					Usage:  "get miner thread number",
-					Flags:  rpcFlags(),
-					Action: rpcAction("miner", "getThreads"),
-				},
-				{
-					Name:   "setthreads",
-					Usage:  "set miner thread number",
-					Flags:  rpcFlags(threadsFlag),
-					Action: rpcAction("miner", "setThreads"),
-				},
-				{
-					Name:   "setcoinbase",
-					Usage:  "set miner coinbase",
-					Flags:  rpcFlags(coinbaseFlag),
-					Action: rpcAction("miner", "setCoinbase"),
-				},
-				{
-					Name:   "getcoinbase",
-					Usage:  "get miner coinbase",
-					Flags:  rpcFlags(),
-					Action: rpcAction("miner", "getCoinbase"),
-				},
-				{
-					Name:   "status",
-					Usage:  "get miner status",
-					Flags:  rpcFlags(),
-					Action: rpcAction("miner", "status"),
-				},
-			},
-		}
-
-		baseCommands = append(baseCommands,
-			htlcCommands,
-			domainCommands,
-			subChainCommands,
-			minerCommands)
-
 		// add a command which generates subchain config file
 		subChainCommands.Subcommands = append(subChainCommands.Subcommands, cli.Command{
 			Name:   "config",
@@ -365,6 +358,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Flags:  rpcFlags(coinbaseFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
 			Action: createSubChainConfigFile,
 		})
+
+		baseCommands = append(baseCommands,
+			htlcCommands,
+			domainCommands,
+			subChainCommands,
+			minerCommands)
 	}
 
 	baseCommands = append(baseCommands, p2pCommands)
