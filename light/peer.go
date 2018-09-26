@@ -19,8 +19,11 @@ import (
 )
 
 const (
+	// DiscHandShakeErr disconnect due to failed to shake hands in light mode
 	DiscHandShakeErr = "disconnect because get error when handshaking of light mode"
-	DiscAnnounceErr  = "disconnect because send announce message err"
+
+	// DiscAnnounceErr disconnect due to failed to send announce message
+	DiscAnnounceErr = "disconnect because send announce message err"
 )
 
 var (

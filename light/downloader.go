@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	statusNotDownloading int32 = 0
+	statusNotDownloading int32
 	statusDownloading    int32 = 1
 
+	// ErrIsSynchronising indicates the synchronising  is in processing
 	ErrIsSynchronising = errors.New("Is synchronising")
 )
 
