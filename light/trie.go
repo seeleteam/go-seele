@@ -51,8 +51,9 @@ func (t *odrTrie) Commit(batch database.Batch) common.Hash {
 
 func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	request := &odrTriePoof{
-		Root: t.root,
-		Key:  key,
+		Root:  t.root,
+		Key:   key,
+		Proof: make([]proofNode, 0),
 	}
 
 	var err error
@@ -69,8 +70,8 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	}
 
 	// insert the trie proof in databse.
-	for k, v := range request.Proof {
-		t.db.kvs[k] = v
+	for _, n := range request.Proof {
+		t.db.kvs[n.Key] = n.Value
 	}
 
 	// construct the MPT for the first time.
