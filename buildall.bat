@@ -18,7 +18,7 @@ goto:eof
 :all
 call :discovery
 call :node
-call :full
+call :client
 call :light
 call :tool
 call :vm
@@ -38,9 +38,9 @@ go build -o ./build/node.exe ./cmd/node
 @echo off
 goto:eof
 
-:full
+:client
 echo on
-go build -o ./build/full.exe ./cmd/client/full
+go build -o ./build/client.exe ./cmd/client
 @echo "Done full node client building"
 @echo off
 goto:eof
