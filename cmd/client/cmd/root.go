@@ -12,7 +12,7 @@ import (
 )
 
 // AddCommands adds all child commands to app
-func AddCommands(app *cli.App, IsFullNode bool) {
+func AddCommands(app *cli.App, isFullNode bool) {
 	baseCommands := []cli.Command{
 		{
 			Name:   "getbalance",
@@ -256,7 +256,7 @@ func AddCommands(app *cli.App, IsFullNode bool) {
 	}
 
 	// add full node support api
-	if IsFullNode {
+	if isFullNode {
 		baseCommands = append(baseCommands, []cli.Command{
 			{
 				Name:   "getinfo",
@@ -352,7 +352,11 @@ func AddCommands(app *cli.App, IsFullNode bool) {
 			},
 		}
 
-		baseCommands = append(baseCommands, minerCommands)
+		baseCommands = append(baseCommands,
+			htlcCommands,
+			domainCommands,
+			subChainCommands,
+			minerCommands)
 
 		// add a command which generates subchain config file
 		subChainCommands.Subcommands = append(subChainCommands.Subcommands, cli.Command{
@@ -363,12 +367,7 @@ func AddCommands(app *cli.App, IsFullNode bool) {
 		})
 	}
 
-	baseCommands = append(baseCommands, []cli.Command{
-		htlcCommands,
-		domainCommands,
-		subChainCommands,
-		p2pCommands,
-	}...)
+	baseCommands = append(baseCommands, p2pCommands)
 
 	app.Commands = baseCommands
 
