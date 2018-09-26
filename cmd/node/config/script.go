@@ -10,65 +10,12 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/seeleteam/go-seele/cmd/node/cmd"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/log/comm"
-	"github.com/seeleteam/go-seele/metrics"
-	"github.com/seeleteam/go-seele/node"
+	"github.com/seeleteam/go-seele/p2p/discovery"
 )
-
-//P2PConfig is the Configuration of p2p
-type p2pConfig struct {
-	// p2p.server will listen for incoming tcp connections. And it is for udp address used for Kad protocol
-	ListenAddr string `json:"address"`
-
-	// NetworkID used to define net type, for example main net and test net.
-	NetworkID string `json:"networkID"`
-
-	// static nodes which will be connected to find more nodes when the node starts
-	StaticNodes []string `json:"staticNodes"`
-
-	// SubPrivateKey which will be make PrivateKey
-	SubPrivateKey string `json:"privateKey"`
-}
-
-// GenesisInfo genesis info for generating genesis block, it could be used for initializing account balance
-type GenesisInfo struct {
-	// Accounts accounts info for genesis block used for test
-	// map key is account address -> value is account balance
-	// Accounts map[common.Address]*big.Int `json:"accounts"`
-
-	// Difficult initial difficult for mining. Use bigger difficult as you can. Because block is choose by total difficult
-	Difficult int64 `json:"difficult"`
-
-	// ShardNumber is the shard number of genesis block.
-	ShardNumber uint `json:"shard"`
-}
-
-// Config is the Configuration of node
-type Config struct {
-	//Config is the Configuration of log
-	LogConfig comm.LogConfig `json:"log"`
-
-	// basic config for Node
-	BasicConfig node.BasicConfig `json:"basic"`
-
-	// The configuration of p2p network
-	P2PConfig p2pConfig `json:"p2p"`
-
-	// HttpServer config for http server
-	HTTPServer node.HTTPServer `json:"httpServer"`
-
-	// The configuration of websocket rpc service
-	WSServerConfig node.WSServerConfig `json:"wsserver"`
-
-	// metrics config info
-	MetricsConfig *metrics.Config `json:"metrics"`
-
-	// genesis config info
-	GenesisConfig GenesisInfo `json:"genesis"`
-}
 
 // GroupInfo is hosts info of groups
 type GroupInfo struct {
@@ -78,11 +25,12 @@ type GroupInfo struct {
 }
 
 var (
-	configPath  = "/home/seele/node/getconfig/"
-	nodeFile    = "node.json"
-	hostsFile   = "hosts.json"
-	port        = "8057"
-	staticNum   = 20
+	configPath = "/home/seele/node/getconfig/"
+	nodeFile   = "node.json"
+	hostsFile  = "hosts.json"
+	port       = 8057
+	staticNum  = 20
+	// metricsInfo changed to the metric host ip when used
 	metricsInfo = "0.0.0.0:8087"
 	tag         = "scan"
 )
@@ -92,22 +40,16 @@ func main() {
 }
 
 func getConfigTemp() {
-	var config Config
 	nodeFilePath := fmt.Sprint(configPath, nodeFile)
-	buff, err := ioutil.ReadFile(nodeFilePath)
+	config, err := cmd.GetConfigFromFile(nodeFilePath)
 	if err != nil {
-		fmt.Println("Failed to read file, filepath:", nodeFilePath, ",get config template err:", err)
-		return
-	}
-
-	if err = json.Unmarshal(buff, &config); err != nil {
-		fmt.Println("Failed to convert:", reflect.ValueOf(buff).String(), ",json Unmarshal err:", err)
+		fmt.Println("Failed to get util.Config, err:", err)
 		return
 	}
 
 	hostsFilePath := fmt.Sprint(configPath, hostsFile)
 	groups := make(map[string]GroupInfo)
-	buff, err = ioutil.ReadFile(hostsFilePath)
+	buff, err := ioutil.ReadFile(hostsFilePath)
 	if err != nil {
 		fmt.Println("Failed to read file, filepath:", hostsFilePath, ",get hosts template err:", err)
 		return
@@ -145,20 +87,28 @@ func getConfigTemp() {
 	config.LogConfig.IsDebug = false
 	config.LogConfig.PrintLog = false
 	count := 0
-	ipList := []string{}
+	nodes := make([]*discovery.Node, 0)
 	for k, _ := range groups {
 		if k != ip && groups[k].Tag != tag {
-			host := groups[k].Host + ":" + port
-			ipList = append(ipList, host)
+			var node discovery.Node
+			addr, err := net.ResolveIPAddr("ip", groups[k].Host)
+			if err != nil {
+				fmt.Println("Failed to convert host sting to ip, err:", err)
+				return
+			}
+			node.IP = addr.IP
+			node.TCPPort = port
+			node.UDPPort = port
+			nodes = append(nodes, &node)
 			count++
 		}
 
-		if count > staticNum {
+		if count >= staticNum {
 			break
 		}
 	}
 
-	config.P2PConfig.StaticNodes = ipList
+	config.P2PConfig.StaticNodes = nodes
 	output, err := json.Marshal(config)
 	if err != nil {
 		fmt.Println("Failed to convert to json err:", err)
