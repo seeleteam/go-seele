@@ -23,12 +23,19 @@ const (
 	// BlockChainDir lightchain data directory based on config.DataRoot
 	BlockChainDir = "/db/lightchain"
 
-	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
+	// MaxBlockHashRequest maximum hashes to request per message
+	MaxBlockHashRequest uint64 = 1024
 
-	MaxBlockHashRequest   uint64 = 1024 // maximum hases to request per message
-	MaxBlockHeaderRequest uint64 = 256  // maximum headers to request per message
-	MaxGapForAnnounce     uint64 = 256  // sends AnnounceQuery message if gap is more than this value
-	MinHashesCached       uint64 = 256  // minimum items cached in peer for client mode
+	// MaxBlockHeaderRequest maximum headers to request per message
+	MaxBlockHeaderRequest uint64 = 256
+
+	// MaxGapForAnnounce sends AnnounceQuery message if gap is more than this value
+	MaxGapForAnnounce uint64 = 256
+
+	// MinHashesCached minimum items cached in peer for client mode
+	MinHashesCached uint64 = 256
+
+	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 )
 
 // statusData the structure for peers to exchange status
@@ -42,12 +49,14 @@ type statusData struct {
 	GenesisBlock    common.Hash
 }
 
+// AnnounceQuery header of AnnounceQuery request
 type AnnounceQuery struct {
 	Magic uint32
 	Begin uint64
 	End   uint64
 }
 
+// AnnounceBody body of AnnounceQuery response
 type AnnounceBody struct {
 	Magic           uint32
 	TD              *big.Int
@@ -57,11 +66,13 @@ type AnnounceBody struct {
 	HeaderArr       []common.Hash
 }
 
+// HeaderHashSyncQuery header of HeaderHashSyncQuery request
 type HeaderHashSyncQuery struct {
 	Magic    uint32
 	BeginNum uint64
 }
 
+// HeaderHashSync body of HeaderHashSyncQuery response
 type HeaderHashSync struct {
 	Magic           uint32
 	TD              *big.Int
@@ -71,11 +82,13 @@ type HeaderHashSync struct {
 	HeaderArr       []common.Hash
 }
 
+// DownloadHeaderQuery header of DownloadHeaderQuery request
 type DownloadHeaderQuery struct {
 	ReqID    uint32
 	BeginNum uint64
 }
 
+// DownloadHeader body of DownloadHeaderQuery response
 type DownloadHeader struct {
 	ReqID       uint32
 	HasFinished bool
