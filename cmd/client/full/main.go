@@ -15,7 +15,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "light node client"
+	app.Name = "full node client"
 	app.Usage = "interact with full node process"
 	app.HideVersion = true
 

@@ -18,7 +18,8 @@ goto:eof
 :all
 call :discovery
 call :node
-call :client
+call :full
+call :light
 call :tool
 call :vm
 goto:eof
