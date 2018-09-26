@@ -10,7 +10,10 @@ import (
 
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 )
+
+const purgeBlockLimit = uint64(500)
 
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
@@ -156,4 +159,45 @@ func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
 	}
 
 	return true
+}
+
+// Purge purges the worst chain in forking tree.
+func (bf *BlockLeaves) Purge(bcStore store.BlockchainStore) error {
+	if bf.worstIndex == nil || bf.bestIndex == nil {
+		return nil
+	}
+
+	// purge only when worst chain is far away from best chain.
+	if bf.bestIndex.blockHeight-bf.worstIndex.blockHeight < purgeBlockLimit {
+		return nil
+	}
+
+	hash := bf.worstIndex.blockHash
+	bf.RemoveByHash(hash)
+
+	// remove blocks in worst chain until the common ancestor found in canonical chain.
+	for !hash.IsEmpty() {
+		header, err := bcStore.GetBlockHeader(hash)
+		if err != nil {
+			return err
+		}
+
+		canonicalHash, err := bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return err
+		}
+
+		// common ancestor found in canonical chain.
+		if hash.Equal(canonicalHash) {
+			break
+		}
+
+		if err := bcStore.DeleteBlock(hash); err != nil {
+			return err
+		}
+
+		hash = header.PreviousBlockHash
+	}
+
+	return nil
 }
