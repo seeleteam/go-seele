@@ -29,15 +29,17 @@ func Test_RegisterSubChain(t *testing.T) {
 		},
 	}
 
-	encoded, err := json.Marshal(regInfo)
-	if err != nil {
-		panic(err)
-	}
-
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 
 	context := newTestContext(db, SubChainContractAddress)
+
+	regInfo.Owner = context.tx.Data.From
+
+	encoded, err := json.Marshal(regInfo)
+	if err != nil {
+		panic(err)
+	}
 
 	// register with valid reg info
 	result, err := registerSubChain(encoded, context)
