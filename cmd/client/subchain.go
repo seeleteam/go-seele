@@ -65,21 +65,12 @@ func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, errInvalidTokenAmount
 	}
 
-	key, txd, err := makeTransactionData(client)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	subChain.Owner = key.Address
-
 	subChainBytes, err := json.Marshal(subChain)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	txd.To = system.SubChainContractAddress
-	txd.Payload = append([]byte{system.CmdSubChainRegister}, subChainBytes...)
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.AccountNonce, txd.Payload)
+	tx, err := sendSystemContractTx(client, system.SubChainContractAddress, system.CmdSubChainRegister, subChainBytes)
 	if err != nil {
 		return nil, nil, err
 	}
