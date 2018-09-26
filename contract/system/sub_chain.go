@@ -32,16 +32,19 @@ var (
 
 // SubChainInfo represents the sub-chain registration information.
 type SubChainInfo struct {
-	Name        string
-	Version     string
-	StaticNodes []*discovery.Node
+	Name        string            `json:"name"`
+	Version     string            `json:"version"`
+	StaticNodes []*discovery.Node `json:"staticNodes"`
 
-	TokenFullName  string
-	TokenShortName string
-	TokenAmount    uint64
+	TokenFullName  string `json:"tokenFullName"`
+	TokenShortName string `json:"tokenShortName"`
+	TokenAmount    uint64 `json:"tokenAmount"`
 
-	GenesisDifficulty uint64
-	GenesisAccounts   map[common.Address]*big.Int
+	GenesisDifficulty uint64                      `json:"genesisDifficulty"`
+	GenesisAccounts   map[common.Address]*big.Int `json:"genesisAccounts"`
+
+	// SubChain owner publick key
+	Owner common.Address `json:"owner,omitempty"`
 }
 
 func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
@@ -63,6 +66,9 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 	if len(info.Version) == 0 || len(info.TokenFullName) == 0 || len(info.TokenShortName) == 0 || info.TokenAmount == 0 {
 		return nil, errInvalidSubChainInfo
 	}
+
+	// set transaction sender to subchain owner
+	info.Owner = context.tx.Data.From
 
 	value, err := json.MarshalIndent(info, "", "\t")
 	if err != nil {

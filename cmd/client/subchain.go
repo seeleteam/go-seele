@@ -110,7 +110,7 @@ func createSubChainConfigFile(c *cli.Context) error {
 		return err
 	}
 
-	config, err := getConfigFromSubChain(subChainInfo)
+	config, err := getConfigFromSubChain(client, subChainInfo)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func getStaticNodes() ([]*discovery.Node, error) {
 	return arrayNode, nil
 }
 
-func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, error) {
+func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo) (*util.Config, error) {
 	if _, err := common.HexToAddress(coinbaseValue); err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
 	}
@@ -233,6 +233,11 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 	}
 
 	staticNodes, err := getStaticNodes()
+	if err != nil {
+		return nil, err
+	}
+
+	networkID, err := util.GetNetworkID(client)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +253,7 @@ func getConfigFromSubChain(subChainInfo *system.SubChainInfo) (*util.Config, err
 	}
 
 	config.P2PConfig = p2p.Config{
-		NetworkID:     "1",
+		NetworkID:     fmt.Sprintf("%s.%d.%s", subChainInfo.Name, subChainInfo.Owner.Shard(), networkID),
 		ListenAddr:    "0.0.0.0:8057",
 		StaticNodes:   append(subChainInfo.StaticNodes, staticNodes...),
 		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),

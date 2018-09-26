@@ -80,3 +80,11 @@ func CallContract(client *rpc.Client, contractID, payLoad string, height int64) 
 
 	return info, err
 }
+
+// GetNetworkID get network ID
+func GetNetworkID(client *rpc.Client) (string, error) {
+	var networkID string
+	err := client.Call(&networkID, "network_getNetworkID")
+
+	return networkID, err
+}
