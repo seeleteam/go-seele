@@ -13,7 +13,7 @@ import (
 
 // ODR object to send tx.
 type odrAddTx struct {
-	odrItem
+	OdrItem
 	Tx types.Transaction
 }
 
@@ -29,65 +29,89 @@ func (req *odrAddTx) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	return addTxResponseCode, req
 }
 
-func (req *odrAddTx) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrAddTx); ok {
+func (req *odrAddTx) handleResponse(resp interface{}) odrResponse {
+	data, ok := resp.(*odrAddTx)
+	if ok {
 		req.Error = data.Error
 	}
+
+	return data
 }
 
 // ODR object to get transaction by hash.
-type odrTxByHash struct {
-	odrItem
-	TxHash     common.Hash
-	Tx         *types.Transaction
-	Debt       *types.Debt
-	BlockIndex *api.BlockIndex
+type odrTxByHashRequest struct {
+	OdrItem
+	TxHash common.Hash
 }
 
-func (req *odrTxByHash) code() uint16 {
-	return addTxRequestCode
+type odrTxByHashResponse struct {
+	OdrItem
+	Tx         *types.Transaction `rlp:"nil"`
+	Debt       *types.Debt        `rlp:"nil"`
+	BlockIndex *api.BlockIndex    `rlp:"nil"`
+	Proof      []proofNode
 }
 
-func (req *odrTxByHash) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (req *odrTxByHashRequest) code() uint16 {
+	return txByHashRequestCode
+}
+
+func (req *odrTxByHashRequest) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
-	req.Tx, req.BlockIndex, req.Debt, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
+	var result odrTxByHashResponse
+	result.Tx, result.BlockIndex, result.Debt, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
+	result.ReqID = req.ReqID
+
 	if err != nil {
 		req.Error = err.Error()
 	}
 
-	return txByHashResponseCode, req
+	if result.Tx != nil && result.BlockIndex != nil && result.BlockIndex.BlockHash != common.EmptyHash {
+		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
+		if err != nil {
+			req.Error = err.Error()
+		}
+
+		txTrie := types.GetTxTrie(block.Transactions)
+		proof, err := txTrie.GetProof(req.TxHash.Bytes())
+		if err != nil {
+			req.Error = err.Error()
+		}
+
+		result.Proof = mapToArray(proof)
+	}
+
+	return txByHashResponseCode, &result
 }
 
-func (req *odrTxByHash) handleResponse(resp interface{}) {
-	data, ok := resp.(*odrTxByHash)
+func (req *odrTxByHashRequest) handleResponse(resp interface{}) odrResponse {
+	data, ok := resp.(*odrTxByHashResponse)
 	if !ok {
-		return
+		return data
 	}
 
-	req.Tx = data.Tx
-	req.Debt = data.Debt
-	req.BlockIndex = data.BlockIndex
-
-	if len(req.Error) > 0 {
-		return
+	if len(data.Error) > 0 {
+		return data
 	}
 
-	if err := req.validate(); err != nil {
-		req.Error = err.Error()
+	if !req.TxHash.Equal(data.Tx.Hash) {
+		data.Error = types.ErrHashMismatch.Error()
 	}
+
+	if err := data.validate(); err != nil {
+		data.Error = err.Error()
+	}
+
+	return data
 }
 
-func (req *odrTxByHash) validate() error {
-	if req.Tx == nil {
+func (res *odrTxByHashResponse) validate() error {
+	if res.Tx == nil {
 		return nil
 	}
 
-	if err := req.Tx.ValidateWithoutState(true, false); err != nil {
+	if err := res.Tx.ValidateWithoutState(true, false); err != nil {
 		return err
-	}
-
-	if !req.TxHash.Equal(req.Tx.Hash) {
-		return types.ErrHashMismatch
 	}
 
 	return nil

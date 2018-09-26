@@ -112,3 +112,58 @@ func serializeStudent(s *Student) []byte {
 
 	return data
 }
+
+type A struct {
+	A1 uint
+}
+
+type B struct {
+	Num uint
+	B1  *Address
+}
+
+func Test_StructNil(t *testing.T) {
+	b := &B{
+		Num: 1,
+		B1:  nil,
+	}
+
+	buff, err := Serialize(b)
+	if err != nil {
+		panic(err)
+	}
+
+	result := &B{}
+	err = Deserialize(buff, result)
+	if err == nil {
+		panic("should got error")
+	}
+}
+
+type small struct {
+	Str string
+}
+
+type C struct {
+	Num uint
+	small
+}
+
+func Test_UnexportedStruct(t *testing.T) {
+	c := &C{
+		Num: 1,
+	}
+
+	c.Str = "a"
+
+	buff, err := Serialize(c)
+	if err != nil {
+		panic(err)
+	}
+
+	result := &C{}
+	err = Deserialize(buff, result)
+	if result.Str == "a" {
+		panic("should not get a")
+	}
+}

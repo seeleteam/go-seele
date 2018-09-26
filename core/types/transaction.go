@@ -309,6 +309,11 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 		return emptyTxRootHash
 	}
 
+	trie := GetTxTrie(txs)
+	return trie.Hash()
+}
+
+func GetTxTrie(txs []*Transaction) *trie.Trie {
 	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
 	if err != nil {
 		panic(err)
@@ -323,7 +328,7 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 		}
 	}
 
-	return emptyTrie.Hash()
+	return emptyTrie
 }
 
 // BatchValidateTxs validates the state independent fields of specified txs in multiple threads.
