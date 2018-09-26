@@ -15,13 +15,15 @@ import (
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
 	blockHash       common.Hash
+	blockHeight     uint64
 	totalDifficulty *big.Int
 }
 
 // NewBlockIndex constructs and returns a BlockIndex instance
-func NewBlockIndex(hash common.Hash, td *big.Int) *BlockIndex {
+func NewBlockIndex(hash common.Hash, height uint64, td *big.Int) *BlockIndex {
 	return &BlockIndex{
 		blockHash:       hash,
+		blockHeight:     height,
 		totalDifficulty: td,
 	}
 }

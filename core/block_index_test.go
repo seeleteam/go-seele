@@ -16,11 +16,11 @@ import (
 func Test_BlockLeaf_Add_Remove(t *testing.T) {
 	bf := NewBlockLeaves()
 
-	index := NewBlockIndex(common.StringToHash("block"), big.NewInt(1))
+	index := NewBlockIndex(common.StringToHash("block"), 1, big.NewInt(1))
 	bf.Add(index)
 	assert.Equal(t, bf.blockIndexMap.Count(), 1)
 
-	index2 := NewBlockIndex(common.StringToHash("block 2"), big.NewInt(2))
+	index2 := NewBlockIndex(common.StringToHash("block 2"), 2, big.NewInt(2))
 	bf.Add(index2)
 	assert.Equal(t, bf.blockIndexMap.Count(), 2)
 
@@ -36,18 +36,18 @@ func Test_BlockLeaf_Add_Remove(t *testing.T) {
 
 func Test_BlockLeaf_Get(t *testing.T) {
 	bf := NewBlockLeaves()
-	index := NewBlockIndex(common.StringToHash("block"), big.NewInt(1))
+	index := NewBlockIndex(common.StringToHash("block"), 1, big.NewInt(1))
 	bf.Add(index)
-	index2 := NewBlockIndex(common.StringToHash("block 2"), big.NewInt(2))
+	index2 := NewBlockIndex(common.StringToHash("block 2"), 2, big.NewInt(2))
 	bf.Add(index2)
 
 	assert.Equal(t, bf.GetBestBlockIndex(), index2)
 
 	assert.Equal(t, bf.GetBlockIndexByHash(index.blockHash), index)
 
-	index3 := NewBlockIndex(common.StringToHash("block 3"), big.NewInt(2))
+	index3 := NewBlockIndex(common.StringToHash("block 3"), 3, big.NewInt(2))
 	assert.Equal(t, bf.IsBestBlockIndex(index3), false)
 
-	index4 := NewBlockIndex(common.StringToHash("block 4"), big.NewInt(3))
+	index4 := NewBlockIndex(common.StringToHash("block 4"), 4, big.NewInt(3))
 	assert.Equal(t, bf.IsBestBlockIndex(index4), true)
 }

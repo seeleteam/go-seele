@@ -146,7 +146,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, err
 	}
 
-	blockIndex := NewBlockIndex(currentHeaderHash, td)
+	blockIndex := NewBlockIndex(currentHeaderHash, bc.currentBlock.Header.Height, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
 
@@ -269,7 +269,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	}
 
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
-	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentTd)
+	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentBlock.Header.Height, currentTd)
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
 
 	/////////////////////////////////////////////////////////////////
