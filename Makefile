@@ -10,11 +10,11 @@ node:
 	go build -o ./build/node ./cmd/node 
 	@echo "Done node building"
 
-full node client:
+full:
 	go build -o ./build/full ./cmd/client/full
 	@echo "Done full node client building"
 
-light node client:
+light:
 	go build -o ./build/light ./cmd/client/light
 	@echo "Done light node client building"
 

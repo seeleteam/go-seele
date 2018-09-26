@@ -37,14 +37,14 @@ go build -o ./build/node.exe ./cmd/node
 @echo off
 goto:eof
 
-:full node client
+:full
 echo on
 go build -o ./build/full.exe ./cmd/client/full
 @echo "Done full node client building"
 @echo off
 goto:eof
 
-:light node client
+:light
 echo on
 go build -o ./build/light.exe ./cmd/client/light
 @echo "Done light node client building"
