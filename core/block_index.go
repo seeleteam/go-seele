@@ -13,7 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 )
 
-const purgeBlockLimit = uint64(500)
+const purgeBlockLimit = 500
 
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
@@ -150,15 +150,7 @@ func (bf *BlockLeaves) findBlockIndex() (*BlockIndex, *BlockIndex) {
 
 // IsBestBlockIndex indicates whether the given block index is the best compared with all indices in the block leaves
 func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
-	td := index.totalDifficulty
-	for item := range bf.blockIndexMap.IterBuffered() {
-		bi := item.Val.(*BlockIndex)
-		if td.Cmp(bi.totalDifficulty) <= 0 {
-			return false
-		}
-	}
-
-	return true
+	return index.cmp(bf.bestIndex) > 0
 }
 
 // Purge purges the worst chain in forking tree.
