@@ -2,7 +2,7 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
-package main
+package cmd
 
 import (
 	"context"

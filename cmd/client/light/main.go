@@ -2,7 +2,6 @@
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
-
 package main
 
 import (
@@ -15,11 +14,11 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "full node client"
-	app.Usage = "interact with full node process"
+	app.Name = "light node client"
+	app.Usage = "interact with node process"
 	app.HideVersion = true
 
-	cmd.AddCommands(app, true)
+	cmd.AddCommands(app, false)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
