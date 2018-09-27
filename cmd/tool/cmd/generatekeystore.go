@@ -27,7 +27,7 @@ var keyFile string
 var output string
 var shard int
 
-// KeyInfo contains information of key
+// KeyInfo information of account key
 type KeyInfo struct {
 	addr       *common.Address
 	privateKey string
