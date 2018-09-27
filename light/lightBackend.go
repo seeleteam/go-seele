@@ -1,7 +1,6 @@
 package light
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/trie"
 )
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
@@ -105,20 +103,9 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 	response := result.(*odrTxByHashResponse)
 	// verify transaction if it is packed in block
 	if response.BlockIndex != nil {
-		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
+		err := response.Validate(bcStore, request.TxHash)
 		if err != nil {
 			return nil, nil, nil, err
-		}
-
-		proof := arrayToMap(response.Proof)
-		value, err := trie.VerifyProof(header.TxHash, request.TxHash.Bytes(), proof)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		buff := common.SerializePanic(response.Tx)
-		if !bytes.Equal(buff, value) {
-			return nil, nil, nil, errTransactionVerifyFailed
 		}
 	}
 

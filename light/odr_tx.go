@@ -6,9 +6,13 @@
 package light
 
 import (
+	"bytes"
+
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/trie"
 )
 
 // ODR object to send tx.
@@ -98,20 +102,32 @@ func (req *odrTxByHashRequest) handleResponse(resp interface{}) odrResponse {
 		data.Error = types.ErrHashMismatch.Error()
 	}
 
-	if err := data.validate(); err != nil {
-		data.Error = err.Error()
-	}
-
 	return data
 }
 
-func (res *odrTxByHashResponse) validate() error {
-	if res.Tx == nil {
+func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txHash common.Hash) error {
+	if response.Tx == nil {
 		return nil
 	}
 
-	if err := res.Tx.ValidateWithoutState(true, false); err != nil {
+	if err := response.Tx.ValidateWithoutState(true, false); err != nil {
 		return err
+	}
+
+	header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
+	if err != nil {
+		return err
+	}
+
+	proof := arrayToMap(response.Proof)
+	value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
+	if err != nil {
+		return err
+	}
+
+	buff := common.SerializePanic(response.Tx)
+	if !bytes.Equal(buff, value) {
+		return errTransactionVerifyFailed
 	}
 
 	return nil
