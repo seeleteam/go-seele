@@ -33,6 +33,8 @@ const (
 	configPath = "/home/seele/node/getconfig/"
 	nodeFile   = "node.json"
 	hostsFile  = "hosts.json"
+	keyFile    = "keyStore.json"
+	configDir  = "config"
 	port       = 8057
 	staticNum  = 20
 
@@ -122,7 +124,7 @@ func getConfigTemp() {
 		return
 	}
 
-	if err = common.SaveFile(filepath.Join(configPath, "config", nodeFile), foutpot.Bytes()); err != nil {
+	if err = common.SaveFile(filepath.Join(configPath, configDir, nodeFile), foutpot.Bytes()); err != nil {
 		fmt.Println("Failed to write file err:", err)
 	}
 }
@@ -139,8 +141,26 @@ func changed(config *util.Config, host string, shard uint) error {
 
 	pubkeyStr := publicKey.ToHex()
 	prikeyStr := hexutil.BytesToHex(crypto.FromECDSA(privateKey))
+	key := make(map[string]string)
+	key["coinbase"] = pubkeyStr
+	key["privateKey"] = prikeyStr
+	data, err := json.MarshalIndent(key, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	if err = common.SaveFile(filepath.Join(configPath, configDir, keyFile), data); err != nil {
+		return err
+	}
 
 	config.BasicConfig.Coinbase = pubkeyStr
+
+	_, privateKey, err = util.GenerateKey(shard)
+	if err != nil {
+		return err
+	}
+
+	prikeyStr = hexutil.BytesToHex(crypto.FromECDSA(privateKey))
 	config.P2PConfig.SubPrivateKey = prikeyStr
 	config.MetricsConfig.Addr = metricsInfo
 	config.LogConfig.IsDebug = false
