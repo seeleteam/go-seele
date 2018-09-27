@@ -323,10 +323,11 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if isHead {
 		bc.currentBlock = currentBlock
 
-		if err = bc.blockLeaves.Purge(bc.bcStore); err != nil {
-			bc.log.Error("Failed to purge blocks, error = %v", err.Error())
-			return err
-		}
+		go func() {
+			if err := bc.blockLeaves.Purge(bc.bcStore); err != nil {
+				bc.log.Error("Failed to purge blocks, error = %v", err.Error())
+			}
+		}()
 
 		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
 	}
