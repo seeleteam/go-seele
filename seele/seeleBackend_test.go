@@ -24,6 +24,7 @@ func Test_GetReceiptByHash(t *testing.T) {
 		api.s.Stop()
 		os.RemoveAll(dbPath)
 	}()
+
 	// save receipts to block
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
 	receipts := []*types.Receipt{
@@ -53,6 +54,7 @@ func Test_GetReceiptByHash(t *testing.T) {
 	assert.Equal(t, err, nil)
 	err = api.s.chain.GetStore().PutReceipts(block.HeaderHash, receipts)
 	assert.Equal(t, err, nil)
+
 	// verify block receipt
 	poolAPI := NewSeeleBackend(api.s)
 	receipt, err := poolAPI.GetReceiptByTxHash(tx1.Hash)
@@ -70,6 +72,7 @@ func Test_GetReceiptByHash(t *testing.T) {
 func newTestTx(t *testing.T, s *SeeleService, amount, fee int64, nonce uint64) *types.Transaction {
 	statedb, err := s.chain.GetCurrentState()
 	assert.Equal(t, err, nil)
+
 	// set initial balance
 	fromAddress, fromPrivKey, err := crypto.GenerateKeyPair()
 	assert.Equal(t, err, nil)
@@ -101,6 +104,7 @@ func newTestTxPoolAPI(t *testing.T, dbPath string) *TransactionPoolAPI {
 	serviceContext := ServiceContext{
 		DataDir: dbPath,
 	}
+
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
