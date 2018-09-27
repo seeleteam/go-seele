@@ -37,7 +37,7 @@ func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtoc
 func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
 	var block *types.Block
 	var err error
-	if hash.IsEmpty() {
+	if !hash.IsEmpty() {
 		store := sd.s.chain.GetStore()
 		block, err = store.GetBlock(hash)
 		if err != nil {
