@@ -1,13 +1,17 @@
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
+
 package main
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
+	"path/filepath"
 	"reflect"
 
 	"github.com/seeleteam/go-seele/cmd/node/cmd"
@@ -25,12 +29,13 @@ type GroupInfo struct {
 	Tag   string `json:"tag"`
 }
 
-var (
+const (
 	configPath = "/home/seele/node/getconfig/"
 	nodeFile   = "node.json"
 	hostsFile  = "hosts.json"
 	port       = 8057
 	staticNum  = 20
+
 	// metricsInfo changed to the metric host ip when used
 	metricsInfo = "0.0.0.0:8087"
 	tag         = "scan"
@@ -41,14 +46,14 @@ func main() {
 }
 
 func getConfigTemp() {
-	nodeFilePath := fmt.Sprint(configPath, nodeFile)
+	nodeFilePath := filepath.Join(configPath, nodeFile)
 	config, err := cmd.GetConfigFromFile(nodeFilePath)
 	if err != nil {
 		fmt.Println("Failed to get util.Config, err:", err)
 		return
 	}
 
-	hostsFilePath := fmt.Sprint(configPath, hostsFile)
+	hostsFilePath := filepath.Join(configPath, hostsFile)
 	groups := make(map[string]GroupInfo)
 	buff, err := ioutil.ReadFile(hostsFilePath)
 	if err != nil {
@@ -77,7 +82,11 @@ func getConfigTemp() {
 		}
 	}
 
-	changed(config, groups[ip].Host, groups[ip].Shard)
+	if err = changed(config, groups[ip].Host, groups[ip].Shard); err != nil {
+		fmt.Println("Failed to change base info, err:", err)
+		return
+	}
+
 	count := 0
 	nodes := make([]*discovery.Node, 0)
 	for k, _ := range groups {
@@ -108,55 +117,34 @@ func getConfigTemp() {
 	}
 
 	var foutpot bytes.Buffer
-	json.Indent(&foutpot, output, "", "\t")
-
-	path := fmt.Sprint(configPath, "config/")
-
-	if err = os.MkdirAll(path, os.ModePerm); err != nil {
-		fmt.Println("Failed to make dir err:", err)
+	if err = json.Indent(&foutpot, output, "", "\t"); err != nil {
+		fmt.Println("Failed to marshalIndet, err:", err)
 		return
 	}
 
-	err = ioutil.WriteFile(fmt.Sprint(path, nodeFile), foutpot.Bytes(), os.ModePerm)
-	if err != nil {
+	if err = common.SaveFile(filepath.Join(configPath, "config", nodeFile), foutpot.Bytes()); err != nil {
 		fmt.Println("Failed to write file err:", err)
 	}
 }
 
-// getKey get the shard public and private key
-func getkey(shard *uint) (string, string) {
-	var publicKey *common.Address
-	var privateKey *ecdsa.PrivateKey
-	var err error
-
-	if *shard > common.ShardCount {
-		fmt.Printf("not supported shard number, shard number should be [0, %d]\n", common.ShardCount)
-		return "", ""
-	} else if *shard == 0 {
-		publicKey, privateKey, err = crypto.GenerateKeyPair()
-		if err != nil {
-			fmt.Printf("Failed to generate the key pair: %s\n", err.Error())
-			return "", ""
-		}
-	} else {
-		publicKey, privateKey = crypto.MustGenerateShardKeyPair(*shard)
-	}
-
-	pubkey := publicKey.ToHex()
-	prikey := hexutil.BytesToHex(crypto.FromECDSA(privateKey))
-
-	return pubkey, prikey
-}
-
 // changed change the config base info
-func changed(config *util.Config, host string, shard uint) {
+func changed(config *util.Config, host string, shard uint) error {
 	config.GenesisConfig.ShardNumber = shard
 	config.BasicConfig.Name = fmt.Sprint("seele_node_", host)
 	config.BasicConfig.DataDir = fmt.Sprint("seele_node_", host)
-	publicKey, privateKey := getkey(&shard)
-	config.BasicConfig.Coinbase = publicKey
-	config.P2PConfig.SubPrivateKey = privateKey
+	publicKey, privateKey, err := util.GenerateKey(shard)
+	if err != nil {
+		return err
+	}
+
+	pubkeyStr := publicKey.ToHex()
+	prikeyStr := hexutil.BytesToHex(crypto.FromECDSA(privateKey))
+
+	config.BasicConfig.Coinbase = pubkeyStr
+	config.P2PConfig.SubPrivateKey = prikeyStr
 	config.MetricsConfig.Addr = metricsInfo
 	config.LogConfig.IsDebug = false
 	config.LogConfig.PrintLog = false
+
+	return nil
 }
