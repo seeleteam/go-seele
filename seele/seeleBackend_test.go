@@ -27,24 +27,8 @@ func Test_GetReceiptByHash(t *testing.T) {
 
 	// save receipts to block
 	tx1 := newTestTx(t, api.s, 1, 2, 1)
-	receipts := []*types.Receipt{
-		&types.Receipt{
-			Result:    []byte("result"),
-			PostState: common.StringToHash("post state"),
-			Logs:      []*types.Log{&types.Log{}, &types.Log{}, &types.Log{}},
-			TxHash:    tx1.Hash,
-			UsedGas:   123,
-			TotalFee:  456,
-		},
-		&types.Receipt{
-			Result:    []byte("result"),
-			PostState: common.StringToHash("post state"),
-			Logs:      []*types.Log{&types.Log{}, &types.Log{}, &types.Log{}},
-			TxHash:    tx1.Hash,
-			UsedGas:   789,
-			TotalFee:  120,
-		},
-	}
+	receipts := newTestTxReceipt(tx1)
+
 	block := api.s.chain.CurrentBlock()
 	block.Header.Height++
 	block.Header.PreviousBlockHash = block.HeaderHash
@@ -109,6 +93,30 @@ func newTestTxPoolAPI(t *testing.T, dbPath string) *TransactionPoolAPI {
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
 	ss, err := NewSeeleService(ctx, conf, log)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		panic("new seele service error")
+	}
 	return NewTransactionPoolAPI(ss)
+}
+
+func newTestTxReceipt(tx1 *types.Transaction) []*types.Receipt {
+	receipts := []*types.Receipt{
+		&types.Receipt{
+			Result:    []byte("result"),
+			PostState: common.StringToHash("post state"),
+			Logs:      []*types.Log{&types.Log{}, &types.Log{}, &types.Log{}},
+			TxHash:    tx1.Hash,
+			UsedGas:   123,
+			TotalFee:  456,
+		},
+		&types.Receipt{
+			Result:    []byte("result"),
+			PostState: common.StringToHash("post state"),
+			Logs:      []*types.Log{&types.Log{}, &types.Log{}, &types.Log{}},
+			TxHash:    tx1.Hash,
+			UsedGas:   789,
+			TotalFee:  120,
+		},
+	}
+	return receipts
 }
