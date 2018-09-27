@@ -5,13 +5,9 @@
 
 package common
 
-import (
-	"container/heap"
-)
-
 // HeapItem is implemented by any type that support heap manipulations.
 type HeapItem interface {
-	getHeapIndex() int // to support delete item from heap by index.
+	GetHeapIndex() int // to support delete item from heap by index.
 	setHeapIndex(int)  // to record the item index in heap.
 }
 
@@ -20,7 +16,8 @@ type BaseHeapItem struct {
 	heapIndex int
 }
 
-func (item *BaseHeapItem) getHeapIndex() int {
+// GetHeapIndex returns the item index in heap.
+func (item *BaseHeapItem) GetHeapIndex() int {
 	return item.heapIndex
 }
 
@@ -80,11 +77,4 @@ func (h *Heap) Peek() interface{} {
 	}
 
 	return h.data[0]
-}
-
-// Remove removes the specified item from heap.
-// Note, this API suppose the specified item exists in heap.
-// Otherwise, any data will be removed from heap accidently.
-func (h *Heap) Remove(item HeapItem) {
-	heap.Remove(h, item.getHeapIndex())
 }

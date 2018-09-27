@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func uintToAddress(i uint64) common.Address {
@@ -29,7 +29,6 @@ func newMockPooledTx(fromAddr, fee, nonce uint64) *pooledTx {
 				AccountNonce: nonce,
 			},
 		},
-		heapItem:  heapItem{0},
 		timestamp: time.Now(),
 	}
 }
