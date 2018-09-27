@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package main
+package cmd
 
 import (
 	"crypto/ecdsa"

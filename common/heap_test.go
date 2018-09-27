@@ -46,20 +46,3 @@ func Test_Heap(t *testing.T) {
 	assert.Equal(t, &testHeapItem{BaseHeapItem: BaseHeapItem{0}, Num: 18}, heap.Pop(h))
 	assert.Equal(t, 0, h.Len())
 }
-
-func Test_Heap_Remove(t *testing.T) {
-	h := NewHeap(func(i, j HeapItem) bool {
-		return i.(*testHeapItem).Num < j.(*testHeapItem).Num
-	})
-
-	heap.Push(h, &testHeapItem{Num: 16})
-	item := &testHeapItem{Num: 17}
-	heap.Push(h, item)
-	heap.Push(h, &testHeapItem{Num: 18})
-
-	h.Remove(item)
-
-	assert.Equal(t, &testHeapItem{BaseHeapItem: BaseHeapItem{1}, Num: 16}, heap.Pop(h))
-	assert.Equal(t, &testHeapItem{BaseHeapItem: BaseHeapItem{0}, Num: 18}, heap.Pop(h))
-	assert.Equal(t, 0, h.Len())
-}

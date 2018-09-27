@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package main
+package cmd
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// GetAccountShardNumAction is a action to get the shard number of account
 func GetAccountShardNumAction(c *cli.Context) error {
 	var accountAddress common.Address
 	if len(privateKeyValue) > 0 {
@@ -43,6 +44,7 @@ func GetAccountShardNumAction(c *cli.Context) error {
 	return nil
 }
 
+// SaveKeyAction is a action to save the private key to the file
 func SaveKeyAction(c *cli.Context) error {
 	privateKey, err := crypto.LoadECDSAFromString(privateKeyValue)
 	if err != nil {
@@ -72,8 +74,9 @@ func SaveKeyAction(c *cli.Context) error {
 	return nil
 }
 
+// SignTxAction is a action that signs a transaction
 func SignTxAction(c *cli.Context) error {
-	var client *rpc.Client = nil
+	var client *rpc.Client
 	if addressValue != "" {
 		c, err := rpc.DialTCP(context.Background(), addressValue)
 		if err != nil {

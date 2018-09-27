@@ -61,6 +61,11 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 	if err := request.getError(); err != nil {
 		return nil, err
 	}
+
+	if err := request.Validate(l.s.chain.GetStore()); err != nil {
+		return nil, err
+	}
+
 	return request.Block, nil
 }
 
