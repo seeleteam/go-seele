@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"github.com/seeleteam/go-seele/cmd/node/cmd"
+	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
@@ -76,16 +77,7 @@ func getConfigTemp() {
 		}
 	}
 
-	shard := groups[ip].Shard
-	config.GenesisConfig.ShardNumber = shard
-	config.BasicConfig.Name = fmt.Sprint("seele_node_", groups[ip].Host)
-	config.BasicConfig.DataDir = fmt.Sprint("seele_node_", groups[ip].Host)
-	publicKey, privateKey := getkey(&shard)
-	config.BasicConfig.Coinbase = publicKey
-	config.P2PConfig.SubPrivateKey = privateKey
-	config.MetricsConfig.Addr = metricsInfo
-	config.LogConfig.IsDebug = false
-	config.LogConfig.PrintLog = false
+	changed(config, groups[ip].Host, groups[ip].Shard)
 	count := 0
 	nodes := make([]*discovery.Node, 0)
 	for k, _ := range groups {
@@ -131,10 +123,12 @@ func getConfigTemp() {
 	}
 }
 
+// getKey get the shard public and private key
 func getkey(shard *uint) (string, string) {
 	var publicKey *common.Address
 	var privateKey *ecdsa.PrivateKey
 	var err error
+
 	if *shard > common.ShardCount {
 		fmt.Printf("not supported shard number, shard number should be [0, %d]\n", common.ShardCount)
 		return "", ""
@@ -147,7 +141,22 @@ func getkey(shard *uint) (string, string) {
 	} else {
 		publicKey, privateKey = crypto.MustGenerateShardKeyPair(*shard)
 	}
+
 	pubkey := publicKey.ToHex()
 	prikey := hexutil.BytesToHex(crypto.FromECDSA(privateKey))
+
 	return pubkey, prikey
+}
+
+// changed change the config base info
+func changed(config *util.Config, host string, shard uint) {
+	config.GenesisConfig.ShardNumber = shard
+	config.BasicConfig.Name = fmt.Sprint("seele_node_", host)
+	config.BasicConfig.DataDir = fmt.Sprint("seele_node_", host)
+	publicKey, privateKey := getkey(&shard)
+	config.BasicConfig.Coinbase = publicKey
+	config.P2PConfig.SubPrivateKey = privateKey
+	config.MetricsConfig.Addr = metricsInfo
+	config.LogConfig.IsDebug = false
+	config.LogConfig.PrintLog = false
 }
