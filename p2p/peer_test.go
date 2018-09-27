@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
@@ -80,6 +81,7 @@ func Test_peer_RunAndClose(t *testing.T) {
 		assert.Equal(t, strings.Contains(err.Error(), "123"), true)
 	}()
 
+	time.Sleep(500 * time.Millisecond)
 	p2.Disconnect("123")
 	assert.Equal(t, p2.disconnection != nil, true)
 	p2.wg.Wait()
