@@ -15,6 +15,8 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
+
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {
 	s *ServiceClient
@@ -96,20 +98,23 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 	}
 
 	response := result.(*odrTxByHashResponse)
-	header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+	// verify transaction if it is packed in block
+	if response.BlockIndex != nil {
+		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
-	proof := arrayToMap(response.Proof)
-	value, err := trie.VerifyProof(header.TxHash, request.TxHash.Bytes(), proof)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+		proof := arrayToMap(response.Proof)
+		value, err := trie.VerifyProof(header.TxHash, request.TxHash.Bytes(), proof)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
-	buff := common.SerializePanic(response.Tx)
-	if !bytes.Equal(buff, value) {
-		return nil, nil, nil, errors.New("got a transaction, but verify it failed")
+		buff := common.SerializePanic(response.Tx)
+		if !bytes.Equal(buff, value) {
+			return nil, nil, nil, errTransactionVerifyFailed
+		}
 	}
 
 	return response.Tx, response.BlockIndex, response.Debt, nil

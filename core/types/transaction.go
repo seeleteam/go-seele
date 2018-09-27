@@ -313,6 +313,7 @@ func MerkleRootHash(txs []*Transaction) common.Hash {
 	return trie.Hash()
 }
 
+// GetTxTrie generate trie according the txs
 func GetTxTrie(txs []*Transaction) *trie.Trie {
 	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
 	if err != nil {

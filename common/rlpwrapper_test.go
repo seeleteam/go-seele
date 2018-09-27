@@ -129,15 +129,11 @@ func Test_StructNil(t *testing.T) {
 	}
 
 	buff, err := Serialize(b)
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
 
 	result := &B{}
 	err = Deserialize(buff, result)
-	if err == nil {
-		panic("should got error")
-	}
+	assert.NotNil(t, err)
 }
 
 type small struct {
@@ -157,13 +153,10 @@ func Test_UnexportedStruct(t *testing.T) {
 	c.Str = "a"
 
 	buff, err := Serialize(c)
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
 
 	result := &C{}
 	err = Deserialize(buff, result)
-	if result.Str == "a" {
-		panic("should not get a")
-	}
+	assert.Nil(t, err)
+	assert.NotEqual(t, result.Str, "a")
 }
