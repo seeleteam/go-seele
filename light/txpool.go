@@ -263,6 +263,10 @@ func (pool *txPool) getBlock(hash common.Hash) (*types.Block, error) {
 		return nil, err
 	}
 
+	if err := request.Validate(pool.chain.GetStore()); err != nil {
+		return nil, err
+	}
+
 	return request.Block, nil
 }
 
