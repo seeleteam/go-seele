@@ -67,6 +67,7 @@ var sendTxCmd = &cobra.Command{
 	},
 }
 
+// StartSend send balance list
 func StartSend(balanceList []*balance, threadNum int) {
 	lock := &sync.Mutex{}
 	if mode == 3 {
@@ -123,6 +124,7 @@ func newBalancesList(balanceList []*balance, splitNum int, copyValue bool) [][]*
 	return balances
 }
 
+// SendMode3 send balance
 func SendMode3(current []*balance, next []*balance) {
 	copy(current, next)
 	for i, b := range current {
