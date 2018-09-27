@@ -20,7 +20,18 @@ import (
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/spf13/cobra"
 )
+
+var getConfigFileCmd = &cobra.Command{
+	Use:   "generateConfigFile",
+	Short: "generate config file",
+	Long: `For example:
+	tool.exe generateConfigFile`,
+	Run: func(cmd *cobra.Command, args []string) {
+		MakeConfigFile()
+	},
+}
 
 // GroupInfo is hosts info of groups
 type GroupInfo struct {
@@ -29,7 +40,7 @@ type GroupInfo struct {
 	Tag   string `json:"tag"`
 }
 
-const (
+var (
 	configPath  = "/home/seele/node/getconfig/"
 	nodeFile    = "node.json"
 	hostsFile   = "hosts.json"
@@ -164,4 +175,9 @@ func changed(config *util.Config, host string, shard uint) error {
 	config.LogConfig.PrintLog = false
 
 	return nil
+}
+
+func init() {
+	rootCmd.AddCommand(getConfigFileCmd)
+	getConfigFileCmd.Flags().StringVarP(&keyNodeFile, "file", "f", "keystore.json", "key store file")
 }
