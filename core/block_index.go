@@ -31,7 +31,7 @@ func NewBlockIndex(hash common.Hash, height uint64, td *big.Int) *BlockIndex {
 	}
 }
 
-// cmp compares to the specified block index based on block TD and height. It returns:
+// cmp compares to the specified block index based on block TD and height.
 //   If TD is bigger, return 1.
 //   If TD is smaller, return -1.
 //   If TD is the same:
