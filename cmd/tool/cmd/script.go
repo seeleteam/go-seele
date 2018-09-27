@@ -3,7 +3,7 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
-package main
+package cmd
 
 import (
 	"bytes"
@@ -30,24 +30,21 @@ type GroupInfo struct {
 }
 
 const (
-	configPath = "/home/seele/node/getconfig/"
-	nodeFile   = "node.json"
-	hostsFile  = "hosts.json"
-	keyFile    = "keyStore.json"
-	configDir  = "config"
-	port       = 8057
-	staticNum  = 20
+	configPath  = "/home/seele/node/getconfig/"
+	nodeFile    = "node.json"
+	hostsFile   = "hosts.json"
+	keyNodeFile = "keyStore.json"
+	configDir   = "config"
+	port        = 8057
+	staticNum   = 20
 
 	// metricsInfo changed to the metric host ip when used
 	metricsInfo = "0.0.0.0:8087"
 	tag         = "scan"
 )
 
-func main() {
-	getConfigTemp()
-}
-
-func getConfigTemp() {
+// MakeConfigFile make node config file
+func MakeConfigFile() {
 	nodeFilePath := filepath.Join(configPath, nodeFile)
 	config, err := cmd.GetConfigFromFile(nodeFilePath)
 	if err != nil {
@@ -149,7 +146,7 @@ func changed(config *util.Config, host string, shard uint) error {
 		return err
 	}
 
-	if err = common.SaveFile(filepath.Join(configPath, configDir, keyFile), data); err != nil {
+	if err = common.SaveFile(filepath.Join(configPath, configDir, keyNodeFile), data); err != nil {
 		return err
 	}
 
