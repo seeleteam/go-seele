@@ -381,7 +381,5 @@ func sortCommands(commands []cli.Command) {
 		if len(command.Subcommands) > 0 {
 			sortCommands(command.Subcommands)
 		}
-
-		sort.Sort(cli.FlagsByName(command.Flags))
 	}
 }

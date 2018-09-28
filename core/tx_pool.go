@@ -35,12 +35,15 @@ type blockchain interface {
 
 type pooledTx struct {
 	*types.Transaction
-	heapItem
+	common.BaseHeapItem
 	timestamp time.Time
 }
 
 func newPooledTx(tx *types.Transaction) *pooledTx {
-	return &pooledTx{tx, heapItem{0}, time.Now()}
+	return &pooledTx{
+		Transaction: tx,
+		timestamp:   time.Now(),
+	}
 }
 
 // TransactionPool is a thread-safe container for transactions received

@@ -30,8 +30,8 @@ func Test_Odr_AllFuncs(t *testing.T) {
 	assert.Equal(t, odr.getError(), errors.New(errString))
 }
 
-func newOdrItem(id uint32, err string) *odrItem {
-	return &odrItem{
+func newOdrItem(id uint32, err string) *OdrItem {
+	return &OdrItem{
 		ReqID: id,
 		Error: err,
 	}
