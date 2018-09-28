@@ -102,11 +102,9 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 
 	response := result.(*odrTxByHashResponse)
 	// verify transaction if it is packed in block
-	if response.BlockIndex != nil {
-		err := response.Validate(bcStore, request.TxHash)
-		if err != nil {
-			return nil, nil, nil, err
-		}
+	err = response.Validate(bcStore, request.TxHash, response.BlockIndex != nil)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	return response.Tx, response.BlockIndex, response.Debt, nil

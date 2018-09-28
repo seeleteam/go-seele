@@ -105,7 +105,7 @@ func (req *odrTxByHashRequest) handleResponse(resp interface{}) odrResponse {
 	return data
 }
 
-func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txHash common.Hash) error {
+func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txHash common.Hash, validateInBlock bool) error {
 	if response.Tx == nil {
 		return nil
 	}
@@ -114,20 +114,22 @@ func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txH
 		return err
 	}
 
-	header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
-	if err != nil {
-		return err
-	}
+	if validateInBlock {
+		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
+		if err != nil {
+			return err
+		}
 
-	proof := arrayToMap(response.Proof)
-	value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
-	if err != nil {
-		return err
-	}
+		proof := arrayToMap(response.Proof)
+		value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
+		if err != nil {
+			return err
+		}
 
-	buff := common.SerializePanic(response.Tx)
-	if !bytes.Equal(buff, value) {
-		return errTransactionVerifyFailed
+		buff := common.SerializePanic(response.Tx)
+		if !bytes.Equal(buff, value) {
+			return errTransactionVerifyFailed
+		}
 	}
 
 	return nil
