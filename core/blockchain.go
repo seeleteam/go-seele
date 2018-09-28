@@ -317,7 +317,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	// update block header after meta info updated
 	bc.blockLeaves.Add(blockIndex)
-	bc.blockLeaves.RemoveByHash(block.Header.PreviousBlockHash)
+	bc.blockLeaves.Remove(block.Header.PreviousBlockHash)
 
 	committed = true
 	if isHead {

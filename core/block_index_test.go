@@ -44,20 +44,17 @@ func Test_BlockLeaf_Add_Remove(t *testing.T) {
 
 	index := newTestBlockIndex("block 1", 1, 1)
 	bf.Add(index)
-	assert.Equal(t, bf.blockIndexMap.Count(), 1)
+	assert.Equal(t, bf.Count(), 1)
 
 	index2 := newTestBlockIndex("block 2", 2, 2)
 	bf.Add(index2)
-	assert.Equal(t, bf.blockIndexMap.Count(), 2)
+	assert.Equal(t, bf.Count(), 2)
 
-	bf.RemoveByHash(index.blockHash)
-	assert.Equal(t, bf.blockIndexMap.Count(), 1)
+	bf.Remove(index.blockHash)
+	assert.Equal(t, bf.Count(), 1)
 
-	bf.Remove(index)
-	assert.Equal(t, bf.blockIndexMap.Count(), 1)
-
-	bf.Remove(index2)
-	assert.Equal(t, bf.blockIndexMap.Count(), 0)
+	bf.Remove(index2.blockHash)
+	assert.Equal(t, bf.Count(), 0)
 }
 
 func Test_BlockLeaf_Get(t *testing.T) {
