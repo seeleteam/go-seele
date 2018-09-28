@@ -17,6 +17,12 @@ func main() {
 	app.Name = "light node client"
 	app.Usage = "interact with node process"
 	app.HideVersion = true
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name:  "seeleteam",
+			Email: "dev@seelenet.com",
+		},
+	}
 
 	cmd.AddCommands(app, false)
 

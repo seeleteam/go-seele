@@ -226,3 +226,26 @@ var (
 		Value: &staticNodesValue,
 	}
 )
+
+// GeneratePayload
+var (
+	abiFile     string
+	abiFileFlag = cli.StringFlag{
+		Name:        "abi",
+		Usage:       "the abi file of contract",
+		Destination: &abiFile,
+	}
+
+	methodName     string
+	methodNameFlag = cli.StringFlag{
+		Name:        "method",
+		Usage:       "the method name of contract",
+		Destination: &methodName,
+	}
+
+	// args     []interface{}
+	argsFlag = cli.StringSliceFlag{
+		Name:  "args",
+		Usage: "the parameters of contract method",
+	}
+)

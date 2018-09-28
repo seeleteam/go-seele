@@ -18,6 +18,12 @@ func main() {
 	app.Name = "full node client"
 	app.Usage = "interact with full node process"
 	app.HideVersion = true
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name:  "seeleteam",
+			Email: "dev@seelenet.com",
+		},
+	}
 
 	cmd.AddCommands(app, true)
 
