@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -29,15 +30,17 @@ type odrBackend struct {
 	requestMap map[uint32]chan interface{}
 	wg         sync.WaitGroup
 	peers      *peerSet
+	bcStore    store.BlockchainStore // used to validate the retrieved ODR object.
 	log        *log.SeeleLog
 }
 
-func newOdrBackend(log *log.SeeleLog) *odrBackend {
+func newOdrBackend(bcStore store.BlockchainStore) *odrBackend {
 	o := &odrBackend{
 		msgCh:      make(chan *p2p.Message),
 		requestMap: make(map[uint32]chan interface{}),
 		quitCh:     make(chan struct{}),
-		log:        log,
+		bcStore:    bcStore,
+		log:        log.GetLogger("odrBackend"),
 	}
 
 	return o
