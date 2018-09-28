@@ -122,7 +122,8 @@ func (pool *txPool) stop() {
 }
 
 func (pool *txPool) onBlockHeaderChanged(e event.Event) {
-	pool.headerCh <- e.(*types.BlockHeader)
+	// @todo event.Event is common.Hash, not *types.BlockHeader
+	//pool.headerCh <- e.(*types.BlockHeader)
 }
 
 func (pool *txPool) eventLoop() {

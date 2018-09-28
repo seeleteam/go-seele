@@ -88,3 +88,21 @@ type SeeleConfig struct {
 
 	GenesisConfig core.GenesisInfo
 }
+
+func GetCopyConfig(conf *Config) *Config {
+	var metric *metrics.Config
+	if conf.MetricsConfig != nil {
+		temp := *conf.MetricsConfig
+		metric = &temp
+	}
+
+	return &Config{
+		LogConfig:      conf.LogConfig,
+		BasicConfig:    conf.BasicConfig,
+		P2PConfig:      conf.P2PConfig,
+		HTTPServer:     conf.HTTPServer,
+		SeeleConfig:    conf.SeeleConfig,
+		WSServerConfig: conf.WSServerConfig,
+		MetricsConfig:  metric,
+	}
+}

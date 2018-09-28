@@ -13,7 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -113,14 +113,14 @@ func Test_ServiceStart(t *testing.T) {
 
 	// unsupported shard number
 	stack.config.SeeleConfig.GenesisConfig.ShardNumber = 21
-	err = stack.Start()
+	err = stack.checkConfig()
 	assert.Equal(t, err != nil, true)
 	assert.Equal(t, strings.Contains(err.Error(), "unsupported shard number"), true)
 
 	// coinbase does not match with specific shard number
 	stack.config.SeeleConfig.GenesisConfig.ShardNumber = 8
 	stack.config.SeeleConfig.Coinbase = common.BytesToAddress([]byte("testAddr"))
-	err = stack.Start()
+	err = stack.checkConfig()
 	assert.Equal(t, err != nil, true)
 	assert.Equal(t, strings.Contains(err.Error(), "coinbase does not match with specific shard number"), true)
 

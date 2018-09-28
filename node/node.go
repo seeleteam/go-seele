@@ -67,11 +67,18 @@ func New(conf *Config) (*Node, error) {
 	conf = &confCopy
 	nlog := log.GetLogger("node")
 
-	return &Node{
+	node := &Node{
 		config:   conf,
 		services: []Service{},
 		log:      nlog,
-	}, nil
+	}
+
+	err := node.checkConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return node, nil
 }
 
 // Register appends a new service into the node's stack.
@@ -95,11 +102,6 @@ func (n *Node) Start() error {
 	// 1. Check node status
 	if n.server != nil {
 		return ErrNodeRunning
-	}
-
-	// 2. Check configurations
-	if err := n.checkConfig(); err != nil {
-		return err
 	}
 
 	// 3. Start p2p server

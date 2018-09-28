@@ -27,6 +27,15 @@ const (
 
 	// ConfirmedBlockNumber is the block number fot confirmed a block, it should be more than 10 in product
 	ConfirmedBlockNumber = 6
+
+	// ServerSyncMode config sync mode for server mode
+	ServerSyncMode = "full"
+
+	// LightSyncMode config sync mode for light mode
+	LightSyncMode = "light"
+
+	// LightChainDir lightchain data directory based on config.DataRoot
+	LightChainDir = "/db/lightchain"
 )
 
 var (

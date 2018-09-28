@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -17,7 +18,6 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/consensus"
 )
 
 // LightChain represents a canonical chain that by default only handles block headers.
