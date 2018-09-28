@@ -13,68 +13,50 @@ import (
 
 type odrBlock struct {
 	OdrItem
-	Hash   common.Hash  // Block hash from which to retrieve (excludes Height)
-	Height int64        // Block hash from which to retrieve (excludes Hash)
-	Block  *types.Block // Retrieved block
+	Hash   common.Hash  // Retrieved block hash
+	Height uint64       // Retrieved block height
+	Block  *types.Block `rlp:"nil"` // Retrieved block
 }
 
-func (ob *odrBlock) code() uint16 {
+func (odr *odrBlock) code() uint16 {
 	return blockRequestCode
 }
 
-func (ob *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (odr *odrBlock) handle(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
-	var h uint64
-	if ob.Height <= 0 {
-		h = lp.chain.CurrentHeader().Height
-	} else {
-		h = uint64(ob.Height)
+
+	if odr.Hash.IsEmpty() {
+		if odr.Block, err = lp.chain.GetStore().GetBlockByHeight(odr.Height); err != nil {
+			lp.log.Debug("Failed to get block, height = %d, error = %v", odr.Height, err)
+			odr.Error = err.Error()
+		}
+	} else if odr.Block, err = lp.chain.GetStore().GetBlock(odr.Hash); err != nil {
+		lp.log.Debug("Failed to get block, hash = %v, error = %v", odr.Hash, err)
+		odr.Error = err.Error()
 	}
 
-	if ob.Hash.IsEmpty() {
-		if ob.Block, err = lp.chain.GetStore().GetBlockByHeight(h); err != nil {
-			lp.log.Debug("Failed to get block, height = %d, error = %v", ob.Height, err)
-			ob.Error = err.Error()
-		}
-	} else {
-		if ob.Block, err = lp.chain.GetStore().GetBlock(ob.Hash); err != nil {
-			lp.log.Debug("Failed to get block, hash = %v, error = %v", ob.Hash, err)
-			ob.Error = err.Error()
-		}
-	}
-
-	return blockResponseCode, ob
+	return blockResponseCode, odr
 }
 
-func (ob *odrBlock) handleResponse(resp interface{}) odrResponse {
-	data, ok := resp.(*odrBlock)
-	if ok {
-		ob.Error = data.Error
-		ob.Block = data.Block
-	}
-
-	return data
-}
-
-// Validate validates the retrieved block.
-func (ob *odrBlock) Validate(bcStore store.BlockchainStore) error {
-	if ob.Block == nil {
+func (odr *odrBlock) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	if odr.Block == nil {
 		return nil
 	}
 
 	var err error
-	if err = ob.Block.Validate(); err != nil {
+
+	if err = odr.Block.Validate(); err != nil {
 		return err
 	}
 
-	hash := ob.Hash
+	hash := request.(*odrBlock).Hash
 	if hash.IsEmpty() {
-		if hash, err = bcStore.GetBlockHash(uint64(ob.Height)); err != nil {
+		if hash, err = bcStore.GetBlockHash(odr.Height); err != nil {
 			return err
 		}
 	}
 
-	if !hash.Equal(ob.Block.HeaderHash) {
+	if !hash.Equal(odr.Block.HeaderHash) {
 		return types.ErrBlockHashMismatch
 	}
 
