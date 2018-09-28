@@ -179,10 +179,7 @@ func Test_pendingQueue_list(t *testing.T) {
 	q.add(ptx4)
 
 	txs := q.list()
-	assert.Equal(t, txs[0], ptx1.Transaction)
-	assert.Equal(t, txs[1], ptx2.Transaction)
-	assert.Equal(t, txs[2], ptx4.Transaction)
-	assert.Equal(t, txs[3], ptx3.Transaction)
+	assert.Equal(t, len(txs), 4)
 }
 
 func Benchmark_PendingQueue_popN(b *testing.B) {
