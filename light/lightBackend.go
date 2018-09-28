@@ -14,6 +14,7 @@ import (
 )
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
+var errTxHashNotMatched = errors.New("tx hash not matched with request")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {

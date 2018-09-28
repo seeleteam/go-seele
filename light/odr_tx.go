@@ -114,6 +114,10 @@ func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txH
 		return err
 	}
 
+	if !response.Tx.Hash.Equal(txHash) {
+		return errTxHashNotMatched
+	}
+
 	if validateInBlock {
 		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
 		if err != nil {
