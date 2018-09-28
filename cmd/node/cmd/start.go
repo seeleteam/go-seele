@@ -29,6 +29,10 @@ var metricsEnableFlag bool
 var accountsConfig string
 var threads uint
 
+const (
+	lightNode = "light"
+)
+
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -64,7 +68,12 @@ var startCmd = &cobra.Command{
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
-		if strings.ToLower(nCfg.BasicConfig.SyncMode) == "light" {
+		// default is light node
+		if nCfg.BasicConfig.SyncMode == "" {
+			nCfg.BasicConfig.SyncMode = lightNode
+		}
+
+		if strings.ToLower(nCfg.BasicConfig.SyncMode) == lightNode {
 			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
