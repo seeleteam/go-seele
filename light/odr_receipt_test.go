@@ -10,7 +10,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/stretchr/testify/assert"
 )
 
 func newTestReceipt() *types.Receipt {
@@ -19,7 +18,7 @@ func newTestReceipt() *types.Receipt {
 		Failed:          false,
 		UsedGas:         uint64(0),
 		PostState:       common.EmptyHash,
-		Logs:            nil,
+		Logs:            []*types.Log{},
 		TxHash:          common.EmptyHash,
 		ContractAddress: []byte("test"),
 		TotalFee:        uint64(0),
@@ -27,26 +26,27 @@ func newTestReceipt() *types.Receipt {
 	return &receipt
 }
 
-func newTestOdrtReceipt(receipt *types.Receipt) *odrtReceipt {
-	odrtReceipt := odrtReceipt{
-		TxHash:  common.EmptyHash,
-		Receipt: receipt,
+func Test_OdrReceipt_Serializable(t *testing.T) {
+	// with nil receipt
+	request := odrReceipt{
 		OdrItem: OdrItem{
-			ReqID: 0,
-			Error: "",
+			ReqID: 38,
+			Error: "hello",
 		},
+		TxHash: common.StringToHash("tx hash"),
 	}
 
-	return &odrtReceipt
-}
+	assertSerializable(t, &request, &odrReceipt{})
 
-func Test_handleResponse(t *testing.T) {
-	odrtReceiptRequest := newTestOdrtReceipt(&types.Receipt{})
-	receipt := newTestReceipt()
-	odrtReceiptResponse := newTestOdrtReceipt(receipt)
+	// with receipt
+	request = odrReceipt{
+		OdrItem: OdrItem{
+			ReqID: 38,
+			Error: "hello",
+		},
+		TxHash:  common.StringToHash("tx hash"),
+		Receipt: newTestReceipt(),
+	}
 
-	odrtReceiptRequest.handleResponse(odrtReceiptResponse)
-
-	assert.Equal(t, odrtReceiptRequest.Receipt == odrtReceiptResponse.Receipt, true)
-	assert.Equal(t, odrtReceiptRequest.Error == odrtReceiptResponse.Error, true)
+	assertSerializable(t, &request, &odrReceipt{})
 }

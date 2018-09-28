@@ -27,7 +27,7 @@ type odrBackend struct {
 	lock       sync.Mutex
 	msgCh      chan *p2p.Message
 	quitCh     chan struct{}
-	requestMap map[uint32]chan interface{}
+	requestMap map[uint32]chan odrResponse
 	wg         sync.WaitGroup
 	peers      *peerSet
 	bcStore    store.BlockchainStore // used to validate the retrieved ODR object.
@@ -37,7 +37,7 @@ type odrBackend struct {
 func newOdrBackend(bcStore store.BlockchainStore) *odrBackend {
 	o := &odrBackend{
 		msgCh:      make(chan *p2p.Message),
-		requestMap: make(map[uint32]chan interface{}),
+		requestMap: make(map[uint32]chan odrResponse),
 		quitCh:     make(chan struct{}),
 		bcStore:    bcStore,
 		log:        log.GetLogger("odrBackend"),
@@ -86,14 +86,14 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 	}
 }
 
-func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
+func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
 	peerL := o.peers.choosePeers(common.LocalShardNumber)
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}
 	rand2.Seed(time.Now().UnixNano())
 	reqID := rand2.Uint32()
-	ch := make(chan interface{})
+	ch := make(chan odrResponse)
 
 	o.lock.Lock()
 	if o.requestMap[reqID] != nil {
@@ -105,7 +105,8 @@ func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
 	return reqID, ch, peerL, nil
 }
 
-func (o *odrBackend) sendRequest(request odrRequest) (odrResponse, error) {
+// retrieve retrieves the requested ODR object from remote peer.
+func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
 	reqID, ch, peerL, err := o.getReqInfo()
 	if err != nil {
 		return nil, err
@@ -126,9 +127,16 @@ func (o *odrBackend) sendRequest(request odrRequest) (odrResponse, error) {
 	defer timeout.Stop()
 
 	select {
-	case msg := <-ch:
-		response := request.handleResponse(msg)
-		return response, nil
+	case resp := <-ch:
+		if err := resp.getError(); err != nil {
+			return nil, err
+		}
+
+		if err := resp.validate(request, o.bcStore); err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	case <-o.quitCh:
 		return nil, errServiceQuited
 	case <-timeout.C:

@@ -7,6 +7,7 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/trie"
 )
 
@@ -40,44 +41,34 @@ type odrTriePoof struct {
 	Proof []proofNode
 }
 
-func (req *odrTriePoof) code() uint16 {
+func (odr *odrTriePoof) code() uint16 {
 	return trieRequestCode
 }
 
-func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	statedb, err := lp.chain.GetState(req.Root)
+func (odr *odrTriePoof) handle(lp *LightProtocol) (uint16, odrResponse) {
+	statedb, err := lp.chain.GetState(odr.Root)
 	if err != nil {
-		req.Error = err.Error()
-		return trieResponseCode, req
+		odr.Error = err.Error()
+		return trieResponseCode, odr
 	}
 
-	proof, err := statedb.Trie().GetProof(req.Key)
+	proof, err := statedb.Trie().GetProof(odr.Key)
 	if err != nil {
-		req.Error = err.Error()
-		return trieResponseCode, req
+		odr.Error = err.Error()
+		return trieResponseCode, odr
 	}
 
-	req.Proof = mapToArray(proof)
-	return trieResponseCode, req
+	odr.Proof = mapToArray(proof)
+	return trieResponseCode, odr
 }
 
-func (req *odrTriePoof) handleResponse(resp interface{}) odrResponse {
-	data, ok := resp.(*odrTriePoof)
-	if !ok {
-		return data
+func (odr *odrTriePoof) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	proofRequest := request.(*odrTriePoof)
+	proof := arrayToMap(odr.Proof)
+
+	if _, err := trie.VerifyProof(proofRequest.Root, proofRequest.Key, proof); err != nil {
+		return err
 	}
 
-	req.Proof = data.Proof
-	req.Error = data.Error
-
-	if len(req.Error) > 0 {
-		return data
-	}
-
-	proof := arrayToMap(req.Proof)
-	if _, err := trie.VerifyProof(req.Root, req.Key, proof); err != nil {
-		req.Error = err.Error()
-	}
-
-	return data
+	return nil
 }

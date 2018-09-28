@@ -7,36 +7,31 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-type odrtReceipt struct {
+type odrReceipt struct {
 	OdrItem
-	Receipt *types.Receipt
 	TxHash  common.Hash
+	Receipt *types.Receipt `rlp:"nil"`
 }
 
-func (req *odrtReceipt) code() uint16 {
+func (odr *odrReceipt) code() uint16 {
 	return receiptRequestCode
 }
 
-func (req *odrtReceipt) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	receipt, err := lp.chain.GetStore().GetReceiptByTxHash(req.TxHash)
+func (odr *odrReceipt) handle(lp *LightProtocol) (uint16, odrResponse) {
+	receipt, err := lp.chain.GetStore().GetReceiptByTxHash(odr.TxHash)
 	if err != nil {
-		req.Error = err.Error()
+		odr.Error = err.Error()
 	} else {
-		req.Receipt = receipt
+		odr.Receipt = receipt
 	}
 
-	return receiptResponseCode, req
+	return receiptResponseCode, odr
 }
 
-func (req *odrtReceipt) handleResponse(resp interface{}) odrResponse {
-	data, ok := resp.(*odrtReceipt)
-	if ok {
-		req.Error = data.Error
-		req.Receipt = data.Receipt
-	}
-
-	return data
+func (odr *odrReceipt) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	return nil
 }
