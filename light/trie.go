@@ -59,7 +59,8 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	var err error
 
 	// send ODR request to get trie proof.
-	if err = t.odr.sendRequest(request); err != nil {
+	// @todo
+	if _, err = t.odr.sendRequest(request); err != nil {
 		// @todo refactor the trie struct to return error for Get method.
 		// In full node, the Get method should return error for any levelDB error.
 		return nil, false

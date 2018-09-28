@@ -70,7 +70,7 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 
 	response := factory()
 	if err := common.Deserialize(msg.Payload, response); err != nil {
-		o.log.Error("Failed to deserialize ODR response, code = %v, error = %v", msg.Code, err.Error())
+		o.log.Error("Failed to deserialize ODR response, code = %s, error = %s", codeToStr(msg.Code), err)
 		return
 	}
 
@@ -102,20 +102,20 @@ func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
 	return reqID, ch, peerL, nil
 }
 
-func (o *odrBackend) sendRequest(request odrRequest) error {
+func (o *odrBackend) sendRequest(request odrRequest) (odrResponse, error) {
 	reqID, ch, peerL, err := o.getReqInfo()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer close(ch)
 
 	request.setRequestID(reqID)
 	code, payload := request.code(), common.SerializePanic(request)
 	for _, p := range peerL {
-		o.log.Debug("peer send request, code = %v, payloadSizeBytes = %v", code, len(payload))
+		o.log.Debug("peer send request, code = %s, payloadSizeBytes = %v", codeToStr(code), len(payload))
 		if err = p2p.SendMessage(p.rw, code, payload); err != nil {
 			o.log.Info("Failed to send message with peer %v", p)
-			return err
+			return nil, err
 		}
 	}
 
@@ -124,15 +124,15 @@ func (o *odrBackend) sendRequest(request odrRequest) error {
 
 	select {
 	case msg := <-ch:
-		request.handleResponse(msg)
-		return nil
+		response := request.handleResponse(msg)
+		return response, nil
 	case <-o.quitCh:
-		return errServiceQuited
+		return nil, errServiceQuited
 	case <-timeout.C:
 		o.lock.Lock()
 		delete(o.requestMap, reqID)
 		o.lock.Unlock()
-		return fmt.Errorf("wait for msg reqid=%d timeout", reqID)
+		return nil, fmt.Errorf("wait for msg reqid=%d timeout", reqID)
 	}
 }
 

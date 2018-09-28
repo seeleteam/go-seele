@@ -86,7 +86,7 @@ func Test_OdrBlock_Validate(t *testing.T) {
 
 func newTestOdrBlock(hash common.Hash) *odrBlock {
 	return &odrBlock{
-		odrItem: newTestOdrItem(),
+		OdrItem: newTestOdrItem(),
 		Hash:    hash,
 		Height:  1,
 	}
@@ -94,15 +94,15 @@ func newTestOdrBlock(hash common.Hash) *odrBlock {
 
 func newTestOdrBlockWithBlock(hash common.Hash) *odrBlock {
 	return &odrBlock{
-		odrItem: newTestOdrItem(),
+		OdrItem: newTestOdrItem(),
 		Hash:    hash,
 		Height:  1,
 		Block:   newTestBlock(),
 	}
 }
 
-func newTestOdrItem() odrItem {
-	return odrItem{
+func newTestOdrItem() OdrItem {
+	return OdrItem{
 		ReqID: 1,
 	}
 }

@@ -15,8 +15,26 @@ type proofNode struct {
 	Value []byte
 }
 
+func arrayToMap(nodes []proofNode) map[string][]byte {
+	proof := make(map[string][]byte)
+	for _, n := range nodes {
+		proof[n.Key] = n.Value
+	}
+
+	return proof
+}
+
+func mapToArray(proof map[string][]byte) []proofNode {
+	var nodes []proofNode
+	for k, v := range proof {
+		nodes = append(nodes, proofNode{k, v})
+	}
+
+	return nodes
+}
+
 type odrTriePoof struct {
-	odrItem
+	OdrItem
 	Root  common.Hash
 	Key   []byte
 	Proof []proofNode
@@ -39,32 +57,27 @@ func (req *odrTriePoof) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 		return trieResponseCode, req
 	}
 
-	for k, v := range proof {
-		req.Proof = append(req.Proof, proofNode{k, v})
-	}
-
+	req.Proof = mapToArray(proof)
 	return trieResponseCode, req
 }
 
-func (req *odrTriePoof) handleResponse(resp interface{}) {
+func (req *odrTriePoof) handleResponse(resp interface{}) odrResponse {
 	data, ok := resp.(*odrTriePoof)
 	if !ok {
-		return
+		return data
 	}
 
 	req.Proof = data.Proof
 	req.Error = data.Error
 
 	if len(req.Error) > 0 {
-		return
+		return data
 	}
 
-	proof := make(map[string][]byte)
-	for _, n := range req.Proof {
-		proof[n.Key] = n.Value
-	}
-
+	proof := arrayToMap(req.Proof)
 	if _, err := trie.VerifyProof(req.Root, req.Key, proof); err != nil {
 		req.Error = err.Error()
 	}
+
+	return data
 }

@@ -31,7 +31,7 @@ func newTestOdrtReceipt(receipt *types.Receipt) *odrtReceipt {
 	odrtReceipt := odrtReceipt{
 		TxHash:  common.EmptyHash,
 		Receipt: receipt,
-		odrItem: odrItem{
+		OdrItem: OdrItem{
 			ReqID: 0,
 			Error: "",
 		},
