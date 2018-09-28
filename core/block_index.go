@@ -89,11 +89,6 @@ func NewBlockLeaves() *BlockLeaves {
 
 // Add adds the specified block index to the block leaves
 func (bf *BlockLeaves) Add(index *BlockIndex) {
-	indices := &blockIndices{
-		bestHeaped:  &heapedBlockIndex{BlockIndex: index},
-		worstHeaped: &heapedBlockIndex{BlockIndex: index},
-	}
-
 	if exist := bf.blockIndexMap[index.blockHash]; exist != nil {
 		// update the block index
 		exist.bestHeaped.BlockIndex = index
@@ -103,11 +98,16 @@ func (bf *BlockLeaves) Add(index *BlockIndex) {
 		heap.Fix(bf.bestHeap, exist.bestHeaped.GetHeapIndex())
 		heap.Fix(bf.worstHeap, exist.worstHeaped.GetHeapIndex())
 	} else {
+		indices := &blockIndices{
+			bestHeaped:  &heapedBlockIndex{BlockIndex: index},
+			worstHeaped: &heapedBlockIndex{BlockIndex: index},
+		}
+
+		bf.blockIndexMap[index.blockHash] = indices
+
 		heap.Push(bf.bestHeap, indices.bestHeaped)
 		heap.Push(bf.worstHeap, indices.worstHeaped)
 	}
-
-	bf.blockIndexMap[index.blockHash] = indices
 }
 
 // Remove removes the block index of the specified hash from the block leaves
