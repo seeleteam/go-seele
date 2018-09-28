@@ -4,7 +4,8 @@
     "version": "1.0",
     "dataDir": "node3",
     "address": "0.0.0.0:8029",
-    "coinbase": "0x7222f89b38277d782fbd2a55736450cc1e4be631"
+    "coinbase": "0x7222f89b38277d782fbd2a55736450cc1e4be631",
+    "syncMode": "full"
   },
   "p2p": {
     "address": "0.0.0.0:8059",
