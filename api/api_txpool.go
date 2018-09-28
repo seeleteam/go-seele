@@ -214,7 +214,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	}
 	hash := common.BytesToHash(hashByte)
 
-	tx, idx, debt, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
+	tx, idx, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
 	if err != nil {
 		api.s.Log().Debug("Failed to get transaction by hash, %v", err.Error())
 		return nil, err
@@ -228,6 +228,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 		"transaction": PrintableOutputTx(tx),
 	}
 
+	debt := types.NewDebt(tx)
 	if debt != nil {
 		output["debt"] = debt
 	}
@@ -253,28 +254,28 @@ type BlockIndex struct {
 }
 
 // GetTransaction returns the transaction by the given blockchain store and transaction hash.
-func GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *BlockIndex, *types.Debt, error) {
+func GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *BlockIndex, error) {
 	// Try to get transaction in tx pool.
 	if tx := pool.GetTransaction(txHash); tx != nil {
-		return tx, nil, types.NewDebt(tx), nil
+		return tx, nil, nil
 	}
 
 	// Try to find transaction in blockchain.
 	txIdx, err := bcStore.GetTxIndex(txHash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	if txIdx == nil {
-		return nil, nil, nil, nil
+		return nil, nil, nil
 	}
 
 	block, err := bcStore.GetBlock(txIdx.BlockHash)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	tx := block.Transactions[txIdx.Index]
 	idx := &BlockIndex{block.HeaderHash, block.Header.Height, txIdx.Index}
-	return tx, idx, types.NewDebt(tx), nil
+	return tx, idx, nil
 }

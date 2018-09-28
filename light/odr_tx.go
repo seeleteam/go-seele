@@ -51,7 +51,6 @@ type odrTxByHashRequest struct {
 type odrTxByHashResponse struct {
 	OdrItem
 	Tx         *types.Transaction `rlp:"nil"`
-	Debt       *types.Debt        `rlp:"nil"`
 	BlockIndex *api.BlockIndex    `rlp:"nil"`
 	Proof      []proofNode
 }
@@ -63,7 +62,7 @@ func (req *odrTxByHashRequest) code() uint16 {
 func (req *odrTxByHashRequest) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
 	var result odrTxByHashResponse
-	result.Tx, result.BlockIndex, result.Debt, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
+	result.Tx, result.BlockIndex, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
 	result.ReqID = req.ReqID
 
 	if err != nil {

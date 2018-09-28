@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -62,6 +62,8 @@ miner:
 				case result <- block:
 					atomic.StoreInt32(isNonceFound, 1)
 					log.Debug("nonce finding succeeded")
+				default:
+					log.Warn("result channel is nil, this may be caused by miner stop")
 				}
 
 				break miner

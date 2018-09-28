@@ -73,6 +73,6 @@ func (sd *SeeleBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, er
 	return receipt, nil
 }
 
-func (sd *SeeleBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, *types.Debt, error) {
+func (sd *SeeleBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, error) {
 	return api.GetTransaction(pool, bcStore, txHash)
 }
