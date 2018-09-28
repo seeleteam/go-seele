@@ -1,7 +1,6 @@
 package light
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -14,7 +13,6 @@ import (
 )
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
-var errTxHashNotMatched = errors.New("tx hash not matched with request")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {
@@ -49,23 +47,22 @@ func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol
 
 // GetBlock gets a specific block through block's hash and height
 func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
-	var request *odrBlock
-	request = &odrBlock{Height: height, Hash: hash}
+	request := &odrBlock{Hash: hash}
 
-	// @todo
-	if _, err := l.s.odrBackend.sendRequest(request); err != nil {
-		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	if hash.IsEmpty() {
+		if height < 0 {
+			request.Height = l.ChainBackend().CurrentHeader().Height
+		} else {
+			request.Height = uint64(height)
+		}
 	}
 
-	if err := request.getError(); err != nil {
+	response, err := l.s.odrBackend.retrieve(request)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := request.Validate(l.s.chain.GetStore()); err != nil {
-		return nil, err
-	}
-
-	return request.Block, nil
+	return response.(*odrBlock).Block, nil
 }
 
 // GetBlockTotalDifficulty gets total difficulty by block hash
@@ -75,38 +72,22 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 
 // GetReceiptByTxHash gets block's receipt by block hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
-	var request *odrtReceipt
-	request = &odrtReceipt{TxHash: hash}
-
-	// @todo
-	if _, err := l.s.odrBackend.sendRequest(request); err != nil {
-		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
-	}
-
-	if err := request.getError(); err != nil {
+	response, err := l.s.odrBackend.retrieve(&odrReceipt{TxHash: hash})
+	if err != nil {
 		return nil, err
 	}
-	return request.Receipt, nil
+
+	return response.(*odrReceipt).Receipt, nil
 }
 
 // GetTransaction gets tx, block index and its debt by tx hash
 func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, error) {
-	request := &odrTxByHashRequest{TxHash: txHash}
-	result, err := l.s.odrBackend.sendRequest(request)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to send request to peers, %s", err)
-	}
-
-	if err := result.getError(); err != nil {
-		return nil, nil, err
-	}
-
-	response := result.(*odrTxByHashResponse)
-	// verify transaction if it is packed in block
-	err = response.Validate(bcStore, request.TxHash, response.BlockIndex != nil)
+	response, err := l.s.odrBackend.retrieve(&odrTxByHashRequest{TxHash: txHash})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return response.Tx, response.BlockIndex, nil
+	result := response.(*odrTxByHashResponse)
+
+	return result.Tx, result.BlockIndex, nil
 }

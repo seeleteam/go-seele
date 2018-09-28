@@ -26,12 +26,12 @@ func Test_OdrBlock_Code(t *testing.T) {
 	assert.Equal(t, odrBlock.code(), blockRequestCode)
 }
 
-func Test_OdrBlock_HandleRequest(t *testing.T) {
+func Test_OdrBlock_Handle(t *testing.T) {
 	// case 1: empty hash
 	ob1 := newTestOdrBlock(common.EmptyHash)
 	lp := newTestLightProtocol()
 
-	code, resp := ob1.handleRequest(lp)
+	code, resp := ob1.handle(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
 	assert.Nil(t, resp.getError())
@@ -39,7 +39,7 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 
 	// case 2: invalid block hash
 	ob2 := newTestOdrBlock(common.StringToHash("1"))
-	code, resp = ob2.handleRequest(lp)
+	code, resp = ob2.handle(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
 	assert.Equal(t, strings.Contains(resp.getError().Error(), "leveldb: not found"), true)
@@ -49,19 +49,11 @@ func Test_OdrBlock_HandleRequest(t *testing.T) {
 	header := newTestBlockHeader()
 	headerHash := header.Hash()
 	ob3 := newTestOdrBlock(headerHash)
-	code, resp = ob3.handleRequest(lp)
+	code, resp = ob3.handle(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
 	assert.Nil(t, resp.getError())
 	assert.Equal(t, resp.getRequestID(), uint32(1))
-}
-
-func Test_OdrBlock_HandleResponse(t *testing.T) {
-	ob := newTestOdrBlock(common.EmptyHash)
-	ob.handleResponse(ob)
-
-	assert.Equal(t, ob.Error, "")
-	assert.Equal(t, ob.Block == nil, true)
 }
 
 func Test_OdrBlock_Validate(t *testing.T) {
@@ -69,18 +61,18 @@ func Test_OdrBlock_Validate(t *testing.T) {
 
 	// case 1: block is nil
 	testBlockChain := &TestBlockChain{}
-	err := ob1.Validate(testBlockChain.GetStore())
+	err := ob1.validate(ob1, testBlockChain.GetStore())
 	assert.Nil(t, err)
 
 	// case 2: ErrBlockHashMismatch
 	ob2 := newTestOdrBlockWithBlock(common.EmptyHash)
 	ob2.Hash = common.StringToHash("1")
-	err = ob2.Validate(testBlockChain.GetStore())
+	err = ob2.validate(ob2, testBlockChain.GetStore())
 	assert.Equal(t, err, types.ErrBlockHashMismatch)
 
 	// case 2: ok
 	ob2.Hash = ob2.Block.HeaderHash
-	err = ob2.Validate(testBlockChain.GetStore())
+	err = ob2.validate(ob2, testBlockChain.GetStore())
 	assert.Nil(t, err)
 }
 

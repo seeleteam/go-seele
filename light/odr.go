@@ -5,7 +5,11 @@
 
 package light
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/seeleteam/go-seele/core/store"
+)
 
 const (
 	blockRequestCode uint16 = 10 + iota
@@ -26,7 +30,7 @@ var (
 		blockRequestCode:    func() odrRequest { return &odrBlock{} },
 		addTxRequestCode:    func() odrRequest { return &odrAddTx{} },
 		trieRequestCode:     func() odrRequest { return &odrTriePoof{} },
-		receiptRequestCode:  func() odrRequest { return &odrtReceipt{} },
+		receiptRequestCode:  func() odrRequest { return &odrReceipt{} },
 		txByHashRequestCode: func() odrRequest { return &odrTxByHashRequest{} },
 	}
 
@@ -34,23 +38,24 @@ var (
 		blockResponseCode:    func() odrResponse { return &odrBlock{} },
 		addTxResponseCode:    func() odrResponse { return &odrAddTx{} },
 		trieResponseCode:     func() odrResponse { return &odrTriePoof{} },
-		receiptResponseCode:  func() odrResponse { return &odrtReceipt{} },
+		receiptResponseCode:  func() odrResponse { return &odrReceipt{} },
 		txByHashResponseCode: func() odrResponse { return &odrTxByHashResponse{} },
 	}
 )
 
 type odrRequest interface {
-	setRequestID(requestID uint32)                                       // set the random request ID.
-	code() uint16                                                        // get request code.
-	handleRequest(lp *LightProtocol) (respCode uint16, resp odrResponse) // handle the request and return response to remote peer.
-	handleResponse(resp interface{}) (res odrResponse)                   // handle the received response from remote peer.
+	setRequestID(requestID uint32)                                // set the random request ID.
+	code() uint16                                                 // get request code.
+	handle(lp *LightProtocol) (respCode uint16, resp odrResponse) // handle the request and return response to remote peer.
 }
 
 type odrResponse interface {
-	getRequestID() uint32 // get the random request ID.
-	getError() error      // get the response error if any.
+	getRequestID() uint32                                             // get the random request ID.
+	getError() error                                                  // get the response error if any.
+	validate(request odrRequest, bcStore store.BlockchainStore) error // validate the retrieved response.
 }
 
+// OdrItem is base struct for ODR request and response.
 type OdrItem struct {
 	ReqID uint32 // random request ID that generated dynamically
 	Error string // response error

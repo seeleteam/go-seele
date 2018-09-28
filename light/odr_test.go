@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,4 +36,29 @@ func newOdrItem(id uint32, err string) *OdrItem {
 		ReqID: id,
 		Error: err,
 	}
+}
+
+type testOdrObj struct {
+	OdrItem
+	Name string
+}
+
+func Test_OdrItem_Serialize(t *testing.T) {
+	obj := testOdrObj{
+		OdrItem: OdrItem{
+			ReqID: 38,
+			Error: "hello, error",
+		},
+		Name: "test name",
+	}
+
+	assertSerializable(t, &obj, &testOdrObj{})
+}
+
+func assertSerializable(t *testing.T, ptrToEncode interface{}, ptrForDecode interface{}) {
+	encoded, err := common.Serialize(ptrToEncode)
+	assert.Nil(t, err)
+
+	assert.Nil(t, common.Deserialize(encoded, ptrForDecode))
+	assert.Equal(t, ptrToEncode, ptrForDecode)
 }

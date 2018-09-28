@@ -401,7 +401,7 @@ func (lp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 	}
 
 	lp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", codeToStr(msg.Code), len(msg.Payload))
-	respCode, response := request.handleRequest(lp)
+	respCode, response := request.handle(lp)
 	buff := common.SerializePanic(response)
 	lp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", codeToStr(respCode), len(buff), peer.peerStrID)
 
