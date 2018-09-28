@@ -13,7 +13,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/p2p"
 )
 
 const (
@@ -26,18 +25,10 @@ type minedBlock struct {
 	txs    []*types.Transaction
 }
 
-type odrBackendService interface {
-	start(peers *peerSet)
-	handleResponse(msg *p2p.Message)
-	getReqInfo() (uint32, chan interface{}, []*peer, error)
-	sendRequest(request odrRequest) (odrResponse, error)
-	close()
-}
-
 type txPool struct {
 	mutex         sync.RWMutex
 	chain         BlockChain
-	odrBackend    odrBackendService                  //*odrBackend
+	odrBackend    *odrBackend
 	pendingTxs    map[common.Hash]*types.Transaction // txs that not mined yet.
 	minedBlocks   map[common.Hash]*minedBlock        // blocks that already mined.
 	headerCh      chan *types.BlockHeader            // channel to receive new header in canonical chain.
@@ -45,7 +36,7 @@ type txPool struct {
 	log           *log.SeeleLog
 }
 
-func newTxPool(chain BlockChain, odrBackend odrBackendService /**odrBackend*/) *txPool {
+func newTxPool(chain BlockChain, odrBackend *odrBackend) *txPool {
 	pool := &txPool{
 		chain:         chain,
 		odrBackend:    odrBackend,
