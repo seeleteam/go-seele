@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
@@ -11,6 +12,9 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
+
+var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
+var errTxHashNotMatched = errors.New("tx hash not matched with request")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {
@@ -48,7 +52,8 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 	var request *odrBlock
 	request = &odrBlock{Height: height, Hash: hash}
 
-	if err := l.s.odrBackend.sendRequest(request); err != nil {
+	// @todo
+	if _, err := l.s.odrBackend.sendRequest(request); err != nil {
 		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
 	}
 
@@ -73,7 +78,8 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 	var request *odrtReceipt
 	request = &odrtReceipt{TxHash: hash}
 
-	if err := l.s.odrBackend.sendRequest(request); err != nil {
+	// @todo
+	if _, err := l.s.odrBackend.sendRequest(request); err != nil {
 		return nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
 	}
 
@@ -85,14 +91,22 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 
 // GetTransaction gets tx, block index and its debt by tx hash
 func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, *types.Debt, error) {
-	request := &odrTxByHash{TxHash: txHash}
-	if err := l.s.odrBackend.sendRequest(request); err != nil {
-		return nil, nil, nil, fmt.Errorf("Failed to send request to peers, %v", err.Error())
+	request := &odrTxByHashRequest{TxHash: txHash}
+	result, err := l.s.odrBackend.sendRequest(request)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("Failed to send request to peers, %s", err)
 	}
 
-	if err := request.getError(); err != nil {
+	if err := result.getError(); err != nil {
 		return nil, nil, nil, err
 	}
 
-	return request.Tx, request.BlockIndex, request.Debt, nil
+	response := result.(*odrTxByHashResponse)
+	// verify transaction if it is packed in block
+	err = response.Validate(bcStore, request.TxHash, response.BlockIndex != nil)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return response.Tx, response.BlockIndex, response.Debt, nil
 }

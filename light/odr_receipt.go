@@ -11,7 +11,7 @@ import (
 )
 
 type odrtReceipt struct {
-	odrItem
+	OdrItem
 	Receipt *types.Receipt
 	TxHash  common.Hash
 }
@@ -31,9 +31,12 @@ func (req *odrtReceipt) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	return receiptResponseCode, req
 }
 
-func (req *odrtReceipt) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrtReceipt); ok {
+func (req *odrtReceipt) handleResponse(resp interface{}) odrResponse {
+	data, ok := resp.(*odrtReceipt)
+	if ok {
 		req.Error = data.Error
 		req.Receipt = data.Receipt
 	}
+
+	return data
 }

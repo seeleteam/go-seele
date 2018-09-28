@@ -72,7 +72,8 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	}
 
 	request := &odrAddTx{Tx: *tx}
-	if err := pool.odrBackend.sendRequest(request); err != nil {
+	// @todo
+	if _, err := pool.odrBackend.sendRequest(request); err != nil {
 		return fmt.Errorf("Failed to send request to peers, %v", err.Error())
 	}
 
@@ -255,7 +256,8 @@ func (pool *txPool) getBlock(hash common.Hash) (*types.Block, error) {
 		Hash: hash,
 	}
 
-	if err := pool.odrBackend.sendRequest(request); err != nil {
+	// @todo
+	if _, err := pool.odrBackend.sendRequest(request); err != nil {
 		return nil, err
 	}
 

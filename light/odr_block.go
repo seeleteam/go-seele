@@ -12,7 +12,7 @@ import (
 )
 
 type odrBlock struct {
-	odrItem
+	OdrItem
 	Hash   common.Hash  // Block hash from which to retrieve (excludes Height)
 	Height int64        // Block hash from which to retrieve (excludes Hash)
 	Block  *types.Block // Retrieved block
@@ -46,11 +46,14 @@ func (ob *odrBlock) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
 	return blockResponseCode, ob
 }
 
-func (ob *odrBlock) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrBlock); ok {
+func (ob *odrBlock) handleResponse(resp interface{}) odrResponse {
+	data, ok := resp.(*odrBlock)
+	if ok {
 		ob.Error = data.Error
 		ob.Block = data.Block
 	}
+
+	return data
 }
 
 // Validate validates the retrieved block.

@@ -27,7 +27,7 @@ var (
 		addTxRequestCode:    func() odrRequest { return &odrAddTx{} },
 		trieRequestCode:     func() odrRequest { return &odrTriePoof{} },
 		receiptRequestCode:  func() odrRequest { return &odrtReceipt{} },
-		txByHashRequestCode: func() odrRequest { return &odrTxByHash{} },
+		txByHashRequestCode: func() odrRequest { return &odrTxByHashRequest{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
@@ -35,7 +35,7 @@ var (
 		addTxResponseCode:    func() odrResponse { return &odrAddTx{} },
 		trieResponseCode:     func() odrResponse { return &odrTriePoof{} },
 		receiptResponseCode:  func() odrResponse { return &odrtReceipt{} },
-		txByHashResponseCode: func() odrResponse { return &odrTxByHash{} },
+		txByHashResponseCode: func() odrResponse { return &odrTxByHashResponse{} },
 	}
 )
 
@@ -43,7 +43,7 @@ type odrRequest interface {
 	setRequestID(requestID uint32)                                       // set the random request ID.
 	code() uint16                                                        // get request code.
 	handleRequest(lp *LightProtocol) (respCode uint16, resp odrResponse) // handle the request and return response to remote peer.
-	handleResponse(resp interface{})                                     // handle the received response from remote peer.
+	handleResponse(resp interface{}) (res odrResponse)                   // handle the received response from remote peer.
 }
 
 type odrResponse interface {
@@ -51,20 +51,20 @@ type odrResponse interface {
 	getError() error      // get the response error if any.
 }
 
-type odrItem struct {
+type OdrItem struct {
 	ReqID uint32 // random request ID that generated dynamically
 	Error string // response error
 }
 
-func (item *odrItem) getRequestID() uint32 {
+func (item *OdrItem) getRequestID() uint32 {
 	return item.ReqID
 }
 
-func (item *odrItem) setRequestID(requestID uint32) {
+func (item *OdrItem) setRequestID(requestID uint32) {
 	item.ReqID = requestID
 }
 
-func (item *odrItem) getError() error {
+func (item *OdrItem) getError() error {
 	if len(item.Error) == 0 {
 		return nil
 	}
