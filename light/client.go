@@ -54,9 +54,9 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 		return nil, err
 	}
 
-	s.odrBackend = newOdrBackend(log)
-	// initialize and validate genesis
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.lightDB))
+	s.odrBackend = newOdrBackend(bcStore)
+	// initialize and validate genesis
 	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
 
 	err = genesis.InitializeAndValidate(bcStore, s.lightDB)
