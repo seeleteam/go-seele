@@ -12,70 +12,33 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-type txHeapByFee []*txCollection
-
-func (h txHeapByFee) Len() int {
-	return len(h)
-}
-
-func (h txHeapByFee) Less(i, j int) bool {
-	iTx := h[i].peek()
-	jTx := h[j].peek()
-
-	r := iTx.Data.Fee.Cmp(jTx.Data.Fee)
-	switch r {
-	case -1:
-		return false
-	case 1:
-		return true
-	default:
-		return iTx.timestamp.Before(jTx.timestamp)
-	}
-}
-
-func (h txHeapByFee) Swap(i, j int) {
-	h[i], h[j] = h[j], h[i]
-	h[i].heapIndex = i
-	h[j].heapIndex = j
-}
-
-func (h *txHeapByFee) Push(x interface{}) {
-	q := x.(*txCollection)
-	q.heapIndex = h.Len()
-	*h = append(*h, q)
-}
-
-func (h *txHeapByFee) Pop() interface{} {
-	old := *h
-	n := len(old)
-	x := old[n-1]
-	*h = old[0 : n-1]
-	return x
-}
-
 // pendingQueue represents the fee sorted transactions that grouped by account.
 type pendingQueue struct {
 	txs     map[common.Address]*txCollection
-	feeHeap txHeapByFee
+	feeHeap *common.Heap
 }
 
 func newPendingQueue() *pendingQueue {
 	return &pendingQueue{
 		txs: make(map[common.Address]*txCollection),
+		feeHeap: common.NewHeap(func(i, j common.HeapItem) bool {
+			iCollection, jCollection := i.(*txCollection), j.(*txCollection)
+			return iCollection.cmp(jCollection) > 0
+		}),
 	}
 }
 
 func (q *pendingQueue) add(tx *pooledTx) {
 	if collection := q.txs[tx.Data.From]; collection != nil {
 		if updated := !collection.add(tx); updated {
-			heap.Fix(&q.feeHeap, collection.heapIndex)
+			heap.Fix(q.feeHeap, collection.GetHeapIndex())
 		}
 	} else {
 		collection := newTxCollection()
 		collection.add(tx)
 
 		q.txs[tx.Data.From] = collection
-		heap.Push(&q.feeHeap, collection)
+		heap.Push(q.feeHeap, collection)
 	}
 }
 
@@ -100,16 +63,16 @@ func (q *pendingQueue) remove(addr common.Address, nonce uint64) {
 
 	if collection.len() == 0 {
 		delete(q.txs, addr)
-		heap.Remove(&q.feeHeap, collection.heapIndex)
+		heap.Remove(q.feeHeap, collection.GetHeapIndex())
 	} else {
-		heap.Fix(&q.feeHeap, collection.heapIndex)
+		heap.Fix(q.feeHeap, collection.GetHeapIndex())
 	}
 }
 
 func (q *pendingQueue) count() int {
 	sum := 0
 
-	for _, collection := range q.feeHeap {
+	for _, collection := range q.txs {
 		sum += collection.len()
 	}
 
@@ -117,7 +80,11 @@ func (q *pendingQueue) count() int {
 }
 
 func (q *pendingQueue) peek() *txCollection {
-	return q.feeHeap[0]
+	if item := q.feeHeap.Peek(); item != nil {
+		return item.(*txCollection)
+	}
+
+	return nil
 }
 
 func (q *pendingQueue) popN(n int) []*types.Transaction {
@@ -140,9 +107,9 @@ func (q *pendingQueue) pop() *types.Transaction {
 
 	if collection.len() == 0 {
 		delete(q.txs, tx.Data.From)
-		heap.Remove(&q.feeHeap, collection.heapIndex)
+		heap.Remove(q.feeHeap, collection.GetHeapIndex())
 	} else {
-		heap.Fix(&q.feeHeap, collection.heapIndex)
+		heap.Fix(q.feeHeap, collection.GetHeapIndex())
 	}
 
 	return tx
@@ -151,7 +118,7 @@ func (q *pendingQueue) pop() *types.Transaction {
 func (q *pendingQueue) list() []*types.Transaction {
 	var result []*types.Transaction
 
-	for _, collection := range q.feeHeap {
+	for _, collection := range q.txs {
 		result = append(result, collection.list()...)
 	}
 

@@ -6,9 +6,9 @@
 package seele
 
 import (
+	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
-	api2"github.com/seeleteam/go-seele/api"
 )
 
 // TransactionPoolAPI provides an API to access transaction pool information.
@@ -20,6 +20,7 @@ type TransactionPoolAPI struct {
 func NewTransactionPoolAPI(s *SeeleService) *TransactionPoolAPI {
 	return &TransactionPoolAPI{s}
 }
+
 // GetDebtByHash return the debt info by debt hash
 func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interface{}, error) {
 	hashByte, err := hexutil.HexToBytes(debtHash)

@@ -9,53 +9,25 @@ import (
 	"container/heap"
 	"sort"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-type heapItem struct {
-	heapIndex int // used to randomly remove an item from heap.
-}
-
-type txHeapByNonce []*pooledTx
-
-func (h txHeapByNonce) Len() int {
-	return len(h)
-}
-
-func (h txHeapByNonce) Less(i, j int) bool {
-	return h[i].Data.AccountNonce < h[j].Data.AccountNonce
-}
-
-func (h txHeapByNonce) Swap(i, j int) {
-	h[i], h[j] = h[j], h[i]
-	h[i].heapIndex = i
-	h[j].heapIndex = j
-}
-
-func (h *txHeapByNonce) Push(x interface{}) {
-	tx := x.(*pooledTx)
-	tx.heapIndex = h.Len()
-	*h = append(*h, tx)
-}
-
-func (h *txHeapByNonce) Pop() interface{} {
-	old := *h
-	n := len(old)
-	x := old[n-1]
-	*h = old[0 : n-1]
-	return x
-}
-
 // txCollection represents the nonce sorted transactions of an account.
 type txCollection struct {
-	heapItem
+	common.BaseHeapItem
 	txs       map[uint64]*pooledTx
-	nonceHeap txHeapByNonce
+	nonceHeap *common.Heap
 }
 
 func newTxCollection() *txCollection {
 	return &txCollection{
 		txs: make(map[uint64]*pooledTx),
+		nonceHeap: common.NewHeap(func(i, j common.HeapItem) bool {
+			iNonce := i.(*pooledTx).Data.AccountNonce
+			jNonce := j.(*pooledTx).Data.AccountNonce
+			return iNonce < jNonce
+		}),
 	}
 }
 
@@ -66,7 +38,7 @@ func (collection *txCollection) add(tx *pooledTx) bool {
 		return false
 	}
 
-	heap.Push(&collection.nonceHeap, tx)
+	heap.Push(collection.nonceHeap, tx)
 	collection.txs[tx.Data.AccountNonce] = tx
 
 	return true
@@ -78,7 +50,7 @@ func (collection *txCollection) get(nonce uint64) *pooledTx {
 
 func (collection *txCollection) remove(nonce uint64) bool {
 	if tx := collection.txs[nonce]; tx != nil {
-		heap.Remove(&collection.nonceHeap, tx.heapIndex)
+		heap.Remove(collection.nonceHeap, tx.GetHeapIndex())
 		delete(collection.txs, nonce)
 		return true
 	}
@@ -91,19 +63,26 @@ func (collection *txCollection) len() int {
 }
 
 func (collection *txCollection) peek() *pooledTx {
-	return collection.nonceHeap[0]
+	if item := collection.nonceHeap.Peek(); item != nil {
+		return item.(*pooledTx)
+	}
+
+	return nil
 }
 
 func (collection *txCollection) pop() *pooledTx {
-	tx := heap.Pop(&collection.nonceHeap).(*pooledTx)
+	tx := heap.Pop(collection.nonceHeap).(*pooledTx)
 	delete(collection.txs, tx.Data.AccountNonce)
 	return tx
 }
 
 func (collection *txCollection) list() []*types.Transaction {
-	result := make([]*types.Transaction, collection.len())
-	for i, tx := range collection.nonceHeap {
+	result := make([]*types.Transaction, len(collection.txs))
+	i := 0
+
+	for _, tx := range collection.txs {
 		result[i] = tx.Transaction
+		i++
 	}
 
 	sort.Slice(result, func(i, j int) bool {
@@ -111,4 +90,29 @@ func (collection *txCollection) list() []*types.Transaction {
 	})
 
 	return result
+}
+
+// feeCmp compares to the specified tx collection based on fee and timestamp.
+//   For higher fee, return 1.
+//   For lower fee, return -1.
+//   Otherwise:
+//     For earier timestamp, return 1.
+//     For later timestamp, return -1.
+//     Otherwise, return 0.
+func (collection *txCollection) cmp(other *txCollection) int {
+	iTx, jTx := collection.peek(), other.peek()
+
+	if r := iTx.Data.Fee.Cmp(jTx.Data.Fee); r != 0 {
+		return r
+	}
+
+	if iTx.timestamp.Before(jTx.timestamp) {
+		return 1
+	}
+
+	if iTx.timestamp.After(jTx.timestamp) {
+		return -1
+	}
+
+	return 0
 }
