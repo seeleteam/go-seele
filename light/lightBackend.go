@@ -90,23 +90,23 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 }
 
 // GetTransaction gets tx, block index and its debt by tx hash
-func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, *types.Debt, error) {
+func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, error) {
 	request := &odrTxByHashRequest{TxHash: txHash}
 	result, err := l.s.odrBackend.sendRequest(request)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("Failed to send request to peers, %s", err)
+		return nil, nil, fmt.Errorf("Failed to send request to peers, %s", err)
 	}
 
 	if err := result.getError(); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	response := result.(*odrTxByHashResponse)
 	// verify transaction if it is packed in block
 	err = response.Validate(bcStore, request.TxHash, response.BlockIndex != nil)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return response.Tx, response.BlockIndex, response.Debt, nil
+	return response.Tx, response.BlockIndex, nil
 }
