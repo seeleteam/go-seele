@@ -13,8 +13,8 @@ import (
 
 type odrBlock struct {
 	OdrItem
-	Hash   common.Hash  // Block hash from which to retrieve
-	Height uint64       // Block height from which to retrieve
+	Hash   common.Hash  // Retrieved block hash
+	Height uint64       // Retrieved block height
 	Block  *types.Block `rlp:"nil"` // Retrieved block
 }
 
