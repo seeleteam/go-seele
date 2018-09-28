@@ -21,25 +21,20 @@ type odrAddTx struct {
 	Tx types.Transaction
 }
 
-func (req *odrAddTx) code() uint16 {
+func (odr *odrAddTx) code() uint16 {
 	return addTxRequestCode
 }
 
-func (req *odrAddTx) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	if err := lp.txPool.AddTransaction(&req.Tx); err != nil {
-		req.Error = err.Error()
+func (odr *odrAddTx) handle(lp *LightProtocol) (uint16, odrResponse) {
+	if err := lp.txPool.AddTransaction(&odr.Tx); err != nil {
+		odr.Error = err.Error()
 	}
 
-	return addTxResponseCode, req
+	return addTxResponseCode, odr
 }
 
-func (req *odrAddTx) handleResponse(resp interface{}) odrResponse {
-	data, ok := resp.(*odrAddTx)
-	if ok {
-		req.Error = data.Error
-	}
-
-	return data
+func (odr *odrAddTx) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	return nil
 }
 
 // ODR object to get transaction by hash.
@@ -60,7 +55,7 @@ func (req *odrTxByHashRequest) code() uint16 {
 	return txByHashRequestCode
 }
 
-func (req *odrTxByHashRequest) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
 	var result odrTxByHashResponse
 	result.Tx, result.BlockIndex, result.Debt, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
@@ -70,7 +65,7 @@ func (req *odrTxByHashRequest) handleRequest(lp *LightProtocol) (uint16, odrResp
 		req.Error = err.Error()
 	}
 
-	if result.Tx != nil && result.BlockIndex != nil && result.BlockIndex.BlockHash != common.EmptyHash {
+	if result.Tx != nil && result.BlockIndex != nil && !result.BlockIndex.BlockHash.IsEmpty() {
 		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
 		if err != nil {
 			req.Error = err.Error()
@@ -88,37 +83,22 @@ func (req *odrTxByHashRequest) handleRequest(lp *LightProtocol) (uint16, odrResp
 	return txByHashResponseCode, &result
 }
 
-func (req *odrTxByHashRequest) handleResponse(resp interface{}) odrResponse {
-	data, ok := resp.(*odrTxByHashResponse)
-	if !ok {
-		return data
-	}
-
-	if len(data.Error) > 0 {
-		return data
-	}
-
-	if !req.TxHash.Equal(data.Tx.Hash) {
-		data.Error = types.ErrHashMismatch.Error()
-	}
-
-	return data
-}
-
-func (response *odrTxByHashResponse) Validate(bcStore store.BlockchainStore, txHash common.Hash, validateInBlock bool) error {
+func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
 	if response.Tx == nil {
 		return nil
+	}
+
+	txHash := request.(*odrTxByHashRequest).TxHash
+	if !txHash.Equal(response.Tx.Hash) {
+		return types.ErrHashMismatch
 	}
 
 	if err := response.Tx.ValidateWithoutState(true, false); err != nil {
 		return err
 	}
 
-	if !response.Tx.Hash.Equal(txHash) {
-		return errTxHashNotMatched
-	}
-
-	if validateInBlock {
+	// validate the tx trie proof if stored in blockchain already.
+	if response.BlockIndex != nil {
 		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
 		if err != nil {
 			return err
