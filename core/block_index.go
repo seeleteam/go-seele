@@ -6,9 +6,9 @@
 package core
 
 import (
+	"container/heap"
 	"math/big"
 
-	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 )
@@ -54,48 +54,79 @@ func (bi *BlockIndex) cmp(other *BlockIndex) int {
 	return 0
 }
 
+type heapedBlockIndex struct {
+	common.BaseHeapItem
+	*BlockIndex
+}
+
+type blockIndices struct {
+	bestHeaped  *heapedBlockIndex
+	worstHeaped *heapedBlockIndex
+}
+
 // BlockLeaves is the block leaves used for block forking
 // Note that BlockLeaves is not thread safe
 type BlockLeaves struct {
-	blockIndexMap cmap.ConcurrentMap //block hash -> blockIndex
-
-	bestIndex  *BlockIndex // the block index which is the first index with the largest total difficulty
-	worstIndex *BlockIndex // the block index which is the first index with the smallest total difficulty
+	blockIndexMap map[common.Hash]*blockIndices //block hash -> block indices
+	bestHeap      *common.Heap                  // block index heap with best one on top
+	worstHeap     *common.Heap                  // block index heap with worst one on top
 }
 
 // NewBlockLeaves constructs and returns a NewBlockLeaves instance
 func NewBlockLeaves() *BlockLeaves {
 	return &BlockLeaves{
-		blockIndexMap: cmap.New(),
+		blockIndexMap: make(map[common.Hash]*blockIndices),
+		bestHeap: common.NewHeap(func(i, j common.HeapItem) bool {
+			iIdx, jIdx := i.(*heapedBlockIndex), j.(*heapedBlockIndex)
+			return iIdx.cmp(jIdx.BlockIndex) > 0
+		}),
+		worstHeap: common.NewHeap(func(i, j common.HeapItem) bool {
+			iIdx, jIdx := i.(*heapedBlockIndex), j.(*heapedBlockIndex)
+			return iIdx.cmp(jIdx.BlockIndex) < 0
+		}),
 	}
-}
-
-// Remove removes the specified block index from the block leaves
-func (bf *BlockLeaves) Remove(old *BlockIndex) {
-	bf.blockIndexMap.Remove(old.blockHash.String())
-	bf.updateIndexWhenRemove(old)
 }
 
 // Add adds the specified block index to the block leaves
 func (bf *BlockLeaves) Add(index *BlockIndex) {
-	bf.blockIndexMap.Set(index.blockHash.String(), index)
-	bf.updateIndexWhenAdd(index)
+	indices := &blockIndices{
+		bestHeaped:  &heapedBlockIndex{BlockIndex: index},
+		worstHeaped: &heapedBlockIndex{BlockIndex: index},
+	}
+
+	if exist := bf.blockIndexMap[index.blockHash]; exist != nil {
+		// update the block index
+		exist.bestHeaped.BlockIndex = index
+		exist.worstHeaped.BlockIndex = index
+
+		// fix the order in heap
+		heap.Fix(bf.bestHeap, exist.bestHeaped.GetHeapIndex())
+		heap.Fix(bf.worstHeap, exist.worstHeaped.GetHeapIndex())
+	} else {
+		heap.Push(bf.bestHeap, indices.bestHeaped)
+		heap.Push(bf.worstHeap, indices.worstHeaped)
+	}
+
+	bf.blockIndexMap[index.blockHash] = indices
 }
 
-// RemoveByHash removes the block index of the specified hash from the block leaves
-func (bf *BlockLeaves) RemoveByHash(hash common.Hash) {
-	index := bf.GetBlockIndexByHash(hash)
-	bf.blockIndexMap.Remove(hash.String())
-	if index != nil {
-		bf.updateIndexWhenRemove(index)
+// Remove removes the block index of the specified hash from the block leaves
+func (bf *BlockLeaves) Remove(hash common.Hash) {
+	indices := bf.blockIndexMap[hash]
+	if indices == nil {
+		return
 	}
+
+	delete(bf.blockIndexMap, hash)
+
+	heap.Remove(bf.bestHeap, indices.bestHeaped.GetHeapIndex())
+	heap.Remove(bf.worstHeap, indices.worstHeaped.GetHeapIndex())
 }
 
 // GetBlockIndexByHash gets the block index with the specified hash in the block leaves
 func (bf *BlockLeaves) GetBlockIndexByHash(hash common.Hash) *BlockIndex {
-	index, ok := bf.blockIndexMap.Get(hash.String())
-	if ok {
-		return index.(*BlockIndex)
+	if indices := bf.blockIndexMap[hash]; indices != nil {
+		return indices.bestHeaped.BlockIndex
 	}
 
 	return nil
@@ -103,76 +134,47 @@ func (bf *BlockLeaves) GetBlockIndexByHash(hash common.Hash) *BlockIndex {
 
 // Count returns the number of the block indices in the block leaves
 func (bf *BlockLeaves) Count() int {
-	return bf.blockIndexMap.Count()
+	return len(bf.blockIndexMap)
 }
 
 // GetBestBlockIndex gets the best block index in the block leaves
 func (bf *BlockLeaves) GetBestBlockIndex() *BlockIndex {
-	return bf.bestIndex
+	if best := bf.bestHeap.Peek(); best != nil {
+		return best.(*heapedBlockIndex).BlockIndex
+	}
+
+	return nil
 }
 
 // GetWorstBlockIndex gets the worst block index in the block leaves.
 func (bf *BlockLeaves) GetWorstBlockIndex() *BlockIndex {
-	return bf.worstIndex
-}
-
-// updateIndexWhenRemove updates the best/worst index when removing the given block index from the block leaves
-func (bf *BlockLeaves) updateIndexWhenRemove(index *BlockIndex) {
-	isBest := bf.bestIndex != nil && bf.bestIndex.blockHash.Equal(index.blockHash)
-	isWorst := bf.worstIndex != nil && bf.worstIndex.blockHash.Equal(index.blockHash)
-	if isBest || isWorst {
-		bf.bestIndex, bf.worstIndex = bf.findBlockIndex()
-	}
-}
-
-// updateIndexWhenAdd updates the best/worst index when adding the given block index to the block leaves
-func (bf *BlockLeaves) updateIndexWhenAdd(index *BlockIndex) {
-	if bf.bestIndex == nil || bf.bestIndex.cmp(index) < 0 {
-		bf.bestIndex = index
+	if worst := bf.worstHeap.Peek(); worst != nil {
+		return worst.(*heapedBlockIndex).BlockIndex
 	}
 
-	if bf.worstIndex == nil || bf.worstIndex.cmp(index) > 0 {
-		bf.worstIndex = index
-	}
-}
-
-// findBlockIndex searchs for the block index of the largest and smallest total difficult from the block leaves
-func (bf *BlockLeaves) findBlockIndex() (*BlockIndex, *BlockIndex) {
-	var best, worst *BlockIndex
-
-	for item := range bf.blockIndexMap.IterBuffered() {
-		index := item.Val.(*BlockIndex)
-
-		if best == nil || best.cmp(index) < 0 {
-			best = index
-		}
-
-		if worst == nil || worst.cmp(index) > 0 {
-			worst = index
-		}
-	}
-
-	return best, worst
+	return nil
 }
 
 // IsBestBlockIndex indicates whether the given block index is the best compared with all indices in the block leaves
 func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
-	return index.cmp(bf.bestIndex) > 0
+	best := bf.GetBestBlockIndex()
+	return best == nil || index.cmp(best) > 0
 }
 
 // Purge purges the worst chain in forking tree.
 func (bf *BlockLeaves) Purge(bcStore store.BlockchainStore) error {
-	if bf.worstIndex == nil || bf.bestIndex == nil {
+	best, worst := bf.GetBestBlockIndex(), bf.GetWorstBlockIndex()
+	if best == nil || worst == nil {
 		return nil
 	}
 
 	// purge only when worst chain is far away from best chain.
-	if bf.bestIndex.blockHeight-bf.worstIndex.blockHeight < purgeBlockLimit {
+	if best.blockHeight-worst.blockHeight < purgeBlockLimit {
 		return nil
 	}
 
-	hash := bf.worstIndex.blockHash
-	bf.RemoveByHash(hash)
+	hash := worst.blockHash
+	bf.Remove(hash)
 
 	// remove blocks in worst chain until the common ancestor found in canonical chain.
 	for !hash.IsEmpty() {
