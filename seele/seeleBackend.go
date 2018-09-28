@@ -33,11 +33,11 @@ func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
 
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
-// GetBlockByHeightOrHash returns the requested block.
+// GetBlock returns the requested block by hash or height
 func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
 	var block *types.Block
 	var err error
-	if hash.IsEmpty() {
+	if !hash.IsEmpty() {
 		store := sd.s.chain.GetStore()
 		block, err = store.GetBlock(hash)
 		if err != nil {
