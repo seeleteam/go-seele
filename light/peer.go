@@ -334,7 +334,8 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 		curBlock, err := chain.GetStore().GetBlockByHeight(curNum)
 		if err != nil {
-			panic("Load block error")
+			p.log.Error("Load block error: ", err)
+			return err
 		}
 
 		numArr = append(numArr, curNum)
@@ -347,6 +348,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 	msg.BlockNumArr, msg.HeaderArr = numArr, hashArr
 	buff := common.SerializePanic(msg)
 	p.log.Debug("peer send [announceCode] with magic:%d length:%d bytes peerid:%s num:%d", magic, len(buff), p.peerStrID, len(msg.HeaderArr))
+
 	return p2p.SendMessage(p.rw, announceCode, buff)
 }
 
