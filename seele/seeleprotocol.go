@@ -679,7 +679,7 @@ handler:
 			p.syncCh <- struct{}{}
 
 		default:
-			p.log.Warn("unknown code %s", msg.Code)
+			p.log.Warn("unknown code %d", msg.Code)
 		}
 	}
 

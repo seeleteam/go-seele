@@ -94,7 +94,7 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 	if len(sm.senderSlice) == 0 {
 		return
 	}
-	sm.log.Debug("onBitmap msgCurSeq=%u msgMaxSeq=%u bitmapLen=%d msgWinStartPackNo=%u curSeq=%u len(packSlice)=%d",
+	sm.log.Debug("onBitmap msgCurSeq=%d msgMaxSeq=%d bitmapLen=%d msgWinStartPackNo=%d curSeq=%d len(packSlice)=%d",
 		msgCurSeq, msgMaxSeq, len(data)-30, msgWinStartPackNo, sm.curSeq, len(sm.senderSlice))
 	sm.peerWinStartSeq = msgWinStartPackNo
 	if !sm.qconn.isEqAndBig_32(sm.peerCurSeq, msgCurSeq) {
@@ -108,7 +108,7 @@ func (sm *SenderMgr) onBitmap(data []byte, curTick uint32) {
 		}
 
 		sm.peerCurSeq = msgCurSeq
-		sm.log.Debug("onBitmap m_peerCurSeq=%u", msgCurSeq)
+		sm.log.Debug("onBitmap m_peerCurSeq=%d", msgCurSeq)
 		sm.doDel()
 	}
 

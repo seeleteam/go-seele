@@ -315,7 +315,7 @@ func (rv *ReceiverMgr) tryRecoverFec(packSeq, curTick uint32) bool {
 	fecItem := &rv.packItems[fecPack.seq%rv.winSize]
 	fecItem.p = fecPack
 	rv.setBitmap(fecPack.seq, true)
-	rv.log.Debug("ReceiverMgr tryRecoverFec ok seq=%u", fecPack.seq)
+	rv.log.Debug("ReceiverMgr tryRecoverFec ok seq=%d", fecPack.seq)
 	return true
 }
 
@@ -360,7 +360,7 @@ func (rv *ReceiverMgr) doDel() {
 		rv.setBitmap(seq, false)
 	}
 	rv.startSeq += toDel
-	rv.log.Debug("qvic recvmgr.doDel toDel:%u curSeq=%u startSeq=%u readSeq=%u maxSeq=%u", toDel, rv.curSeq, rv.startSeq, rv.curReadSeq, rv.maxSeq)
+	rv.log.Debug("qvic recvmgr.doDel toDel:%d curSeq=%d startSeq=%d readSeq=%d maxSeq=%d", toDel, rv.curSeq, rv.startSeq, rv.curReadSeq, rv.maxSeq)
 }
 
 func (rv *ReceiverMgr) close() {

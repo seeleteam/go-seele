@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Log(t *testing.T) {
@@ -42,7 +42,7 @@ func Test_LogFile(t *testing.T) {
 	log.Warn("warn msg")
 
 	log.Error("error msg")
-	log.Info("folder is:", LogFolder)
+	log.Info("folder is: %s", LogFolder)
 
 	now := time.Now().Format("20060102")
 	logFileName := fmt.Sprintf("%s%s", now, logExtension)
