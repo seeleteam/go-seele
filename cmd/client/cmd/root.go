@@ -126,6 +126,14 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			},
 			Action: GenerateKeyAction,
 		},
+		{
+			Name:  "payload",
+			Usage: "generate the payload according to the abi file and method name and args",
+			Flags: []cli.Flag{
+				abiFileFlag, methodNameFlag, argsFlag,
+			},
+			Action: GeneratePayloadAction,
+		},
 	}
 
 	htlcCommands := cli.Command{
@@ -275,7 +283,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Name:   "getengineinfo",
 				Usage:  "get miner engine information",
 				Flags:  rpcFlags(),
-				Action: rpcAction("miner", "GetEngineInfo"),
+				Action: rpcAction("miner", "getEngineInfo"),
 			},
 			{
 				Name:   "setthreads",

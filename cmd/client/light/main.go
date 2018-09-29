@@ -9,16 +9,10 @@ import (
 	"os"
 
 	"github.com/seeleteam/go-seele/cmd/client/cmd"
-	"github.com/urfave/cli"
 )
 
 func main() {
-	app := cli.NewApp()
-	app.Name = "light node client"
-	app.Usage = "interact with node process"
-	app.HideVersion = true
-
-	cmd.AddCommands(app, false)
+	app := cmd.NewApp(false)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
