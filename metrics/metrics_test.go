@@ -49,7 +49,7 @@ func influxdbSimulate() {
 	http.HandleFunc("/write", saveResult)
 	err := http.ListenAndServe(address, nil)
 	if err != nil {
-		slog.Fatal("ListenAndServe: ", err)
+		slog.Fatal("ListenAndServe: %s", err)
 	}
 }
 

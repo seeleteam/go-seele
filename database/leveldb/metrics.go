@@ -72,7 +72,7 @@ MetricsLoop:
 		// Retrieve the database stats
 		stats, err := db.db.GetProperty("leveldb.stats")
 		if err != nil {
-			log.Error("Failed to read database stats", "err", err)
+			log.Error("Failed to read database stats, err: %s", err)
 			break MetricsLoop
 		}
 		// Find the compaction table, skip the header
@@ -98,7 +98,7 @@ MetricsLoop:
 			for idx, counter := range parts[3:] {
 				value, err := strconv.ParseFloat(strings.TrimSpace(counter), 64)
 				if err != nil {
-					log.Error("failed to compacte entry parsing ", "err", err)
+					log.Error("failed to compacte entry parsing, err: %s", err)
 					break MetricsLoop
 				}
 				compactions[i%2][idx] += value
@@ -112,7 +112,7 @@ MetricsLoop:
 		// Retrieve the write delay statistic
 		writedelay, err := db.db.GetProperty("leveldb.writedelay")
 		if err != nil {
-			log.Error("Failed to read database write delay statistic", "err", err)
+			log.Error("Failed to read database write delay statistic, err: %s", err)
 			break MetricsLoop
 		}
 		var (
@@ -126,7 +126,7 @@ MetricsLoop:
 		}
 		duration, err = time.ParseDuration(delayDuration)
 		if err != nil {
-			log.Error("Failed to parse delay duration", "err", err)
+			log.Error("Failed to parse delay duration, err: %s", err)
 			break MetricsLoop
 		}
 
@@ -148,7 +148,7 @@ MetricsLoop:
 		// any subsequent warnings will be withhold for 1 minute to don't overwhelm the user.
 		if int64(m.metricsWriteDelayMeter.Rate1()) > writeDelayThreshold.Nanoseconds() &&
 			time.Now().After(lastWriteDelay.Add(writeDelayWarningThrottler)) {
-			log.Warn("Write delay duration exceeds the threshold (35% of the time) in the last minute")
+			log.Warn("Write delay duration exceeds the threshold (35%% of the time) in the last minute")
 			lastWriteDelay = time.Now()
 		}
 

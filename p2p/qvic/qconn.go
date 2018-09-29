@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
+// Qvic const
 const (
 	StatusNone       = 0
 	StatusConnecting = 1
@@ -204,7 +205,7 @@ func (qc *QConn) dialTimeout(addr string, timeout time.Duration) error {
 
 	atomic.StoreInt32(&qc.status, StatusConnecting)
 	qc.magic = rand.Uint32()
-	qc.log.Debug("qconn dialTimeout magic=%u", qc.magic)
+	qc.log.Debug("qconn dialTimeout magic=%d", qc.magic)
 	notifyCh := make(chan struct{})
 	qc.wg.Add(1)
 	go qc.recvLoop(notifyCh)
@@ -292,7 +293,7 @@ func (qc *QConn) acceptQConn(magic uint32, from *net.UDPAddr, data []byte) {
 	atomic.StoreInt32(&qc.status, StatusConnected)
 	qc.wg.Add(1)
 	go qc.recvLoop(nil)
-	qc.log.Info("qconn acceptQConn. myfd=%d peerfd=%d magic=%u", qc.myFD, qc.peerFD, qc.magic)
+	qc.log.Info("qconn acceptQConn. myfd=%d peerfd=%d magic=%d", qc.myFD, qc.peerFD, qc.magic)
 }
 
 func (qc *QConn) qvicBind() error {
@@ -329,7 +330,7 @@ func (qc *QConn) Read(b []byte) (readLen int, err error) {
 	var deadLineTicker *time.Timer
 	if needWait.Nanoseconds() > 0 {
 		deadLineTicker = time.NewTimer(needWait)
-		qc.log.Debug("qconn read waittime=needWait %us", needWait.Seconds())
+		qc.log.Debug("qconn read waittime=needWait %f", needWait.Seconds())
 	} else {
 		// set a long enough time, if no readDeadLine is set
 		deadLineTicker = time.NewTimer(24 * time.Hour)
@@ -379,7 +380,7 @@ func (qc *QConn) Write(b []byte) (n int, err error) {
 	}
 	timer := time.NewTicker(200 * time.Microsecond)
 	curPos, needSend := 0, len(b)
-	var errRet error = nil
+	var errRet error
 needQuit:
 	for {
 		select {
@@ -420,6 +421,7 @@ needQuit:
 	return curPos, errRet
 }
 
+// Close the qvic connection
 func (qc *QConn) Close() error {
 	if atomic.LoadInt32(&qc.status) == StatusConnected {
 		qc.sendMsgClose()

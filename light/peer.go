@@ -334,7 +334,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 		curBlock, err := chain.GetStore().GetBlockByHeight(curNum)
 		if err != nil {
-			p.log.Error("Load block error: ", err)
+			p.log.Error("Load block error: %s", err)
 			return err
 		}
 
