@@ -223,6 +223,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, nameFlag),
 				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
 			},
+			cli.Command{
+				Name:   "config",
+				Usage:  "generate sub chain config file",
+				Flags:  rpcFlags(coinbaseFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
+				Action: createSubChainConfigFile,
+			},
 		},
 	}
 
@@ -352,14 +358,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Action: rpcAction("txpool", "getDebtByHash"),
 			},
 		}...)
-
-		// add a command which generates subchain config file
-		subChainCommands.Subcommands = append(subChainCommands.Subcommands, cli.Command{
-			Name:   "config",
-			Usage:  "generate sub chain config file",
-			Flags:  rpcFlags(coinbaseFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
-			Action: createSubChainConfigFile,
-		})
 
 		baseCommands = append(baseCommands,
 			htlcCommands,
