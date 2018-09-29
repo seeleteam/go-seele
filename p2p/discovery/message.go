@@ -106,8 +106,8 @@ func convertToRPCNode(n *Node) *rpcNode {
 	}
 }
 
-func byteToMsgType(byte byte) msgType {
-	return msgType(uint8(byte))
+func byteToMsgType(data byte) msgType {
+	return msgType(data)
 }
 
 func msgTypeToByte(t msgType) byte {
