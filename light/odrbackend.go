@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -26,18 +27,20 @@ type odrBackend struct {
 	lock       sync.Mutex
 	msgCh      chan *p2p.Message
 	quitCh     chan struct{}
-	requestMap map[uint32]chan interface{}
+	requestMap map[uint32]chan odrResponse
 	wg         sync.WaitGroup
 	peers      *peerSet
+	bcStore    store.BlockchainStore // used to validate the retrieved ODR object.
 	log        *log.SeeleLog
 }
 
-func newOdrBackend(log *log.SeeleLog) *odrBackend {
+func newOdrBackend(bcStore store.BlockchainStore) *odrBackend {
 	o := &odrBackend{
 		msgCh:      make(chan *p2p.Message),
-		requestMap: make(map[uint32]chan interface{}),
+		requestMap: make(map[uint32]chan odrResponse),
 		quitCh:     make(chan struct{}),
-		log:        log,
+		bcStore:    bcStore,
+		log:        log.GetLogger("odrBackend"),
 	}
 
 	return o
@@ -70,7 +73,7 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 
 	response := factory()
 	if err := common.Deserialize(msg.Payload, response); err != nil {
-		o.log.Error("Failed to deserialize ODR response, code = %v, error = %v", msg.Code, err.Error())
+		o.log.Error("Failed to deserialize ODR response, code = %s, error = %s", codeToStr(msg.Code), err)
 		return
 	}
 
@@ -83,14 +86,14 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 	}
 }
 
-func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
+func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
 	peerL := o.peers.choosePeers(common.LocalShardNumber)
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}
 	rand2.Seed(time.Now().UnixNano())
 	reqID := rand2.Uint32()
-	ch := make(chan interface{})
+	ch := make(chan odrResponse)
 
 	o.lock.Lock()
 	if o.requestMap[reqID] != nil {
@@ -102,20 +105,21 @@ func (o *odrBackend) getReqInfo() (uint32, chan interface{}, []*peer, error) {
 	return reqID, ch, peerL, nil
 }
 
-func (o *odrBackend) sendRequest(request odrRequest) error {
+// retrieve retrieves the requested ODR object from remote peer.
+func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
 	reqID, ch, peerL, err := o.getReqInfo()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer close(ch)
 
 	request.setRequestID(reqID)
 	code, payload := request.code(), common.SerializePanic(request)
 	for _, p := range peerL {
-		o.log.Debug("peer send request, code = %v, payloadSizeBytes = %v", code, len(payload))
+		o.log.Debug("peer send request, code = %s, payloadSizeBytes = %v", codeToStr(code), len(payload))
 		if err = p2p.SendMessage(p.rw, code, payload); err != nil {
 			o.log.Info("Failed to send message with peer %v", p)
-			return err
+			return nil, err
 		}
 	}
 
@@ -123,16 +127,23 @@ func (o *odrBackend) sendRequest(request odrRequest) error {
 	defer timeout.Stop()
 
 	select {
-	case msg := <-ch:
-		request.handleResponse(msg)
-		return nil
+	case resp := <-ch:
+		if err := resp.getError(); err != nil {
+			return nil, err
+		}
+
+		if err := resp.validate(request, o.bcStore); err != nil {
+			return nil, err
+		}
+
+		return resp, nil
 	case <-o.quitCh:
-		return errServiceQuited
+		return nil, errServiceQuited
 	case <-timeout.C:
 		o.lock.Lock()
 		delete(o.requestMap, reqID)
 		o.lock.Unlock()
-		return fmt.Errorf("wait for msg reqid=%d timeout", reqID)
+		return nil, fmt.Errorf("wait for msg reqid=%d timeout", reqID)
 	}
 }
 

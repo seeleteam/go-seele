@@ -29,6 +29,10 @@ var metricsEnableFlag bool
 var accountsConfig string
 var threads uint
 
+const (
+	lightNode = "light"
+)
+
 // startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -58,13 +62,19 @@ var startCmd = &cobra.Command{
 
 		// Create seele service and register the service
 		slog := log.GetLogger("seele")
+		lightLog := log.GetLogger("seele-light")
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
-		if strings.ToLower(nCfg.BasicConfig.SyncMode) == "light" {
-			lightService, err := light.NewServiceClient(ctx, nCfg, slog)
+		// default is light node
+		if nCfg.BasicConfig.SyncMode == "" {
+			nCfg.BasicConfig.SyncMode = lightNode
+		}
+
+		if strings.ToLower(nCfg.BasicConfig.SyncMode) == lightNode {
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -90,7 +100,7 @@ var startCmd = &cobra.Command{
 
 			seeleService.Miner().SetThreads(threads)
 
-			lightServerService, err := light.NewServiceServer(seeleService, nCfg, slog)
+			lightServerService, err := light.NewServiceServer(seeleService, nCfg, lightLog)
 			if err != nil {
 				fmt.Println("Create light server err. ", err.Error())
 				return

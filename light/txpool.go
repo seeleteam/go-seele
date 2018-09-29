@@ -71,12 +71,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 		return fmt.Errorf("Transaction already exists, hash is %v", tx.Hash.ToHex())
 	}
 
-	request := &odrAddTx{Tx: *tx}
-	if err := pool.odrBackend.sendRequest(request); err != nil {
-		return fmt.Errorf("Failed to send request to peers, %v", err.Error())
-	}
-
-	if err := request.getError(); err != nil {
+	if _, err := pool.odrBackend.retrieve(&odrAddTx{Tx: *tx}); err != nil {
 		return err
 	}
 
@@ -251,23 +246,12 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 
 // getBlock retrieves block of specified block hash via odr backend.
 func (pool *txPool) getBlock(hash common.Hash) (*types.Block, error) {
-	request := &odrBlock{
-		Hash: hash,
-	}
-
-	if err := pool.odrBackend.sendRequest(request); err != nil {
+	response, err := pool.odrBackend.retrieve(&odrBlock{Hash: hash})
+	if err != nil {
 		return nil, err
 	}
 
-	if err := request.getError(); err != nil {
-		return nil, err
-	}
-
-	if err := request.Validate(pool.chain.GetStore()); err != nil {
-		return nil, err
-	}
-
-	return request.Block, nil
+	return response.(*odrBlock).Block, nil
 }
 
 // clearConfirmedBlocks clears the confirmed txs from tx pool.

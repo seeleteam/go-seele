@@ -51,26 +51,18 @@ func (t *odrTrie) Commit(batch database.Batch) common.Hash {
 
 func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	request := &odrTriePoof{
-		Root:  t.root,
-		Key:   key,
-		Proof: make([]proofNode, 0),
+		Root: t.root,
+		Key:  key,
 	}
-
-	var err error
 
 	// send ODR request to get trie proof.
-	if err = t.odr.sendRequest(request); err != nil {
-		// @todo refactor the trie struct to return error for Get method.
-		// In full node, the Get method should return error for any levelDB error.
-		return nil, false
-	}
-
-	if err = request.getError(); err != nil {
+	response, err := t.odr.retrieve(request)
+	if err != nil {
 		return nil, false
 	}
 
 	// insert the trie proof in databse.
-	for _, n := range request.Proof {
+	for _, n := range response.(*odrTriePoof).Proof {
 		t.db.kvs[n.Key] = n.Value
 	}
 

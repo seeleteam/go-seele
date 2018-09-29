@@ -56,14 +56,14 @@ func (api *PrivateMinerAPI) Stop() (bool, error) {
 // SetThreads  API is used to set the number of threads.
 func (api *PrivateMinerAPI) SetThreads(threads uint) (bool, error) {
 	if threads < 0 {
-		return false, errors.New("threads should be greater than zero.")
+		return false, errors.New("threads should be greater than zero")
 	}
 
 	api.s.miner.SetThreads(threads)
 	return true, nil
 }
 
-// GetThreads  API is used to get the number of threads.
+// GetEngineInfo  API is used to get engine information.
 func (api *PrivateMinerAPI) GetEngineInfo() (interface{}, error) {
 	return api.s.miner.GetEngine().GetEngineInfo(), nil
 }

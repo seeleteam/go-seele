@@ -7,6 +7,7 @@ package light
 
 import (
 	"errors"
+	"fmt"
 	rand2 "math/rand"
 	"sync"
 	"time"
@@ -66,6 +67,28 @@ func codeToStr(code uint16) string {
 		return "downloadHeadersRequestCode"
 	case downloadHeadersResponseCode:
 		return "downloadHeadersResponseCode"
+	case blockRequestCode:
+		return "blockRequestCode"
+	case blockResponseCode:
+		return "blockResponseCode"
+	case addTxRequestCode:
+		return "addTxRequestCode"
+	case addTxResponseCode:
+		return "addTxResponseCode"
+	case trieRequestCode:
+		return "trieRequestCode"
+	case trieResponseCode:
+		return "trieResponseCode"
+	case receiptRequestCode:
+		return "receiptRequestCode"
+	case receiptResponseCode:
+		return "receiptResponseCode"
+	case txByHashRequestCode:
+		return "txByHashRequestCode"
+	case txByHashResponseCode:
+		return "txByHashResponseCode"
+	case protocolMsgCodeLength:
+		return "protocolMsgCodeLength"
 	}
 
 	return "unknown"
@@ -352,7 +375,7 @@ handler:
 			if odrResponseFactories[msg.Code] != nil {
 				bNeedDeliverOdr = true
 			} else if err := lp.handleOdrRequest(peer, msg); err != nil {
-				lp.log.Error("Failed to handle ODR message, code = %v, error = %v", msg.Code, err.Error())
+				lp.log.Error("Failed to handle ODR message, code = %s, error = %s", codeToStr(msg.Code), err)
 				break handler
 			}
 		}
@@ -374,13 +397,13 @@ func (lp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
 
 	request := factory()
 	if err := common.Deserialize(msg.Payload, request); err != nil {
-		return err
+		return fmt.Errorf("deserialize request failed with %s", err)
 	}
 
-	lp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", msg.Code, len(msg.Payload))
-	respCode, response := request.handleRequest(lp)
+	lp.log.Debug("begin to handle ODR request, code = %v, payloadLen = %v", codeToStr(msg.Code), len(msg.Payload))
+	respCode, response := request.handle(lp)
 	buff := common.SerializePanic(response)
-	lp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", respCode, len(buff), peer.peerStrID)
+	lp.log.Debug("peer send response, code = %v, payloadSizeBytes = %v, peerID = %v", codeToStr(respCode), len(buff), peer.peerStrID)
 
 	return p2p.SendMessage(peer.rw, respCode, buff)
 }

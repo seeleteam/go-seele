@@ -6,88 +6,113 @@
 package light
 
 import (
+	"bytes"
+
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/trie"
 )
 
 // ODR object to send tx.
 type odrAddTx struct {
-	odrItem
+	OdrItem
 	Tx types.Transaction
 }
 
-func (req *odrAddTx) code() uint16 {
+func (odr *odrAddTx) code() uint16 {
 	return addTxRequestCode
 }
 
-func (req *odrAddTx) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
-	if err := lp.txPool.AddTransaction(&req.Tx); err != nil {
-		req.Error = err.Error()
+func (odr *odrAddTx) handle(lp *LightProtocol) (uint16, odrResponse) {
+	if err := lp.txPool.AddTransaction(&odr.Tx); err != nil {
+		odr.Error = err.Error()
 	}
 
-	return addTxResponseCode, req
+	return addTxResponseCode, odr
 }
 
-func (req *odrAddTx) handleResponse(resp interface{}) {
-	if data, ok := resp.(*odrAddTx); ok {
-		req.Error = data.Error
-	}
+func (odr *odrAddTx) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	return nil
 }
 
 // ODR object to get transaction by hash.
-type odrTxByHash struct {
-	odrItem
-	TxHash     common.Hash
-	Tx         *types.Transaction
-	Debt       *types.Debt
-	BlockIndex *api.BlockIndex
+type odrTxByHashRequest struct {
+	OdrItem
+	TxHash common.Hash
 }
 
-func (req *odrTxByHash) code() uint16 {
-	return addTxRequestCode
+type odrTxByHashResponse struct {
+	OdrItem
+	Tx         *types.Transaction `rlp:"nil"`
+	BlockIndex *api.BlockIndex    `rlp:"nil"`
+	Proof      []proofNode
 }
 
-func (req *odrTxByHash) handleRequest(lp *LightProtocol) (uint16, odrResponse) {
+func (req *odrTxByHashRequest) code() uint16 {
+	return txByHashRequestCode
+}
+
+func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	var err error
-	req.Tx, req.BlockIndex, req.Debt, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
+	var result odrTxByHashResponse
+	result.Tx, result.BlockIndex, err = api.GetTransaction(lp.txPool, lp.chain.GetStore(), req.TxHash)
+	result.ReqID = req.ReqID
+
 	if err != nil {
 		req.Error = err.Error()
 	}
 
-	return txByHashResponseCode, req
+	if result.Tx != nil && result.BlockIndex != nil && !result.BlockIndex.BlockHash.IsEmpty() {
+		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
+		if err != nil {
+			req.Error = err.Error()
+		}
+
+		txTrie := types.GetTxTrie(block.Transactions)
+		proof, err := txTrie.GetProof(req.TxHash.Bytes())
+		if err != nil {
+			req.Error = err.Error()
+		}
+
+		result.Proof = mapToArray(proof)
+	}
+
+	return txByHashResponseCode, &result
 }
 
-func (req *odrTxByHash) handleResponse(resp interface{}) {
-	data, ok := resp.(*odrTxByHash)
-	if !ok {
-		return
-	}
-
-	req.Tx = data.Tx
-	req.Debt = data.Debt
-	req.BlockIndex = data.BlockIndex
-
-	if len(req.Error) > 0 {
-		return
-	}
-
-	if err := req.validate(); err != nil {
-		req.Error = err.Error()
-	}
-}
-
-func (req *odrTxByHash) validate() error {
-	if req.Tx == nil {
+func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	if response.Tx == nil {
 		return nil
 	}
 
-	if err := req.Tx.ValidateWithoutState(true, false); err != nil {
+	txHash := request.(*odrTxByHashRequest).TxHash
+	if !txHash.Equal(response.Tx.Hash) {
+		return types.ErrHashMismatch
+	}
+
+	if err := response.Tx.ValidateWithoutState(true, false); err != nil {
 		return err
 	}
 
-	if !req.TxHash.Equal(req.Tx.Hash) {
-		return types.ErrHashMismatch
+	// validate the tx trie proof if stored in blockchain already.
+	if response.BlockIndex != nil {
+		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
+		if err != nil {
+			return err
+		}
+
+		proof := arrayToMap(response.Proof)
+		value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
+		if err != nil {
+			return err
+		}
+
+		buff := common.SerializePanic(response.Tx)
+		if !bytes.Equal(buff, value) {
+			return errTransactionVerifyFailed
+		}
 	}
 
 	return nil

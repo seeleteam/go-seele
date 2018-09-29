@@ -206,3 +206,21 @@ func Test_Call(t *testing.T) {
 	result, err = api.Call(contractAddress.ToHex(), "payload", -1)
 	assert.Equal(t, err == nil, false)
 }
+
+func Test_GetInfo(t *testing.T) {
+	dbPath := filepath.Join(common.GetTempFolder(), ".GetLogs")
+	api := newTestAPI(t, dbPath)
+	defer func() {
+		api.s.Stop()
+		os.RemoveAll(dbPath)
+	}()
+
+	info, err := api.GetInfo()
+	assert.Nil(t, err)
+	assert.NotNil(t, info)
+	assert.NotNil(t, info.Coinbase)
+	assert.Equal(t, info.CurrentBlockHeight, uint64(0))
+	assert.Equal(t, info.Shard, uint(0))
+	assert.Equal(t, info.MinerStatus, "Stopped")
+	assert.Equal(t, info.HeaderHash.ToHex(), "0x55645b42f6c3bc19687d7b17d159c695ce9116660332a93b30326bda44e1be2c")
+}

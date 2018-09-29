@@ -18,7 +18,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
-	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +28,7 @@ func newTestBlockchainDatabase(db database.Database) store.BlockchainStore {
 func newTestLightChain() (*LightChain, func(), error) {
 	db, dispose := leveldb.NewTestDatabase()
 	bcStore := newTestBlockchainDatabase(db)
-	backend := newOdrBackend(log.GetLogger("LightChain"))
+	backend := newOdrBackend(bcStore)
 
 	// put genesis block
 	header := newTestBlockHeader()
@@ -73,7 +72,7 @@ func Test_LightChain_NewLightChain(t *testing.T) {
 	defer dispose()
 
 	bcStore := newTestBlockchainDatabase(db)
-	backend := newOdrBackend(log.GetLogger("LightChain"))
+	backend := newOdrBackend(bcStore)
 
 	// no block in bcStore
 	lc, err := newLightChain(bcStore, db, backend, pow.NewEngine(1))
