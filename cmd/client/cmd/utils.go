@@ -84,8 +84,7 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 // NewApp generate default app
 func NewApp(isFullNode bool) *cli.App {
 	app := cli.NewApp()
-	app.Name = "full node client"
-	app.Usage = "interact with full node process"
+	app.Usage = addUsage(isFullNode)
 	app.HideVersion = true
 	app.Authors = []cli.Author{
 		cli.Author{
@@ -96,4 +95,12 @@ func NewApp(isFullNode bool) *cli.App {
 
 	AddCommands(app, isFullNode)
 	return app
+}
+
+func addUsage(isFullNode bool) string {
+	if isFullNode {
+		return "interact with a full node process"
+	}
+
+	return "interact with a light node process"
 }
