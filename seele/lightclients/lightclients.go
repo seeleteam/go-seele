@@ -19,24 +19,24 @@ import (
 )
 
 var (
-	errWrongShardDebt = errors.New("wrong debt with and invalid shard")
-	errNotMatchedTx   = errors.New("get transaction not matched with request debt")
+	errWrongShardDebt = errors.New("wrong debt with invalid shard")
+	errNotMatchedTx   = errors.New("transaction mismatch with request debt")
 )
 
-// LightClientsManager manager other shards light client and provider service for debt validation
+// LightClientsManager manages light clients of other shards and provides services for debt validation.
 type LightClientsManager struct {
 	lightClients        []*light.ServiceClient
 	lightClientsBackend []*light.LightBackend
 
-	targetShard uint
+	localShard uint
 }
 
-// NewLightClientManager
+// NewLightClientManager create a new LightClientManager instance.
 func NewLightClientManager(targetShard uint, context context.Context, config *node.Config) (*LightClientsManager, error) {
 	clients := make([]*light.ServiceClient, common.ShardCount+1)
 	backends := make([]*light.LightBackend, common.ShardCount+1)
 
-	copyConf := node.GetCopyConfig(config)
+	copyConf := config.Clone()
 	copyConf.BasicConfig.SyncMode = common.LightSyncMode
 
 	var err error
@@ -59,13 +59,13 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 	return &LightClientsManager{
 		lightClients:        clients,
 		lightClientsBackend: backends,
-		targetShard:         targetShard,
+		localShard:          targetShard,
 	}, nil
 }
 
 // ValidateDebt validate debt
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error) {
-	if debt.Data.Shard == 0 || debt.Data.Shard == manager.targetShard {
+	if debt.Data.Shard == 0 || debt.Data.Shard == manager.localShard {
 		return false, errWrongShardDebt
 	}
 

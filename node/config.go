@@ -89,7 +89,7 @@ type SeeleConfig struct {
 	GenesisConfig core.GenesisInfo
 }
 
-func GetCopyConfig(conf *Config) *Config {
+func (conf *Config) Clone() *Config {
 	var metric *metrics.Config
 	if conf.MetricsConfig != nil {
 		temp := *conf.MetricsConfig

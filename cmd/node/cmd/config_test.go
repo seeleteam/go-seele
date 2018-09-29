@@ -49,7 +49,7 @@ func Test_LoadConfigFromFile(t *testing.T) {
 
 func Test_CopyConfig(t *testing.T) {
 	config := getConfig(t)
-	copied := node.GetCopyConfig(config)
+	copied := config.Clone()
 
 	assert.Equal(t, config.BasicConfig.SyncMode, common.ServerSyncMode)
 	copied.BasicConfig.SyncMode = common.LightSyncMode

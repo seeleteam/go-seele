@@ -99,19 +99,19 @@ func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
-	// 1. Check node status
+	// Check node status
 	if n.server != nil {
 		return ErrNodeRunning
 	}
 
-	// 3. Start p2p server
+	// Start p2p server
 	p2pServer, err := n.startP2PServer()
 	if err != nil {
 		return err
 	}
 	n.server = p2pServer
 
-	// 4. Start services
+	// Start services
 	for _, service := range n.services {
 		if err := service.Start(p2pServer); err != nil {
 			n.log.Error("got error when start service %s", err)
@@ -121,7 +121,7 @@ func (n *Node) Start() error {
 		}
 	}
 
-	// 5. Start RPC server
+	// Start RPC server
 	if err := n.startRPC(n.services); err != nil {
 		n.log.Error("got error when start rpc %s", err)
 		n.stopAllServices()
