@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/log/comm"
@@ -20,6 +21,7 @@ import (
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
+	"github.com/seeleteam/go-seele/seele/lightclients"
 	"github.com/spf13/cobra"
 )
 
@@ -28,10 +30,6 @@ var miner string
 var metricsEnableFlag bool
 var accountsConfig string
 var threads uint
-
-const (
-	lightNode = "light"
-)
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -70,11 +68,11 @@ var startCmd = &cobra.Command{
 
 		// default is light node
 		if nCfg.BasicConfig.SyncMode == "" {
-			nCfg.BasicConfig.SyncMode = lightNode
+			nCfg.BasicConfig.SyncMode = common.LightSyncMode
 		}
 
-		if strings.ToLower(nCfg.BasicConfig.SyncMode) == lightNode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog)
+		if strings.ToLower(nCfg.BasicConfig.SyncMode) == common.LightSyncMode {
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -113,7 +111,15 @@ var startCmd = &cobra.Command{
 				return
 			}
 
-			services := []node.Service{seeleService, monitorService, lightServerService}
+			// light client manager
+			manager, err := lightclients.NewLightClientManager(common.LocalShardNumber, ctx, nCfg)
+			if err != nil {
+				fmt.Printf("create light client manager failed. %s", err)
+				return
+			}
+
+			services := manager.GetServices()
+			services = append(services, seeleService, monitorService, lightServerService)
 			for _, service := range services {
 				if err := seeleNode.Register(service); err != nil {
 					fmt.Println(err.Error())

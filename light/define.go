@@ -20,9 +20,6 @@ const (
 	// LightSeeleVersion version number of Seele protocol
 	LightSeeleVersion uint = 1
 
-	// BlockChainDir lightchain data directory based on config.DataRoot
-	BlockChainDir = "/db/lightchain"
-
 	// MaxBlockHashRequest maximum hashes to request per message
 	MaxBlockHashRequest uint64 = 1024
 

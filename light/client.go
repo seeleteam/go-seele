@@ -18,7 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -37,7 +37,7 @@ type ServiceClient struct {
 }
 
 // NewServiceClient create ServiceClient
-func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *ServiceClient, err error) {
+func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog, dbFolder string) (s *ServiceClient, err error) {
 	s = &ServiceClient{
 		log:        log,
 		networkID:  conf.P2PConfig.NetworkID,
@@ -46,7 +46,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog)
 
 	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
 	// Initialize blockchain DB.
-	chainDBPath := filepath.Join(serviceContext.DataDir, BlockChainDir)
+	chainDBPath := filepath.Join(serviceContext.DataDir, dbFolder)
 	log.Info("NewServiceClient BlockChain datadir is %s", chainDBPath)
 	s.lightDB, err = leveldb.NewLevelDB(chainDBPath)
 	if err != nil {

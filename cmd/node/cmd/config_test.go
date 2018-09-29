@@ -5,10 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/node"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_LoadConfigFromFile(t *testing.T) {
+func getConfig(t *testing.T) *node.Config {
 	configFileName := "/testConfig/nodeConfigTest.json"
 	currentProjectPath, err := os.Getwd()
 	assert.Equal(t, err, nil, "1")
@@ -16,8 +18,14 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	accountFilePath := filepath.Join(currentProjectPath, "/testConfig/accounts.json")
 
 	config, err := LoadConfigFromFile(configFilePath, accountFilePath)
+	assert.Nil(t, err)
 
-	assert.Equal(t, err, nil, "2")
+	return config
+}
+
+func Test_LoadConfigFromFile(t *testing.T) {
+	config := getConfig(t)
+
 	assert.Equal(t, config.BasicConfig.Name, "seele node2", "3")
 	assert.Equal(t, config.BasicConfig.Version, "1.0", "4")
 	assert.Equal(t, config.BasicConfig.RPCAddr, "0.0.0.0:55028", "5")
@@ -37,4 +45,17 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	assert.Equal(t, len(config.SeeleConfig.GenesisConfig.Accounts), 2, "14")
 	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, int64(22), "15")
 	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12), "16")
+}
+
+func Test_CopyConfig(t *testing.T) {
+	config := getConfig(t)
+	copied := config.Clone()
+
+	assert.Equal(t, config.BasicConfig.SyncMode, common.ServerSyncMode)
+	copied.BasicConfig.SyncMode = common.LightSyncMode
+	assert.Equal(t, copied.BasicConfig.SyncMode, common.LightSyncMode)
+
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12))
+	copied.SeeleConfig.GenesisConfig.ShardNumber = uint(2)
+	assert.Equal(t, copied.SeeleConfig.GenesisConfig.ShardNumber, uint(2))
 }

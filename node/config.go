@@ -88,3 +88,13 @@ type SeeleConfig struct {
 
 	GenesisConfig core.GenesisInfo
 }
+
+func (conf *Config) Clone() *Config {
+	cloned := *conf
+	if conf.MetricsConfig != nil {
+		temp := *conf.MetricsConfig
+		cloned.MetricsConfig = &temp
+	}
+
+	return &cloned
+}

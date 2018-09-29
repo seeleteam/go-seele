@@ -7,7 +7,7 @@ package node
 
 import (
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // Service represents a service which is registered to the node after the node starts.
