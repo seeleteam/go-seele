@@ -22,13 +22,14 @@ import (
 
 // LightChain represents a canonical chain that by default only handles block headers.
 type LightChain struct {
-	mutex         sync.RWMutex
-	bcStore       store.BlockchainStore
-	odrBackend    *odrBackend
-	engine        consensus.Engine
-	currentHeader *types.BlockHeader
-	canonicalTD   *big.Int
-	log           *log.SeeleLog
+	mutex                     sync.RWMutex
+	bcStore                   store.BlockchainStore
+	odrBackend                *odrBackend
+	engine                    consensus.Engine
+	currentHeader             *types.BlockHeader
+	canonicalTD               *big.Int
+	headerChangedEventManager *event.EventManager
+	log                       *log.SeeleLog
 }
 
 func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odrBackend *odrBackend, engine consensus.Engine) (*LightChain, error) {
@@ -36,7 +37,8 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 		bcStore:    bcStore,
 		odrBackend: odrBackend,
 		engine:     engine,
-		log:        log.GetLogger("LightChain"),
+		headerChangedEventManager: event.NewEventManager(),
+		log: log.GetLogger("LightChain"),
 	}
 
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
@@ -67,16 +69,7 @@ func (lc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
 
 // CurrentHeader returns the HEAD block header of the blockchain.
 func (lc *LightChain) CurrentHeader() *types.BlockHeader {
-	hash, err := lc.bcStore.GetHeadBlockHash()
-	if err != nil {
-		return nil
-	}
-
-	header, err := lc.bcStore.GetBlockHeader(hash)
-	if err != nil {
-		return nil
-	}
-	return header
+	return lc.currentHeader
 }
 
 // GetStore get underlying store
@@ -120,7 +113,7 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 	lc.canonicalTD = currentTd
 	lc.currentHeader = header
 
-	event.ChainHeaderChangedEventMananger.Fire(header)
+	lc.headerChangedEventManager.Fire(header)
 
 	return nil
 }

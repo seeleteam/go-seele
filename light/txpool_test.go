@@ -10,13 +10,14 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_TxPool_NewTxPool(t *testing.T) {
 	chain := &TestBlockChain{}
 	ob := newOdrBackend(chain.GetStore())
-	txPool := newTxPool(chain, ob)
+	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 
 	assert.NotNil(t, txPool)
@@ -32,7 +33,7 @@ func Test_TxPool_NewTxPool(t *testing.T) {
 func Test_TxPool_AddTransaction(t *testing.T) {
 	chain := &TestBlockChain{}
 	ob := newOdrBackend(chain.GetStore())
-	txPool := newTxPool(chain, ob)
+	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 
 	// case 1: tx is nil
@@ -49,7 +50,7 @@ func Test_TxPool_AddTransaction(t *testing.T) {
 func Test_TxPool_GetTransactions(t *testing.T) {
 	chain := &TestBlockChain{}
 	ob := newOdrBackend(chain.GetStore())
-	txPool := newTxPool(chain, ob)
+	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 
 	pooledTx := txPool.GetTransaction(common.EmptyHash)
