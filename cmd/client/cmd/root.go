@@ -275,7 +275,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Name:   "getengineinfo",
 				Usage:  "get miner engine information",
 				Flags:  rpcFlags(),
-				Action: rpcAction("miner", "GetEngineInfo"),
+				Action: rpcAction("miner", "getEngineInfo"),
 			},
 			{
 				Name:   "setthreads",
