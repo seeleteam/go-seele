@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -78,4 +79,21 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	info.Payload = payload
 
 	return info, nil
+}
+
+// NewApp generate default app
+func NewApp(isFullNode bool) *cli.App {
+	app := cli.NewApp()
+	app.Name = "full node client"
+	app.Usage = "interact with full node process"
+	app.HideVersion = true
+	app.Authors = []cli.Author{
+		cli.Author{
+			Name:  "seeleteam",
+			Email: "dev@seelenet.com",
+		},
+	}
+
+	AddCommands(app, isFullNode)
+	return app
 }

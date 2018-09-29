@@ -9,7 +9,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"strings"
 
+	"github.com/seeleteam/go-seele/accounts/abi"
+	"github.com/seeleteam/go-seele/accounts/abi/bind"
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -119,4 +123,49 @@ func GenerateKeyAction(c *cli.Context) error {
 	fmt.Printf("public key:  %s\n", publicKey.ToHex())
 	fmt.Printf("private key: %s\n", hexutil.BytesToHex(crypto.FromECDSA(privateKey)))
 	return nil
+}
+
+// GeneratePayloadAction is a action to generate the payload according to the abi string and method name and args
+func GeneratePayloadAction(c *cli.Context) error {
+	if abiFile == "" || methodName == "" {
+		return fmt.Errorf("required flag(s) \"abi, method\" not set")
+	}
+
+	if !common.FileOrFolderExists(abiFile) {
+		fmt.Println("The specified abi file does not exist,", abiFile)
+		return nil
+	}
+
+	bytes, err := ioutil.ReadFile(abiFile)
+	if err != nil {
+		fmt.Println("failed to read abi file,", err)
+		return nil
+	}
+
+	payload, err := generatePayload(string(bytes), methodName, c.StringSlice("args"))
+	if err != nil {
+		return fmt.Errorf("failed to parse the abi, err:%s", err)
+	}
+
+	fmt.Printf("payload:  %s\n", hexutil.BytesToHex(payload))
+	return nil
+}
+
+func generatePayload(abiStr, methodName string, args []string) ([]byte, error) {
+	parsed, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the abi, err:%s", err)
+	}
+
+	method, exist := parsed.Methods[methodName]
+	if !exist {
+		return nil, fmt.Errorf("method '%s' not found", methodName)
+	}
+
+	ss, err := bind.ParseArgs(method.Inputs, args)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsed.Pack(methodName, ss...)
 }
