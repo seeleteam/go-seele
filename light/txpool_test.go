@@ -10,14 +10,12 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_TxPool_NewTxPool(t *testing.T) {
 	chain := &TestBlockChain{}
-	log := log.GetLogger("LightChain")
-	ob := newOdrBackend(log)
+	ob := newOdrBackend(chain.GetStore())
 	txPool := newTxPool(chain, ob)
 	defer txPool.stop()
 
@@ -33,8 +31,7 @@ func Test_TxPool_NewTxPool(t *testing.T) {
 
 func Test_TxPool_AddTransaction(t *testing.T) {
 	chain := &TestBlockChain{}
-	log := log.GetLogger("LightChain")
-	ob := newOdrBackend(log)
+	ob := newOdrBackend(chain.GetStore())
 	txPool := newTxPool(chain, ob)
 	defer txPool.stop()
 
@@ -51,8 +48,7 @@ func Test_TxPool_AddTransaction(t *testing.T) {
 
 func Test_TxPool_GetTransactions(t *testing.T) {
 	chain := &TestBlockChain{}
-	log := log.GetLogger("LightChain")
-	ob := newOdrBackend(log)
+	ob := newOdrBackend(chain.GetStore())
 	txPool := newTxPool(chain, ob)
 	defer txPool.stop()
 
