@@ -24,17 +24,21 @@ func (db *odrDatabase) Get(key []byte) ([]byte, error) {
 	return db.kvs[string(key)], nil
 }
 
+type odrRetriever interface {
+	retrieve(request odrRequest) (odrResponse, error)
+}
+
 type odrTrie struct {
-	odr      *odrBackend
+	odr      odrRetriever
 	root     common.Hash
 	db       *odrDatabase
 	dbPrefix []byte
 	trie     *trie.Trie
 }
 
-func newOdrTrie(odr *odrBackend, root common.Hash, dbPrefix []byte) *odrTrie {
+func newOdrTrie(retriever odrRetriever, root common.Hash, dbPrefix []byte) *odrTrie {
 	return &odrTrie{
-		odr:      odr,
+		odr:      retriever,
 		root:     root,
 		db:       newOdrDatabase(),
 		dbPrefix: dbPrefix,
@@ -63,7 +67,8 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 
 	// insert the trie proof in databse.
 	for _, n := range response.(*odrTriePoof).Proof {
-		t.db.kvs[n.Key] = n.Value
+		key := append(t.dbPrefix, []byte(n.Key)...)
+		t.db.kvs[string(key)] = n.Value
 	}
 
 	// construct the MPT for the first time.

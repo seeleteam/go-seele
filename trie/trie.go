@@ -52,13 +52,9 @@ func (t *Trie) ShallowCopy() (*Trie, error) {
 // param dbprefix will be used as prefix of hash key to save db.
 // because we save all of trie trees in the same db,dbprefix protects key/values for different trees
 func NewTrie(root common.Hash, dbprefix []byte, db Database) (*Trie, error) {
-	trie := &Trie{
-		db:       db,
-		dbprefix: dbprefix,
-		sha:      sha3.NewKeccak256(),
-	}
+	trie := NewEmptyTrie(dbprefix, db)
 
-	if root != common.EmptyHash {
+	if !root.IsEmpty() {
 		rootnode, err := trie.loadNode(root.Bytes())
 		if err != nil {
 			return nil, err
@@ -67,6 +63,15 @@ func NewTrie(root common.Hash, dbprefix []byte, db Database) (*Trie, error) {
 	}
 
 	return trie, nil
+}
+
+// NewEmptyTrie creates an empty trie tree.
+func NewEmptyTrie(dbprefix []byte, db Database) *Trie {
+	return &Trie{
+		db:       db,
+		dbprefix: dbprefix,
+		sha:      sha3.NewKeccak256(),
+	}
 }
 
 // Put add or update [key,value] in the trie
