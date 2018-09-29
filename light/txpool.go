@@ -26,28 +26,30 @@ type minedBlock struct {
 }
 
 type txPool struct {
-	mutex         sync.RWMutex
-	chain         BlockChain
-	odrBackend    *odrBackend
-	pendingTxs    map[common.Hash]*types.Transaction // txs that not mined yet.
-	minedBlocks   map[common.Hash]*minedBlock        // blocks that already mined.
-	headerCh      chan *types.BlockHeader            // channel to receive new header in canonical chain.
-	currentHeader *types.BlockHeader                 // current HEAD header in canonical chain.
-	log           *log.SeeleLog
+	mutex                     sync.RWMutex
+	chain                     BlockChain
+	odrBackend                *odrBackend
+	pendingTxs                map[common.Hash]*types.Transaction // txs that not mined yet.
+	minedBlocks               map[common.Hash]*minedBlock        // blocks that already mined.
+	headerCh                  chan *types.BlockHeader            // channel to receive new header in canonical chain.
+	currentHeader             *types.BlockHeader                 // current HEAD header in canonical chain.
+	headerChangedEventManager *event.EventManager
+	log                       *log.SeeleLog
 }
 
-func newTxPool(chain BlockChain, odrBackend *odrBackend) *txPool {
+func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManager *event.EventManager) *txPool {
 	pool := &txPool{
-		chain:         chain,
-		odrBackend:    odrBackend,
-		pendingTxs:    make(map[common.Hash]*types.Transaction),
-		minedBlocks:   make(map[common.Hash]*minedBlock),
-		headerCh:      make(chan *types.BlockHeader, headerChanBufSize),
-		currentHeader: chain.CurrentHeader(),
-		log:           log.GetLogger("lightTxPool"),
+		chain:                     chain,
+		odrBackend:                odrBackend,
+		pendingTxs:                make(map[common.Hash]*types.Transaction),
+		minedBlocks:               make(map[common.Hash]*minedBlock),
+		headerCh:                  make(chan *types.BlockHeader, headerChanBufSize),
+		currentHeader:             chain.CurrentHeader(),
+		headerChangedEventManager: headerChangedEventManager,
+		log: log.GetLogger("lightTxPool"),
 	}
 
-	event.ChainHeaderChangedEventMananger.AddAsyncListener(pool.onBlockHeaderChanged)
+	headerChangedEventManager.AddAsyncListener(pool.onBlockHeaderChanged)
 
 	go pool.eventLoop()
 
@@ -117,13 +119,12 @@ func (pool *txPool) GetPendingTxCount() int {
 }
 
 func (pool *txPool) stop() {
-	event.ChainHeaderChangedEventMananger.RemoveListener(pool.onBlockHeaderChanged)
+	pool.headerChangedEventManager.RemoveListener(pool.onBlockHeaderChanged)
 	close(pool.headerCh)
 }
 
 func (pool *txPool) onBlockHeaderChanged(e event.Event) {
-	// @todo event.Event is common.Hash, not *types.BlockHeader
-	//pool.headerCh <- e.(*types.BlockHeader)
+	pool.headerCh <- e.(*types.BlockHeader)
 }
 
 func (pool *txPool) eventLoop() {
