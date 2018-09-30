@@ -6,12 +6,15 @@
 package types
 
 import (
+	"errors"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
 )
 
 var emptyReceiptRootHash = crypto.MustHash("empty receipt root hash")
+var ErrReceiptRootHash = errors.New("receipt root hash mismatch")
 
 // Receipt represents the transaction processing receipt.
 type Receipt struct {

@@ -76,8 +76,8 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 	if err != nil {
 		return nil, err
 	}
-
-	return response.(*odrReceipt).Receipt, nil
+	result := response.(*odrReceipt)
+	return result.Receipts[result.Index], nil
 }
 
 // GetTransaction gets tx, block index and its debt by tx hash

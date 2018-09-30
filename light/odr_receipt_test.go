@@ -12,18 +12,40 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-func newTestReceipt() *types.Receipt {
-	receipt := types.Receipt{
-		Result:          []byte("test"),
-		Failed:          false,
-		UsedGas:         uint64(0),
-		PostState:       common.EmptyHash,
-		Logs:            []*types.Log{},
-		TxHash:          common.EmptyHash,
-		ContractAddress: []byte("test"),
-		TotalFee:        uint64(0),
+func newTestReceipt() []*types.Receipt {
+	receipts := []*types.Receipt{
+		{
+			Result:          []byte("test1"),
+			Failed:          false,
+			UsedGas:         uint64(0),
+			PostState:       common.EmptyHash,
+			Logs:            []*types.Log{},
+			TxHash:          common.EmptyHash,
+			ContractAddress: []byte("test1"),
+			TotalFee:        uint64(0),
+		},
+		{
+			Result:          []byte("test2"),
+			Failed:          false,
+			UsedGas:         uint64(0),
+			PostState:       common.EmptyHash,
+			Logs:            []*types.Log{},
+			TxHash:          common.EmptyHash,
+			ContractAddress: []byte("test2"),
+			TotalFee:        uint64(0),
+		},
+		{
+			Result:          []byte("test3"),
+			Failed:          false,
+			UsedGas:         uint64(0),
+			PostState:       common.EmptyHash,
+			Logs:            []*types.Log{},
+			TxHash:          common.EmptyHash,
+			ContractAddress: []byte("test3"),
+			TotalFee:        uint64(0),
+		},
 	}
-	return &receipt
+	return receipts
 }
 
 func Test_OdrReceipt_Serializable(t *testing.T) {
@@ -45,7 +67,7 @@ func Test_OdrReceipt_Serializable(t *testing.T) {
 			Error: "hello",
 		},
 		TxHash:  common.StringToHash("tx hash"),
-		Receipt: newTestReceipt(),
+		Receipts: newTestReceipt(),
 	}
 
 	assertSerializable(t, &request, &odrReceipt{})
