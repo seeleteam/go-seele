@@ -63,7 +63,7 @@ func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64
 		}
 
 		for _, d := range debts {
-			err := ApplyDebt(statedb, d, minerAccount.addr)
+			err := ApplyDebt(statedb, d, minerAccount.addr, nil)
 			if err != nil {
 				panic(err)
 			}

@@ -30,6 +30,10 @@ type Debt struct {
 	Data DebtData
 }
 
+type DebtVerifier interface {
+	ValidateDebt(debt *Debt) (bool, error)
+}
+
 type DebtIndex indexInBlock
 
 // DebtMerkleRootHash calculates and returns the merkle root hash of the specified debts.

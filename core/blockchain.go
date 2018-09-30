@@ -89,7 +89,8 @@ type Blockchain struct {
 	currentBlock *types.Block
 	log          *log.SeeleLog
 
-	rp *recoveryPoint // used to recover blockchain in case of program crashed when write a block
+	rp           *recoveryPoint // used to recover blockchain in case of program crashed when write a block
+	debtVerifier types.DebtVerifier
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
@@ -151,6 +152,10 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc.blockLeaves.Add(blockIndex)
 
 	return bc, nil
+}
+
+func (bc *Blockchain) SetDebtVerifier(verifier types.DebtVerifier) {
+	bc.debtVerifier = verifier
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
@@ -418,7 +423,7 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 
 	// update debts
 	for _, d := range block.Debts {
-		err = ApplyDebt(statedb, d, block.Header.Creator)
+		err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -534,10 +539,18 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	return receipt, nil
 }
 
-func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address) error {
+func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) error {
 	data := statedb.GetData(d.Data.Account, d.Hash)
 	if bytes.Equal(data, DebtDataFlag) {
 		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
+	}
+
+	// validate debt, skip validation when verifier is nil for test
+	if verifier != nil {
+		ok, err := verifier.ValidateDebt(d)
+		if !ok || err != nil {
+			return fmt.Errorf("validate debt failed, error: %s", err)
+		}
 	}
 
 	if !statedb.Exist(d.Data.Account) {

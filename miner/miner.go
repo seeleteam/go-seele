@@ -59,10 +59,12 @@ type Miner struct {
 
 	coinbase common.Address
 	engine   consensus.Engine
+
+	debtVerifier types.DebtVerifier
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifier) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
@@ -73,6 +75,7 @@ func NewMiner(addr common.Address, seele SeeleBackend) *Miner {
 		log:                  log.GetLogger("miner"),
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
+		debtVerifier:         verifier,
 	}
 
 	miner.engine = pow.NewEngine(1)
@@ -285,9 +288,10 @@ func (miner *Miner) prepareNewBlock() error {
 	miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
 
 	miner.current = &Task{
-		header:    header,
-		createdAt: time.Now(),
-		coinbase:  miner.coinbase,
+		header:       header,
+		createdAt:    time.Now(),
+		coinbase:     miner.coinbase,
+		debtVerifier: miner.debtVerifier,
 	}
 
 	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)

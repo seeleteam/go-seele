@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/event"
@@ -47,6 +48,8 @@ type SeeleService struct {
 
 	lastHeader               common.Hash
 	chainHeaderChangeChannel chan common.Hash
+
+	debtVerifier types.DebtVerifier
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -97,7 +100,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s)
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier)
 
 	// initialize and validate genesis
 	if err = s.initGenesisAndChain(&serviceContext, conf); err != nil {
@@ -115,6 +118,10 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 	}
 
 	return s, nil
+}
+
+func (s *SeeleService) SetDebtVerifier(verifier types.DebtVerifier) {
+	s.debtVerifier = verifier
 }
 
 func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) (err error) {
@@ -158,6 +165,8 @@ func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf 
 		s.log.Error("failed to init chain in NewSeeleService. %s", err)
 		return err
 	}
+
+	s.chain.SetDebtVerifier(s.debtVerifier)
 
 	return nil
 }

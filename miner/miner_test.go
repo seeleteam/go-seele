@@ -77,7 +77,7 @@ func Test_Start(t *testing.T) {
 }
 
 func createMiner() *Miner {
-	return NewMiner(defaultMinerAddr, seele)
+	return NewMiner(defaultMinerAddr, seele, nil)
 }
 
 func checkMinerMembers(miner *Miner, addr common.Address, seele SeeleBackend, t *testing.T) {
