@@ -33,6 +33,7 @@ func (odr *odrReceiptRequest) code() uint16 {
 func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	var result odrReceiptResponse
 	txIndex, err := lp.chain.GetStore().GetTxIndex(odr.TxHash)
+	result.ReqID = odr.ReqID
 	if err != nil {
 		result.Error = err.Error()
 		return receiptResponseCode, &result
