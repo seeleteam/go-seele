@@ -22,6 +22,7 @@ type odrReceiptRequest struct {
 type odrReceiptResponse struct {
 	OdrItem
 	ReceiptIndex *types.ReceiptIndex `rlp:"nil"`
+	//@todo check if need the Receipt
 	Receipt      *types.Receipt      `rlp:"nil"`
 	Proof        []proofNode
 }
