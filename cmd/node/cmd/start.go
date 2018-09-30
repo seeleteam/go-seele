@@ -118,6 +118,8 @@ var startCmd = &cobra.Command{
 				return
 			}
 
+			seeleService.SetDebtVerifier(manager)
+
 			services := manager.GetServices()
 			services = append(services, seeleService, monitorService, lightServerService)
 			for _, service := range services {
