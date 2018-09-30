@@ -72,11 +72,11 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 
 // GetReceiptByTxHash gets block's receipt by block hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
-	response, err := l.s.odrBackend.retrieve(&odrReceipt{TxHash: hash})
+	response, err := l.s.odrBackend.retrieve(&odrReceiptRequest{TxHash: hash})
 	if err != nil {
 		return nil, err
 	}
-	result := response.(*odrReceipt)
+	result := response.(*odrReceiptResponse)
 	return result.Receipts[result.Index], nil
 }
 

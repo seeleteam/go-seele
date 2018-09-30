@@ -13,9 +13,13 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
-type odrReceipt struct {
+type odrReceiptRequest struct {
 	OdrItem
-	TxHash    common.Hash
+	TxHash common.Hash
+}
+
+type odrReceiptResponse struct {
+	OdrItem
 	BlockHash common.Hash
 	Index     uint // index in block body
 	Receipts  []*types.Receipt
@@ -23,32 +27,34 @@ type odrReceipt struct {
 
 var ErrIndexMismatchReceipts = errors.New("error data, index mismatch receipts")
 var ErrEmptyBlockHash = errors.New("error data, empty block hash")
+var ErrMismatchTxHash = errors.New("error data, mismatch tx hash")
 
-func (odr *odrReceipt) code() uint16 {
+func (odr *odrReceiptRequest) code() uint16 {
 	return receiptRequestCode
 }
 
-func (odr *odrReceipt) handle(lp *LightProtocol) (uint16, odrResponse) {
+func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	txIndex, err := lp.chain.GetStore().GetTxIndex(odr.TxHash)
 	if err != nil {
 		odr.Error = err.Error()
 	}
 
+	var result odrReceiptResponse
 	receipts, err := lp.chain.GetStore().GetReceiptsByBlockHash(txIndex.BlockHash)
 	if err != nil {
-		odr.Error = err.Error()
+		result.Error = err.Error()
 	} else {
 		if len(receipts) > 0 {
-			odr.Receipts = receipts
-			odr.Index = txIndex.Index
-			odr.BlockHash = txIndex.BlockHash
+			result.Receipts = receipts
+			result.Index = txIndex.Index
+			result.BlockHash = txIndex.BlockHash
 		}
 	}
 
-	return receiptResponseCode, odr
+	return receiptResponseCode, &result
 }
 
-func (odr *odrReceipt) validate(request odrRequest, bcStore store.BlockchainStore) error {
+func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
 	if odr.Receipts == nil {
 		return nil
 	}
@@ -57,19 +63,24 @@ func (odr *odrReceipt) validate(request odrRequest, bcStore store.BlockchainStor
 		return ErrIndexMismatchReceipts
 	}
 
-	hash := request.(*odrReceipt).BlockHash
 	var header *types.BlockHeader
 	var err error
-	if hash.IsEmpty() {
+	if odr.BlockHash.IsEmpty() {
 		return ErrEmptyBlockHash
 	}
 
-	if header, err = bcStore.GetBlockHeader(hash); err != nil {
+	if header, err = bcStore.GetBlockHeader(odr.BlockHash); err != nil {
 		return err
 	}
 
-	if !hash.Equal(header.ReceiptHash) {
+	rceiptMerkleRootHash := types.ReceiptMerkleRootHash(odr.Receipts)
+	if !rceiptMerkleRootHash.Equal(header.ReceiptHash) {
 		return types.ErrReceiptRootHash
+	}
+
+	txhash := request.(*odrReceiptRequest).TxHash
+	if txhash != odr.Receipts[odr.Index].TxHash {
+		return ErrMismatchTxHash
 	}
 
 	return nil

@@ -50,7 +50,7 @@ func newTestReceipt() []*types.Receipt {
 
 func Test_OdrReceipt_Serializable(t *testing.T) {
 	// with nil receipt
-	request := odrReceipt{
+	request := odrReceiptRequest{
 		OdrItem: OdrItem{
 			ReqID: 38,
 			Error: "hello",
@@ -58,17 +58,18 @@ func Test_OdrReceipt_Serializable(t *testing.T) {
 		TxHash: common.StringToHash("tx hash"),
 	}
 
-	assertSerializable(t, &request, &odrReceipt{})
+	assertSerializable(t, &request, &odrReceiptRequest{})
 
 	// with receipt
-	request = odrReceipt{
+	response := odrReceiptResponse{
 		OdrItem: OdrItem{
 			ReqID: 38,
 			Error: "hello",
 		},
-		TxHash:  common.StringToHash("tx hash"),
-		Receipts: newTestReceipt(),
+		BlockHash: common.StringToHash("tx hash"),
+		Index:     uint(0),
+		Receipts:  newTestReceipt(),
 	}
 
-	assertSerializable(t, &request, &odrReceipt{})
+	assertSerializable(t, &response, &odrReceiptResponse{})
 }
