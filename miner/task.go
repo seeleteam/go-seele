@@ -24,8 +24,9 @@ type Task struct {
 	receipts []*types.Receipt
 	debts    []*types.Debt
 
-	createdAt time.Time
-	coinbase  common.Address
+	createdAt    time.Time
+	coinbase     common.Address
+	debtVerifier types.DebtVerifier
 }
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
@@ -65,7 +66,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			err := core.ApplyDebt(statedb, d, task.coinbase)
+			err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
 			if err != nil {
 				continue
 			}
