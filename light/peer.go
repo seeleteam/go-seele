@@ -330,6 +330,9 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 		idx, curNum := power2-1, begin
 		if end > idx {
 			curNum = end - idx
+			if curNum < begin {
+				curNum = begin
+			}
 		}
 
 		curBlock, err := chain.GetStore().GetBlockByHeight(curNum)
@@ -340,7 +343,7 @@ func (p *peer) sendAnnounce(magic uint32, begin uint64, end uint64) error {
 
 		numArr = append(numArr, curNum)
 		hashArr = append(hashArr, curBlock.HeaderHash)
-		if curNum <= begin || len(numArr) >= int(MaxGapForAnnounce) {
+		if curNum == begin || len(numArr) >= int(MaxGapForAnnounce) {
 			break
 		}
 	}
