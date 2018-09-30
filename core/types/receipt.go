@@ -6,15 +6,12 @@
 package types
 
 import (
-	"errors"
-
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
 )
 
 var emptyReceiptRootHash = crypto.MustHash("empty receipt root hash")
-var ErrReceiptRootHash = errors.New("receipt root hash mismatch")
 
 // Receipt represents the transaction processing receipt.
 type Receipt struct {
@@ -26,6 +23,26 @@ type Receipt struct {
 	TxHash          common.Hash // the hash of the executed transaction
 	ContractAddress []byte      // Used when the tx (nil To address) is to create a contract.
 	TotalFee        uint64      // the full cost of the transaction
+}
+
+// ReceiptIndex represents an index that used to query block info by tx hash.
+type ReceiptIndex indexInBlock
+
+// GetReceiptTrie generate trie according the receipts
+func GetReceiptTrie(receipts []*Receipt) *trie.Trie {
+	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, receipt := range receipts {
+		buff := common.SerializePanic(receipt)
+		if receipt.TxHash != common.EmptyHash {
+			emptyTrie.Put(receipt.TxHash.Bytes(), buff)
+		}
+	}
+
+	return emptyTrie
 }
 
 // ReceiptMerkleRootHash calculates and returns the merkle root hash of the specified receipts.

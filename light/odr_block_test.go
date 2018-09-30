@@ -136,7 +136,11 @@ func newTestBlock() *types.Block {
 		newTestTx(20, 1, 2, true),
 		newTestTx(30, 1, 3, true),
 	}
-	receipts := newTestReceipt()
+	receipts := []*types.Receipt{
+		newTestReceipt(),
+		newTestReceipt(),
+		newTestReceipt(),
+	}
 
 	return types.NewBlock(header, txs, receipts, nil)
 }

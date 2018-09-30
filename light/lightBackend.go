@@ -13,6 +13,7 @@ import (
 )
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
+var errReceiptVerifyFailed = errors.New("got a receipt, but verify it failed")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {
@@ -77,7 +78,7 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 		return nil, err
 	}
 	result := response.(*odrReceiptResponse)
-	return result.Receipts[result.Index], nil
+	return result.Receipt, nil
 }
 
 // GetTransaction gets tx, block index and its debt by tx hash
