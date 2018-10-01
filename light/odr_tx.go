@@ -45,7 +45,6 @@ type odrTxByHashRequest struct {
 
 type odrTxByHashResponse struct {
 	OdrItem
-	//@todo check if need the Tx
 	Tx         *types.Transaction `rlp:"nil"`
 	BlockIndex *api.BlockIndex    `rlp:"nil"`
 	Proof      []proofNode

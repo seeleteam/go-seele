@@ -35,11 +35,9 @@ func GetReceiptTrie(receipts []*Receipt) *trie.Trie {
 		panic(err)
 	}
 
-	for _, receipt := range receipts {
-		buff := common.SerializePanic(receipt)
-		if receipt.TxHash != common.EmptyHash {
-			emptyTrie.Put(receipt.TxHash.Bytes(), buff)
-		}
+	for _, r := range receipts {
+		buff := common.SerializePanic(r)
+		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
 	}
 
 	return emptyTrie
@@ -52,16 +50,7 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 		return emptyReceiptRootHash
 	}
 
-	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, r := range receipts {
-		buff := common.SerializePanic(r)
-		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
-	}
-
+	emptyTrie := GetReceiptTrie(receipts)
 	return emptyTrie.Hash()
 }
 

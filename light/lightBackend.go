@@ -14,6 +14,7 @@ import (
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
 var errReceiptVerifyFailed = errors.New("got a receipt, but verify it failed")
+var errReceipIndexNil = errors.New("got a nil receipt index")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {

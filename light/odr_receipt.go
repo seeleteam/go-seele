@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
 )
 
@@ -22,9 +23,8 @@ type odrReceiptRequest struct {
 type odrReceiptResponse struct {
 	OdrItem
 	ReceiptIndex *types.ReceiptIndex `rlp:"nil"`
-	//@todo check if need the Receipt
-	Receipt *types.Receipt `rlp:"nil"`
-	Proof   []proofNode
+	Receipt      *types.Receipt      `rlp:"nil"`
+	Proof        []proofNode
 }
 
 func (odr *odrReceiptRequest) code() uint16 {
@@ -49,9 +49,10 @@ func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 		result.ReceiptIndex.BlockHash = txIndex.BlockHash
 
 		receiptTrie := types.GetReceiptTrie(receipts)
-		proof, err := receiptTrie.GetProof(odr.TxHash.Bytes())
+		proof, err := receiptTrie.GetProof(crypto.MustHash(result.Receipt).Bytes())
 		if err != nil {
 			result.Error = err.Error()
+			return receiptResponseCode, &result
 		}
 		result.Proof = mapToArray(proof)
 	}
@@ -77,7 +78,7 @@ func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.Blockc
 		}
 
 		proof := arrayToMap(odr.Proof)
-		value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
+		value, err := trie.VerifyProof(header.ReceiptHash, crypto.MustHash(odr.Receipt).Bytes(), proof)
 		if err != nil {
 			return err
 		}
@@ -86,6 +87,8 @@ func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.Blockc
 		if !bytes.Equal(buff, value) {
 			return errReceiptVerifyFailed
 		}
+	} else {
+		return errReceipIndexNil
 	}
 
 	return nil
