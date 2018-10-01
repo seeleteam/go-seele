@@ -46,10 +46,11 @@ type Miner struct {
 	canStart int32
 	stopped  int32
 
-	wg       sync.WaitGroup
-	stopChan chan struct{}
-	current  *Task
-	recv     chan *types.Block
+	wg         sync.WaitGroup
+	stopWbChan chan struct{}
+	stopMrChan chan struct{}
+	current    *Task
+	recv       chan *types.Block
 
 	seele SeeleBackend
 	log   *log.SeeleLog
@@ -125,7 +126,8 @@ func (miner *Miner) Start() error {
 		return nil
 	}
 
-	miner.stopChan = make(chan struct{})
+	miner.stopWbChan = make(chan struct{})
+	miner.stopMrChan = make(chan struct{}, 1)
 
 	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
 		miner.log.Warn(err.Error())
@@ -155,9 +157,15 @@ func (miner *Miner) stopMining() {
 	}
 
 	// notify all threads to terminate
-	if miner.stopChan != nil {
-		close(miner.stopChan)
-		miner.stopChan = nil
+	if miner.stopMrChan != nil && len(miner.stopMrChan) == 0 {
+		close(miner.stopMrChan)
+		miner.stopMrChan = nil
+	}
+
+	// notify all threads to terminate
+	if miner.stopWbChan != nil {
+		close(miner.stopWbChan)
+		miner.stopWbChan = nil
 	}
 
 	// wait for all threads to terminate
@@ -168,9 +176,14 @@ func (miner *Miner) stopMining() {
 
 // Close closes the miner.
 func (miner *Miner) Close() {
-	if miner.stopChan != nil {
-		close(miner.stopChan)
-		miner.stopChan = nil
+	if miner.stopMrChan != nil && len(miner.stopMrChan) == 0 {
+		close(miner.stopMrChan)
+		miner.stopMrChan = nil
+	}
+
+	if miner.stopWbChan != nil {
+		close(miner.stopWbChan)
+		miner.stopWbChan = nil
 	}
 
 	if miner.recv != nil {
@@ -249,7 +262,7 @@ out:
 			atomic.StoreInt32(&miner.mining, 0)
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
-		case <-miner.stopChan:
+		case <-miner.stopWbChan:
 			break out
 		}
 	}
@@ -318,5 +331,5 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	block := task.generateBlock()
-	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
+	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopMrChan, miner.recv)
 }

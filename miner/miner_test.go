@@ -7,6 +7,7 @@ package miner
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -196,4 +197,37 @@ func newTestPool(config *core.TransactionPoolConfig, db database.Database) *core
 	txPool := core.NewTransactionPool(*config, chain)
 
 	return txPool
+}
+
+type channlTest struct {
+	A chan struct{}
+}
+
+func Test_ChannlConsume(t *testing.T) {
+	channlTest := channlTest{
+		A: make(chan struct{}),
+	}
+	go func(ch chan struct{}) {
+		<-ch
+		fmt.Println("A")
+	}(channlTest.A)
+	go func(ch chan struct{}) {
+		<-ch
+		fmt.Println("B")
+	}(channlTest.A)
+	channlTest.A <- struct{}{}
+	channlTest.A <- struct{}{}
+}
+
+func Test_ChannlLen(t *testing.T) {
+	channlTest := channlTest{
+		A: make(chan struct{}, 1),
+	}
+	assert.Equal(t, len(channlTest.A), 0)
+	channlTest.A <- struct{}{}
+	assert.Equal(t, len(channlTest.A), 1)
+	go func(ch chan struct{}) {
+		channlTest.A <- struct{}{}
+	}(channlTest.A)
+	assert.Equal(t, len(channlTest.A), 1)
 }
