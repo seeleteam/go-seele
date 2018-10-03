@@ -156,17 +156,7 @@ func (miner *Miner) stopMining() {
 		return
 	}
 
-	// notify all threads to terminate
-	if miner.stopMrChan != nil && len(miner.stopMrChan) == 0 {
-		close(miner.stopMrChan)
-		miner.stopMrChan = nil
-	}
-
-	// notify all threads to terminate
-	if miner.stopWbChan != nil {
-		close(miner.stopWbChan)
-		miner.stopWbChan = nil
-	}
+	miner.closeStopChan()
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
@@ -174,17 +164,23 @@ func (miner *Miner) stopMining() {
 	miner.log.Info("Miner is stopped.")
 }
 
-// Close closes the miner.
-func (miner *Miner) Close() {
+func (miner *Miner) closeStopChan() {
+	// notify all threads to terminate
 	if miner.stopMrChan != nil && len(miner.stopMrChan) == 0 {
 		close(miner.stopMrChan)
 		miner.stopMrChan = nil
 	}
 
+	// notify all threads to terminate
 	if miner.stopWbChan != nil {
 		close(miner.stopWbChan)
 		miner.stopWbChan = nil
 	}
+}
+
+// Close closes the miner.
+func (miner *Miner) Close() {
+	miner.closeStopChan()
 
 	if miner.recv != nil {
 		close(miner.recv)
