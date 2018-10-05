@@ -242,7 +242,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		return false
 	}
 
-	if err := newPeer.handShake(lp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
+	if err := newPeer.handShake(lp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash, genesisBlock.Header.Difficulty.Uint64()); err != nil {
 		if err == errModeNotMatch {
 			lp.log.Info("handleAddPeer message. %s", err)
 		} else {

@@ -44,6 +44,8 @@ type statusData struct {
 	CurrentBlock    common.Hash
 	CurrentBlockNum uint64
 	GenesisBlock    common.Hash
+	Shard           uint
+	Difficult       uint64
 }
 
 // AnnounceQuery header of AnnounceQuery request
