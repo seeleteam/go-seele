@@ -21,12 +21,11 @@ const (
 )
 
 var (
-	TestCoinbase     = crypto.MustGenerateShardAddress(1)
-	slog             = log.GetLogger("seele")
-	address          = "127.0.0.1:8086"
-	result           = new(string)
-	dataSyncWriterWg = sync.WaitGroup{}
-	dataSyncReaderWg = sync.WaitGroup{}
+	TestCoinbase = crypto.MustGenerateShardAddress(1)
+	slog         = log.GetLogger("seele")
+	address      = "127.0.0.1:8086"
+	result       = new(string)
+	mux          sync.Mutex
 )
 
 func getTmpConfig() *Config {
@@ -39,32 +38,14 @@ func getTmpConfig() *Config {
 	}
 }
 
-func writeOpStart() {
-	dataSyncReaderWg.Wait()
-	dataSyncWriterWg.Add(1)
-}
-
-func writeOpStop() {
-	dataSyncWriterWg.Done()
-}
-
-func readOpStart() {
-	dataSyncWriterWg.Wait()
-	dataSyncReaderWg.Add(1)
-}
-
-func readOpStop() {
-	dataSyncReaderWg.Done()
-}
-
 // saveResult will Save the data
 func saveResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("path", r.URL.Path)
 	s, _ := ioutil.ReadAll(r.Body)
 
-	writeOpStart()
+	mux.Lock()
 	*result = *result + string(s)
-	writeOpStop()
+	mux.Unlock()
 }
 
 // influxdbSimulate simulate the influxdb server
@@ -110,14 +91,14 @@ func Test_StartMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer readOpStop()
+		defer mux.Unlock()
 
 		for {
-			readOpStart()
+			mux.Lock()
 			if result != nil && strings.Contains(*result, "test.Gauge") {
 				return
 			}
-			readOpStop()
+			mux.Unlock()
 		}
 	}()
 	wg.Wait()
@@ -132,18 +113,18 @@ func Test_StartMetrics(t *testing.T) {
 }
 
 func resultCompare(t *testing.T, data string, errMsg string) {
-	defer readOpStop()
+	defer mux.Unlock()
 
-	readOpStart()
+	mux.Lock()
 	if !strings.Contains(*result, data) {
 		t.Fatal(errMsg)
 	}
 }
 
 func resultCompareContains(t *testing.T, data string, errMsg string) {
-	defer readOpStop()
+	defer mux.Unlock()
 
-	readOpStart()
+	mux.Lock()
 	if strings.Contains(*result, data) {
 		t.Fatal(errMsg)
 	}
