@@ -27,10 +27,12 @@ const (
 )
 
 var (
-	errMsgNotMatch     = errors.New("Message not match")
-	errNetworkNotMatch = errors.New("NetworkID not match")
-	errModeNotMatch    = errors.New("server/client mode not match")
-	errBlockNotFound   = errors.New("block not found")
+	errMsgNotMatch              = errors.New("Message not match")
+	errNetworkNotMatch          = errors.New("NetworkID not match")
+	errGenesisNotMatch          = errors.New("Genesis not match")
+	errGenesisDifficultNotMatch = errors.New("Genesis Difficult not match")
+	errModeNotMatch             = errors.New("server/client mode not match")
+	errBlockNotFound            = errors.New("block not found")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -443,7 +445,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 }
 
 // handShake exchange networkid td etc between two connected peers.
-func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBlockNum uint64, genesis common.Hash) error {
+func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBlockNum uint64, genesis common.Hash, difficulty uint64) error {
 	msg := &statusData{
 		ProtocolVersion: uint32(LightSeeleVersion),
 		NetworkID:       networkID,
@@ -452,6 +454,8 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 		CurrentBlock:    head,
 		CurrentBlockNum: headBlockNum,
 		GenesisBlock:    genesis,
+		Shard:           common.LocalShardNumber,
+		Difficult:       difficulty,
 	}
 
 	if err := p2p.SendMessage(p.rw, statusDataMsgCode, common.SerializePanic(msg)); err != nil {
@@ -471,8 +475,22 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 		return err
 	}
 
-	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
+	if retStatusMsg.NetworkID != networkID {
 		return errNetworkNotMatch
+	}
+
+	// if in the same shard, genesis must be same
+	if common.LocalShardNumber == retStatusMsg.Shard {
+		// inconsistent with same shard
+		if !retStatusMsg.GenesisBlock.Equal(genesis) {
+			return errGenesisNotMatch
+		}
+	} else {
+		// in different shard, to be consistent with full node, just compare genesis difficulty
+		if retStatusMsg.Difficult != difficulty {
+			return errGenesisDifficultNotMatch
+		}
+
 	}
 
 	if retStatusMsg.IsServer == p.protocolManager.bServerMode {
@@ -480,5 +498,6 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 	}
 
 	p.head, p.td, p.headBlockNum = retStatusMsg.CurrentBlock, retStatusMsg.TD, retStatusMsg.CurrentBlockNum
+
 	return nil
 }
