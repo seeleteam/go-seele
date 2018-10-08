@@ -215,8 +215,10 @@ func Test_ChannlConsume(t *testing.T) {
 		<-ch
 		fmt.Println("B")
 	}(channlTest.A)
-	channlTest.A <- struct{}{}
-	channlTest.A <- struct{}{}
+	close(channlTest.A)
+	assert.Equal(t,len(channlTest.A), 0)
+	channlTest.A = nil
+	assert.Equal(t,len(channlTest.A), 0)
 }
 
 func Test_ChannlLen(t *testing.T) {

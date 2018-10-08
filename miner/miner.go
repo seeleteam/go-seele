@@ -47,8 +47,7 @@ type Miner struct {
 	stopped  int32
 
 	wg         sync.WaitGroup
-	stopWbChan chan struct{}
-	stopMrChan chan struct{}
+	stopChan chan struct{}
 	current    *Task
 	recv       chan *types.Block
 
@@ -126,8 +125,7 @@ func (miner *Miner) Start() error {
 		return nil
 	}
 
-	miner.stopWbChan = make(chan struct{})
-	miner.stopMrChan = make(chan struct{}, 1)
+	miner.stopChan = make(chan struct{})
 
 	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
 		miner.log.Warn(err.Error())
@@ -160,27 +158,23 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
-
 	miner.log.Info("Miner is stopped.")
 }
 
 func (miner *Miner) closeStopChan() {
 	// notify all threads to terminate
-	if miner.stopMrChan != nil && len(miner.stopMrChan) == 0 {
-		close(miner.stopMrChan)
-		miner.stopMrChan = nil
-	}
-
-	// notify all threads to terminate
-	if miner.stopWbChan != nil {
-		close(miner.stopWbChan)
-		miner.stopWbChan = nil
+	if miner.stopChan != nil {
+		close(miner.stopChan)
+		miner.stopChan = nil
 	}
 }
 
 // Close closes the miner.
 func (miner *Miner) Close() {
 	miner.closeStopChan()
+
+	// wait for all threads to terminate
+	miner.wg.Wait()
 
 	if miner.recv != nil {
 		close(miner.recv)
@@ -258,7 +252,7 @@ out:
 			atomic.StoreInt32(&miner.mining, 0)
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
-		case <-miner.stopWbChan:
+		case <-miner.stopChan:
 			break out
 		}
 	}
@@ -327,5 +321,5 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	block := task.generateBlock()
-	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopMrChan, miner.recv)
+	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
 }
