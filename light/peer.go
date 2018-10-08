@@ -27,10 +27,10 @@ const (
 )
 
 var (
-	errMsgNotMatch     = errors.New("Message not match")
-	errNetworkNotMatch = errors.New("NetworkID not match")
-	errModeNotMatch    = errors.New("server/client mode not match")
-	errGenesisNotMatch = errors.New("Genesis hash not match")
+	errMsgNotMatch     = errors.New("message mismatch")
+	errNetworkNotMatch = errors.New("networkID mismatch")
+	errModeNotMatch    = errors.New("server/client mode mismatch")
+	errGenesisNotMatch = errors.New("genesis hash mismatch")
 	errBlockNotFound   = errors.New("block not found")
 )
 
