@@ -23,11 +23,12 @@ type ServiceServer struct {
 	p2pServer     *p2p.Server
 	seeleProtocol *LightProtocol
 	log           *log.SeeleLog
+	shard         uint
 }
 
 // NewServiceServer create ServiceServer
-func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.SeeleLog) (*ServiceServer, error) {
-	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.BlockChain(), true, nil, log)
+func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.SeeleLog, shard uint) (*ServiceServer, error) {
+	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.BlockChain(), true, nil, log, shard)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ needQuit:
 		case <-pm.chainHeaderChangeCh:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
-			pm.peerSet.ForEach(common.LocalShardNumber, func(p *peer) bool {
+			pm.peerSet.ForEach(pm.shard, func(p *peer) bool {
 				p.sendAnnounce(magic, uint64(0), uint64(0))
 				return true
 			})
