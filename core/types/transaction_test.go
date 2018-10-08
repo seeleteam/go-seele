@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
@@ -251,11 +251,11 @@ func prepareShardEnv(localShard uint) func() {
 }
 
 func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
-	dispose := prepareShardEnv(9)
+	dispose := prepareShardEnv(2)
 	defer dispose()
 
 	from, _ := crypto.MustGenerateShardKeyPair(1) // invalid shard
-	to := crypto.MustGenerateShardAddress(9)
+	to := crypto.MustGenerateShardAddress(2)
 	_, err := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
 
 	assert.Equal(t, err != nil, true)
@@ -263,12 +263,12 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 }
 
 func Test_Transaction_InvalidFee(t *testing.T) {
-	dispose := prepareShardEnv(9)
+	dispose := prepareShardEnv(2)
 	defer dispose()
 
 	// From and contract addresses match the shard number.
-	from := crypto.MustGenerateShardAddress(9)
-	contractAddr := crypto.MustGenerateShardAddress(9)
+	from := crypto.MustGenerateShardAddress(2)
+	contractAddr := crypto.MustGenerateShardAddress(2)
 
 	tx, err := NewTransaction(*from, *contractAddr, big.NewInt(20), big.NewInt(-1), 5)
 	assert.Equal(t, tx, (*Transaction)(nil))

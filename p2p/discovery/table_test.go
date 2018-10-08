@@ -6,9 +6,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestTable() *Table {
@@ -51,7 +51,6 @@ func Test_addNode(t *testing.T) {
 	table.addNode(node2)
 	assert.Equal(t, len(table.shardBuckets[2].peers) == 1, true)
 	assert.Equal(t, len(table.shardBuckets[1].peers) != 1, true)
-	assert.Equal(t, len(table.shardBuckets[3].peers) != 1, true)
 	assert.Equal(t, table.shardBuckets[2].peers[0] == node2, true)
 }
 
