@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,18 +43,14 @@ func Test_LoadConfigFromFile(t *testing.T) {
 
 	assert.Equal(t, len(config.SeeleConfig.GenesisConfig.Accounts), 2, "14")
 	assert.Equal(t, config.SeeleConfig.GenesisConfig.Difficult, int64(22), "15")
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12), "16")
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(1), "16")
 }
 
 func Test_CopyConfig(t *testing.T) {
 	config := getConfig(t)
 	copied := config.Clone()
 
-	assert.Equal(t, config.BasicConfig.SyncMode, common.ServerSyncMode)
-	copied.BasicConfig.SyncMode = common.LightSyncMode
-	assert.Equal(t, copied.BasicConfig.SyncMode, common.LightSyncMode)
-
-	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(12))
+	assert.Equal(t, config.SeeleConfig.GenesisConfig.ShardNumber, uint(1))
 	copied.SeeleConfig.GenesisConfig.ShardNumber = uint(2)
 	assert.Equal(t, copied.SeeleConfig.GenesisConfig.ShardNumber, uint(2))
 }
