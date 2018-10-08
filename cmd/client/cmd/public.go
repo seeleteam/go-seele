@@ -129,9 +129,26 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 			return err
 		}
 
-		var result bool
-		if err = client.Call(&result, "seele_addTx", arg); err != nil || !result {
-			return fmt.Errorf("Failed to call rpc, %s", err)
+		find := 0
+		flags, ok := callFlags[namespace]
+		if ok {
+			_, ok := flags[method]
+			if ok {
+				// use call method to get receipt
+				find = 1
+			}
+		}
+
+		if find == 1 {
+			printdata, err = callTx(client, arg)
+			if err != nil {
+				return err
+			}
+
+		} else {
+			if err := sendTx(client, arg); err != nil {
+				return err
+			}
 		}
 
 		return resultHandler([]interface{}{}, printdata)
