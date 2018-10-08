@@ -119,7 +119,7 @@ func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain
 	log *log.SeeleLog, shard uint) (s *LightProtocol, err error) {
 	s = &LightProtocol{
 		Protocol: p2p.Protocol{
-			Name:    LightProtoName,
+			Name:    fmt.Sprintf("%s_%d", LightProtoName, shard),
 			Version: LightSeeleVersion,
 			Length:  protocolMsgCodeLength,
 		},
