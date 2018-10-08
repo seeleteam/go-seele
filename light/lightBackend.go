@@ -13,6 +13,8 @@ import (
 )
 
 var errTransactionVerifyFailed = errors.New("got a transaction, but verify it failed")
+var errReceiptVerifyFailed = errors.New("got a receipt, but verify it failed")
+var errReceipIndexNil = errors.New("got a nil receipt index")
 
 // LightBackend represents a channel (client) that communicate with backend node service.
 type LightBackend struct {
@@ -72,12 +74,12 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 
 // GetReceiptByTxHash gets block's receipt by block hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
-	response, err := l.s.odrBackend.retrieve(&odrReceipt{TxHash: hash})
+	response, err := l.s.odrBackend.retrieve(&odrReceiptRequest{TxHash: hash})
 	if err != nil {
 		return nil, err
 	}
-
-	return response.(*odrReceipt).Receipt, nil
+	result := response.(*odrReceiptResponse)
+	return result.Receipt, nil
 }
 
 // GetTransaction gets tx, block index and its debt by tx hash

@@ -14,21 +14,20 @@ import (
 
 func newTestReceipt() *types.Receipt {
 	receipt := types.Receipt{
-		Result:          []byte("test"),
+		Result:          []byte("test1"),
 		Failed:          false,
 		UsedGas:         uint64(0),
 		PostState:       common.EmptyHash,
 		Logs:            []*types.Log{},
 		TxHash:          common.EmptyHash,
-		ContractAddress: []byte("test"),
+		ContractAddress: []byte("test1"),
 		TotalFee:        uint64(0),
 	}
 	return &receipt
 }
 
 func Test_OdrReceipt_Serializable(t *testing.T) {
-	// with nil receipt
-	request := odrReceipt{
+	request := odrReceiptRequest{
 		OdrItem: OdrItem{
 			ReqID: 38,
 			Error: "hello",
@@ -36,17 +35,34 @@ func Test_OdrReceipt_Serializable(t *testing.T) {
 		TxHash: common.StringToHash("tx hash"),
 	}
 
-	assertSerializable(t, &request, &odrReceipt{})
+	assertSerializable(t, &request, &odrReceiptRequest{})
 
 	// with receipt
-	request = odrReceipt{
+	response := odrReceiptResponse{
 		OdrItem: OdrItem{
 			ReqID: 38,
 			Error: "hello",
 		},
-		TxHash:  common.StringToHash("tx hash"),
+		ReceiptIndex: &types.ReceiptIndex{
+			BlockHash: common.StringToHash("tx hash"),
+			Index:     uint(0),
+		},
 		Receipt: newTestReceipt(),
+		Proof:   make([]proofNode, 0),
 	}
+	assertSerializable(t, &response, &odrReceiptResponse{})
 
-	assertSerializable(t, &request, &odrReceipt{})
+	// without receipt
+	response = odrReceiptResponse{
+		OdrItem: OdrItem{
+			ReqID: 38,
+			Error: "hello",
+		},
+		ReceiptIndex: &types.ReceiptIndex{
+			BlockHash: common.StringToHash("tx hash"),
+			Index:     uint(0),
+		},
+		Proof: make([]proofNode, 0),
+	}
+	assertSerializable(t, &response, &odrReceiptResponse{})
 }

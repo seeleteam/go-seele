@@ -30,7 +30,7 @@ var (
 		blockRequestCode:    func() odrRequest { return &odrBlock{} },
 		addTxRequestCode:    func() odrRequest { return &odrAddTx{} },
 		trieRequestCode:     func() odrRequest { return &odrTriePoof{} },
-		receiptRequestCode:  func() odrRequest { return &odrReceipt{} },
+		receiptRequestCode:  func() odrRequest { return &odrReceiptRequest{} },
 		txByHashRequestCode: func() odrRequest { return &odrTxByHashRequest{} },
 	}
 
@@ -38,7 +38,7 @@ var (
 		blockResponseCode:    func() odrResponse { return &odrBlock{} },
 		addTxResponseCode:    func() odrResponse { return &odrAddTx{} },
 		trieResponseCode:     func() odrResponse { return &odrTriePoof{} },
-		receiptResponseCode:  func() odrResponse { return &odrReceipt{} },
+		receiptResponseCode:  func() odrResponse { return &odrReceiptResponse{} },
 		txByHashResponseCode: func() odrResponse { return &odrTxByHashResponse{} },
 	}
 )
