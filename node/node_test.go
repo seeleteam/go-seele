@@ -118,7 +118,7 @@ func Test_ServiceStart(t *testing.T) {
 	assert.Equal(t, strings.Contains(err.Error(), "unsupported shard number"), true)
 
 	// coinbase does not match with specific shard number
-	stack.config.SeeleConfig.GenesisConfig.ShardNumber = 8
+	stack.config.SeeleConfig.GenesisConfig.ShardNumber = 2
 	stack.config.SeeleConfig.Coinbase = common.BytesToAddress([]byte("testAddr"))
 	err = stack.checkConfig()
 	assert.Equal(t, err != nil, true)

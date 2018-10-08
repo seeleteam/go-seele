@@ -32,15 +32,18 @@ type odrBackend struct {
 	peers      *peerSet
 	bcStore    store.BlockchainStore // used to validate the retrieved ODR object.
 	log        *log.SeeleLog
+
+	shard uint
 }
 
-func newOdrBackend(bcStore store.BlockchainStore) *odrBackend {
+func newOdrBackend(bcStore store.BlockchainStore, shard uint) *odrBackend {
 	o := &odrBackend{
 		msgCh:      make(chan *p2p.Message),
 		requestMap: make(map[uint32]chan odrResponse),
 		quitCh:     make(chan struct{}),
 		bcStore:    bcStore,
 		log:        log.GetLogger("odrBackend"),
+		shard:      shard,
 	}
 
 	return o
@@ -87,7 +90,7 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 }
 
 func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
-	peerL := o.peers.choosePeers(common.LocalShardNumber)
+	peerL := o.peers.choosePeers(o.shard)
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}

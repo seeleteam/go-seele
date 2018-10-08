@@ -25,13 +25,11 @@ type Receipt struct {
 	TotalFee        uint64      // the full cost of the transaction
 }
 
-// ReceiptMerkleRootHash calculates and returns the merkle root hash of the specified receipts.
-// If the given receipts are empty, return empty hash.
-func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
-	if len(receipts) == 0 {
-		return emptyReceiptRootHash
-	}
+// ReceiptIndex represents an index that used to query block info by tx hash.
+type ReceiptIndex indexInBlock
 
+// GetReceiptTrie generate trie according the receipts
+func GetReceiptTrie(receipts []*Receipt) *trie.Trie {
 	emptyTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
 	if err != nil {
 		panic(err)
@@ -42,6 +40,17 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
 	}
 
+	return emptyTrie
+}
+
+// ReceiptMerkleRootHash calculates and returns the merkle root hash of the specified receipts.
+// If the given receipts are empty, return empty hash.
+func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
+	if len(receipts) == 0 {
+		return emptyReceiptRootHash
+	}
+
+	emptyTrie := GetReceiptTrie(receipts)
 	return emptyTrie.Hash()
 }
 

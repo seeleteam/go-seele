@@ -59,6 +59,8 @@ type Node struct {
 	wsEndpoint string       // Websocket endpoint (interface + port) to listen at (empty = websocket disabled)
 	wsListener net.Listener // Websocket RPC listener socket to serve API requests
 	wsHandler  *rpc.Server  // Websocket RPC request handler to process the API requests
+
+	shard uint
 }
 
 // New creates a new P2P node.
@@ -79,6 +81,10 @@ func New(conf *Config) (*Node, error) {
 	}
 
 	return node, nil
+}
+
+func (n *Node) GetShardNumber() uint {
+	return n.shard
 }
 
 // Register appends a new service into the node's stack.
@@ -143,7 +149,8 @@ func (n *Node) checkConfig() error {
 		return fmt.Errorf("unsupported shard number, it must be in range [0, %d]", common.ShardCount)
 	}
 
-	common.LocalShardNumber = specificShard
+	common.LocalShardNumber = specificShard // @todo remove LocalShardNumber
+	n.shard = specificShard
 	n.log.Info("local shard number is %d", common.LocalShardNumber)
 
 	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {

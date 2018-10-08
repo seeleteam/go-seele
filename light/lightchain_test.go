@@ -28,7 +28,7 @@ func newTestBlockchainDatabase(db database.Database) store.BlockchainStore {
 func newTestLightChain() (*LightChain, func(), error) {
 	db, dispose := leveldb.NewTestDatabase()
 	bcStore := newTestBlockchainDatabase(db)
-	backend := newOdrBackend(bcStore)
+	backend := newOdrBackend(bcStore, 1)
 
 	// put genesis block
 	header := newTestBlockHeader()
@@ -72,7 +72,7 @@ func Test_LightChain_NewLightChain(t *testing.T) {
 	defer dispose()
 
 	bcStore := newTestBlockchainDatabase(db)
-	backend := newOdrBackend(bcStore)
+	backend := newOdrBackend(bcStore, 1)
 
 	// no block in bcStore
 	lc, err := newLightChain(bcStore, db, backend, pow.NewEngine(1))

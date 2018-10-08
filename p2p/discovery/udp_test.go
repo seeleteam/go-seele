@@ -88,7 +88,7 @@ func Test_UDP_SendConnMsg(t *testing.T) {
 	assert.Equal(t, result, true)
 
 	// failed to send message due to invalid ip address
-	toAddr, _ = net.ResolveUDPAddr("udp", "127.0.0:9667")
+	toAddr, _ = net.ResolveUDPAddr("udp", "")
 	result = udp.sendConnMsg([]byte("testmsg"), conn, toAddr)
 	assert.Equal(t, result, false)
 }

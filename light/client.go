@@ -34,14 +34,17 @@ type ServiceClient struct {
 	txPool  *txPool
 	chain   *LightChain
 	lightDB database.Database // database used to store blocks and account state.
+
+	shard uint
 }
 
 // NewServiceClient create ServiceClient
-func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog, dbFolder string) (s *ServiceClient, err error) {
+func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog, dbFolder string, shard uint) (s *ServiceClient, err error) {
 	s = &ServiceClient{
 		log:        log,
 		networkID:  conf.P2PConfig.NetworkID,
 		netVersion: conf.BasicConfig.Version,
+		shard:      shard,
 	}
 
 	serviceContext := ctx.Value("ServiceContext").(seele.ServiceContext)
@@ -55,7 +58,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog,
 	}
 
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.lightDB))
-	s.odrBackend = newOdrBackend(bcStore)
+	s.odrBackend = newOdrBackend(bcStore, shard)
 	// initialize and validate genesis
 	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
 
@@ -77,7 +80,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog,
 
 	s.txPool = newTxPool(s.chain, s.odrBackend, s.chain.headerChangedEventManager)
 
-	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, false, s.odrBackend, log)
+	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, false, s.odrBackend, log, shard)
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()

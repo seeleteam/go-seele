@@ -110,13 +110,16 @@ type LightProtocol struct {
 	syncCh              chan struct{}
 	chainHeaderChangeCh chan common.Hash
 	log                 *log.SeeleLog
+
+	shard uint
 }
 
 // NewLightProtocol create LightProtocol
-func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain, serverMode bool, odrBackend *odrBackend, log *log.SeeleLog) (s *LightProtocol, err error) {
+func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain, serverMode bool, odrBackend *odrBackend,
+	log *log.SeeleLog, shard uint) (s *LightProtocol, err error) {
 	s = &LightProtocol{
 		Protocol: p2p.Protocol{
-			Name:    LightProtoName,
+			Name:    fmt.Sprintf("%s_%d", LightProtoName, shard),
 			Version: LightSeeleVersion,
 			Length:  protocolMsgCodeLength,
 		},
@@ -129,6 +132,7 @@ func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain
 		quitCh:      make(chan struct{}),
 		syncCh:      make(chan struct{}),
 		peerSet:     newPeerSet(),
+		shard:       shard,
 	}
 
 	if !serverMode {
@@ -166,9 +170,9 @@ func (lp *LightProtocol) syncer() {
 	for {
 		select {
 		case <-lp.syncCh:
-			go lp.synchronise(lp.peerSet.bestPeer(common.LocalShardNumber))
+			go lp.synchronise(lp.peerSet.bestPeer(lp.shard))
 		case <-forceSync.C:
-			go lp.synchronise(lp.peerSet.bestPeer(common.LocalShardNumber))
+			go lp.synchronise(lp.peerSet.bestPeer(lp.shard))
 		case <-lp.quitCh:
 			return
 		}
@@ -213,6 +217,10 @@ func (lp *LightProtocol) synchronise(p *peer) {
 }
 
 func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
+	if p2pPeer.Node.Shard != lp.shard {
+		return false
+	}
+
 	if lp.peerSet.Find(p2pPeer.Node.ID) != nil {
 		lp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
 		return false

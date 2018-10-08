@@ -45,10 +45,11 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 			continue
 		}
 
-		copyConf.SeeleConfig.GenesisConfig.ShardNumber = uint(i)
+		shard := uint(i)
+		copyConf.SeeleConfig.GenesisConfig.ShardNumber = shard
 
 		dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", i))
-		clients[i], err = light.NewServiceClient(context, copyConf, log.GetLogger(fmt.Sprintf("lightclient_%d", i)), dbFolder)
+		clients[i], err = light.NewServiceClient(context, copyConf, log.GetLogger(fmt.Sprintf("lightclient_%d", i)), dbFolder, shard)
 		if err != nil {
 			return nil, err
 		}
