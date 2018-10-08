@@ -30,6 +30,7 @@ var miner string
 var metricsEnableFlag bool
 var accountsConfig string
 var threads uint
+var lightNode bool // default is full node
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -66,12 +67,7 @@ var startCmd = &cobra.Command{
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
-		// default is light node
-		if nCfg.BasicConfig.SyncMode == "" {
-			nCfg.BasicConfig.SyncMode = common.LightSyncMode
-		}
-
-		if strings.ToLower(nCfg.BasicConfig.SyncMode) == common.LightSyncMode {
+		if lightNode {
 			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber())
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
@@ -176,4 +172,5 @@ func init() {
 	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 	startCmd.Flags().UintVarP(&threads, "threads", "", 1, "miner thread value")
+	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 }

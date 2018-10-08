@@ -53,9 +53,6 @@ type BasicConfig struct {
 
 	// coinbase used by the miner
 	Coinbase string `json:"coinbase"`
-
-	// SyncMode represents synchronization mode, it must be (light|full) for light mode and fullnode mode respectively.
-	SyncMode string `json:"syncMode"`
 }
 
 // HTTPServer config for http server

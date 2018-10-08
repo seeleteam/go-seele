@@ -250,7 +250,6 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 		DataDir:  subChainInfo.Name,
 		RPCAddr:  "0.0.0.0:8027",
 		Coinbase: coinbaseValue,
-		SyncMode: common.ServerSyncMode,
 	}
 
 	config.P2PConfig = p2p.Config{

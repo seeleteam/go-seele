@@ -37,8 +37,6 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 	backends := make([]*light.LightBackend, common.ShardCount+1)
 
 	copyConf := config.Clone()
-	copyConf.BasicConfig.SyncMode = common.LightSyncMode
-
 	var err error
 	for i := 1; i <= common.ShardCount; i++ {
 		if i == int(targetShard) {
