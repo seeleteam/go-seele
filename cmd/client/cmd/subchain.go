@@ -181,8 +181,7 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 	}
 
 	var subChainInfo system.SubChainInfo
-	err = json.Unmarshal(bytesSubChainInfo, &subChainInfo)
-	if err != nil {
+	if err = json.Unmarshal(bytesSubChainInfo, &subChainInfo); err != nil {
 		return nil, err
 	}
 
@@ -225,13 +224,14 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 	if err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
 	}
+	shardNumber := addr.Shard()
 
 	if shardValue == 0 {
-		shardValue = addr.Shard()
+		shardValue = shardNumber
 	}
 
-	if addr.Shard() != shardValue {
-		return nil, fmt.Errorf("input shard(%d) is not equal to shard nubmer(%d) obtained from the input coinbase:%s", shardValue, addr.Shard(), coinbaseValue)
+	if shardValue != shardNumber {
+		return nil, fmt.Errorf("input shard(%d) is not equal to shard nubmer(%d) obtained from the input coinbase:%s", shardValue, shardNumber, coinbaseValue)
 	}
 
 	privateKey, err := getPrivateKey()
