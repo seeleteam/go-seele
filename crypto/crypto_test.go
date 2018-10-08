@@ -8,8 +8,8 @@ package crypto
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_GenerateKey(t *testing.T) {
@@ -141,15 +141,15 @@ func Test_CreateAddress(t *testing.T) {
 }
 
 func Test_CreateAddress_Shard(t *testing.T) {
-	fromAddr := MustGenerateShardAddress(9)
+	fromAddr := MustGenerateShardAddress(2)
 	contractAddr := CreateAddress(*fromAddr, 38)
-	assert.Equal(t, contractAddr.Shard(), uint(9))
+	assert.Equal(t, contractAddr.Shard(), uint(2))
 }
 
 func Test_MustGenerateShardAddress(t *testing.T) {
-	addr := MustGenerateShardAddress(5)
-	assert.Equal(t, addr.Shard(), uint(5))
+	addr := MustGenerateShardAddress(2)
+	assert.Equal(t, addr.Shard(), uint(2))
 
-	addr = MustGenerateShardAddress(10)
-	assert.Equal(t, addr.Shard(), uint(10))
+	addr = MustGenerateShardAddress(1)
+	assert.Equal(t, addr.Shard(), uint(1))
 }
