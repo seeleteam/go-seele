@@ -46,10 +46,10 @@ type Miner struct {
 	canStart int32
 	stopped  int32
 
-	wg         sync.WaitGroup
+	wg       sync.WaitGroup
 	stopChan chan struct{}
-	current    *Task
-	recv       chan *types.Block
+	current  *Task
+	recv     chan *types.Block
 
 	seele SeeleBackend
 	log   *log.SeeleLog
@@ -157,7 +157,7 @@ func (miner *Miner) stopMining() {
 	miner.closeStopChan()
 
 	// wait for all threads to terminate
-	miner.wg.Wait()
+	miner.engine.WaitDone()
 	miner.log.Info("Miner is stopped.")
 }
 
@@ -174,7 +174,7 @@ func (miner *Miner) Close() {
 	miner.closeStopChan()
 
 	// wait for all threads to terminate
-	miner.wg.Wait()
+	miner.engine.WaitDone()
 
 	if miner.recv != nil {
 		close(miner.recv)

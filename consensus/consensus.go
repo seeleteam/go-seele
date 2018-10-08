@@ -22,4 +22,7 @@ type Engine interface {
 
 	// GetEngineInfo get engine basic info
 	GetEngineInfo() interface{}
+
+	// WaitDone wait all threads work done
+	WaitDone()
 }

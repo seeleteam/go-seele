@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -29,6 +30,7 @@ type Engine struct {
 	threads  int
 	log      *log.SeeleLog
 	hashrate metrics.Meter
+	wg       sync.WaitGroup
 }
 
 func NewEngine(threads int) *Engine {
@@ -36,6 +38,7 @@ func NewEngine(threads int) *Engine {
 		threads:  threads,
 		log:      log.GetLogger("pow_engine"),
 		hashrate: metrics.NewMeter(),
+		wg:       sync.WaitGroup{},
 	}
 }
 
@@ -121,12 +124,18 @@ func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop
 			max = math.MaxUint64
 		}
 
+		engine.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
 			StartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, engine.hashrate, engine.log)
+			engine.wg.Done()
 		}(tSeed, min, max)
 	}
 
 	return nil
+}
+
+func (engine *Engine) WaitDone() {
+	engine.wg.Wait()
 }
 
 func verifyDifficulty(parent *types.BlockHeader, header *types.BlockHeader) error {
