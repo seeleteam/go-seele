@@ -16,7 +16,7 @@ import (
 
 func Test_TxPool_NewTxPool(t *testing.T) {
 	chain := &TestBlockChain{}
-	ob := newOdrBackend(chain.GetStore())
+	ob := newOdrBackend(chain.GetStore(), 1)
 	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 
@@ -32,7 +32,7 @@ func Test_TxPool_NewTxPool(t *testing.T) {
 
 func Test_TxPool_AddTransaction(t *testing.T) {
 	chain := &TestBlockChain{}
-	ob := newOdrBackend(chain.GetStore())
+	ob := newOdrBackend(chain.GetStore(), 1)
 	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 
@@ -49,7 +49,7 @@ func Test_TxPool_AddTransaction(t *testing.T) {
 
 func Test_TxPool_GetTransactions(t *testing.T) {
 	chain := &TestBlockChain{}
-	ob := newOdrBackend(chain.GetStore())
+	ob := newOdrBackend(chain.GetStore(), 1)
 	txPool := newTxPool(chain, ob, event.NewEventManager())
 	defer txPool.stop()
 

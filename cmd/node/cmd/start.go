@@ -72,7 +72,7 @@ var startCmd = &cobra.Command{
 		}
 
 		if strings.ToLower(nCfg.BasicConfig.SyncMode) == common.LightSyncMode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir)
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber())
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -98,7 +98,7 @@ var startCmd = &cobra.Command{
 
 			seeleService.Miner().SetThreads(threads)
 
-			lightServerService, err := light.NewServiceServer(seeleService, nCfg, lightLog)
+			lightServerService, err := light.NewServiceServer(seeleService, nCfg, lightLog, seeleNode.GetShardNumber())
 			if err != nil {
 				fmt.Println("Create light server err. ", err.Error())
 				return
@@ -112,7 +112,7 @@ var startCmd = &cobra.Command{
 			}
 
 			// light client manager
-			manager, err := lightclients.NewLightClientManager(common.LocalShardNumber, ctx, nCfg)
+			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg)
 			if err != nil {
 				fmt.Printf("create light client manager failed. %s", err)
 				return

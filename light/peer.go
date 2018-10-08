@@ -30,6 +30,7 @@ var (
 	errMsgNotMatch     = errors.New("Message not match")
 	errNetworkNotMatch = errors.New("NetworkID not match")
 	errModeNotMatch    = errors.New("server/client mode not match")
+	errGenesisNotMatch = errors.New("Genesis hash not match")
 	errBlockNotFound   = errors.New("block not found")
 )
 
@@ -471,8 +472,12 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 		return err
 	}
 
-	if retStatusMsg.NetworkID != networkID || retStatusMsg.GenesisBlock != genesis {
+	if retStatusMsg.NetworkID != networkID {
 		return errNetworkNotMatch
+	}
+
+	if retStatusMsg.GenesisBlock != genesis {
+		return errGenesisNotMatch
 	}
 
 	if retStatusMsg.IsServer == p.protocolManager.bServerMode {
