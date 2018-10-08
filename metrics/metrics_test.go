@@ -21,10 +21,12 @@ const (
 )
 
 var (
-	TestCoinbase = crypto.MustGenerateShardAddress(1)
-	slog         = log.GetLogger("seele")
-	address      = "127.0.0.1:8086"
-	result       = new(string)
+	TestCoinbase     = crypto.MustGenerateShardAddress(1)
+	slog             = log.GetLogger("seele")
+	address          = "127.0.0.1:8086"
+	result           = new(string)
+	dataSyncWriterWg = sync.WaitGroup{}
+	dataSyncReaderWg = sync.WaitGroup{}
 )
 
 func getTmpConfig() *Config {
@@ -37,11 +39,32 @@ func getTmpConfig() *Config {
 	}
 }
 
+func writeOpStart() {
+	dataSyncReaderWg.Wait()
+	dataSyncWriterWg.Add(1)
+}
+
+func writeOpStop() {
+	dataSyncWriterWg.Done()
+}
+
+func readOpStart() {
+	dataSyncWriterWg.Wait()
+	dataSyncReaderWg.Add(1)
+}
+
+func readOpStop() {
+	dataSyncReaderWg.Done()
+}
+
 // saveResult will Save the data
 func saveResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("path", r.URL.Path)
 	s, _ := ioutil.ReadAll(r.Body)
+
+	writeOpStart()
 	*result = *result + string(s)
+	writeOpStop()
 }
 
 // influxdbSimulate simulate the influxdb server
@@ -87,33 +110,41 @@ func Test_StartMetrics(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer readOpStop()
+
 		for {
+			readOpStart()
 			if result != nil && strings.Contains(*result, "test.Gauge") {
 				return
 			}
+			readOpStop()
 		}
 	}()
 	wg.Wait()
 
-	if !strings.Contains(*result, "test.Gauge") {
-		t.Fatal("failed to get test.Gauge")
+	resultCompare(t, "test.Gauge", "failed to get test.Gauge")
+	resultCompare(t, "test.Counter", "failed to get test.Counter")
+	resultCompare(t, "test.Meter", "failed to get test.Meter")
+	resultCompare(t, "test.GaugeFloat64", "failed to get test.GaugeFloat64")
+	resultCompare(t, "test.Histogram", "failed to get test.Histogram")
+	resultCompare(t, "test.Timer", "failed to get test.Timer")
+	resultCompareContains(t, "not exsit", "get a value of not exsit")
+}
+
+func resultCompare(t *testing.T, data string, errMsg string) {
+	defer readOpStop()
+
+	readOpStart()
+	if !strings.Contains(*result, data) {
+		t.Fatal(errMsg)
 	}
-	if !strings.Contains(*result, "test.Counter") {
-		t.Fatal("failed to get test.Counter")
-	}
-	if !strings.Contains(*result, "test.Meter") {
-		t.Fatal("failed to get test.Meter")
-	}
-	if !strings.Contains(*result, "test.GaugeFloat64") {
-		t.Fatal("failed to get test.GaugeFloat64")
-	}
-	if !strings.Contains(*result, "test.Histogram") {
-		t.Fatal("failed to get test.Histogram")
-	}
-	if !strings.Contains(*result, "test.Timer") {
-		t.Fatal("failed to get test.Timer")
-	}
-	if strings.Contains(*result, "not exsit") {
-		t.Fatal("get a value of not exsit")
+}
+
+func resultCompareContains(t *testing.T, data string, errMsg string) {
+	defer readOpStop()
+
+	readOpStart()
+	if strings.Contains(*result, data) {
+		t.Fatal(errMsg)
 	}
 }
