@@ -176,9 +176,12 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 		return nil, err
 	}
 
+	if len(bytesSubChainInfo) == 0 {
+		return nil, fmt.Errorf("sub-chain %s does not exist", nameValue)
+	}
+
 	var subChainInfo system.SubChainInfo
-	err = json.Unmarshal(bytesSubChainInfo, &subChainInfo)
-	if err != nil {
+	if err = json.Unmarshal(bytesSubChainInfo, &subChainInfo); err != nil {
 		return nil, err
 	}
 
@@ -199,13 +202,6 @@ func getPrivateKey() (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid key: %s", err)
 		}
-
-		publicKey := crypto.GetAddress(&privateKey.PublicKey)
-		if shardValue == 0 || shardValue > common.ShardCount {
-			shardValue = publicKey.Shard()
-		} else if shardValue != publicKey.Shard() {
-			return nil, fmt.Errorf("input shard(%d) is not equal to shard nubmer(%d) obtained from the input privateKey:%s", shardValue, publicKey.Shard(), privateKeyValue)
-		}
 	}
 	return privateKey, nil
 }
@@ -224,8 +220,18 @@ func getStaticNodes() ([]*discovery.Node, error) {
 }
 
 func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo) (*util.Config, error) {
-	if _, err := common.HexToAddress(coinbaseValue); err != nil {
+	addr, err := common.HexToAddress(coinbaseValue)
+	if err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
+	}
+	shardNumber := addr.Shard()
+
+	if shardValue == 0 {
+		shardValue = shardNumber
+	}
+
+	if shardValue != shardNumber {
+		return nil, fmt.Errorf("input shard(%d) is not equal to shard nubmer(%d) obtained from the input coinbase:%s", shardValue, shardNumber, coinbaseValue)
 	}
 
 	privateKey, err := getPrivateKey()
@@ -248,14 +254,14 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 		Name:     subChainInfo.Name,
 		Version:  subChainInfo.Version,
 		DataDir:  subChainInfo.Name,
-		RPCAddr:  "0.0.0.0:8027",
+		RPCAddr:  "0.0.0.0:8127",
 		Coinbase: coinbaseValue,
 		SyncMode: common.ServerSyncMode,
 	}
 
 	config.P2PConfig = p2p.Config{
 		NetworkID:     fmt.Sprintf("%s.%d.%s", subChainInfo.Name, subChainInfo.Owner.Shard(), networkID),
-		ListenAddr:    "0.0.0.0:8057",
+		ListenAddr:    "0.0.0.0:8157",
 		StaticNodes:   append(subChainInfo.StaticNodes, staticNodes...),
 		SubPrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
 	}
@@ -265,18 +271,18 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 	}
 
 	config.HTTPServer = node.HTTPServer{
-		HTTPAddr:      "127.0.0.1:8036",
+		HTTPAddr:      "127.0.0.1:8136",
 		HTTPCors:      []string{"*"},
 		HTTPWhiteHost: []string{"*"},
 	}
 
 	config.WSServerConfig = node.WSServerConfig{
-		Address:      "127.0.0.1:8046",
+		Address:      "127.0.0.1:8146",
 		CrossOrigins: []string{"*"},
 	}
 
 	config.MetricsConfig = &metrics.Config{
-		Addr:     "127.0.0.1:8087",
+		Addr:     "127.0.0.1:8187",
 		Duration: time.Duration(10),
 		Database: "influxdb",
 		Username: "test",
