@@ -38,7 +38,6 @@ func NewEngine(threads int) *Engine {
 		threads:  threads,
 		log:      log.GetLogger("pow_engine"),
 		hashrate: metrics.NewMeter(),
-		wg:       sync.WaitGroup{},
 	}
 }
 
@@ -126,8 +125,8 @@ func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop
 
 		engine.wg.Add(1)
 		go func(tseed uint64, tmin uint64, tmax uint64) {
+			defer engine.wg.Done()
 			StartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, engine.hashrate, engine.log)
-			engine.wg.Done()
 		}(tSeed, min, max)
 	}
 
