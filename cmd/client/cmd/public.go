@@ -138,7 +138,7 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 		}
 
 		if find == 1 {
-			printdata, err = callTx(client, arg)
+			printdata, err = callTx(client, arg.(*types.Transaction))
 			if err != nil {
 				return err
 			}
