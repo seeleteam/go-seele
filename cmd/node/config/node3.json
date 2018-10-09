@@ -19,7 +19,7 @@
     "printLog": true
   },
   "httpServer": {
-    "address": "127.0.0.1:8039",
+    "address": "0.0.0.0:8039",
     "crossorigins": [
       "*"
     ],
@@ -28,13 +28,13 @@
     ]
   },
   "wsserver": {
-    "address": "127.0.0.1:8049",
+    "address": "0.0.0.0:8049",
     "crossorigins": [
       "*"
     ]
   },
   "metrics": {
-    "address": "127.0.0.1:8087",
+    "address": "0.0.0.0:8087",
     "duration": 10,
     "database": "influxdb",
     "username": "test",
