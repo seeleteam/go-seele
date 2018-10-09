@@ -8,12 +8,9 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/seeleteam/go-seele/accounts/abi"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,30 +28,30 @@ func Test_GeneratePayload(t *testing.T) {
 	}
 	api := newTestAPI(t, dbPath)
 
-	abiObj, err := abi.JSON(strings.NewReader(SimpleStorageABI))
-	assert.NoError(t, err)
-
 	// Get method test
-	payload1, err1 := api.GeneratePayload(abiObj, "get")
+	payload1, err1 := api.GeneratePayload(SimpleStorageABI, "get")
 	assert.NoError(t, err1)
-	getPayload := hexutil.BytesToHex(payload1)
-	assert.Equal(t, getPayload, RemixGetPayload)
+	assert.Equal(t, payload1, RemixGetPayload)
 
 	// Set method test
-	payload2, err2 := api.GeneratePayload(abiObj, "set", big.NewInt(23))
+	payload2, err2 := api.GeneratePayload(SimpleStorageABI, "set", big.NewInt(23))
 	assert.NoError(t, err2)
-	set23Payload := hexutil.BytesToHex(payload2)
-	assert.Equal(t, set23Payload, RemixSet23Payload)
+	assert.Equal(t, payload2, RemixSet23Payload)
 
 	// Invalid method test
-	payload3, err3 := api.GeneratePayload(abiObj, "add", big.NewInt(23))
+	payload3, err3 := api.GeneratePayload(SimpleStorageABI, "add", big.NewInt(23))
 	assert.Error(t, err3)
 	assert.Empty(t, payload3)
 
 	// Invalid parameter type test
-	payload4, err4 := api.GeneratePayload(abiObj, "set", 23)
+	payload4, err4 := api.GeneratePayload(SimpleStorageABI, "set", 23)
 	assert.Error(t, err4)
 	assert.Empty(t, payload4)
+
+	// Invalid abiJSON string test
+	payload5, err5 := api.GeneratePayload("SimpleStorageABI:asdf", "set", 23)
+	assert.Error(t, err5)
+	assert.Empty(t, payload5)
 }
 
 func Test_GetAPI(t *testing.T) {
@@ -68,16 +65,14 @@ func Test_GetAPI(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Correctness test
-	abiObj, err := abi.JSON(strings.NewReader(SimpleStorageABI))
-	assert.NoError(t, err)
 	abiObj1, err1 := api.GetABI(from)
 	assert.NoError(t, err1)
-	assert.Equal(t, abiObj1, abiObj)
+	assert.Equal(t, abiObj1, SimpleStorageABI)
 
 	// Invalid address test
 	abiObj2, err2 := api.GetABI(common.EmptyAddress)
 	assert.Error(t, err2)
-	assert.Equal(t, abiObj2, abi.ABI{})
+	assert.Equal(t, abiObj2, "")
 }
 
 func saveABI(api *PublicSeeleAPI) (common.Address, error) {
