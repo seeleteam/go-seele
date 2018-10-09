@@ -11,9 +11,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 var ErrInvalidAccount = errors.New("invalid account")
+var ErrfailedToLoadKey = errors.New("failed to load key")
 
 const maxSizeLimit = 64
 
@@ -223,6 +225,13 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	return transaction
 }
 
+// PrintableOutputTxWithSignature converts the given tx to the RPC output with signature
+func PrintableOutputTxWithSignature(tx *types.Transaction) map[string]interface{} {
+	transaction := PrintableOutputTx(tx)
+	transaction["signature"] = tx.Signature
+	return transaction
+}
+
 // AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	shard := tx.Data.From.Shard()
@@ -240,4 +249,20 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func SignTx(privateKeyValue string, tx types.Transaction) (map[string]interface{}, error) {
+	key, err := crypto.LoadECDSAFromString(privateKeyValue)
+	if err != nil {
+		return nil, ErrfailedToLoadKey
+	}
+
+	err = tx.ValidateWithoutState(true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.Sign(key)
+
+	return PrintableOutputTxWithSignature(&tx), nil
 }
