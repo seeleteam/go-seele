@@ -9,17 +9,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/seeleteam/go-seele/common/hexutil"
-
 	"github.com/seeleteam/go-seele/accounts/abi"
 	"github.com/seeleteam/go-seele/accounts/abi/bind"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 )
 
 // KeyABIHash is the hash key to storing abi to statedb
 var KeyABIHash = common.StringToHash("KeyABIHash")
 
-// GeneratePayload according to abi to generate payload hex string
+// GeneratePayload according to abi json string and methodName and args to generate payload hex string
 func (api *PublicSeeleAPI) GeneratePayload(abiJSON string, methodName string, args ...interface{}) (string, error) {
 	parsed, err := abi.JSON(strings.NewReader(abiJSON))
 	if err != nil {
