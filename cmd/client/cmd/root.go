@@ -161,7 +161,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "get",
 				Usage:  "get HTLC information",
-				Flags:  rpcFlags(fromFlag, feeFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "get", handleCallResult),
 			},
 			{

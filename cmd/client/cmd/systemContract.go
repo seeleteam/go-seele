@@ -7,9 +7,11 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc"
 )
@@ -36,6 +38,13 @@ var (
 			"query":    querySubChain,
 		},
 	}
+
+	// if the method have key-value, use the call method to get receipt
+	callFlags = map[string]map[string]string{
+		"htlc": map[string]string{
+			"get": "1",
+		},
+	}
 )
 
 // sendSystemContractTx send system contract transaction
@@ -53,4 +62,28 @@ func sendSystemContractTx(client *rpc.Client, to common.Address, method byte, pa
 	}
 
 	return tx, err
+}
+
+// sendTx send transaction or contract
+func sendTx(client *rpc.Client, arg interface{}) error {
+	var result bool
+	if err := client.Call(&result, "seele_addTx", arg); err != nil || !result {
+		return fmt.Errorf("Failed to call rpc, %s", err)
+	}
+
+	return nil
+}
+
+// callTx call transaction or contract
+func callTx(client *rpc.Client, tx *types.Transaction) (interface{}, error) {
+	var result interface{}
+	if tx != nil {
+		if err := client.Call(&result, "seele_call", tx.Data.To.ToHex(), hexutil.BytesToHex(tx.Data.Payload), -1); err != nil {
+			return nil, fmt.Errorf("Failed to call rpc, %s", err)
+		}
+	} else {
+		return nil, errors.New("Invalid parameters")
+	}
+
+	return result, nil
 }

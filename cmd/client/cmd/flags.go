@@ -53,6 +53,14 @@ var (
 		Destination: &heightValue,
 	}
 
+	trialValue string
+	trialFlag  = cli.StringFlag{
+		Name:        "trial, t",
+		Value:       "false",
+		Usage:       "trial for transanction or contract, value of false is to send tx or contract, and true is to call",
+		Destination: &trialValue,
+	}
+
 	fulltxValue bool
 	fulltxFlag  = cli.BoolFlag{
 		Name:        "fulltx, f",

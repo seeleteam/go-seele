@@ -106,6 +106,7 @@ func refund(client *rpc.Client) (interface{}, interface{}, error) {
 // getHTLC used to get HTLC
 func getHTLC(client *rpc.Client) (interface{}, interface{}, error) {
 	amountValue = "0"
+	feeValue = "1"
 	txHashBytes, err := hexutil.HexToBytes(hashValue)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to convert Hex to Bytes %s", err)
