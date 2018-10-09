@@ -75,10 +75,9 @@ func sendTx(client *rpc.Client, arg interface{}) error {
 }
 
 // callTx call transaction or contract
-func callTx(client *rpc.Client, arg interface{}) (interface{}, error) {
+func callTx(client *rpc.Client, tx *types.Transaction) (interface{}, error) {
 	var result interface{}
-	tx, ok := arg.(*types.Transaction)
-	if ok {
+	if tx != nil {
 		if err := client.Call(&result, "seele_call", tx.Data.To.ToHex(), hexutil.BytesToHex(tx.Data.Payload), -1); err != nil {
 			return nil, fmt.Errorf("Failed to call rpc, %s", err)
 		}

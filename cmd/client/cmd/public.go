@@ -130,10 +130,8 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 		}
 
 		find := 0
-		flags, ok := callFlags[namespace]
-		if ok {
-			_, ok := flags[method]
-			if ok {
+		if flags, ok := callFlags[namespace]; ok {
+			if _, ok := flags[method]; ok {
 				// use call method to get receipt
 				find = 1
 			}
