@@ -158,6 +158,7 @@ func (miner *Miner) stopMining() {
 		close(miner.stopChan)
 		miner.stopChan = nil
 	}
+	
 	miner.log.Info("Miner is stopped.")
 }
 
