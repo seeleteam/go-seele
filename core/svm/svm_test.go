@@ -222,8 +222,8 @@ func Benchmark_CallContract_EVM(b *testing.B) {
 
 	// Call contract tx: SimpleStorage.get(), it returns 5 as initialized in constructor.
 	input := mustHexToBytes("0x6d4ce63c")
-	amount, fee, nonce := big.NewInt(0), big.NewInt(1), uint64(38)
-	callContractTx, _ := types.NewMessageTransaction(ctx.Tx.Data.From, contractAddr, amount, fee, math.MaxUint64, nonce, input)
+	amount, price, nonce := big.NewInt(0), big.NewInt(1), uint64(38)
+	callContractTx, _ := types.NewMessageTransaction(ctx.Tx.Data.From, contractAddr, amount, price, math.MaxUint64, nonce, input)
 	ctx.Tx = callContractTx
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
