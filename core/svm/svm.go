@@ -32,7 +32,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	gasLimit := ctx.Tx.Data.GasLimit
 	intrGas := ctx.Tx.IntrinsicGas()
 	if gasLimit < intrGas {
-		return nil, vm.ErrOutOfGas
+		return nil, types.ErrIntrinsicGas
 	}
 	leftOverGas := gasLimit - intrGas
 
