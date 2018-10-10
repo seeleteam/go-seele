@@ -66,7 +66,7 @@ func Test_Process_SysContract(t *testing.T) {
 	assert.Equal(t, ctx.Tx.Hash, receipt.TxHash)
 
 	gasCreateDomainName := uint64(50000) // gas used to create a domain name
-	assert.Equal(t, receipt.UsedGas, gasCreateDomainName)
+	assert.Equal(t, receipt.UsedGas, gasCreateDomainName+ctx.Tx.IntrinsicGas())
 	assert.Equal(t, new(big.Int).SetUint64(receipt.TotalFee), new(big.Int).Add(usedGasFee(gasCreateDomainName), ctx.Tx.Data.Fee))
 
 	// DomainNameOwner
@@ -79,7 +79,7 @@ func Test_Process_SysContract(t *testing.T) {
 	assert.Equal(t, ctx1.Tx.Hash, receipt1.TxHash)
 
 	gasDomainNameCreator := uint64(100000) // gas used to query the creator of given domain name
-	assert.Equal(t, receipt1.UsedGas, gasDomainNameCreator)
+	assert.Equal(t, receipt1.UsedGas, gasDomainNameCreator+ctx.Tx.IntrinsicGas())
 	assert.Equal(t, new(big.Int).SetUint64(receipt1.TotalFee), new(big.Int).Add(usedGasFee(gasDomainNameCreator), ctx1.Tx.Data.Fee))
 
 	// Do not transfer the amount of the run error
