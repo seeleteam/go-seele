@@ -66,7 +66,6 @@ func Test_Start(t *testing.T) {
 
 	miner.canStart = 1
 	err = miner.Start()
-	defer miner.Close()
 	assert.Equal(t, err, nil)
 
 	assert.Equal(t, miner.stopped, int32(0))

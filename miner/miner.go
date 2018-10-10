@@ -153,7 +153,6 @@ func (miner *Miner) stopMining() {
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
-
 	// notify all threads to terminate
 	if miner.stopChan != nil {
 		close(miner.stopChan)
@@ -162,21 +161,7 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
-
 	miner.log.Info("Miner is stopped.")
-}
-
-// Close closes the miner.
-func (miner *Miner) Close() {
-	if miner.stopChan != nil {
-		close(miner.stopChan)
-		miner.stopChan = nil
-	}
-
-	if miner.recv != nil {
-		close(miner.recv)
-		miner.recv = nil
-	}
 }
 
 // IsMining returns true if the miner is started, otherwise false
@@ -318,5 +303,5 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	block := task.generateBlock()
-	go miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
+	miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
 }
