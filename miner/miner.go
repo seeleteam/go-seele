@@ -48,7 +48,6 @@ type Miner struct {
 
 	wg        sync.WaitGroup
 	stopChan  chan struct{}
-	abort     chan struct{}
 	closeOnce sync.Once
 	current   *Task
 	recv      chan *types.Block
@@ -128,7 +127,6 @@ func (miner *Miner) Start() error {
 	}
 
 	miner.stopChan = make(chan struct{})
-	miner.abort = make(chan struct{})
 
 	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
 		miner.log.Warn(err.Error())
@@ -156,28 +154,12 @@ func (miner *Miner) stopMining() {
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
-	miner.closeStopChan()
-	miner.log.Info("Miner is stopped.")
-}
-
-func (miner *Miner) closeStopChan() {
 	// notify all threads to terminate
 	if miner.stopChan != nil {
 		close(miner.stopChan)
-		miner.engine.WaitDone()
-		miner.wg.Wait()
 		miner.stopChan = nil
 	}
-}
-
-// Close closes the miner.
-func (miner *Miner) Close() {
-	miner.closeOnce.Do(
-		func() {
-			miner.closeStopChan()
-			close(miner.recv)
-			miner.recv = nil
-		})
+	miner.log.Info("Miner is stopped.")
 }
 
 // IsMining returns true if the miner is started, otherwise false
@@ -251,7 +233,6 @@ out:
 			// loop mining after mining completed
 			miner.newTxCallback(event.EmptyEvent)
 		case <-miner.stopChan:
-			close(miner.abort)
 			break out
 		}
 	}
@@ -320,9 +301,5 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	block := task.generateBlock()
-	miner.wg.Add(1)
-	go func() {
-		defer miner.wg.Done()
-		miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.abort, miner.recv)
-	}()
+	miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
 }
