@@ -15,12 +15,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/spf13/cobra"
-	"github.com/seeleteam/go-seele/api"
 )
 
 var tps int
@@ -294,7 +294,7 @@ func send(b *balance) *balance {
 	value.Mul(value, common.SeeleToFan)
 
 	client := getRandClient()
-	tx, err := util.GenerateTx(b.privateKey, *addr, value, big.NewInt(1), b.nonce, nil)
+	tx, err := util.GenerateTx(b.privateKey, *addr, value, big.NewInt(1), 0, b.nonce, nil)
 	if err != nil {
 		return newBalance
 	}

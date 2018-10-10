@@ -47,6 +47,8 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	}
 	info.Fee = fee
 
+	info.GasLimit = gasLimitValue
+
 	fromAddr := crypto.GetAddress(publicKey)
 	info.From = *fromAddr
 

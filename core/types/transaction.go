@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sync"
 
+	ethCore "github.com/ethereum/go-ethereum/core"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
@@ -22,7 +23,7 @@ const (
 	defaultMaxPayloadSize = 32 * 1024
 
 	// TransactionPreSize is the transaction size excluding payload size
-	TransactionPreSize = 169
+	TransactionPreSize = 177
 )
 
 var (
@@ -37,6 +38,9 @@ var (
 
 	// ErrFeeNil is returned when the transaction fee is nil.
 	ErrFeeNil = errors.New("failed to create tx, fee is nil")
+
+	// ErrIntrinsicGas is returned if the tx gas is too low.
+	ErrIntrinsicGas = errors.New("intrinsic gas too low")
 
 	// ErrHashMismatch is returned when the transaction hash and data mismatch.
 	ErrHashMismatch = errors.New("hash mismatch")
@@ -69,6 +73,7 @@ type TransactionData struct {
 	Amount       *big.Int       // Amount is the amount to be transferred
 	AccountNonce uint64         // AccountNonce is the nonce of the sender account
 	Fee          *big.Int       // Transaction Fee
+	GasLimit     uint64         // Maximum gas for contract creation/execution
 	Timestamp    uint64         // Timestamp is used for the miner reward transaction, referring to the block timestamp
 	Payload      common.Bytes   // Payload is the extra data of the transaction
 }
@@ -134,13 +139,15 @@ func (tx *Transaction) Size() int {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
-	return newTx(from, to, amount, fee, nonce, nil)
+	gasLimit, _ := ethCore.IntrinsicGas(nil, false, false)
+	return newTx(from, to, amount, fee, gasLimit, nonce, nil)
 }
 
-func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*Transaction, error) {
+func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*Transaction, error) {
 	txData := TransactionData{
 		From:         from,
 		To:           to,
+		GasLimit:     gasLimit,
 		AccountNonce: nonce,
 		Payload:      common.CopyBytes(payload),
 	}
@@ -191,6 +198,16 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrFeeNegative
 	}
 
+	// validate gas limit
+	intrGas, err := tx.IntrinsicGas()
+	if err != nil {
+		return err
+	}
+
+	if tx.Data.GasLimit < intrGas {
+		return ErrIntrinsicGas
+	}
+
 	// validate payload
 	if len(tx.Data.Payload) > MaxPayloadSize {
 		return ErrPayloadOversized
@@ -231,13 +248,13 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 }
 
 // NewContractTransaction returns a transaction to create a smart contract.
-func NewContractTransaction(from common.Address, amount *big.Int, fee *big.Int, nonce uint64, code []byte) (*Transaction, error) {
-	return newTx(from, common.EmptyAddress, amount, fee, nonce, code)
+func NewContractTransaction(from common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, code []byte) (*Transaction, error) {
+	return newTx(from, common.EmptyAddress, amount, fee, gasLimit, nonce, code)
 }
 
 // NewMessageTransaction returns a transation with the specified message.
-func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, msg []byte) (*Transaction, error) {
-	return newTx(from, to, amount, fee, nonce, msg)
+func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, msg []byte) (*Transaction, error) {
+	return newTx(from, to, amount, fee, gasLimit, nonce, msg)
 }
 
 // NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
@@ -285,6 +302,7 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 
 // ValidateState validates state dependent fields in tx.
 func (tx *Transaction) ValidateState(statedb stateDB) error {
+	// @todo fee = price * gasLimit
 	consumed := new(big.Int).Add(tx.Data.Amount, tx.Data.Fee)
 	if balance := statedb.GetBalance(tx.Data.From); consumed.Cmp(balance) > 0 {
 		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
@@ -374,4 +392,10 @@ func BatchValidateTxs(txs []*Transaction) error {
 	wg.Wait()
 
 	return err
+}
+
+// IntrinsicGas computes the 'intrinsic gas' for a tx.
+func (tx *Transaction) IntrinsicGas() (uint64, error) {
+	// Reuse the algorithm of ETH
+	return ethCore.IntrinsicGas(tx.Data.Payload, false, false)
 }

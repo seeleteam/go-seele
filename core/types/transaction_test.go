@@ -8,6 +8,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"encoding/json"
+	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -198,11 +199,11 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 	to := crypto.MustGenerateRandomAddress()
 
 	// Cannot create a tx with oversized payload.
-	tx, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), 38, make([]byte, MaxPayloadSize+1))
+	tx, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), math.MaxUint64, 38, make([]byte, MaxPayloadSize+1))
 	assert.Equal(t, err, ErrPayloadOversized)
 
 	// Create a tx with valid payload
-	tx, err = NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), 38, []byte("hello"))
+	tx, err = NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), math.MaxUint64, 38, []byte("hello"))
 	assert.Equal(t, err, error(nil))
 	tx.Data.Payload = make([]byte, MaxPayloadSize+1) // modify the payload to invalid size.
 
@@ -227,7 +228,7 @@ func Test_Transaction_Validate_PayLoadJSON(t *testing.T) {
 
 	from := crypto.MustGenerateRandomAddress()
 	to := crypto.MustGenerateRandomAddress()
-	tx2, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), 38, []byte("hello"))
+	tx2, err := NewMessageTransaction(*from, *to, big.NewInt(100), big.NewInt(1), math.MaxUint64, 38, []byte("hello"))
 	assert.Equal(t, err, nil)
 	assert.Equal(t, string(tx2.Data.Payload), "hello")
 
@@ -282,11 +283,11 @@ func Test_Transaction_InvalidFee(t *testing.T) {
 func Test_Transaction_EmptyPayloadError(t *testing.T) {
 	from := *crypto.MustGenerateRandomAddress()
 
-	_, err := NewContractTransaction(from, big.NewInt(100), big.NewInt(2), 38, nil)
+	_, err := NewContractTransaction(from, big.NewInt(100), big.NewInt(2), math.MaxUint64, 38, nil)
 	assert.Equal(t, err, ErrPayloadEmpty)
 
 	contractAddr := crypto.CreateAddress(from, 77)
-	_, err = NewMessageTransaction(from, contractAddr, big.NewInt(100), big.NewInt(2), 38, nil)
+	_, err = NewMessageTransaction(from, contractAddr, big.NewInt(100), big.NewInt(2), math.MaxUint64, 38, nil)
 	assert.Equal(t, err, ErrPayloadEmpty)
 }
 
@@ -294,7 +295,7 @@ func Test_Transaction_Validate_EmptyPayloadError(t *testing.T) {
 	fromPrivKey, fromAddr := randomAccount(t)
 	toAddress := crypto.CreateAddress(fromAddr, 38)
 
-	tx, err := newTx(fromAddr, toAddress, big.NewInt(100), big.NewInt(2), 38, []byte("payload"))
+	tx, err := newTx(fromAddr, toAddress, big.NewInt(100), big.NewInt(2), math.MaxUint64, 38, []byte("payload"))
 	assert.Equal(t, err, nil)
 
 	tx.Data.Payload = nil
@@ -323,7 +324,7 @@ func Test_Transaction_RlpTransferTx(t *testing.T) {
 
 func Test_Transaction_RlpContractTx(t *testing.T) {
 	from := *crypto.MustGenerateRandomAddress()
-	tx, err := NewContractTransaction(from, big.NewInt(3), big.NewInt(1), 38, []byte("test code"))
+	tx, err := NewContractTransaction(from, big.NewInt(3), big.NewInt(1), math.MaxUint64, 38, []byte("test code"))
 	assert.Equal(t, err, nil)
 
 	assertTxRlp(t, tx)
@@ -333,7 +334,7 @@ func Test_Transaction_RlpMsgTx(t *testing.T) {
 	from := *crypto.MustGenerateRandomAddress()
 	to := *crypto.MustGenerateRandomAddress()
 	contractAddr := crypto.CreateAddress(to, 38)
-	tx, err := NewMessageTransaction(from, contractAddr, big.NewInt(3), big.NewInt(1), 38, []byte("test input message"))
+	tx, err := NewMessageTransaction(from, contractAddr, big.NewInt(3), big.NewInt(1), math.MaxUint64, 38, []byte("test input message"))
 	assert.Equal(t, err, nil)
 
 	assertTxRlp(t, tx)
@@ -356,4 +357,13 @@ func Test_Transaction_InvalidAmount(t *testing.T) {
 
 	_, err = NewTransaction(fromAddress, toAddress, big.NewInt(-1), new(big.Int).SetInt64(1), 0)
 	assert.Equal(t, err, ErrAmountNegative)
+}
+
+func Test_Transaction_GasNotEnough(t *testing.T) {
+	from := *crypto.MustGenerateRandomAddress()
+	to := *crypto.MustGenerateRandomAddress()
+	tx, err := newTx(from, to, big.NewInt(38), big.NewInt(1), 1, 1, nil)
+
+	assert.Nil(t, tx)
+	assert.Equal(t, ErrIntrinsicGas, err)
 }
