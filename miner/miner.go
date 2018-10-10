@@ -46,11 +46,10 @@ type Miner struct {
 	canStart int32
 	stopped  int32
 
-	wg        sync.WaitGroup
-	stopChan  chan struct{}
-	closeOnce sync.Once
-	current   *Task
-	recv      chan *types.Block
+	wg       sync.WaitGroup
+	stopChan chan struct{}
+	current  *Task
+	recv     chan *types.Block
 
 	seele SeeleBackend
 	log   *log.SeeleLog
