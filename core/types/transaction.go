@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"sync"
 
-	ethCore "github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
@@ -139,7 +139,7 @@ func (tx *Transaction) Size() int {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
-	gasLimit, _ := ethCore.IntrinsicGas(nil, false, false)
+	gasLimit := ethIntrinsicGas(nil)
 	return newTx(from, to, amount, fee, gasLimit, nonce, nil)
 }
 
@@ -199,12 +199,7 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 	}
 
 	// validate gas limit
-	intrGas, err := tx.IntrinsicGas()
-	if err != nil {
-		return err
-	}
-
-	if tx.Data.GasLimit < intrGas {
+	if tx.Data.GasLimit < tx.IntrinsicGas() {
 		return ErrIntrinsicGas
 	}
 
@@ -395,7 +390,32 @@ func BatchValidateTxs(txs []*Transaction) error {
 }
 
 // IntrinsicGas computes the 'intrinsic gas' for a tx.
-func (tx *Transaction) IntrinsicGas() (uint64, error) {
-	// Reuse the algorithm of ETH
-	return ethCore.IntrinsicGas(tx.Data.Payload, false, false)
+func (tx *Transaction) IntrinsicGas() uint64 {
+	return ethIntrinsicGas(tx.Data.Payload)
+}
+
+// ethIntrinsicGas computes the 'intrinsic gas' for a message with the given data.
+func ethIntrinsicGas(data []byte) uint64 {
+	// Set the starting gas for the raw transaction
+	gas := params.TxGas
+
+	if len(data) == 0 {
+		return gas
+	}
+
+	// Bump the required gas by the amount of transactional data
+	// Zero and non-zero bytes are priced differently
+	var nz uint64
+	for _, byt := range data {
+		if byt != 0 {
+			nz++
+		}
+	}
+
+	// will not overflow, since maximum tx payload size is 32K.
+	gas += nz * params.TxDataNonZeroGas
+	z := uint64(len(data)) - nz
+	gas += z * params.TxDataZeroGas
+
+	return gas
 }

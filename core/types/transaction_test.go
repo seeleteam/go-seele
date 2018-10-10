@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/stretchr/testify/assert"
@@ -359,11 +360,16 @@ func Test_Transaction_InvalidAmount(t *testing.T) {
 	assert.Equal(t, err, ErrAmountNegative)
 }
 
-func Test_Transaction_GasNotEnough(t *testing.T) {
+func Test_Transaction_IntrinsicGasError(t *testing.T) {
 	from := *crypto.MustGenerateRandomAddress()
 	to := *crypto.MustGenerateRandomAddress()
 	tx, err := newTx(from, to, big.NewInt(38), big.NewInt(1), 1, 1, nil)
 
 	assert.Nil(t, tx)
 	assert.Equal(t, ErrIntrinsicGas, err)
+}
+
+func Test_Transaction_IntrinsicGasOverflow(t *testing.T) {
+	overflowPayloadSize := (math.MaxUint64 - params.TxGas) / params.TxDataNonZeroGas
+	assert.Equal(t, overflowPayloadSize > defaultMaxPayloadSize, true)
 }
