@@ -14,8 +14,6 @@ import (
 ///////////////////////////////////////////////////////////////////////////////////////
 // Gas fee model for test net
 ///////////////////////////////////////////////////////////////////////////////////////
-const maxTxGas = uint64(10000000)
-
 var (
 	contractFeeComplex       = new(big.Int).Div(common.SeeleToFan, big.NewInt(100))
 	contractFeeCustomToken   = new(big.Int).Div(common.SeeleToFan, big.NewInt(200))

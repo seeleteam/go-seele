@@ -32,21 +32,20 @@ func GetInfo(client *rpc.Client) (api.GetMinerInfo, error) {
 }
 
 // GenerateTx generate a transaction based on the address type of to
-func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee *big.Int, nonce uint64, payload []byte) (*types.Transaction, error) {
+func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*types.Transaction, error) {
 	fromAddr := crypto.GetAddress(&from.PublicKey)
 
 	var tx *types.Transaction
 	var err error
 	if to.IsEmpty() {
-		tx, err = types.NewContractTransaction(*fromAddr, amount, fee, nonce, payload)
+		tx, err = types.NewContractTransaction(*fromAddr, amount, fee, gasLimit, nonce, payload)
 	} else {
 		switch to.Type() {
 		case common.AddressTypeExternal:
+			// always ignore the user input gas limit for transfer amount tx.
 			tx, err = types.NewTransaction(*fromAddr, to, amount, fee, nonce)
-		case common.AddressTypeContract:
-			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
-		case common.AddressTypeReserved:
-			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, nonce, payload)
+		case common.AddressTypeContract, common.AddressTypeReserved:
+			tx, err = types.NewMessageTransaction(*fromAddr, to, amount, fee, gasLimit, nonce, payload)
 		default:
 			return nil, fmt.Errorf("unsupported address type: %d", to.Type())
 		}

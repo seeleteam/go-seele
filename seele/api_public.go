@@ -82,7 +82,9 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 	statedb.SetBalance(*from, common.SeeleToFan)
 
 	amount, fee, nonce := big.NewInt(0), big.NewInt(1), uint64(1)
-	tx, err := types.NewMessageTransaction(*from, contractAddr, amount, fee, nonce, msg)
+	// gasLimit = balance / fee
+	gasLimit := common.SeeleToFan.Uint64()
+	tx, err := types.NewMessageTransaction(*from, contractAddr, amount, fee, gasLimit, nonce, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %s", err)
 	}

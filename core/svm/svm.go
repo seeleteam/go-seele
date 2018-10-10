@@ -28,6 +28,14 @@ type Context struct {
 
 // Process the tx
 func Process(ctx *Context) (*types.Receipt, error) {
+	// Pay intrinsic gas all the time
+	gasLimit := ctx.Tx.Data.GasLimit
+	intrGas := ctx.Tx.IntrinsicGas()
+	if gasLimit < intrGas {
+		return nil, types.ErrIntrinsicGas
+	}
+	leftOverGas := gasLimit - intrGas
+
 	var err error
 	var receipt *types.Receipt
 	snapshot := ctx.Statedb.Prepare(ctx.TxIndex)
@@ -37,13 +45,15 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() {
 		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
-		receipt, err = processEvmContract(ctx)
+		receipt, err = processEvmContract(ctx, leftOverGas)
 	}
 
 	// Gas is not enough
 	if err == vm.ErrInsufficientBalance {
 		return nil, err
 	}
+
+	receipt.UsedGas += intrGas
 
 	if err != nil {
 		ctx.Statedb.RevertToSnapshot(snapshot)
@@ -113,7 +123,7 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int)
 	return receipt, err
 }
 
-func processEvmContract(ctx *Context) (*types.Receipt, error) {
+func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 	var err error
 	receipt := &types.Receipt{
 		TxHash: ctx.Tx.Hash,
@@ -122,9 +132,8 @@ func processEvmContract(ctx *Context) (*types.Receipt, error) {
 	statedb := &evm.StateDB{Statedb: ctx.Statedb}
 	e := evm.NewEVMByDefaultConfig(ctx.Tx, statedb, ctx.BlockHeader, ctx.BcStore)
 	caller := vm.AccountRef(ctx.Tx.Data.From)
-	gas, leftOverGas := maxTxGas, uint64(0)
+	var leftOverGas uint64
 
-	// Currently, use maxTxGas gas to bypass ErrInsufficientBalance error and avoid overly complex contract creation or calculation.
 	if ctx.Tx.Data.To.IsEmpty() {
 		var createdContractAddr common.Address
 		receipt.Result, createdContractAddr, leftOverGas, err = e.Create(caller, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
@@ -146,7 +155,8 @@ func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Recei
 	if ctx.Tx.Data.To.IsEmpty() {
 		gasFee = contractCreationFee(ctx.Tx.Data.Payload)
 	} else {
-		gasFee = usedGasFee(receipt.UsedGas)
+		// except the intrinsic gas
+		gasFee = usedGasFee(receipt.UsedGas - ctx.Tx.IntrinsicGas())
 	}
 	totalFee := big.NewInt(0).Add(gasFee, ctx.Tx.Data.Fee)
 

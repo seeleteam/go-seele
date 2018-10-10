@@ -111,6 +111,13 @@ var (
 		Destination: &feeValue,
 	}
 
+	gasLimitValue uint64
+	gasLimitFlag  = cli.Uint64Flag{
+		Name:        "gas",
+		Usage:       "maximum gas for transaction",
+		Destination: &gasLimitValue,
+	}
+
 	nonceValue uint64
 	nonceFlag  = cli.Uint64Flag{
 		Name:        "nonce",
