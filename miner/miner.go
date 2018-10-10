@@ -158,7 +158,9 @@ func (miner *Miner) stopMining() {
 		close(miner.stopChan)
 		miner.stopChan = nil
 	}
-	
+
+	// wait for all threads to terminate
+	miner.wg.Wait()
 	miner.log.Info("Miner is stopped.")
 }
 
