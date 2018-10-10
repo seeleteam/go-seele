@@ -22,7 +22,6 @@ import (
 var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
-	errTxFeeNil     = errors.New("fee can't be nil")
 	errTxNonceUsed  = errors.New("transaction nonce already been used")
 )
 
@@ -206,8 +205,9 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	}
 
 	if existTx := pool.pendingQueue.get(tx.Data.From, tx.Data.AccountNonce); existTx != nil {
-		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
-			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
+		// @todo overwrite for higher gas limit.
+		if tx.Data.GasPrice.Cmp(existTx.Data.GasPrice) > 0 {
+			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
 				tx.Hash.ToHex(), existTx.Hash.ToHex())
 			pool.RemoveTransaction(existTx.Hash)
 		} else {
@@ -290,7 +290,7 @@ func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Tran
 	totalSize := 0
 	var txs []*types.Transaction
 
-	for pool.pendingQueue.feeHeap.Len() > 0 {
+	for !pool.pendingQueue.empty() {
 		tx := pool.pendingQueue.peek().peek().Transaction
 		tmpSize := totalSize + tx.Size()
 		if tmpSize > size {

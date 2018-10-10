@@ -218,7 +218,8 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 		"accountNonce": tx.Data.AccountNonce,
 		"payload":      tx.Data.Payload,
 		"timestamp":    tx.Data.Timestamp,
-		"fee":          tx.Data.Fee,
+		"gasPrice":     tx.Data.GasPrice,
+		"gasLimit":     tx.Data.GasLimit,
 	}
 	return transaction
 }

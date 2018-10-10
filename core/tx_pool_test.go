@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/stretchr/testify/assert"
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
@@ -36,16 +36,16 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 	return newTestPoolTxWithNonce(t, amount, nonce, 1)
 }
 
-func newTestPoolTxWithNonce(t *testing.T, amount int64, nonce uint64, fee int64) *pooledTx {
+func newTestPoolTxWithNonce(t *testing.T, amount int64, nonce uint64, price int64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
 
 	return newTestPoolEx(t, fromPrivKey, fromAddress, amount, nonce, 1)
 }
 
-func newTestPoolEx(t *testing.T, fromPrivKey *ecdsa.PrivateKey, fromAddress common.Address, amount int64, nonce uint64, fee int64) *pooledTx {
+func newTestPoolEx(t *testing.T, fromPrivKey *ecdsa.PrivateKey, fromAddress common.Address, amount int64, nonce uint64, price int64) *pooledTx {
 	_, toAddress := randomAccount(t)
 
-	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(fee), nonce)
+	tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(price), nonce)
 	tx.Sign(fromPrivKey)
 
 	return newPooledTx(tx)
@@ -101,7 +101,7 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 50000, 100)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 
@@ -134,7 +134,7 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 50000, 100)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, error(nil))
@@ -150,9 +150,9 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx1 := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx1.Data.From, 20, 100)
+	chain.addAccount(poolTx1.Data.From, 50000, 100)
 	poolTx2 := newTestPoolTx(t, 19, 101)
-	chain.addAccount(poolTx2.Data.From, 20, 101)
+	chain.addAccount(poolTx2.Data.From, 50000, 101)
 
 	err := pool.AddTransaction(poolTx1.Transaction)
 	assert.Equal(t, err, error(nil))
@@ -167,13 +167,13 @@ func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
 
 	fromPrivKey, fromAddress := randomAccount(t)
 	var nonce uint64 = 100
-	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 10)
-	chain.addAccount(poolTx.Data.From, 20, 10)
+	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 1)
+	chain.addAccount(poolTx.Data.From, 50000, 10)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, error(nil))
 
-	poolTx = newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 8)
+	poolTx = newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 1)
 	err = pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, errTxNonceUsed)
 }
@@ -183,7 +183,7 @@ func Test_TransactionPool_GetTransaction(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 50000, 100)
 
 	pool.AddTransaction(poolTx.Transaction)
 
@@ -215,7 +215,7 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 50000, 100)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
@@ -266,7 +266,7 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 500000, 100)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
@@ -297,7 +297,7 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	assert.Equal(t, pool.GetPendingTxCount(), 0)
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 50000, 100)
 
 	err := pool.AddTransaction(poolTx.Transaction)
 	assert.Equal(t, err, nil)
@@ -315,7 +315,7 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Data.From, 20, 100)
+	chain.addAccount(poolTx.Data.From, 500000, 100)
 
 	pool.AddTransaction(poolTx.Transaction)
 
@@ -336,13 +336,13 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	assert.Equal(t, len(txs), 0)
 }
 
-func newTxs(t *testing.T, amount, fee, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
+func newTxs(t *testing.T, amount, price, nonce, number int64, chain *mockBlockchain) []*types.Transaction {
 	var txs []*types.Transaction
 
 	for i := int64(0); i < number; i++ {
 		fromPrivKey, fromAddress := randomAccount(t)
 		_, toAddress := randomAccount(t)
-		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(fee), uint64(nonce))
+		tx, _ := types.NewTransaction(fromAddress, toAddress, big.NewInt(amount), big.NewInt(price), uint64(nonce))
 		tx.Sign(fromPrivKey)
 		chain.addAccount(fromAddress, 1000000000, 1)
 		txs = append(txs, tx)

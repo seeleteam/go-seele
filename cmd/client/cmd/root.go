@@ -23,7 +23,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		{
 			Name:   "sendtx",
 			Usage:  "send transaction to node",
-			Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, gasLimitFlag, payloadFlag, nonceFlag),
+			Flags:  rpcFlags(fromFlag, toFlag, amountFlag, priceFlag, gasLimitFlag, payloadFlag, nonceFlag),
 			Action: rpcActionEx("seele", "addTx", makeTransaction, onTxAdded),
 		},
 		{
@@ -112,7 +112,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				privateKeyFlag,
 				toFlag,
 				amountFlag,
-				feeFlag,
+				priceFlag,
 				gasLimitFlag,
 				payloadFlag,
 				nonceFlag,
@@ -144,19 +144,19 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "create",
 				Usage:  "create HTLC",
-				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, feeFlag, gasLimitFlag, nonceFlag, hashFlag, timeLockFlag),
+				Flags:  rpcFlags(fromFlag, toFlag, amountFlag, priceFlag, gasLimitFlag, nonceFlag, hashFlag, timeLockFlag),
 				Action: rpcActionSystemContract("htlc", "create", handleCallResult),
 			},
 			{
 				Name:   "withdraw",
 				Usage:  "withdraw from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nonceFlag, hashFlag, preimageFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nonceFlag, hashFlag, preimageFlag),
 				Action: rpcActionSystemContract("htlc", "withdraw", handleCallResult),
 			},
 			{
 				Name:   "refund",
 				Usage:  "refund from HTLC",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nonceFlag, hashFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nonceFlag, hashFlag),
 				Action: rpcActionSystemContract("htlc", "refund", handleCallResult),
 			},
 			{
@@ -196,13 +196,13 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "register",
 				Usage:  "register a domain name",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "create", handleCallResult),
 			},
 			{
 				Name:   "owner",
 				Usage:  "get the domain name owner",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nameFlag, nonceFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nameFlag, nonceFlag),
 				Action: rpcActionSystemContract("domain", "getOwner", handleCallResult),
 			},
 		},
@@ -215,13 +215,13 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "register",
 				Usage:  "register a sub chain",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nonceFlag, subChainJSONFileFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nonceFlag, subChainJSONFileFlag),
 				Action: rpcActionSystemContract("subchain", "register", handleCallResult),
 			},
 			{
 				Name:   "query",
 				Usage:  "query sub chain",
-				Flags:  rpcFlags(fromFlag, feeFlag, gasLimitFlag, nonceFlag, nameFlag),
+				Flags:  rpcFlags(fromFlag, priceFlag, gasLimitFlag, nonceFlag, nameFlag),
 				Action: rpcActionSystemContract("subchain", "query", handleCallResult),
 			},
 			cli.Command{

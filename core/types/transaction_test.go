@@ -35,11 +35,11 @@ func randomAddress(t *testing.T) common.Address {
 	return address
 }
 
-func newTestTx(t *testing.T, amount, fee, nonce uint64, sign bool) *Transaction {
+func newTestTx(t *testing.T, amount, price, nonce uint64, sign bool) *Transaction {
 	fromPrivKey, fromAddress := randomAccount(t)
 	toAddress := randomAddress(t)
 
-	tx, err := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	tx, err := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func newTestStateDB(address common.Address, nonce, balance uint64) *mockStateDB 
 // Validate successfully if no data changed.
 func Test_Transaction_Validate_NoDataChange(t *testing.T) {
 	tx := newTestTx(t, 100, 2, 38, true)
-	statedb := newTestStateDB(tx.Data.From, 38, 200)
+	statedb := newTestStateDB(tx.Data.From, 38, 200000)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, error(nil))
 }
@@ -264,7 +264,7 @@ func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
 	assert.Equal(t, strings.Contains(err.Error(), "invalid from address"), true)
 }
 
-func Test_Transaction_InvalidFee(t *testing.T) {
+func Test_Transaction_InvalidPrice(t *testing.T) {
 	dispose := prepareShardEnv(2)
 	defer dispose()
 
@@ -274,11 +274,11 @@ func Test_Transaction_InvalidFee(t *testing.T) {
 
 	tx, err := NewTransaction(*from, *contractAddr, big.NewInt(20), big.NewInt(-1), 5)
 	assert.Equal(t, tx, (*Transaction)(nil))
-	assert.Equal(t, err, ErrFeeNegative)
+	assert.Equal(t, err, ErrPriceNegative)
 
 	tx, err = NewTransaction(*from, *contractAddr, big.NewInt(20), nil, 5)
 	assert.Equal(t, tx, (*Transaction)(nil))
-	assert.Equal(t, err, ErrFeeNil)
+	assert.Equal(t, err, ErrPriceNil)
 }
 
 func Test_Transaction_EmptyPayloadError(t *testing.T) {

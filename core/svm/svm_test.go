@@ -67,7 +67,6 @@ func Test_Process_SysContract(t *testing.T) {
 
 	gasCreateDomainName := uint64(50000) // gas used to create a domain name
 	assert.Equal(t, receipt.UsedGas, gasCreateDomainName+ctx.Tx.IntrinsicGas())
-	assert.Equal(t, new(big.Int).SetUint64(receipt.TotalFee), new(big.Int).Add(usedGasFee(gasCreateDomainName), ctx.Tx.Data.Fee))
 
 	// DomainNameOwner
 	ctx1 := ctx
@@ -80,7 +79,6 @@ func Test_Process_SysContract(t *testing.T) {
 
 	gasDomainNameCreator := uint64(100000) // gas used to query the creator of given domain name
 	assert.Equal(t, receipt1.UsedGas, gasDomainNameCreator+ctx.Tx.IntrinsicGas())
-	assert.Equal(t, new(big.Int).SetUint64(receipt1.TotalFee), new(big.Int).Add(usedGasFee(gasDomainNameCreator), ctx1.Tx.Data.Fee))
 
 	// Do not transfer the amount of the run error
 	ctx2 := ctx1
@@ -115,7 +113,9 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 
 	// can apply the tx but not enough fee
 	ctx2, _ := newTestContext(big.NewInt(1))
-	balanceF2 := big.NewInt(0).Sub(big.NewInt(0).SetUint64(totalFee), ctx2.Tx.Data.Fee)
+	intrGas := new(big.Int).SetUint64(ctx2.Tx.IntrinsicGas())
+	intrGasFee := new(big.Int).Mul(intrGas, ctx2.Tx.Data.GasPrice)
+	balanceF2 := big.NewInt(0).Sub(big.NewInt(0).SetUint64(totalFee), intrGasFee)
 	ctx2.Statedb.SetBalance(ctx2.Tx.Data.From, balanceF2)
 	receipt2, err2 := Process(ctx2)
 	assert.Equal(t, err2, vm.ErrInsufficientBalance)
@@ -195,7 +195,7 @@ func newTestContext(amount *big.Int) (*Context, error) {
 	header := newTestBlockHeader(coinbase)
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	tx, err := types.NewContractTransaction(address, amount, big.NewInt(1), math.MaxUint64, 38, code)
+	tx, err := types.NewContractTransaction(address, amount, big.NewInt(1), 5000000, 38, code)
 
 	return &Context{
 		Tx:          tx,

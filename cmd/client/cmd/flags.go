@@ -104,11 +104,11 @@ var (
 		Destination: &payloadValue,
 	}
 
-	feeValue string
-	feeFlag  = cli.StringFlag{
-		Name:        "fee",
-		Usage:       "transaction fee",
-		Destination: &feeValue,
+	priceValue string
+	priceFlag  = cli.StringFlag{
+		Name:        "price",
+		Usage:       "transaction gas price",
+		Destination: &priceValue,
 	}
 
 	gasLimitValue uint64
