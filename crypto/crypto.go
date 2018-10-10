@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
+	"github.com/seeleteam/go-seele/crypto/sha3"
 )
 
 const (
@@ -53,6 +54,15 @@ func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 // PubkeyToString returns the string of the given public key, with prefix 0x
 func PubkeyToString(pub *ecdsa.PublicKey) string {
 	return GetAddress(pub).ToHex()
+}
+
+// Keccak512 calculates and returns the Keccak512 hash of the input data.
+func Keccak512(data ...[]byte) []byte {
+	d := sha3.NewKeccak512()
+	for _, b := range data {
+		d.Write(b)
+	}
+	return d.Sum(nil)
 }
 
 // FromECDSAPub marshals and returns the byte array of the specified ECDSA public key.
