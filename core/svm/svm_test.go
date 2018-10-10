@@ -5,6 +5,7 @@
 package svm
 
 import (
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -194,7 +195,7 @@ func newTestContext(amount *big.Int) (*Context, error) {
 	header := newTestBlockHeader(coinbase)
 	// Create contract tx, please refer to the code content in contract/solidity/simple_storage.sol
 	code := mustHexToBytes("0x608060405234801561001057600080fd5b50600560008190555060df806100276000396000f3006080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b114604e5780636d4ce63c146078575b600080fd5b348015605957600080fd5b5060766004803603810190808035906020019092919050505060a0565b005b348015608357600080fd5b50608a60aa565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058207f6dc43a0d648e9f5a0cad5071cde46657de72eb87ab4cded53a7f1090f51e6d0029")
-	tx, err := types.NewContractTransaction(address, amount, big.NewInt(1), 38, code)
+	tx, err := types.NewContractTransaction(address, amount, big.NewInt(1), math.MaxUint64, 38, code)
 
 	return &Context{
 		Tx:          tx,
@@ -222,7 +223,7 @@ func Benchmark_CallContract_EVM(b *testing.B) {
 	// Call contract tx: SimpleStorage.get(), it returns 5 as initialized in constructor.
 	input := mustHexToBytes("0x6d4ce63c")
 	amount, fee, nonce := big.NewInt(0), big.NewInt(1), uint64(38)
-	callContractTx, _ := types.NewMessageTransaction(ctx.Tx.Data.From, contractAddr, amount, fee, nonce, input)
+	callContractTx, _ := types.NewMessageTransaction(ctx.Tx.Data.From, contractAddr, amount, fee, math.MaxUint64, nonce, input)
 	ctx.Tx = callContractTx
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
