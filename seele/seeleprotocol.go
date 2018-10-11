@@ -528,7 +528,7 @@ handler:
 				continue
 			}
 
-			p.log.Info("got block message and save it. height:%d, hash:%s", block.Header.Height, block.HeaderHash.ToHex())
+			p.log.Info("got block message and save it. height:%d, hash:%s, time: %d", block.Header.Height, block.HeaderHash.ToHex(), time.Now().UnixNano())
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork

@@ -7,6 +7,7 @@ package api
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
@@ -239,6 +240,6 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
+	api.s.Log().Debug("create transaction and add it. transaction hash: %s, time: %d", tx.Hash, time.Now().UnixNano())
 	return true, nil
 }
