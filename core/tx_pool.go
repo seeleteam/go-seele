@@ -205,7 +205,6 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	}
 
 	if existTx := pool.pendingQueue.get(tx.Data.From, tx.Data.AccountNonce); existTx != nil {
-		// @todo overwrite for higher gas limit.
 		if tx.Data.GasPrice.Cmp(existTx.Data.GasPrice) > 0 {
 			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
 				tx.Hash.ToHex(), existTx.Hash.ToHex())

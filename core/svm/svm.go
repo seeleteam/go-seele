@@ -55,13 +55,21 @@ func Process(ctx *Context) (*types.Receipt, error) {
 		return nil, err
 	}
 
-	receipt.UsedGas += intrGas
-
 	if err != nil {
 		ctx.Statedb.RevertToSnapshot(snapshot)
 		receipt.Failed = true
 		receipt.Result = []byte(err.Error())
 	}
+
+	// include the intrinsic gas
+	receipt.UsedGas += intrGas
+
+	// refund gas, capped to half of the used gas.
+	refund := ctx.Statedb.GetRefund()
+	if maxRefund := receipt.UsedGas / 2; refund > maxRefund {
+		refund = maxRefund
+	}
+	receipt.UsedGas -= refund
 
 	return handleFee(ctx, receipt, snapshot)
 }
@@ -154,7 +162,8 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 
 func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
 	// Calculating the total fee
-	// @todo decrease the gas fee
+	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
+	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)
 	totalFee := new(big.Int).Mul(usedGas, ctx.Tx.Data.GasPrice)
 
