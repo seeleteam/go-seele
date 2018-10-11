@@ -24,6 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
+	"github.com/sirupsen/logrus"
 	set "gopkg.in/fatih/set.v0"
 )
 
@@ -152,7 +153,30 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.loopWG.Add(1)
 	go srv.run()
 	srv.running = true
+
+	// just in debug mode
+	if srv.log.GetLevel() >= logrus.DebugLevel {
+		go srv.printPeers()
+	}
+
 	return nil
+}
+
+// printPeers used print handshake peers log, not just in debug
+func (srv *Server) printPeers() {
+	timer := time.NewTimer(1 * time.Hour)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			srv.log.Debug("handshake peers number: %d, time: %d", srv.PeerCount(), time.Now().UnixNano())
+		case <-timer.C:
+			break loop
+		}
+	}
 }
 
 func (srv *Server) addNode(node *discovery.Node) {
