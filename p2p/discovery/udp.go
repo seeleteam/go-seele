@@ -458,7 +458,7 @@ loop:
 	for {
 		select {
 		case <-ticker.C:
-			u.log.Debug("discovery peers number: %d, time: %d", u.table.getPeersCount(), time.Now().UnixNano())
+			u.log.Debug("discovery peers number: %d, time: %d", u.table.count(), time.Now().UnixNano())
 		case <-timer.C:
 			break loop
 		}

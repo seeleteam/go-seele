@@ -68,7 +68,7 @@ func (t *Table) addNode(node *Node) {
 }
 
 // getPeersCount obtain all peers count
-func (t *Table) getPeersCount() int {
+func (t *Table) count() int {
 	count := 0
 	for _, v := range t.buckets {
 		count += len(v.peers)
