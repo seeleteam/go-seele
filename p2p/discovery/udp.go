@@ -451,11 +451,17 @@ func (u *udp) StartServe(nodeDir string) {
 
 // printPeers print log during 60 minutes, note this is in debug
 func (u *udp) printPeers() {
-	duration := 10 * time.Second
-	for i := 0; i < 360; i++ {
-		timer := time.NewTimer(duration)
-		<-timer.C
-		u.log.Debug("discovery peers number: %d, time: %d", u.table.getPeersCount(), time.Now().UnixNano())
+	timer := time.NewTimer(3600 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
+
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			u.log.Debug("discovery peers number: %d, time: %d", u.table.getPeersCount(), time.Now().UnixNano())
+		case <-timer.C:
+			break loop
+		}
 	}
 }
 
