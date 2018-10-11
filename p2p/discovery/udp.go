@@ -19,6 +19,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -446,13 +447,16 @@ func (u *udp) StartServe(nodeDir string) {
 	go u.pingPongService()
 	go u.sendLoop()
 	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
-	go u.printPeers()
+	if u.log.GetLevel() >= logrus.DebugLevel {
+		go u.printPeers()
+	}
 }
 
 // printPeers print log during 60 minutes, note this is in debug
 func (u *udp) printPeers() {
 	timer := time.NewTimer(3600 * time.Second)
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
 loop:
 	for {
