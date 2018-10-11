@@ -82,9 +82,8 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 
 	ctx.Statedb.SubBalance(sender, amount)
 
-	// check fee
-	usedGas := ctx.Tx.IntrinsicGas()
-	txFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(usedGas))
+	// check fee, only support non-contract tx.
+	txFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(types.TransferAmountIntrinsicGas))
 	if ctx.Statedb.GetBalance(sender).Cmp(txFee) < 0 {
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
