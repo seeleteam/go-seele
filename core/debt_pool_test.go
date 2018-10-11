@@ -49,7 +49,7 @@ func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64
 		Height:            blockHeight,
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),
-		Nonce:             10,
+		Witness:           make([]byte, 0),
 		ExtraData:         make([]byte, 0),
 	}
 

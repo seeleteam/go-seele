@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestBlockHeader(t *testing.T) *BlockHeader {
@@ -24,7 +24,7 @@ func newTestBlockHeader(t *testing.T) *BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             1,
+		Witness:           common.CopyBytes([]byte("witness")),
 		ExtraData:         common.CopyBytes([]byte("ExtraData")),
 	}
 }
@@ -44,7 +44,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	header.Difficulty.SetInt64(2)
 	header.Height = 2
 	header.CreateTimestamp.SetInt64(2)
-	header.Nonce = 2
+	header.Witness = common.CopyBytes([]byte("witness2"))
 	header.ExtraData = common.CopyBytes([]byte("ExtraData2"))
 
 	// Ensure the cloned header is not affected.
@@ -55,15 +55,15 @@ func Test_BlockHeader_Clone(t *testing.T) {
 	assert.Equal(t, cloned.Difficulty.Int64(), int64(1))
 	assert.Equal(t, cloned.Height, uint64(1))
 	assert.Equal(t, cloned.CreateTimestamp.Int64(), originalTimestamp)
-	assert.Equal(t, cloned.Nonce, uint64(1))
 	assert.Equal(t, cloned.ExtraData, []byte("ExtraData"))
+	assert.Equal(t, cloned.Witness, []byte("witness"))
 }
 
 func Test_BlockHeader_Hash(t *testing.T) {
 	header := newTestBlockHeader(t)
 	hash1 := header.Hash()
 
-	header.Nonce = 2
+	header.Height = 2
 	hash2 := header.Hash()
 
 	assert.Equal(t, hash1.Equal(hash2), false)

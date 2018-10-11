@@ -48,7 +48,7 @@ func newTestBlockHeader() *types.BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            1,
 		CreateTimestamp:   big.NewInt(1),
-		Nonce:             1,
+		Witness:           make([]byte, 0),
 		ExtraData:         make([]byte, 0),
 	}
 }
@@ -62,7 +62,7 @@ func newTestNonGensisBlockHeader(parentHeader *types.BlockHeader, difficulty *bi
 		Difficulty:        difficulty,
 		Height:            height,
 		CreateTimestamp:   big.NewInt(2),
-		Nonce:             1,
+		Witness:           make([]byte, 0),
 		ExtraData:         make([]byte, 0),
 	}
 }

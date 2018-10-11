@@ -179,7 +179,7 @@ func newTestBlockHeader(coinbase common.Address) *types.BlockHeader {
 		Difficulty:        big.NewInt(38),
 		Height:            666,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             10,
+		Witness:           make([]byte, 0),
 		ExtraData:         make([]byte, 0),
 	}
 }
