@@ -446,6 +446,17 @@ func (u *udp) StartServe(nodeDir string) {
 	go u.pingPongService()
 	go u.sendLoop()
 	go u.db.StartSaveNodes(nodeDir, make(chan struct{}))
+	go u.printPeers()
+}
+
+// printPeers print log during 60 minutes, note this is in debug
+func (u *udp) printPeers() {
+	duration := 10 * time.Second
+	for i := 0; i < 360; i++ {
+		timer := time.NewTimer(duration)
+		<-timer.C
+		u.log.Debug("discovery peers number: %d, time: %d", u.table.getPeersCount(), time.Now().UnixNano())
+	}
 }
 
 // only notify connect when got pong msg
