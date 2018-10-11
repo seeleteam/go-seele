@@ -55,10 +55,10 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 	}
 }
 
-func newTestTx(from, to int, amount, fee, nonce uint64) *types.Transaction {
+func newTestTx(from, to int, amount, price, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[from]
 	toAccmount := testGenesisAccounts[to]
-	tx, _ := types.NewTransaction(fromAccount.addr, toAccmount.addr, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	tx, _ := types.NewTransaction(fromAccount.addr, toAccmount.addr, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx

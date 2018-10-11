@@ -23,7 +23,7 @@ func newTestContext(db database.Database, contractAddr common.Address) *Context 
 			From:         common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
 			To:           contractAddr,
 			Amount:       big.NewInt(1),
-			Fee:          big.NewInt(1),
+			GasPrice:     big.NewInt(1),
 			AccountNonce: 1,
 		},
 	}

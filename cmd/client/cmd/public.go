@@ -159,7 +159,7 @@ func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, e
 		return nil, err
 	}
 
-	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.Fee, txd.GasLimit, txd.AccountNonce, txd.Payload)
+	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.GasPrice, txd.GasLimit, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return nil, err
 	}

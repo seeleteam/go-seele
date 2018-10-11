@@ -145,11 +145,11 @@ func newTestBlock() *types.Block {
 	return types.NewBlock(header, txs, receipts, nil)
 }
 
-func newTestTx(amount, fee, nonce uint64, sign bool) *types.Transaction {
+func newTestTx(amount, price, nonce uint64, sign bool) *types.Transaction {
 	fromPrivKey, fromAddress := randomAccount()
 	toAddress := randomAddress()
 
-	tx, err := types.NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	tx, err := types.NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
 	if err != nil {
 		panic(err)
 	}

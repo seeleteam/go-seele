@@ -81,7 +81,7 @@ func Test_GetReceiptByHash(t *testing.T) {
 	assert.Equal(t, outputs["totalFee"], receipts[0].TotalFee)
 }
 
-func newTestTx(t *testing.T, s *SeeleService, amount, fee int64, nonce uint64) *types.Transaction {
+func newTestTx(t *testing.T, s *SeeleService, amount, price int64, nonce uint64) *types.Transaction {
 	statedb, err := s.chain.GetCurrentState()
 	assert.Equal(t, err, nil)
 
@@ -94,7 +94,7 @@ func newTestTx(t *testing.T, s *SeeleService, amount, fee int64, nonce uint64) *
 	err = storeStatedb(t, s, statedb)
 	assert.Equal(t, err, nil)
 	toAddress := crypto.MustGenerateShardAddress(fromAddress.Shard())
-	tx, err := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(fee), nonce)
+	tx, err := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), nonce)
 	assert.Equal(t, err, nil)
 	tx.Sign(fromPrivKey)
 	return tx

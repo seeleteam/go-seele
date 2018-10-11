@@ -33,11 +33,11 @@ var (
 	// ErrAmountNil is returned when the transation amount is nil.
 	ErrAmountNil = errors.New("amount is null")
 
-	// ErrFeeNegative is returned when the transaction fee is negative.
-	ErrFeeNegative = errors.New("failed to create tx, fee can't be negative or zero")
+	// ErrPriceNegative is returned when the transaction gas price is negative or zero.
+	ErrPriceNegative = errors.New("gas price is negative or zero")
 
-	// ErrFeeNil is returned when the transaction fee is nil.
-	ErrFeeNil = errors.New("failed to create tx, fee is nil")
+	// ErrPriceNil is returned when the transaction gas price is nil.
+	ErrPriceNil = errors.New("gas price is nil")
 
 	// ErrIntrinsicGas is returned if the tx gas is too low.
 	ErrIntrinsicGas = errors.New("intrinsic gas too low")
@@ -64,6 +64,9 @@ var (
 
 	// MaxPayloadSize limits the payload size to prevent malicious transactions.
 	MaxPayloadSize = defaultMaxPayloadSize
+
+	// TransferAmountIntrinsicGas is the intrinsic gas to transfer amount.
+	TransferAmountIntrinsicGas = ethIntrinsicGas(nil)
 )
 
 // TransactionData wraps the data in a transaction.
@@ -72,7 +75,7 @@ type TransactionData struct {
 	To           common.Address // To is the receiver address, and empty address is used to create contract
 	Amount       *big.Int       // Amount is the amount to be transferred
 	AccountNonce uint64         // AccountNonce is the nonce of the sender account
-	Fee          *big.Int       // Transaction Fee
+	GasPrice     *big.Int       // Transaction gas price
 	GasLimit     uint64         // Maximum gas for contract creation/execution
 	Timestamp    uint64         // Timestamp is used for the miner reward transaction, referring to the block timestamp
 	Payload      common.Bytes   // Payload is the extra data of the transaction
@@ -138,12 +141,11 @@ func (tx *Transaction) Size() int {
 
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
-func NewTransaction(from, to common.Address, amount *big.Int, fee *big.Int, nonce uint64) (*Transaction, error) {
-	gasLimit := ethIntrinsicGas(nil)
-	return newTx(from, to, amount, fee, gasLimit, nonce, nil)
+func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {
+	return newTx(from, to, amount, price, TransferAmountIntrinsicGas, nonce, nil)
 }
 
-func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*Transaction, error) {
+func newTx(from common.Address, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*Transaction, error) {
 	txData := TransactionData{
 		From:         from,
 		To:           to,
@@ -156,8 +158,8 @@ func newTx(from common.Address, to common.Address, amount *big.Int, fee *big.Int
 		txData.Amount = new(big.Int).Set(amount)
 	}
 
-	if fee != nil {
-		txData.Fee = new(big.Int).Set(fee)
+	if price != nil {
+		txData.GasPrice = new(big.Int).Set(price)
 	}
 
 	if txData.Payload == nil {
@@ -189,13 +191,13 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrAmountNegative
 	}
 
-	// validate fee
-	if tx.Data.Fee == nil {
-		return ErrFeeNil
+	// validate gas price
+	if tx.Data.GasPrice == nil {
+		return ErrPriceNil
 	}
 
-	if tx.Data.Fee.Sign() <= 0 {
-		return ErrFeeNegative
+	if tx.Data.GasPrice.Sign() <= 0 {
+		return ErrPriceNegative
 	}
 
 	// validate gas limit
@@ -243,13 +245,13 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 }
 
 // NewContractTransaction returns a transaction to create a smart contract.
-func NewContractTransaction(from common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, code []byte) (*Transaction, error) {
-	return newTx(from, common.EmptyAddress, amount, fee, gasLimit, nonce, code)
+func NewContractTransaction(from common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, code []byte) (*Transaction, error) {
+	return newTx(from, common.EmptyAddress, amount, price, gasLimit, nonce, code)
 }
 
 // NewMessageTransaction returns a transation with the specified message.
-func NewMessageTransaction(from, to common.Address, amount *big.Int, fee *big.Int, gasLimit uint64, nonce uint64, msg []byte) (*Transaction, error) {
-	return newTx(from, to, amount, fee, gasLimit, nonce, msg)
+func NewMessageTransaction(from, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, msg []byte) (*Transaction, error) {
+	return newTx(from, to, amount, price, gasLimit, nonce, msg)
 }
 
 // NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
@@ -266,7 +268,7 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 		From:      common.Address{},
 		To:        miner,
 		Amount:    new(big.Int).Set(reward),
-		Fee:       big.NewInt(0),
+		GasPrice:  big.NewInt(0),
 		Timestamp: timestamp,
 		Payload:   make([]byte, 0),
 	}
@@ -297,10 +299,11 @@ func (tx *Transaction) Validate(statedb stateDB) error {
 
 // ValidateState validates state dependent fields in tx.
 func (tx *Transaction) ValidateState(statedb stateDB) error {
-	// @todo fee = price * gasLimit
-	consumed := new(big.Int).Add(tx.Data.Amount, tx.Data.Fee)
-	if balance := statedb.GetBalance(tx.Data.From); consumed.Cmp(balance) > 0 {
-		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v", tx.Data.From.ToHex(), balance, tx.Data.Amount, tx.Data.Fee)
+	fee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(tx.Data.GasLimit))
+	cost := new(big.Int).Add(tx.Data.Amount, fee)
+
+	if balance := statedb.GetBalance(tx.Data.From); cost.Cmp(balance) > 0 {
+		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v, cost:%v", tx.Data.From.ToHex(), balance, tx.Data.Amount, fee, cost)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {

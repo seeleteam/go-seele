@@ -92,9 +92,9 @@ func (collection *txCollection) list() []*types.Transaction {
 	return result
 }
 
-// feeCmp compares to the specified tx collection based on fee and timestamp.
-//   For higher fee, return 1.
-//   For lower fee, return -1.
+// cmp compares to the specified tx collection based on price and timestamp.
+//   For higher price, return 1.
+//   For lower price, return -1.
 //   Otherwise:
 //     For earier timestamp, return 1.
 //     For later timestamp, return -1.
@@ -102,7 +102,7 @@ func (collection *txCollection) list() []*types.Transaction {
 func (collection *txCollection) cmp(other *txCollection) int {
 	iTx, jTx := collection.peek(), other.peek()
 
-	if r := iTx.Data.Fee.Cmp(jTx.Data.Fee); r != 0 {
+	if r := iTx.Data.GasPrice.Cmp(jTx.Data.GasPrice); r != 0 {
 		return r
 	}
 

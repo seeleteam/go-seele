@@ -20,12 +20,12 @@ func uintToAddress(i uint64) common.Address {
 	return common.BigToAddress(new(big.Int).SetUint64(i))
 }
 
-func newMockPooledTx(fromAddr, fee, nonce uint64) *pooledTx {
+func newMockPooledTx(fromAddr, price, nonce uint64) *pooledTx {
 	return &pooledTx{
 		Transaction: &types.Transaction{
 			Data: types.TransactionData{
 				From:         uintToAddress(fromAddr),
-				Fee:          new(big.Int).SetUint64(fee),
+				GasPrice:     new(big.Int).SetUint64(price),
 				AccountNonce: nonce,
 			},
 		},
@@ -85,27 +85,27 @@ func Test_PendingQueue_remove(t *testing.T) {
 func Test_PendingQueue_peek(t *testing.T) {
 	q := newPendingQueue()
 
-	// first account with fee 5
+	// first account with price 5
 	tx1 := newMockPooledTx(1, 5, 1)
 	q.add(tx1)
 	assert.Equal(t, q.peek().peek(), tx1)
 
-	// insert tx with less fee 4
+	// insert tx with less price 4
 	tx2 := newMockPooledTx(2, 4, 1)
 	q.add(tx2)
 	assert.Equal(t, q.peek().peek(), tx1)
 
-	// insert tx with more fee 6
+	// insert tx with more price 6
 	tx3 := newMockPooledTx(3, 6, 1)
 	q.add(tx3)
 	assert.Equal(t, q.peek().peek(), tx3)
 
-	// insert tx with same fee 6, but latest time
+	// insert tx with same price 6, but latest time
 	tx4 := newMockPooledTx(4, 6, 1)
 	q.add(tx4)
 	assert.Equal(t, q.peek().peek(), tx3)
 
-	// insert tx with same fee 6, but older time
+	// insert tx with same price 6, but older time
 	tx5 := newMockPooledTx(5, 6, 1)
 	tx5.timestamp = tx3.timestamp.Add(-3 * time.Second)
 	q.add(tx5)
@@ -131,12 +131,12 @@ func Test_PendingQueue_popN(t *testing.T) {
 	assert.Equal(t, q.popN(0) == nil, true)
 
 	assert.Equal(t, q.popN(100), []*types.Transaction{
-		accountTxs[3][0].Transaction, // pop fee 9
-		accountTxs[2][0].Transaction, // pop fee 7
-		accountTxs[2][1].Transaction, // pop fee 15
-		accountTxs[3][1].Transaction, // pop fee 6
-		accountTxs[1][0].Transaction, // pop fee 5
-		accountTxs[1][1].Transaction, // pop fee 20
+		accountTxs[3][0].Transaction, // pop price 9
+		accountTxs[2][0].Transaction, // pop price 7
+		accountTxs[2][1].Transaction, // pop price 15
+		accountTxs[3][1].Transaction, // pop price 6
+		accountTxs[1][0].Transaction, // pop price 5
+		accountTxs[1][1].Transaction, // pop price 20
 	})
 
 	assert.Equal(t, q.popN(1) == nil, true)
@@ -218,7 +218,7 @@ func prepareTxs(numAccounts, numTxsPerAccount uint) map[common.Address][]*pooled
 			tx := &types.Transaction{
 				Data: types.TransactionData{
 					From:         from,
-					Fee:          big.NewInt(int64(rand.Intn(10000))),
+					GasPrice:     big.NewInt(int64(rand.Intn(10000))),
 					AccountNonce: uint64(j),
 				},
 			}
