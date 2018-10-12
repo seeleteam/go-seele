@@ -14,18 +14,26 @@ import (
 )
 
 const (
-	alpha                = 3 // Kademlia concurrency factor
-	responseNodeNumber   = 5 // TODO with this number for test
-	hashBits             = len(common.Hash{}) * 8
-	nBuckets             = hashBits + 1 // Number of buckets
-	shardTargeNodeNumber = 1            // other shard minimal node number for start
-	UndefinedShardNumber = 0            // UndefinedShardNumber indicates the shard number is undefined
+	// Kademlia concurrency factor
+	alpha = 3
+	// TODO with this number for test
+	responseNodeNumber = 5
+	hashBits           = len(common.Hash{}) * 8
+	// Number of buckets
+	nBuckets = hashBits + 1
+	// other shard minimal node number for start
+	shardTargeNodeNumber = 1
+	// UndefinedShardNumber indicates the shard number is undefined
+	UndefinedShardNumber = 0
 )
 
+// Table used to save peers information
 type Table struct {
-	buckets      [nBuckets]*bucket
-	shardBuckets [common.ShardCount + 1]*bucket // 0 represents undefined shard number node.
-	selfNode     *Node                           //info of local node
+	buckets [nBuckets]*bucket
+	// 0 represents undefined shard number node.
+	shardBuckets [common.ShardCount + 1]*bucket
+	// info of local node
+	selfNode *Node
 
 	log *log.SeeleLog
 }
@@ -57,6 +65,20 @@ func (t *Table) addNode(node *Node) {
 
 		t.buckets[dis].addNode(node)
 	}
+}
+
+// getPeersCount obtain all peers count
+func (t *Table) count() int {
+	count := 0
+	for _, v := range t.buckets {
+		count += len(v.peers)
+	}
+
+	for _, v := range t.shardBuckets {
+		count += len(v.peers)
+	}
+
+	return count
 }
 
 func (t *Table) updateNode(node *Node) {

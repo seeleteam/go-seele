@@ -74,11 +74,11 @@ func newTestBlockchain(db database.Database) *Blockchain {
 	return bc
 }
 
-func newTestBlockTx(genesisAccountIndex int, amount, fee, nonce uint64) *types.Transaction {
+func newTestBlockTx(genesisAccountIndex int, amount, price, nonce uint64) *types.Transaction {
 	fromAccount := testGenesisAccounts[genesisAccountIndex]
 	toAddress := crypto.MustGenerateShardAddress(fromAccount.addr.Shard())
 
-	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(fee), nonce)
+	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
 	tx.Sign(fromAccount.privKey)
 
 	return tx
@@ -370,8 +370,10 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	// prepare tx to apply, amount is 10 and fee is 2
-	tx := newTestBlockTx(0, 10, 2, 0)
+	// prepare tx to apply
+	amount := uint64(3456)
+	price := uint64(2)
+	tx := newTestBlockTx(0, amount, price, 0)
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 	coinbase := block.Header.Creator
 	statedb, err := bc.GetCurrentState()
@@ -389,9 +391,9 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	// check after applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(99988))
-	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(10))
-	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(52))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), new(big.Int).SetUint64(100000-amount-price*types.TransferAmountIntrinsicGas))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), new(big.Int).SetUint64(amount))
+	assert.Equal(t, statedb.GetBalance(coinbase), new(big.Int).SetUint64(50+price*types.TransferAmountIntrinsicGas))
 }
 
 func Benchmark_Blockchain_WriteBlock(b *testing.B) {

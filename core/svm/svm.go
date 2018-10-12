@@ -36,13 +36,15 @@ func Process(ctx *Context) (*types.Receipt, error) {
 	}
 	leftOverGas := gasLimit - intrGas
 
+	// init statedb and set snapshot
 	var err error
 	var receipt *types.Receipt
 	snapshot := ctx.Statedb.Prepare(ctx.TxIndex)
 
+	// create or execute contract
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
 		receipt, err = processSystemContract(ctx, contract, snapshot)
-	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() {
+	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() { // cross shard tx
 		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
 		receipt, err = processEvmContract(ctx, leftOverGas)
@@ -53,13 +55,21 @@ func Process(ctx *Context) (*types.Receipt, error) {
 		return nil, err
 	}
 
-	receipt.UsedGas += intrGas
-
 	if err != nil {
 		ctx.Statedb.RevertToSnapshot(snapshot)
 		receipt.Failed = true
 		receipt.Result = []byte(err.Error())
 	}
+
+	// include the intrinsic gas
+	receipt.UsedGas += intrGas
+
+	// refund gas, capped to half of the used gas.
+	refund := ctx.Statedb.GetRefund()
+	if maxRefund := receipt.UsedGas / 2; refund > maxRefund {
+		refund = maxRefund
+	}
+	receipt.UsedGas -= refund
 
 	return handleFee(ctx, receipt, snapshot)
 }
@@ -80,15 +90,16 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 
 	ctx.Statedb.SubBalance(sender, amount)
 
-	// check fee
-	if ctx.Statedb.GetBalance(sender).Cmp(ctx.Tx.Data.Fee) < 0 {
+	// check fee, only support non-contract tx.
+	txFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(types.TransferAmountIntrinsicGas))
+	if ctx.Statedb.GetBalance(sender).Cmp(txFee) < 0 {
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
 
 	// handle fee
-	ctx.Statedb.SubBalance(sender, ctx.Tx.Data.Fee)
-	txFee := types.GetTxFeeShare(ctx.Tx.Data.Fee)
-	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, txFee)
+	ctx.Statedb.SubBalance(sender, txFee)
+	minerFee := types.GetTxFeeShare(txFee)
+	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, minerFee)
 
 	return receipt, nil
 }
@@ -151,14 +162,10 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 
 func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
 	// Calculating the total fee
-	gasFee := big.NewInt(0)
-	if ctx.Tx.Data.To.IsEmpty() {
-		gasFee = contractCreationFee(ctx.Tx.Data.Payload)
-	} else {
-		// except the intrinsic gas
-		gasFee = usedGasFee(receipt.UsedGas - ctx.Tx.IntrinsicGas())
-	}
-	totalFee := big.NewInt(0).Add(gasFee, ctx.Tx.Data.Fee)
+	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
+	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
+	usedGas := new(big.Int).SetUint64(receipt.UsedGas)
+	totalFee := new(big.Int).Mul(usedGas, ctx.Tx.Data.GasPrice)
 
 	// Calculating the From account balance is enough
 	if balance := ctx.Statedb.GetBalance(ctx.Tx.Data.From); balance.Cmp(totalFee) < 0 {

@@ -41,11 +41,11 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	}
 	info.Amount = amount
 
-	fee, ok := big.NewInt(0).SetString(feeValue, 10)
+	price, ok := big.NewInt(0).SetString(priceValue, 10)
 	if !ok {
-		return info, fmt.Errorf("invalid fee value")
+		return info, fmt.Errorf("invalid gas price value")
 	}
-	info.Fee = fee
+	info.GasPrice = price
 
 	info.GasLimit = gasLimitValue
 

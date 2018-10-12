@@ -6,7 +6,9 @@
 package api
 
 import (
+	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
@@ -38,10 +40,16 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 		return nil, err
 	}
 
-	return &GetBalanceResponse{
-		Account: account,
-		Balance: state.GetBalance(account),
-	}, nil
+	var info GetBalanceResponse
+	// is local shard?
+	if common.LocalShardNumber != account.Shard() {
+		return nil, fmt.Errorf("local shard is: %d, your shard is: %d, you need to change to shard %d to get your balance", common.LocalShardNumber, account.Shard(), account.Shard())
+	}
+
+	info.Balance = state.GetBalance(account)
+	info.Account = account
+
+	return &info, nil
 }
 
 // GetAccountNonce get account next used nonce
@@ -218,7 +226,8 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 		"accountNonce": tx.Data.AccountNonce,
 		"payload":      tx.Data.Payload,
 		"timestamp":    tx.Data.Timestamp,
-		"fee":          tx.Data.Fee,
+		"gasPrice":     tx.Data.GasPrice,
+		"gasLimit":     tx.Data.GasLimit,
 	}
 	return transaction
 }
@@ -238,6 +247,6 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
+	api.s.Log().Debug("create transaction and add it. transaction hash: %s, time: %d", tx.Hash, time.Now().UnixNano())
 	return true, nil
 }

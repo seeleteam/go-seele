@@ -19,10 +19,10 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-func newTestDebt(amount int64, fee int64) *types.Debt {
+func newTestDebt(amount int64, price int64) *types.Debt {
 	fromAddress, fromPrivKey := crypto.MustGenerateShardKeyPair(1)
 	toAddress := crypto.MustGenerateShardAddress(2)
-	tx, _ := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(fee), 1)
+	tx, _ := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), 1)
 	tx.Sign(fromPrivKey)
 
 	return types.NewDebt(tx)

@@ -22,7 +22,6 @@ import (
 var (
 	errTxHashExists = errors.New("transaction hash already exists")
 	errTxPoolFull   = errors.New("transaction pool is full")
-	errTxFeeNil     = errors.New("fee can't be nil")
 	errTxNonceUsed  = errors.New("transaction nonce already been used")
 )
 
@@ -206,17 +205,17 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	}
 
 	if existTx := pool.pendingQueue.get(tx.Data.From, tx.Data.AccountNonce); existTx != nil {
-		if tx.Data.Fee.Cmp(existTx.Data.Fee) > 0 {
-			pool.log.Debug("got a transaction have more fees than before. remove old one. new: %s, old: %s",
+		if tx.Data.GasPrice.Cmp(existTx.Data.GasPrice) > 0 {
+			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
 				tx.Hash.ToHex(), existTx.Hash.ToHex())
-			pool.RemoveTransaction(existTx.Hash)
+			pool.doRemoveTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
 		}
 	}
 
 	pool.addTransaction(tx)
-
+	pool.log.Debug("receive transaction and add it. transaction hash: %s, time: %d", tx.Hash, time.Now().UnixNano())
 	// fire event
 	event.TransactionInsertedEventManager.Fire(tx)
 
@@ -241,8 +240,14 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
-// RemoveTransaction removes a transaction from pool.
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
+	defer pool.mutex.Unlock()
+	pool.mutex.Lock()
+	pool.doRemoveTransaction(txHash)
+}
+
+// doRemoveTransaction removes a transaction from pool.
+func (pool *TransactionPool) doRemoveTransaction(txHash common.Hash) {
 	if tx := pool.hashToTxMap[txHash]; tx != nil {
 		pool.pendingQueue.remove(tx.Data.From, tx.Data.AccountNonce)
 		delete(pool.processingTxs, txHash)
@@ -277,7 +282,7 @@ func (pool *TransactionPool) removeTransactions() {
 					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
 				}
 			}
-			pool.RemoveTransaction(txHash)
+			pool.doRemoveTransaction(txHash)
 		}
 	}
 }
@@ -290,7 +295,7 @@ func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Tran
 	totalSize := 0
 	var txs []*types.Transaction
 
-	for pool.pendingQueue.feeHeap.Len() > 0 {
+	for !pool.pendingQueue.empty() {
 		tx := pool.pendingQueue.peek().peek().Transaction
 		tmpSize := totalSize + tx.Size()
 		if tmpSize > size {
