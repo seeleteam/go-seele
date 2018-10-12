@@ -78,7 +78,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 			Difficulty:        big.NewInt(info.Difficult),
 			Height:            genesisBlockHeight,
 			CreateTimestamp:   big.NewInt(0),
-			Nonce:             1,
+			Witness:           make([]byte, 0),
 			ExtraData:         common.SerializePanic(extraData),
 		},
 		info: info,

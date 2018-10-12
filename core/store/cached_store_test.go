@@ -103,7 +103,7 @@ func newTestFullBlock(debtNum, txNum int) *types.Block {
 		Height:            1,
 		Difficulty:        big.NewInt(2),
 		CreateTimestamp:   big.NewInt(3),
-		Nonce:             4,
+		Witness:           []byte{0x4},
 		ExtraData:         []byte{0x5},
 	}
 

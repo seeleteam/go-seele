@@ -153,7 +153,6 @@ func processContract(statedb *state.Statedb, bcStore store.BlockchainStore, tx *
 		Difficulty:        big.NewInt(38),
 		Height:            666,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             DefaultNonce,
 		ExtraData:         make([]byte, 0),
 	}
 

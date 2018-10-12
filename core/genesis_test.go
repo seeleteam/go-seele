@@ -9,13 +9,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Genesis_GetGenesis(t *testing.T) {
@@ -109,7 +109,7 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 	bcStore := store.NewBlockchainDatabase(db)
 
 	header := GetGenesis(GenesisInfo{}).header.Clone()
-	header.Nonce = 38
+	header.Witness = []byte{2}
 	bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
 
 	genesis := GetGenesis(GenesisInfo{})
@@ -123,5 +123,4 @@ func validateGenesisDefaultMembers(t *testing.T, genesis *Genesis) {
 	assert.Equal(t, genesis.header.TxHash, types.MerkleRootHash(nil))
 	assert.Equal(t, genesis.header.Height, genesisBlockHeight)
 	assert.Equal(t, genesis.header.CreateTimestamp, big.NewInt(0))
-	assert.Equal(t, genesis.header.Nonce, uint64(1))
 }

@@ -233,7 +233,7 @@ func newTestBlockHeaderWithHeight(height uint64) *types.BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            height,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             1,
+		Witness:           common.CopyBytes([]byte("witness")),
 		ExtraData:         common.CopyBytes([]byte("ExtraData")),
 	}
 }

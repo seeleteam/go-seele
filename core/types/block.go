@@ -45,7 +45,7 @@ type BlockHeader struct {
 	Difficulty        *big.Int       // Difficulty is the difficulty of the block
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
-	Nonce             uint64         // Nonce is the pow of the block
+	Witness           []byte         //Witness is the block pow proof info
 	ExtraData         []byte         // ExtraData stores the extra info of block header.
 }
 
@@ -62,6 +62,7 @@ func (header *BlockHeader) Clone() *BlockHeader {
 	}
 
 	clone.ExtraData = common.CopyBytes(header.ExtraData)
+	clone.Witness = common.CopyBytes(header.Witness)
 
 	return &clone
 }

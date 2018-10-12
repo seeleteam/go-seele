@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -22,7 +23,6 @@ import (
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/stretchr/testify/assert"
-	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
@@ -82,7 +82,6 @@ func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db databa
 		Height:            height,
 		Difficulty:        big.NewInt(difficulty),
 		CreateTimestamp:   big.NewInt(1),
-		Nonce:             10,
 	}
 
 	return &types.Block{
@@ -295,7 +294,6 @@ func Test_Downloader_VerifyBlockHeadersMsg(t *testing.T) {
 	assert.Equal(t, header.Creator, common.EmptyAddress)
 	assert.Equal(t, header.Difficulty, big.NewInt(1))
 	assert.Equal(t, header.Height, uint64(1))
-	assert.Equal(t, header.Nonce, uint64(1))
 }
 
 func Test_Downloader_FindCommonAncestorHeight(t *testing.T) {
@@ -409,7 +407,6 @@ func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
 		assert.Equal(t, headers[0].Creator, common.EmptyAddress)
 		assert.Equal(t, headers[0].Difficulty, big.NewInt(1))
 		assert.Equal(t, headers[0].Height, uint64(1))
-		assert.Equal(t, headers[0].Nonce, uint64(1))
 	}()
 	time.Sleep(500 * time.Millisecond)
 

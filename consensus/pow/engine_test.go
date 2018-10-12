@@ -89,7 +89,6 @@ func newTestBlockHeader(t *testing.T) *types.BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             1,
 	}
 }
 

@@ -7,6 +7,7 @@ package pow
 
 import (
 	"math/big"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/rcrowley/go-metrics"
@@ -48,7 +49,7 @@ miner:
 				caltimes = 0
 			}
 
-			block.Header.Nonce = nonce
+			block.Header.Witness = []byte(strconv.FormatUint(nonce, 10))
 			hash := block.Header.Hash()
 			hashInt.SetBytes(hash.Bytes())
 
