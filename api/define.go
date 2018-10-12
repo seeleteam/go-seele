@@ -71,7 +71,6 @@ type GetMinerInfo struct {
 type GetBalanceResponse struct {
 	Account common.Address
 	Balance *big.Int
-	Warning    string
 }
 
 // GetLogsResponse response param for GetLogs api
