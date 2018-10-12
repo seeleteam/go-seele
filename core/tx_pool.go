@@ -208,7 +208,7 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 		if tx.Data.GasPrice.Cmp(existTx.Data.GasPrice) > 0 {
 			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
 				tx.Hash.ToHex(), existTx.Hash.ToHex())
-			pool.RemoveTransaction(existTx.Hash)
+			pool.doRemoveTransaction(existTx.Hash)
 		} else {
 			return errTxNonceUsed
 		}
@@ -240,8 +240,14 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
-// RemoveTransaction removes a transaction from pool.
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
+	defer pool.mutex.Unlock()
+	pool.mutex.Lock()
+	pool.doRemoveTransaction(txHash)
+}
+
+// doRemoveTransaction removes a transaction from pool.
+func (pool *TransactionPool) doRemoveTransaction(txHash common.Hash) {
 	if tx := pool.hashToTxMap[txHash]; tx != nil {
 		pool.pendingQueue.remove(tx.Data.From, tx.Data.AccountNonce)
 		delete(pool.processingTxs, txHash)
@@ -276,7 +282,7 @@ func (pool *TransactionPool) removeTransactions() {
 					pool.log.Debug("remove tx %s because not packed for more than three hours", txHash.ToHex())
 				}
 			}
-			pool.RemoveTransaction(txHash)
+			pool.doRemoveTransaction(txHash)
 		}
 	}
 }
