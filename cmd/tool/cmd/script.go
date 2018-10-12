@@ -46,6 +46,7 @@ var (
 	hostsFile   = "hosts.json"
 	keyNodeFile = "keyStore.json"
 	configDir   = "config"
+	seeleLog    = "seele_node_log"
 	port        = 8057
 	staticNum   = 20
 
@@ -140,8 +141,8 @@ func MakeConfigFile() {
 // changed change the config base info
 func changed(config *util.Config, host string, shard uint) error {
 	config.GenesisConfig.ShardNumber = shard
-	config.BasicConfig.Name = fmt.Sprint("seele_node_", host)
-	config.BasicConfig.DataDir = fmt.Sprint("seele_node_", host)
+	config.BasicConfig.Name = seeleLog
+	config.BasicConfig.DataDir = seeleLog
 	publicKey, privateKey, err := util.GenerateKey(shard)
 	if err != nil {
 		return err
@@ -171,8 +172,6 @@ func changed(config *util.Config, host string, shard uint) error {
 	prikeyStr = hexutil.BytesToHex(crypto.FromECDSA(privateKey))
 	config.P2PConfig.SubPrivateKey = prikeyStr
 	config.MetricsConfig.Addr = metricsInfo
-	config.LogConfig.IsDebug = false
-	config.LogConfig.PrintLog = false
 
 	return nil
 }
