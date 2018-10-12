@@ -108,7 +108,7 @@ var (
 	priceFlag  = cli.StringFlag{
 		Name:        "price",
 		Value:       "10",
-		Usage:       "transaction gas price",
+		Usage:       "transaction gas price in Fan",
 		Destination: &priceValue,
 	}
 
