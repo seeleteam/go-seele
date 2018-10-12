@@ -107,6 +107,7 @@ var (
 	priceValue string
 	priceFlag  = cli.StringFlag{
 		Name:        "price",
+		Value:       "10",
 		Usage:       "transaction gas price",
 		Destination: &priceValue,
 	}
@@ -114,6 +115,7 @@ var (
 	gasLimitValue uint64
 	gasLimitFlag  = cli.Uint64Flag{
 		Name:        "gas",
+		Value:       200000,
 		Usage:       "maximum gas for transaction",
 		Destination: &gasLimitValue,
 	}
