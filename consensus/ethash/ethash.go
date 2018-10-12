@@ -35,10 +35,10 @@ import (
 
 	mmap "github.com/edsrzf/mmap-go"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/common"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
@@ -57,11 +57,6 @@ var (
 	// dumpMagic is a dataset dump header to sanity check a data dump.
 	dumpMagic = []uint32{0xbaddcafe, 0xfee1dead}
 )
-
-// A BlockNonce is a 64-bit hash which proves (combined with the
-// mix-hash) that a sufficient amount of computation has been carried
-// out on a block.
-type BlockNonce [8]byte
 
 // memoryMap tries to memory map a file of uint32s for read only access.
 func memoryMap(path string) (*os.File, mmap.MMap, []uint32, error) {
@@ -493,7 +488,7 @@ func New(config Config, notify []string, noverify bool) *Ethash {
 		fetchRateCh:  make(chan chan uint64),
 		submitRateCh: make(chan *hashrate),
 		exitCh:       make(chan chan error),
-		log: log,
+		log:          log,
 	}
 	go ethash.remote(notify, noverify)
 	return ethash
@@ -502,6 +497,8 @@ func New(config Config, notify []string, noverify bool) *Ethash {
 // NewTester creates a small sized ethash PoW scheme useful only for testing
 // purposes.
 func NewTester(notify []string, noverify bool) *Ethash {
+	log := log.GetLogger("ethash")
+
 	ethash := &Ethash{
 		config:       Config{PowMode: ModeTest},
 		caches:       newlru("cache", 1, newCache),
@@ -514,6 +511,7 @@ func NewTester(notify []string, noverify bool) *Ethash {
 		fetchRateCh:  make(chan chan uint64),
 		submitRateCh: make(chan *hashrate),
 		exitCh:       make(chan chan error),
+		log:          log,
 	}
 	go ethash.remote(notify, noverify)
 	return ethash

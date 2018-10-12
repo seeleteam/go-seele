@@ -29,9 +29,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/common"
 )
 
 const (
@@ -44,24 +44,14 @@ var (
 	errInvalidSealResult = errors.New("invalid or stale proof-of-work solution")
 )
 
+type EthashWitness struct {
+	Nonce     BlockNonce
+	MixDigest common.Hash
+}
+
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
 // the block's difficulty requirements.
 func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
-	// If we're running a fake PoW, simply return a 0 nonce immediately
-	if ethash.config.PowMode == ModeFake || ethash.config.PowMode == ModeFullFake {
-		header := block.Header
-		header.Nonce, header.MixDigest = types.BlockNonce{}, common.Hash{}
-		select {
-		case results <- block.WithSeal(header):
-		default:
-			log.Warn("Sealing result is not read by miner", "mode", "fake", "sealhash", ethash.SealHash(block.Header()))
-		}
-		return nil
-	}
-	// If we're running a shared PoW, delegate sealing to it
-	if ethash.shared != nil {
-		return ethash.shared.Seal(store, block, results, stop)
-	}
 	// Create a runner and the multiple search threads it directs
 	abort := make(chan struct{})
 
@@ -109,14 +99,14 @@ func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, resu
 			select {
 			case results <- result:
 			default:
-				log.Warn("Sealing result is not read by miner", "mode", "local", "sealhash", ethash.SealHash(block.Header()))
+				ethash.log.Warn("Sealing result is not read by miner. mode: local, seelhash:%s", ethash.SealHash(block.Header))
 			}
 			close(abort)
 		case <-ethash.update:
 			// Thread count was changed on user request, restart
 			close(abort)
-			if err := ethash.Seal(chain, block, results, stop); err != nil {
-				log.Error("Failed to restart sealing after update", "err", err)
+			if err := ethash.Seal(store, block, results, stop); err != nil {
+				ethash.log.Error("Failed to restart sealing after update, err %s", err)
 			}
 		}
 		// Wait for all miners to terminate and return the block
@@ -130,10 +120,10 @@ func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, resu
 func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
 	// Extract some data from the header
 	var (
-		header  = block.Header()
+		header  = block.Header
 		hash    = ethash.SealHash(header).Bytes()
 		target  = new(big.Int).Div(two256, header.Difficulty)
-		number  = header.Number.Uint64()
+		number  = header.Height
 		dataset = ethash.dataset(number, false)
 	)
 	// Start generating random nonces until we abort or find a good one
@@ -141,14 +131,14 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 		attempts = int64(0)
 		nonce    = seed
 	)
-	logger := log.New("miner", id)
-	logger.Trace("Started ethash search for new nonces", "seed", seed)
+
+	ethash.log.Debug("Started ethash search for new nonces. seed %d", seed)
 search:
 	for {
 		select {
 		case <-abort:
 			// Mining terminated, update stats and abort
-			logger.Trace("Ethash nonce search aborted", "attempts", nonce-seed)
+			ethash.log.Debug("Ethash nonce search aborted. attempts %d", nonce-seed)
 			ethash.hashrate.Mark(attempts)
 			break search
 
@@ -163,16 +153,15 @@ search:
 			digest, result := hashimotoFull(dataset.dataset, hash, nonce)
 			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
 				// Correct nonce found, create a new header with it
-				header = types.CopyHeader(header)
-				header.Nonce = types.EncodeNonce(nonce)
-				header.MixDigest = common.BytesToHash(digest)
+				header = header.Clone()
+				SetWitness(header, nonce, digest)
 
 				// Seal and return a block (if still needed)
 				select {
 				case found <- block.WithSeal(header):
-					logger.Trace("Ethash nonce found and reported", "attempts", nonce-seed, "nonce", nonce)
+					ethash.log.Debug("Ethash nonce found and reported. attempts %d, nonce %d", nonce-seed, nonce)
 				case <-abort:
-					logger.Trace("Ethash nonce found but discarded", "attempts", nonce-seed, "nonce", nonce)
+					ethash.log.Debug("Ethash nonce found but discarded. attempts %d, nonce %d", nonce-seed, nonce)
 				}
 				break search
 			}
@@ -182,6 +171,19 @@ search:
 	// Datasets are unmapped in a finalizer. Ensure that the dataset stays live
 	// during sealing so it's not unmapped while being read.
 	runtime.KeepAlive(dataset)
+}
+
+func SetWitness(header *types.BlockHeader, nonce uint64, digest []byte) {
+	SetWitnessStraight(header, EncodeNonce(nonce), common.BytesToHash(digest))
+}
+
+func SetWitnessStraight(header *types.BlockHeader, nonce BlockNonce, mixDigest common.Hash) {
+	witness := EthashWitness{
+		Nonce:     nonce,
+		MixDigest: mixDigest,
+	}
+
+	header.Witness = common.SerializePanic(witness)
 }
 
 // remote is a standalone goroutine to handle remote mining related stuff.
@@ -219,9 +221,9 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 			go func(req *http.Request, url string) {
 				res, err := notifyClient.Do(req)
 				if err != nil {
-					log.Warn("Failed to notify remote miner", "err", err)
+					ethash.log.Warn("Failed to notify remote miner. err %s", err)
 				} else {
-					log.Trace("Notified remote miner", "miner", url, "hash", log.Lazy{Fn: func() common.Hash { return common.HexToHash(work[0]) }}, "target", work[2])
+					ethash.log.Debug("Notified remote miner. miner %s. target %s", url, work[2])
 					res.Body.Close()
 				}
 			}(notifyReqs[i], url)
@@ -234,11 +236,11 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 	//   result[1], 32 bytes hex encoded seed hash used for DAG
 	//   result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 	makeWork := func(block *types.Block) {
-		hash := ethash.SealHash(block.Header())
+		hash := ethash.SealHash(block.Header)
 
-		currentWork[0] = hash.Hex()
-		currentWork[1] = common.BytesToHash(SeedHash(block.NumberU64())).Hex()
-		currentWork[2] = common.BytesToHash(new(big.Int).Div(two256, block.Difficulty()).Bytes()).Hex()
+		currentWork[0] = hash.ToHex()
+		currentWork[1] = common.BytesToHash(SeedHash(block.Header.Height)).ToHex()
+		currentWork[2] = common.BytesToHash(new(big.Int).Div(two256, block.Header.Difficulty).Bytes()).ToHex()
 
 		// Trace the seal work fetched by remote sealer.
 		currentBlock = block
@@ -247,52 +249,51 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 	// submitWork verifies the submitted pow solution, returning
 	// whether the solution was accepted or not (not can be both a bad pow as well as
 	// any other error, like no pending work or stale mining result).
-	submitWork := func(nonce types.BlockNonce, mixDigest common.Hash, sealhash common.Hash) bool {
+	submitWork := func(nonce BlockNonce, mixDigest common.Hash, sealhash common.Hash) bool {
 		if currentBlock == nil {
-			log.Error("Pending work without block", "sealhash", sealhash)
+			ethash.log.Error("Pending work without block. sealhash %s", sealhash)
 			return false
 		}
 		// Make sure the work submitted is present
 		block := works[sealhash]
 		if block == nil {
-			log.Warn("Work submitted but none pending", "sealhash", sealhash, "curnumber", currentBlock.NumberU64())
+			ethash.log.Warn("Work submitted but none pending. sealhash %s, curheight %d", sealhash, currentBlock.Header.Height)
 			return false
 		}
 		// Verify the correctness of submitted result.
-		header := block.Header()
-		header.Nonce = nonce
-		header.MixDigest = mixDigest
+		header := block.Header
+		SetWitnessStraight(header, nonce, mixDigest)
 
 		start := time.Now()
 		if !noverify {
 			if err := ethash.verifySeal(nil, header, true); err != nil {
-				log.Warn("Invalid proof-of-work submitted", "sealhash", sealhash, "elapsed", time.Since(start), "err", err)
+				ethash.log.Warn("Invalid proof-of-work submitted. sealhash %s. elapsed %s. err %s", sealhash, time.Since(start), err)
 				return false
 			}
 		}
 		// Make sure the result channel is assigned.
 		if results == nil {
-			log.Warn("Ethash result channel is empty, submitted mining result is rejected")
+			ethash.log.Warn("Ethash result channel is empty, submitted mining result is rejected")
 			return false
 		}
-		log.Trace("Verified correct proof-of-work", "sealhash", sealhash, "elapsed", time.Since(start))
+		ethash.log.Debug("Verified correct proof-of-work. sealhash %s. elapsed %s", sealhash, time.Since(start))
 
 		// Solutions seems to be valid, return to the miner and notify acceptance.
 		solution := block.WithSeal(header)
 
 		// The submitted solution is within the scope of acceptance.
-		if solution.NumberU64()+staleThreshold > currentBlock.NumberU64() {
+		if solution.Header.Height+staleThreshold > currentBlock.Header.Height {
 			select {
 			case results <- solution:
-				log.Debug("Work submitted is acceptable", "number", solution.NumberU64(), "sealhash", sealhash, "hash", solution.Hash())
+				ethash.log.Debug("Work submitted is acceptable. height %d. sealhash %s. hash %s", solution.Header.Height, sealhash, solution.HeaderHash)
 				return true
 			default:
-				log.Warn("Sealing result is not read by miner", "mode", "remote", "sealhash", sealhash)
+				ethash.log.Warn("Sealing result is not read by miner. mode remote. sealhash %s", sealhash)
 				return false
 			}
 		}
 		// The submitted block is too old to accept, drop it.
-		log.Warn("Work submitted is too old", "number", solution.NumberU64(), "sealhash", sealhash, "hash", solution.Hash())
+		ethash.log.Warn("Work submitted is too old. height %d. sealhash %s. hash %s", solution.Header.Height, sealhash, solution.HeaderHash)
 		return false
 	}
 
@@ -351,7 +352,7 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 			// Clear stale pending blocks
 			if currentBlock != nil {
 				for hash, block := range works {
-					if block.NumberU64()+staleThreshold <= currentBlock.NumberU64() {
+					if block.Header.Height+staleThreshold <= currentBlock.Header.Height {
 						delete(works, hash)
 					}
 				}
@@ -360,7 +361,7 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 		case errc := <-ethash.exitCh:
 			// Exit remote loop if ethash is closed and return relevant error.
 			errc <- nil
-			log.Trace("Ethash remote sealer is exiting")
+			ethash.log.Debug("Ethash remote sealer is exiting")
 			return
 		}
 	}
