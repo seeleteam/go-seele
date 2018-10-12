@@ -121,6 +121,22 @@ func (block *Block) GetExcludeRewardTransactions() []*Transaction {
 	return block.Transactions[1:]
 }
 
+func (block *Block) WithSeal(header *BlockHeader) *Block {
+	return &Block{
+		HeaderHash:   header.Hash(),
+		Header:       header.Clone(),
+		Transactions: block.Transactions,
+		Debts:        block.Debts,
+	}
+}
+
+// NewBlockWithHeader creates a block with the given header data. The
+// header data is copied, changes to header and to the field values
+// will not affect the block.
+func NewBlockWithHeader(header *BlockHeader) *Block {
+	return &Block{Header: header.Clone()}
+}
+
 // FindTransaction returns the transaction of the specified hash if found. Otherwise, it returns nil.
 func (block *Block) FindTransaction(txHash common.Hash) *Transaction {
 	for _, tx := range block.Transactions {
