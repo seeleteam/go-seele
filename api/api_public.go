@@ -43,7 +43,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 	var info GetBalanceResponse
 	// is local shard?
 	if common.LocalShardNumber != account.Shard() {
-		info.Warning = fmt.Sprintf("local shard is: %d, your shard is: %d, you need to change to shard %d to get your balance", common.LocalShardNumber, account.Shard(), account.Shard())
+		return nil, fmt.Errorf("local shard is: %d, your shard is: %d, you need to change to shard %d to get your balance", common.LocalShardNumber, account.Shard(), account.Shard())
 	}
 
 	info.Balance = state.GetBalance(account)
