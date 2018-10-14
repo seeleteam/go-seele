@@ -19,7 +19,7 @@ import (
 var KeyABIHash = common.StringToHash("KeyABIHash")
 
 // GeneratePayload according to abi json string and methodName and args to generate payload hex string
-func (api *PublicSeeleAPI) GeneratePayload(abiJSON string, methodName string, args ...interface{}) (string, error) {
+func (api *PublicSeeleAPI) GeneratePayload(abiJSON string, methodName string, args []string) (string, error) {
 	parsed, err := abi.JSON(strings.NewReader(abiJSON))
 	if err != nil {
 		return "", fmt.Errorf("invalid abiJSON '%s', err: %s", abiJSON, err)
@@ -30,11 +30,12 @@ func (api *PublicSeeleAPI) GeneratePayload(abiJSON string, methodName string, ar
 		return "", fmt.Errorf("method '%s' not found", methodName)
 	}
 
-	if ok, err := bind.CheckInputArgs(method.Inputs, args...); !ok {
+	seeleTypeArgs, err := bind.ParseArgs(method.Inputs, args)
+	if err != nil {
 		return "", err
 	}
 
-	bytes, err := parsed.Pack(methodName, args...)
+	bytes, err := parsed.Pack(methodName, seeleTypeArgs...)
 	if err != nil {
 		return "", err
 	}
