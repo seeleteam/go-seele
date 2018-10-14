@@ -35,7 +35,7 @@ func newTestBlockHeader() *types.BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
-		Nonce:             1,
+		Witness:           make([]byte, 0),
 		ExtraData:         common.CopyBytes([]byte("ExtraData")),
 	}
 }

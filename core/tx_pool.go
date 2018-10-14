@@ -196,14 +196,12 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
+	// avoid to add duplicated tx
 	if pool.hashToTxMap[tx.Hash] != nil {
 		return errTxHashExists
 	}
 
-	if uint(len(pool.hashToTxMap)) >= pool.config.Capacity {
-		return errTxPoolFull
-	}
-
+	// update tx with higher price, otherwise return errTxNonceUsed
 	if existTx := pool.pendingQueue.get(tx.Data.From, tx.Data.AccountNonce); existTx != nil {
 		if tx.Data.GasPrice.Cmp(existTx.Data.GasPrice) > 0 {
 			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
@@ -212,6 +210,11 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 		} else {
 			return errTxNonceUsed
 		}
+	}
+
+	// check txpool capacity
+	if uint(len(pool.hashToTxMap)) >= pool.config.Capacity {
+		return errTxPoolFull
 	}
 
 	pool.addTransaction(tx)

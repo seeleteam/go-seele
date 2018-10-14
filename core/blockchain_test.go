@@ -29,11 +29,8 @@ type testAccount struct {
 	nonce   uint64
 }
 
-var testGenesisAccounts = []*testAccount{
-	newTestAccount(big.NewInt(100000), 0),
-	newTestAccount(big.NewInt(100000), 0),
-	newTestAccount(big.NewInt(100000), 0),
-}
+// genesis account with enough balance (100K seele) for benchmark test
+var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0)
 
 func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 	addr, privKey, err := crypto.GenerateKeyPair()
@@ -50,9 +47,8 @@ func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
 }
 
 func newTestGenesis() *Genesis {
-	accounts := make(map[common.Address]*big.Int)
-	for _, account := range testGenesisAccounts {
-		accounts[account.addr] = account.amount
+	accounts := map[common.Address]*big.Int {
+		genesisAccount.addr: genesisAccount.amount,
 	}
 
 	return GetGenesis(GenesisInfo{accounts, 1, 0})
@@ -74,12 +70,11 @@ func newTestBlockchain(db database.Database) *Blockchain {
 	return bc
 }
 
-func newTestBlockTx(genesisAccountIndex int, amount, price, nonce uint64) *types.Transaction {
-	fromAccount := testGenesisAccounts[genesisAccountIndex]
-	toAddress := crypto.MustGenerateShardAddress(fromAccount.addr.Shard())
+func newTestBlockTx(amount, price, nonce uint64) *types.Transaction {
+	toAddress := crypto.MustGenerateShardAddress(genesisAccount.addr.Shard())
 
-	tx, _ := types.NewTransaction(fromAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
-	tx.Sign(fromAccount.privKey)
+	tx, _ := types.NewTransaction(genesisAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
+	tx.Sign(genesisAccount.privKey)
 
 	return tx
 }
@@ -91,7 +86,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 	txs := []*types.Transaction{rewardTx}
 	totalSize := rewardTx.Size()
 	for i := uint64(0); ; i++ {
-		tx := newTestBlockTx(0, 1, 1, startNonce+i)
+		tx := newTestBlockTx(1, 1, startNonce+i)
 		tmp := tx.Size() + totalSize
 		if tmp > size {
 			break
@@ -112,7 +107,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 		Height:            blockHeight,
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),
-		Nonce:             10,
+		Witness:           make([]byte, 0),
 		ExtraData:         make([]byte, 0),
 	}
 
@@ -373,7 +368,7 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	// prepare tx to apply
 	amount := uint64(3456)
 	price := uint64(2)
-	tx := newTestBlockTx(0, amount, price, 0)
+	tx := newTestBlockTx(amount, price, 0)
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 	coinbase := block.Header.Creator
 	statedb, err := bc.GetCurrentState()
@@ -382,7 +377,7 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	statedb.SetBalance(coinbase, big.NewInt(50))
 
 	// check before applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), big.NewInt(100000))
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), genesisAccount.amount)
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
 
@@ -391,7 +386,9 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	// check after applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), new(big.Int).SetUint64(100000-amount-price*types.TransferAmountIntrinsicGas))
+	used := new(big.Int).SetUint64(amount + price*types.TransferAmountIntrinsicGas)
+	newBalance := new(big.Int).Sub(genesisAccount.amount, used)
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), newBalance)
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), new(big.Int).SetUint64(amount))
 	assert.Equal(t, statedb.GetBalance(coinbase), new(big.Int).SetUint64(50+price*types.TransferAmountIntrinsicGas))
 }

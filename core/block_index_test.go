@@ -91,12 +91,12 @@ func Test_BlockLeaf_Purge_NoAction(t *testing.T) {
 }
 
 func Test_BlockLeaf_Purge(t *testing.T) {
-	blockFactory := func(preBlockHash common.Hash, height uint64, nonce uint64) *types.Block {
+	blockFactory := func(preBlockHash common.Hash, height uint64, createTime int) *types.Block {
 		header := &types.BlockHeader{
 			PreviousBlockHash: preBlockHash,
 			Difficulty:        big.NewInt(1),
 			Height:            height,
-			Nonce:             nonce,
+			CreateTimestamp:   big.NewInt(int64(createTime)),
 		}
 
 		return &types.Block{

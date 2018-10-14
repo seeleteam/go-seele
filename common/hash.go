@@ -64,6 +64,11 @@ func (a Hash) ToHex() string {
 	return hexutil.BytesToHex(a[:])
 }
 
+// ToHex returns the hex form of the hash
+func (a Hash) Hex() string {
+	return hexutil.BytesToHex(a[:])
+}
+
 // HexToHash return the hash form of the hex
 func HexToHash(hex string) (Hash, error) {
 	byte, err := hexutil.HexToBytes(hex)
