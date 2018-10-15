@@ -26,9 +26,9 @@ var (
 type Trie interface {
 	Hash() common.Hash
 	Commit(batch database.Batch) common.Hash
-	Get(key []byte) ([]byte, bool)
+	Get(key []byte) ([]byte, bool, error)
 	Put(key, value []byte) error
-	DeletePrefix(prefix []byte) bool
+	DeletePrefix(prefix []byte) (bool, error)
 	GetProof(key []byte) (map[string][]byte, error)
 }
 
@@ -129,20 +129,34 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 // GetData returns the account data of the specified key if exists.
 // Otherwise, return nil.
 func (s *Statedb) GetData(addr common.Address, key common.Hash) []byte {
-	if object := s.getStateObject(addr); object != nil {
-		return object.getState(s.trie, key)
+	object := s.getStateObject(addr)
+	if object == nil {
+		return nil
 	}
 
-	return nil
+	data, err := object.getState(s.trie, key)
+	if err != nil {
+		s.setError(err)
+	}
+
+	return data
 }
 
 // SetData sets the key value pair for the specified account if exists.
 func (s *Statedb) SetData(addr common.Address, key common.Hash, value []byte) {
-	if object := s.getStateObject(addr); object != nil {
-		prevValue := object.getState(s.trie, key)
-		s.curJournal.append(storageChange{&addr, key, prevValue})
-		object.setState(key, value)
+	object := s.getStateObject(addr)
+	if object == nil {
+		return
 	}
+
+	prevValue, err := object.getState(s.trie, key)
+	if err != nil {
+		s.setError(err)
+		return
+	}
+
+	s.curJournal.append(storageChange{&addr, key, prevValue})
+	object.setState(key, value)
 }
 
 // Hash flush the dirty data into trie and calculates the intermediate root hash.
@@ -196,7 +210,12 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 
 	// load from trie
 	object := newStateObject(addr)
-	if ok, err := object.loadAccount(s.trie); !ok || err != nil {
+	ok, err := object.loadAccount(s.trie)
+	if err != nil {
+		s.setError(err)
+	}
+
+	if err != nil || !ok {
 		return nil
 	}
 
@@ -248,22 +267,36 @@ func (s *Statedb) GetCodeHash(address common.Address) common.Hash {
 // GetCode returns the contract code associated with the specified address if any.
 // Otherwise, return nil.
 func (s *Statedb) GetCode(address common.Address) []byte {
-	if object := s.getStateObject(address); object != nil {
-		return object.loadCode(s.trie)
+	object := s.getStateObject(address)
+	if object == nil {
+		return nil
 	}
 
-	return nil
+	code, err := object.loadCode(s.trie)
+	if err != nil {
+		s.setError(err)
+	}
+
+	return code
 }
 
 // SetCode sets the contract code of the specified address if exists.
 func (s *Statedb) SetCode(address common.Address, code []byte) {
 	// EVM call SetCode after CreateAccount during contract creation.
 	// So, here the retrieved stateObj should not be nil.
-	if object := s.getStateObject(address); object != nil {
-		prevCode := object.loadCode(s.trie)
-		s.curJournal.append(codeChange{&address, prevCode})
-		object.setCode(code)
+	object := s.getStateObject(address)
+	if object == nil {
+		return
 	}
+
+	prevCode, err := object.loadCode(s.trie)
+	if err != nil {
+		s.setError(err)
+		return
+	}
+
+	s.curJournal.append(codeChange{&address, prevCode})
+	object.setCode(code)
 }
 
 // GetCodeSize returns the size of the contract code associated with the specified address if any.

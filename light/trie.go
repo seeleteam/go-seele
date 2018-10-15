@@ -53,7 +53,7 @@ func (t *odrTrie) Commit(batch database.Batch) common.Hash {
 	panic("unsupported")
 }
 
-func (t *odrTrie) Get(key []byte) ([]byte, bool) {
+func (t *odrTrie) Get(key []byte) ([]byte, bool, error) {
 	request := &odrTriePoof{
 		Root: t.root,
 		Key:  key,
@@ -62,7 +62,7 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	// send ODR request to get trie proof.
 	response, err := t.odr.retrieve(request)
 	if err != nil {
-		return nil, false
+		return nil, false, err
 	}
 
 	// insert the trie proof in databse.
@@ -75,7 +75,7 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool) {
 	if t.trie == nil {
 		t.trie, err = trie.NewTrie(t.root, t.dbPrefix, t.db)
 		if err != nil {
-			return nil, false
+			return nil, false, err
 		}
 	}
 
@@ -86,7 +86,7 @@ func (t *odrTrie) Put(key, value []byte) error {
 	panic("unsupported")
 }
 
-func (t *odrTrie) DeletePrefix(prefix []byte) bool {
+func (t *odrTrie) DeletePrefix(prefix []byte) (bool, error) {
 	panic("unsupported")
 }
 

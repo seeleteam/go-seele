@@ -132,9 +132,9 @@ func (s *stateObject) dataKey(dataType byte, prefix ...byte) []byte {
 }
 
 func (s *stateObject) loadAccount(trie Trie) (bool, error) {
-	value, ok := trie.Get(s.dataKey(dataTypeAccount))
-	if !ok {
-		return false, nil
+	value, ok, err := trie.Get(s.dataKey(dataTypeAccount))
+	if err != nil || !ok {
+		return false, err
 	}
 
 	if err := common.Deserialize(value, &s.account); err != nil {
@@ -144,26 +144,26 @@ func (s *stateObject) loadAccount(trie Trie) (bool, error) {
 	return true, nil
 }
 
-func (s *stateObject) loadCode(trie Trie) []byte {
+func (s *stateObject) loadCode(trie Trie) ([]byte, error) {
 	// already loaded
 	if s.code != nil {
-		return s.code
+		return s.code, nil
 	}
 
 	// no code
 	if len(s.account.CodeHash) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// load code from trie
-	code, ok := trie.Get(s.dataKey(dataTypeCode))
-	if !ok {
-		return nil
+	code, ok, err := trie.Get(s.dataKey(dataTypeCode))
+	if err != nil || !ok {
+		return nil, err
 	}
 
 	s.code = code
 
-	return code
+	return code, nil
 }
 
 func (s *stateObject) setCode(code []byte) {
@@ -189,16 +189,17 @@ func (s *stateObject) setState(key common.Hash, value []byte) {
 	s.dirtyStorage[key] = value
 }
 
-func (s *stateObject) getState(trie Trie, key common.Hash) []byte {
+func (s *stateObject) getState(trie Trie, key common.Hash) ([]byte, error) {
 	if value, ok := s.cachedStorage[key]; ok {
-		return value
+		return value, nil
 	}
 
-	if value, ok := trie.Get(s.dataKey(dataTypeStorage, crypto.MustHash(key).Bytes()...)); ok {
-		return value
+	value, ok, err := trie.Get(s.dataKey(dataTypeStorage, crypto.MustHash(key).Bytes()...))
+	if err != nil || !ok {
+		return nil, err
 	}
 
-	return nil
+	return value, nil
 }
 
 // flush update the dirty data of state object to the specified trie if any.
