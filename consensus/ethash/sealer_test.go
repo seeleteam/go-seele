@@ -68,11 +68,11 @@ func TestRemoteNotify(t *testing.T) {
 		if want := ethash.SealHash(header).ToHex(); work[0] != want {
 			t.Errorf("work packet hash mismatch: have %s, want %s", work[0], want)
 		}
-		if want := common.BytesToHash(SeedHash(header.Height)).Hex(); work[1] != want {
+		if want := common.BytesToHash(SeedHash(header.Height)).ToHex(); work[1] != want {
 			t.Errorf("work packet seed mismatch: have %s, want %s", work[1], want)
 		}
 		target := new(big.Int).Div(new(big.Int).Lsh(big.NewInt(1), 256), header.Difficulty)
-		if want := common.BytesToHash(target.Bytes()).Hex(); work[2] != want {
+		if want := common.BytesToHash(target.Bytes()).ToHex(); work[2] != want {
 			t.Errorf("work packet target mismatch: have %s, want %s", work[2], want)
 		}
 	case <-time.After(3 * time.Second):

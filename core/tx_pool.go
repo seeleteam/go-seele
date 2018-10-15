@@ -218,7 +218,7 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 	}
 
 	pool.addTransaction(tx)
-	pool.log.Debug("receive transaction and add it. transaction hash: %s, time: %d", tx.Hash.ToHex(), time.Now().UnixNano())
+	pool.log.Debug("receive transaction and add it. transaction hash: %v, time: %d", tx.Hash, time.Now().UnixNano())
 	// fire event
 	event.TransactionInsertedEventManager.Fire(tx)
 

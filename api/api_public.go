@@ -247,6 +247,6 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	api.s.Log().Debug("create transaction and add it. transaction hash: %s, time: %d", tx.Hash.ToHex(), time.Now().UnixNano())
+	api.s.Log().Debug("create transaction and add it. transaction hash: %v, time: %d", tx.Hash, time.Now().UnixNano())
 	return true, nil
 }
