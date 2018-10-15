@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
+// Error variables
 var (
 	ErrTransactionNotFound = errors.New("transaction not found")
 	ErrDebtNotFound        = errors.New("debt not found")
@@ -203,7 +204,7 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash string) (map[string]int
 		return nil, err
 	}
 
-	return PrintableReceipt(receipt)
+	return printReceiptByABI(api, receipt)
 }
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
