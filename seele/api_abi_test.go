@@ -26,30 +26,32 @@ func Test_GeneratePayload(t *testing.T) {
 	if common.FileOrFolderExists(dbPath) {
 		os.RemoveAll(dbPath)
 	}
-	api := newTestAPI(t, dbPath)
+	api, args := newTestAPI(t, dbPath), make([]string, 0)
 
 	// Get method test
-	payload1, err1 := api.GeneratePayload(SimpleStorageABI, "get")
+	payload1, err1 := api.GeneratePayload(SimpleStorageABI, "get", args)
 	assert.NoError(t, err1)
 	assert.Equal(t, payload1, RemixGetPayload)
 
 	// Set method test
-	payload2, err2 := api.GeneratePayload(SimpleStorageABI, "set", big.NewInt(23))
+	args = append(args, "23")
+	payload2, err2 := api.GeneratePayload(SimpleStorageABI, "set", args)
 	assert.NoError(t, err2)
 	assert.Equal(t, payload2, RemixSet23Payload)
 
 	// Invalid method test
-	payload3, err3 := api.GeneratePayload(SimpleStorageABI, "add", big.NewInt(23))
+	payload3, err3 := api.GeneratePayload(SimpleStorageABI, "add", args)
 	assert.Error(t, err3)
 	assert.Empty(t, payload3)
 
 	// Invalid parameter type test
-	payload4, err4 := api.GeneratePayload(SimpleStorageABI, "set", 23)
+	args1 := append(args, "123")
+	payload4, err4 := api.GeneratePayload(SimpleStorageABI, "set", args1)
 	assert.Error(t, err4)
 	assert.Empty(t, payload4)
 
 	// Invalid abiJSON string test
-	payload5, err5 := api.GeneratePayload("SimpleStorageABI:asdf", "set", 23)
+	payload5, err5 := api.GeneratePayload("SimpleStorageABI:asdf", "set", args)
 	assert.Error(t, err5)
 	assert.Empty(t, payload5)
 }
