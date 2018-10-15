@@ -12,11 +12,12 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/log"
-	"github.com/stretchr/testify/assert"
-	"github.com/seeleteam/go-seele/node"
-	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/node"
+	"github.com/stretchr/testify/assert"
 )
 
 func getTmpConfig() *node.Config {
@@ -40,7 +41,7 @@ func newTestSeeleService() *SeeleService {
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
 
-	seeleService, err := NewSeeleService(ctx, conf, log)
+	seeleService, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
 	if err != nil {
 		panic(err)
 	}
