@@ -542,7 +542,8 @@ outLoop:
 // processBlocks writes blocks to the blockchain.
 func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
-		d.log.Debug("height:%d, hash:%s, preHash:%s", h.block.Header.Height, h.block.HeaderHash.ToHex(), h.block.Header.PreviousBlockHash.ToHex())
+		// add it for all received block messages
+		d.log.Info("got block message and save it. height: %d, hash: %s, time: %d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
 
 		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
 			d.log.Error("failed to write block:%s", err)
