@@ -13,6 +13,7 @@ import (
 
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -23,7 +24,7 @@ import (
 	"github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele/download"
 )
 
@@ -79,7 +80,7 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine) (s *SeeleService, err error) {
 	s = &SeeleService{
 		log:        log,
 		networkID:  conf.P2PConfig.NetworkID,
@@ -100,7 +101,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog) 
 		return nil, err
 	}
 
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier)
+	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier, engine)
 
 	// initialize and validate genesis
 	if err = s.initGenesisAndChain(&serviceContext, conf); err != nil {

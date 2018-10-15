@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/log/comm"
@@ -67,8 +68,14 @@ var startCmd = &cobra.Command{
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
+		miningEngine, err := factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
 		if lightNode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber())
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), miningEngine)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -86,7 +93,7 @@ var startCmd = &cobra.Command{
 			}
 		} else {
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog)
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, miningEngine)
 			if err != nil {
 				fmt.Println(err.Error())
 				return

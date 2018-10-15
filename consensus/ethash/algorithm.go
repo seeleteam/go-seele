@@ -285,7 +285,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 		if elapsed > 3*time.Second {
 			logFn = logger.Info
 		}
-		logFn("Generated ethash verification cache", "elapsed", common.PrettyDuration(elapsed))
+		logFn("Generated ethash verification cache. elapsed %s", common.PrettyDuration(elapsed))
 	}()
 
 	// Figure out whether the bytes need to be swapped for the machine

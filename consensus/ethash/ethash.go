@@ -21,6 +21,8 @@ import (
 	"errors"
 	"math/big"
 	"math/rand"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -122,14 +124,14 @@ func New(config Config, notify []string, noverify bool) *Ethash {
 	log := log.GetLogger("ethash")
 
 	if config.CachesInMem <= 0 {
-		log.Warn("One ethash cache must always be in memory", "requested", config.CachesInMem)
+		log.Warn("One ethash cache must always be in memory. requested %d", config.CachesInMem)
 		config.CachesInMem = 1
 	}
 	if config.CacheDir != "" && config.CachesOnDisk > 0 {
-		log.Info("Disk storage enabled for ethash caches", "dir", config.CacheDir, "count", config.CachesOnDisk)
+		log.Info("Disk storage enabled for ethash caches. dir %s, count %d", config.CacheDir, config.CachesOnDisk)
 	}
 	if config.DatasetDir != "" && config.DatasetsOnDisk > 0 {
-		log.Info("Disk storage enabled for ethash DAGs", "dir", config.DatasetDir, "count", config.DatasetsOnDisk)
+		log.Info("Disk storage enabled for ethash DAGs. dir %s, count %d", config.DatasetDir, config.DatasetsOnDisk)
 	}
 	ethash := &Ethash{
 		config:       config,
@@ -259,12 +261,17 @@ func (ethash *Ethash) Threads() int {
 // specified, the miner will use all cores of the machine. Setting a thread
 // count below zero is allowed and will cause the miner to idle, without any
 // work being done.
-func (ethash *Ethash) SetThreads(threads int) {
+func (ethash *Ethash) SetThreads(threads uint) {
 	ethash.lock.Lock()
 	defer ethash.lock.Unlock()
 
+	if threads == 0 {
+		ethash.threads = runtime.NumCPU()
+	} else {
+		ethash.threads = int(threads)
+	}
+
 	// Update the threads and ping any running seal to pull in any changes
-	ethash.threads = threads
 	select {
 	case ethash.update <- struct{}{}:
 	default:
@@ -295,7 +302,7 @@ func (ethash *Ethash) APIs() []rpc.API {
 	// to both eth and ethash namespaces.
 	return []rpc.API{
 		{
-			Namespace: "eth",
+			Namespace: "seele",
 			Version:   "1.0",
 			Service:   &API{ethash},
 			Public:    true,
@@ -313,4 +320,19 @@ func (ethash *Ethash) APIs() []rpc.API {
 // dataset.
 func SeedHash(block uint64) []byte {
 	return seedHash(block)
+}
+
+func GetDefaultConfig() Config {
+	baseDir := common.GetTempFolder()
+	cacheDir := filepath.Join(baseDir, "ethashcache")
+	datasetDir := filepath.Join(baseDir, "datasets")
+
+	return Config{
+		CacheDir:       cacheDir,
+		CachesInMem:    2,
+		CachesOnDisk:   3,
+		DatasetDir:     datasetDir,
+		DatasetsInMem:  1,
+		DatasetsOnDisk: 2,
+	}
 }

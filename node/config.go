@@ -53,6 +53,9 @@ type BasicConfig struct {
 
 	// coinbase used by the miner
 	Coinbase string `json:"coinbase"`
+
+	// MinerAlgorithm miner algorithm
+	MinerAlgorithm string `json:"algorithm"`
 }
 
 // HTTPServer config for http server
