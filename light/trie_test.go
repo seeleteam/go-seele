@@ -45,12 +45,14 @@ func Test_Trie_Get(t *testing.T) {
 	lightTrie := newOdrTrie(retriever, trie.Hash(), dbPrefix)
 
 	// key exists
-	v, ok := lightTrie.Get([]byte("seele"))
+	v, ok, err := lightTrie.Get([]byte("seele"))
+	assert.Nil(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, []byte("SEELE"), v)
 
 	// key not found
-	v, ok = lightTrie.Get([]byte("seele 2"))
+	v, ok, err = lightTrie.Get([]byte("seele 2"))
+	assert.Nil(t, err)
 	assert.False(t, ok)
 	assert.Nil(t, v)
 }
