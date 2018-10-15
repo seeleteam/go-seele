@@ -550,6 +550,9 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 			break
 		}
 
+		// add it for all received block messages
+		d.log.Info("got block message and save it. height: %d, hash: %s, time: %d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
+
 		h.status = taskStatusProcessed
 	}
 }

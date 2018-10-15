@@ -305,12 +305,14 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	if block.Header.Height > common.ConfirmedBlockNumber {
 		confirmedHeight := block.Header.Height - common.ConfirmedBlockNumber
 		confirmedBlock, err := p.chain.GetStore().GetBlockByHeight(confirmedHeight)
+
 		if err != nil {
 			p.log.Warn("failed to load confirmed block height %d, err %s", confirmedHeight, err)
+		} else {
+			debts := types.NewDebtMap(confirmedBlock.Transactions)
+			p.propagateDebtMap(debts)
 		}
 
-		debts := types.NewDebtMap(confirmedBlock.Transactions)
-		p.propagateDebtMap(debts)
 	}
 
 	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
