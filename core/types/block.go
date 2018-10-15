@@ -84,7 +84,7 @@ type Block struct {
 // any change will not affect the block. The input transaction
 // array is copied, but each transaction is not copied.
 // So any change of the input transaction will affect the block.
-// The input receipt array is the same behavior with transation array.
+// The input receipt array is the same behavior with transaction array.
 func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt, debts []*Debt) *Block {
 	block := &Block{
 		Header: header.Clone(),

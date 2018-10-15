@@ -647,7 +647,7 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 	return true, header.PreviousBlockHash, nil
 }
 
-// GetShardNumber returns the shard number of blockchian.
+// GetShardNumber returns the shard number of blockchain.
 func (bc *Blockchain) GetShardNumber() (uint, error) {
 	data, err := getGenesisExtraData(bc.genesisBlock)
 	if err != nil {

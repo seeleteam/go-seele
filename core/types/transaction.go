@@ -30,7 +30,7 @@ var (
 	// ErrAmountNegative is returned when the transaction amount is negative.
 	ErrAmountNegative = errors.New("amount is negative")
 
-	// ErrAmountNil is returned when the transation amount is nil.
+	// ErrAmountNil is returned when the transaction amount is nil.
 	ErrAmountNil = errors.New("amount is null")
 
 	// ErrPriceNegative is returned when the transaction gas price is negative or zero.
@@ -249,7 +249,7 @@ func NewContractTransaction(from common.Address, amount *big.Int, price *big.Int
 	return newTx(from, common.EmptyAddress, amount, price, gasLimit, nonce, code)
 }
 
-// NewMessageTransaction returns a transation with the specified message.
+// NewMessageTransaction returns a transaction with the specified message.
 func NewMessageTransaction(from, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, msg []byte) (*Transaction, error) {
 	return newTx(from, to, amount, price, gasLimit, nonce, msg)
 }

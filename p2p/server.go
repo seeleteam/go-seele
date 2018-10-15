@@ -46,7 +46,7 @@ const (
 	inboundConn  = 1
 	outboundConn = 2
 
-	// In transfering handshake msg, length of extra data
+	// In transferring handshake msg, length of extra data
 	extraDataLen = 24
 )
 

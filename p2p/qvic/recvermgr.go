@@ -98,7 +98,7 @@ needQuit:
 	rv.log.Debug("ReceiverMgr runLoop OUT")
 }
 
-// composeBitmapMsg composes bitmap message head accoring to input parameters, and returns constant head length
+// composeBitmapMsg composes bitmap message head according to input parameters, and returns constant head length
 func (rv *ReceiverMgr) composeBitmapMsg(data []byte, curTick, startSeq, toSeq uint32) int {
 	binary.BigEndian.PutUint32(data[0:4], rv.qconn.magic)
 	data[4] = byte(PackTypeChannel << 4)

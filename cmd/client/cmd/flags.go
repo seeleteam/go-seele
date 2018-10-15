@@ -189,7 +189,7 @@ var (
 	gcBeforeDump     bool
 	gcBeforeDumpFlag = cli.BoolFlag{
 		Name:        "gc",
-		Usage:       "GC before heap dump, defualt false",
+		Usage:       "GC before heap dump, default false",
 		Destination: &gcBeforeDump,
 	}
 
@@ -197,7 +197,7 @@ var (
 	dumpFileFlag  = cli.StringFlag{
 		Name:        "file",
 		Value:       "heap.dump",
-		Usage:       "heap dump file name, defualt heap.dump",
+		Usage:       "heap dump file name, default heap.dump",
 		Destination: &dumpFileValue,
 	}
 

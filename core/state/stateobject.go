@@ -121,7 +121,7 @@ func (s *stateObject) addAmount(amount *big.Int) {
 	s.setAmount(new(big.Int).Add(s.account.Amount, amount))
 }
 
-// subAmount substracts the specified amount from the balance of the account in the state object
+// subAmount subtracts the specified amount from the balance of the account in the state object
 func (s *stateObject) subAmount(amount *big.Int) {
 	s.setAmount(new(big.Int).Sub(s.account.Amount, amount))
 }
