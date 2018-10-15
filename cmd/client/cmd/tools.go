@@ -131,18 +131,13 @@ func GeneratePayloadAction(c *cli.Context) error {
 		return fmt.Errorf("required flag(s) \"abi, method\" not set")
 	}
 
-	if !common.FileOrFolderExists(abiFile) {
-		fmt.Println("The specified abi file does not exist,", abiFile)
-		return nil
-	}
-
-	bytes, err := ioutil.ReadFile(abiFile)
+	abiJSON, err := readABIFile(abiFile)
 	if err != nil {
 		fmt.Println("failed to read abi file,", err)
 		return nil
 	}
 
-	payload, err := generatePayload(string(bytes), methodName, c.StringSlice("args"))
+	payload, err := generatePayload(abiJSON, methodName, c.StringSlice("args"))
 	if err != nil {
 		return fmt.Errorf("failed to parse the abi, err:%s", err)
 	}
@@ -168,4 +163,17 @@ func generatePayload(abiStr, methodName string, args []string) ([]byte, error) {
 	}
 
 	return parsed.Pack(methodName, ss...)
+}
+
+func readABIFile(abiFile string) (string, error) {
+	if !common.FileOrFolderExists(abiFile) {
+		return "", fmt.Errorf("The specified abi file[%s] does not exist,", abiFile)
+	}
+
+	bytes, err := ioutil.ReadFile(abiFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to read abi file, err: %s", err)
+	}
+
+	return string(bytes), nil
 }

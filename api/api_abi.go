@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/seeleteam/go-seele/accounts/abi"
@@ -19,7 +18,7 @@ type seeleLog struct {
 	Args   []interface{}
 }
 
-func printReceiptByABI(api *TransactionPoolAPI, receipt *types.Receipt) (map[string]interface{}, error) {
+func printReceiptByABI(api *TransactionPoolAPI, receipt *types.Receipt, abiJSON string) (map[string]interface{}, error) {
 	result, err := PrintableReceipt(receipt)
 	if err != nil {
 		return nil, err
@@ -32,13 +31,6 @@ func printReceiptByABI(api *TransactionPoolAPI, receipt *types.Receipt) (map[str
 		logOuts := make([]string, 0)
 
 		for _, log := range receipt.Logs {
-			fmt.Println("log.Data：", log.Data)
-			abiJSON, err := api.GetABI(log.Address)
-			if err != nil {
-				api.s.Log().Warn("the contract[%s] abi not found", log.Address.ToHex())
-				return result, nil
-			}
-
 			parsed, err := abi.JSON(strings.NewReader(abiJSON))
 			if err != nil {
 				api.s.Log().Warn("invalid abiJSON '%s', err: %s", abiJSON, err)
@@ -58,21 +50,6 @@ func printReceiptByABI(api *TransactionPoolAPI, receipt *types.Receipt) (map[str
 	}
 
 	return result, nil
-}
-
-// GetABI according to contract address to get abi json string
-func (api *TransactionPoolAPI) GetABI(contractAddr common.Address) (string, error) {
-	statedb, err := api.s.ChainBackend().GetCurrentState()
-	if err != nil {
-		return "", err
-	}
-
-	abiBytes := statedb.GetData(contractAddr, KeyABIHash)
-	if len(abiBytes) == 0 {
-		return "", fmt.Errorf("the abi of contract '%s' not found", contractAddr.ToHex())
-	}
-
-	return string(abiBytes), nil
 }
 
 func printLogByABI(log *types.Log, parsed abi.ABI) (string, error) {

@@ -77,8 +77,8 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		{
 			Name:   "getreceipt",
 			Usage:  "get receipt by transaction hash",
-			Flags:  rpcFlags(hashFlag),
-			Action: rpcAction("txpool", "getReceiptByTxHash"),
+			Flags:  rpcFlags(hashFlag, abiFileFlag),
+			Action: rpcActionEx("txpool", "getReceiptByTxHash", getReceiptArgs, handleCallResult),
 		},
 		{
 			Name:   "getpendingtxs",
