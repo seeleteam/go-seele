@@ -110,7 +110,7 @@ func TestRemoteSealer(t *testing.T) {
 		work [3]string
 		err  error
 	)
-	if work, err = api.GetWork(); err != nil || work[0] != sealhash.Hex() {
+	if work, err = api.GetWork(); err != nil || work[0] != sealhash.ToHex() {
 		t.Error("expect to return a mining work has same hash")
 	}
 
@@ -123,7 +123,7 @@ func TestRemoteSealer(t *testing.T) {
 	sealhash = ethash.SealHash(header)
 	ethash.Seal(nil, block, nil, results)
 
-	if work, err = api.GetWork(); err != nil || work[0] != sealhash.Hex() {
+	if work, err = api.GetWork(); err != nil || work[0] != sealhash.ToHex() {
 		t.Error("expect to return the latest pushed work")
 	}
 }
