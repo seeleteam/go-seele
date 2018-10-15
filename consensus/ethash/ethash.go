@@ -261,14 +261,14 @@ func (ethash *Ethash) Threads() int {
 // specified, the miner will use all cores of the machine. Setting a thread
 // count below zero is allowed and will cause the miner to idle, without any
 // work being done.
-func (ethash *Ethash) SetThreads(threads uint) {
+func (ethash *Ethash) SetThreads(threads int) {
 	ethash.lock.Lock()
 	defer ethash.lock.Unlock()
 
-	if threads == 0 {
+	if threads <= 0 {
 		ethash.threads = runtime.NumCPU()
 	} else {
-		ethash.threads = int(threads)
+		ethash.threads = threads
 	}
 
 	// Update the threads and ping any running seal to pull in any changes

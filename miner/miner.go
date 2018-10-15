@@ -89,7 +89,7 @@ func (miner *Miner) GetEngine() consensus.Engine {
 }
 
 // SetThreads sets the number of mining threads.
-func (miner *Miner) SetThreads(threads uint) {
+func (miner *Miner) SetThreads(threads int) {
 	if miner.engine != nil {
 		miner.engine.SetThreads(threads)
 	}

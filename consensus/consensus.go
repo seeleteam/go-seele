@@ -28,5 +28,5 @@ type Engine interface {
 	APIs() []rpc.API
 
 	// SetThreads set miner threads
-	SetThreads(thread uint)
+	SetThreads(thread int)
 }

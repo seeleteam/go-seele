@@ -41,11 +41,11 @@ func NewEngine(threads int) *Engine {
 	}
 }
 
-func (engine *Engine) SetThreads(threads uint) {
-	if threads == 0 {
+func (engine *Engine) SetThreads(threads int) {
+	if threads <= 0 {
 		engine.threads = runtime.NumCPU()
 	} else {
-		engine.threads = int(threads)
+		engine.threads = threads
 	}
 }
 

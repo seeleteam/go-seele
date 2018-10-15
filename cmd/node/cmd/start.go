@@ -30,7 +30,7 @@ var seeleNodeConfigFile string
 var miner string
 var metricsEnableFlag bool
 var accountsConfig string
-var threads uint
+var threads int
 var lightNode bool // default is full node
 
 // startCmd represents the start command
@@ -178,6 +178,6 @@ func init() {
 	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
 	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
-	startCmd.Flags().UintVarP(&threads, "threads", "", 1, "miner thread value")
+	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 }
