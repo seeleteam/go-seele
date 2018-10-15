@@ -77,24 +77,27 @@ func (t *Trie) Put(key, value []byte) error {
 
 // Delete delete node with key in the trie
 // return true is delete successfully;false mean the key not exist
-func (t *Trie) Delete(key []byte) bool {
-	if t.root != nil {
-		key = keybytesToHex(key)
-		match, newnode, err := t.delete(t.root, key, false)
-		if err == nil && match {
-			t.root = newnode
-		}
-		return match
+func (t *Trie) Delete(key []byte) (bool, error) {
+	if t.root == nil {
+		return false, nil
 	}
-	return false
+
+	key = keybytesToHex(key)
+
+	match, newnode, err := t.delete(t.root, key, false)
+	if err == nil && match {
+		t.root = newnode
+	}
+
+	return match, err
 }
 
 // DeletePrefix deletes nodes with specified prefix in the trie.
 // Return true if any node deleted, otherwise false.
 // Note, no node deleted if the prefix is nil or empty.
-func (t *Trie) DeletePrefix(prefix []byte) bool {
+func (t *Trie) DeletePrefix(prefix []byte) (bool, error) {
 	if len(prefix) == 0 || t.root == nil {
-		return false
+		return false, nil
 	}
 
 	key := keybytesToHex(prefix)
@@ -105,19 +108,19 @@ func (t *Trie) DeletePrefix(prefix []byte) bool {
 		t.root = newNode
 	}
 
-	return match
+	return match, err
 }
 
 // Get get the value by key
-func (t *Trie) Get(key []byte) ([]byte, bool) {
-	if t.root != nil {
-		key = keybytesToHex(key)
-		val, _ := t.get(t.root, key, 0)
-		if len(val) > 0 {
-			return val, true
-		}
+func (t *Trie) Get(key []byte) ([]byte, bool, error) {
+	if t.root == nil {
+		return nil, false, nil
 	}
-	return nil, false
+
+	key = keybytesToHex(key)
+	val, found, _, err := t.get(t.root, key, 0)
+
+	return val, found, err
 }
 
 // Hash return the hash of trie
@@ -374,7 +377,11 @@ func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, err
 
 		if matchlen == len(n.Key) {
 			match, newnode, err := t.delete(n.NextNode, key[matchlen:], descendant)
-			if err == nil && match {
+			if err != nil {
+				return false, nil, err
+			}
+
+			if match {
 				n.status = nodeStatusDirty
 				n.NextNode = newnode
 				if newnode == nil {
@@ -383,6 +390,7 @@ func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, err
 				return true, n, nil
 			}
 		}
+
 		return false, n, nil
 	case *BranchNode:
 		if descendant && len(key) == 1 {
@@ -393,12 +401,15 @@ func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, err
 			n.Children[key[0]] = nil
 		} else {
 			match, newnode, err := t.delete(n.Children[key[0]], key[1:], descendant)
-			if err == nil {
-				n.Children[key[0]] = newnode
+			if err != nil {
+				return false, nil, err
 			}
+
 			if !match {
 				return false, n, nil
 			}
+
+			n.Children[key[0]] = newnode
 		}
 
 		n.status = nodeStatusDirty
@@ -443,11 +454,7 @@ func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, err
 		if err != nil {
 			return false, nil, err
 		}
-		match, newnode, err := t.delete(loadnode, key, descendant)
-		if err != nil {
-			return false, loadnode, err
-		}
-		return match, newnode, nil
+		return t.delete(loadnode, key, descendant)
 	case nil:
 		return false, nil, nil
 	default:
@@ -550,34 +557,33 @@ func decodeBranchNode(hash, values []byte) (noder, error) {
 	return branchnode, nil
 }
 
-func (t *Trie) get(node noder, key []byte, pos int) (value []byte, newnode noder) {
+func (t *Trie) get(node noder, key []byte, pos int) ([]byte, bool, noder, error) {
 	switch n := (node).(type) {
 	case nil:
-		return nil, nil
+		return nil, false, nil, nil
 	case *ExtensionNode:
 		if len(key)-pos < len(n.Key) || !bytes.Equal(n.Key, key[pos:pos+len(n.Key)]) {
-			return nil, n
+			return nil, false, n, nil
 		}
-		val, newnode := t.get(n.NextNode, key, pos+len(n.Key))
+		val, found, newnode, err := t.get(n.NextNode, key, pos+len(n.Key))
 		n.NextNode = newnode
-		return val, n
+		return val, found, n, err
 	case hashNode:
 		child, err := t.loadNode(n)
 		if err != nil {
-			return nil, n
+			return nil, false, n, err
 		}
-		val, _ := t.get(child, key, pos)
-		return val, child
+		return t.get(child, key, pos)
 	case *LeafNode:
 		if len(key)-pos < len(n.Key) || !bytes.Equal(n.Key, key[pos:pos+len(n.Key)]) {
 			// key not found in trie
-			return nil, n
+			return nil, false, n, nil
 		}
-		return n.Value, n
+		return n.Value, true, n, nil
 	case *BranchNode:
-		val, newnode := t.get(n.Children[key[pos]], key, pos+1)
+		val, found, newnode, err := t.get(n.Children[key[pos]], key, pos+1)
 		n.Children[key[pos]] = newnode
-		return val, n
+		return val, found, n, err
 	default:
 		panic(fmt.Sprintf("invalid node: %v", node))
 	}
