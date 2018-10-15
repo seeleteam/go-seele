@@ -5,10 +5,14 @@
 
 package trie
 
+import "github.com/seeleteam/go-seele/common"
+
 const (
 	// numBranchChildren number children in branch node
 	numBranchChildren int = 17 // for 0-f branches + value node; reduce the height of tree for performance
+)
 
+const (
 	nodeStatusDirty     nodeStatus = iota // node is newly created or modified, but not update the node hash
 	nodeStatusUpdated                     // node hash updated
 	nodeStatusPersisted                   // node persisted in DB, in which case the node hash also updated
@@ -74,6 +78,13 @@ func (n hashNode) SetStatus(status nodeStatus) {
 	panic("hashnode do not support to change status")
 }
 
+func newPersistedNode(hash []byte) Node {
+	return Node{
+		hash:   common.CopyBytes(hash),
+		status: nodeStatusPersisted,
+	}
+}
+
 // Hash return the hash of node
 func (n *Node) Hash() []byte {
 	return n.hash
@@ -86,6 +97,10 @@ func (n *Node) Status() nodeStatus {
 
 // SetHash set the node hash
 func (n *Node) SetHash(hash []byte) {
+	if len(n.hash) == 0 {
+		n.hash = make([]byte, common.HashLength)
+	}
+
 	copy(n.hash, hash)
 }
 

@@ -280,10 +280,6 @@ func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error)
 		return dirty, newnode, err
 	case nil:
 		newnode := &LeafNode{
-			Node: Node{
-				status: nodeStatusDirty,
-				hash:   make([]byte, common.HashLength),
-			},
 			Key:   key,
 			Value: value,
 		}
@@ -302,12 +298,7 @@ func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (
 		}
 		return dirty, n, nil
 	}
-	branchnode := &BranchNode{
-		Node: Node{
-			status: nodeStatusDirty,
-			hash:   make([]byte, common.HashLength),
-		},
-	}
+	branchnode := &BranchNode{}
 
 	if matchlen != len(n.Key)-1 {
 		branchnode.Children[n.Key[matchlen]] = n
@@ -327,10 +318,6 @@ func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (
 	}
 
 	return true, &ExtensionNode{ // have match key,return extension node
-		Node: Node{
-			status: nodeStatusDirty,
-			hash:   make([]byte, common.HashLength),
-		},
 		Key:      key[:matchlen],
 		NextNode: branchnode,
 	}, nil
@@ -343,12 +330,7 @@ func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, node
 		n.status = nodeStatusDirty
 		return true, n, nil
 	}
-	branchnode := &BranchNode{
-		Node: Node{
-			status: nodeStatusDirty,
-			hash:   make([]byte, common.HashLength),
-		},
-	}
+	branchnode := &BranchNode{}
 	var err error
 	branchnode.Children[n.Key[matchlen]] = n
 	n.Key = n.Key[matchlen+1:]
@@ -363,10 +345,6 @@ func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, node
 	}
 
 	return true, &ExtensionNode{ // have match key,return extension node
-		Node: Node{
-			status: nodeStatusDirty,
-			hash:   make([]byte, common.HashLength),
-		},
 		Key:      key[:matchlen],
 		NextNode: branchnode,
 	}, nil
@@ -440,20 +418,12 @@ func (t *Trie) delete(node noder, key []byte, descendant bool) (bool, noder, err
 			switch childnode := childnode.(type) {
 			case *LeafNode:
 				newnode := &LeafNode{
-					Node: Node{
-						status: nodeStatusDirty,
-						hash:   make([]byte, common.HashLength),
-					},
 					Key:   append([]byte{byte(pos)}, childnode.Key...),
 					Value: childnode.Value,
 				}
 				return true, newnode, nil
 			case *ExtensionNode:
 				newnode := &ExtensionNode{
-					Node: Node{
-						status: nodeStatusDirty,
-						hash:   make([]byte, common.HashLength),
-					},
 					Key:      append([]byte{byte(pos)}, childnode.Key...),
 					NextNode: childnode.NextNode,
 				}
@@ -520,10 +490,7 @@ func decodeLeafNode(hash, values []byte) (noder, error) {
 		return nil, err
 	}
 	return &LeafNode{
-		Node: Node{
-			status: nodeStatusPersisted,
-			hash:   hash,
-		},
+		Node:  newPersistedNode(hash),
 		Key:   key,
 		Value: val,
 	}, nil
@@ -540,10 +507,7 @@ func decodeExtensionNode(hash, values []byte) (noder, error) {
 		return nil, err
 	}
 	return &ExtensionNode{
-		Node: Node{
-			status: nodeStatusPersisted,
-			hash:   hash,
-		},
+		Node:     newPersistedNode(hash),
 		Key:      key,
 		NextNode: append(hashNode{}, val...),
 	}, nil
@@ -559,10 +523,7 @@ func decodeBranchNode(hash, values []byte) (noder, error) {
 		return nil, errNodeFormat
 	}
 	branchnode := &BranchNode{
-		Node: Node{
-			status: nodeStatusPersisted,
-			hash:   hash,
-		},
+		Node: newPersistedNode(hash),
 	}
 	for i := 0; i < numBranchChildren; i++ {
 		kind, val, rest, err := rlp.Split(elems)
