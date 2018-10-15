@@ -50,8 +50,8 @@ func (a Hash) Bytes() []byte {
 }
 
 // String returns the string representation of the hash
-func (a *Hash) String() string {
-	return string(a[:])
+func (a Hash) String() string {
+	return a.ToHex()
 }
 
 // Equal returns a boolean value indicating whether the hash a is equal to the input hash b.
@@ -61,11 +61,6 @@ func (a *Hash) Equal(b Hash) bool {
 
 // ToHex returns the hex form of the hash
 func (a Hash) ToHex() string {
-	return hexutil.BytesToHex(a[:])
-}
-
-// ToHex returns the hex form of the hash
-func (a Hash) Hex() string {
 	return hexutil.BytesToHex(a[:])
 }
 
