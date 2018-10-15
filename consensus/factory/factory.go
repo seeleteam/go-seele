@@ -21,7 +21,7 @@ func GetConsensusEngine(minerAlgorithm string) (consensus.Engine, error) {
 	} else if minerAlgorithm == common.Sha256Algorithm {
 		minerEngine = pow.NewEngine(1)
 	} else {
-		return nil, fmt.Errorf("unknow miner algorithm")
+		return nil, fmt.Errorf("unknown miner algorithm")
 	}
 
 	return minerEngine, nil
