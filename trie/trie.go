@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	errNodeFormat   = errors.New("node format is invalid")
-	errNodeNotExist = errors.New("node not exist in db")
+	errNodeFormat   = errors.New("trie node format is invalid")
+	errNodeNotExist = errors.New("trie node not found")
 )
 
 // Database is used to load trie nodes by hash.
@@ -35,17 +35,6 @@ type Trie struct {
 	root     noder     // root node of the Trie
 	dbprefix []byte    // db prefix of Trie node
 	sha      hash.Hash // hash calc for trie
-}
-
-// ShallowCopy returns a new trie with the same root.
-func (t *Trie) ShallowCopy() (*Trie, error) {
-	rootHash := t.Hash()
-	t, err := NewTrie(rootHash, t.dbprefix, t.db)
-	if err != nil {
-		return t, fmt.Errorf("request hash: %s, error: %s", rootHash.ToHex(), err)
-	}
-
-	return t, nil
 }
 
 // NewTrie new a trie tree
@@ -77,10 +66,12 @@ func NewEmptyTrie(dbprefix []byte, db Database) *Trie {
 // Put add or update [key,value] in the trie
 func (t *Trie) Put(key, value []byte) error {
 	key = keybytesToHex(key)
-	_, node, err := t.insert(t.root, key, value)
+
+	node, err := t.insert(t.root, key, value)
 	if err == nil {
 		t.root = node
 	}
+
 	return err
 }
 
@@ -256,48 +247,54 @@ func encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 	}
 }
 
-// return true if insert succeed,it also mean node is dirty,should recalc hash
-func (t *Trie) insert(node noder, key []byte, value []byte) (bool, noder, error) {
+// inserts key-value under the specified node, and returns the new node if changed,
+// Otherwise the node itself.
+func (t *Trie) insert(node noder, key []byte, value []byte) (noder, error) {
 	switch n := node.(type) {
 	case *ExtensionNode:
 		return t.insertExtensionNode(n, key, value)
 	case *LeafNode:
 		return t.insertLeafNode(n, key, value)
 	case *BranchNode:
-		_, child, err := t.insert(n.Children[key[0]], key[1:], value)
+		child, err := t.insert(n.Children[key[0]], key[1:], value)
 		if err != nil {
-			return false, nil, err
+			return nil, err
 		}
 		n.Children[key[0]] = child
 		n.status = nodeStatusDirty
-		return true, n, nil
+		return n, nil
 	case hashNode:
 		loadnode, err := t.loadNode(n)
 		if err != nil {
-			return false, nil, err
+			return nil, err
 		}
-		dirty, newnode, err := t.insert(loadnode, key, value)
-		return dirty, newnode, err
+		return t.insert(loadnode, key, value)
 	case nil:
-		newnode := &LeafNode{
+		return &LeafNode{
 			Key:   key,
 			Value: value,
-		}
-		return true, newnode, nil
+		}, nil
+	default:
+		panic(fmt.Errorf("invalid node: %v", node))
 	}
-	return false, nil, nil
 }
 
-func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (bool, noder, error) {
+func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (noder, error) {
 	matchlen := matchkeyLen(n.Key, key)
-	if matchlen == len(n.Key) { // key match insert in nextNode
-		var dirty bool
-		dirty, n.NextNode, _ = t.insert(n.NextNode, key[matchlen:], value)
-		if dirty {
-			n.status = nodeStatusDirty
+
+	// key match and insert in nextNode
+	if matchlen == len(n.Key) {
+		newNode, err := t.insert(n.NextNode, key[matchlen:], value)
+		if err != nil {
+			return nil, err
 		}
-		return dirty, n, nil
+
+		n.NextNode = newNode
+		n.status = nodeStatusDirty
+
+		return n, nil
 	}
+
 	branchnode := &BranchNode{}
 
 	if matchlen != len(n.Key)-1 {
@@ -308,43 +305,53 @@ func (t *Trie) insertExtensionNode(n *ExtensionNode, key []byte, value []byte) (
 		branchnode.Children[n.Key[matchlen]] = n.NextNode
 	}
 
-	var err error
-	_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
+	newNode, err := t.insert(nil, key[matchlen+1:], value)
 	if err != nil {
-		return false, nil, err
-	}
-	if matchlen == 0 { // not match key value return branch node
-		return true, branchnode, nil
+		return nil, err
 	}
 
-	return true, &ExtensionNode{ // have match key,return extension node
+	branchnode.Children[key[matchlen]] = newNode
+
+	// not match key value return branch node
+	if matchlen == 0 {
+		return branchnode, nil
+	}
+
+	// have match key, return extension node
+	return &ExtensionNode{
 		Key:      key[:matchlen],
 		NextNode: branchnode,
 	}, nil
 }
 
-func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (bool, noder, error) {
+func (t *Trie) insertLeafNode(n *LeafNode, key []byte, value []byte) (noder, error) {
 	matchlen := matchkeyLen(n.Key, key)
-	if matchlen == len(n.Key) { // key match, change the value of leaf node
+
+	// key match, change the value of leaf node
+	if matchlen == len(n.Key) {
 		n.Value = value
 		n.status = nodeStatusDirty
-		return true, n, nil
+		return n, nil
 	}
+
 	branchnode := &BranchNode{}
-	var err error
 	branchnode.Children[n.Key[matchlen]] = n
 	n.Key = n.Key[matchlen+1:]
 	n.status = nodeStatusDirty
 
-	_, branchnode.Children[key[matchlen]], err = t.insert(nil, key[matchlen+1:], value)
+	newNode, err := t.insert(nil, key[matchlen+1:], value)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
-	if matchlen == 0 { // not match key value return branch node
-		return true, branchnode, nil
+	branchnode.Children[key[matchlen]] = newNode
+
+	// not match key value return branch node
+	if matchlen == 0 {
+		return branchnode, nil
 	}
 
-	return true, &ExtensionNode{ // have match key,return extension node
+	// have match key, return extension node
+	return &ExtensionNode{
 		Key:      key[:matchlen],
 		NextNode: branchnode,
 	}, nil
