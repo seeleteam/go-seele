@@ -478,11 +478,18 @@ func decodeNode(hash, value []byte) (noder, error) {
 	if len(value) == 0 {
 		return nil, io.ErrUnexpectedEOF
 	}
+
 	vals, _, err := rlp.SplitList(value)
 	if err != nil {
 		return nil, err
 	}
-	switch n, _ := rlp.CountValues(vals); n {
+
+	n, err := rlp.CountValues(vals)
+	if err != nil {
+		return nil, err
+	}
+
+	switch n {
 	case 1:
 		return decodeBranchNode(hash, vals)
 	case 2:
@@ -490,7 +497,7 @@ func decodeNode(hash, value []byte) (noder, error) {
 	case 3:
 		return decodeExtensionNode(hash, vals)
 	default:
-		return nil, nil
+		return nil, errNodeFormat
 	}
 }
 
@@ -499,10 +506,12 @@ func decodeLeafNode(hash, values []byte) (noder, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	val, _, err := rlp.SplitString(rest)
 	if err != nil {
 		return nil, err
 	}
+
 	return &LeafNode{
 		Node:  newPersistedNode(hash),
 		Key:   key,
@@ -512,14 +521,20 @@ func decodeLeafNode(hash, values []byte) (noder, error) {
 
 func decodeExtensionNode(hash, values []byte) (noder, error) {
 	_, bufs, err := rlp.SplitString(values)
+	if err != nil {
+		return nil, err
+	}
+
 	key, rest, err := rlp.SplitString(bufs)
 	if err != nil {
 		return nil, err
 	}
+
 	val, _, err := rlp.SplitString(rest)
 	if err != nil {
 		return nil, err
 	}
+
 	return &ExtensionNode{
 		Node:     newPersistedNode(hash),
 		Key:      key,
@@ -532,28 +547,37 @@ func decodeBranchNode(hash, values []byte) (noder, error) {
 	if err != nil {
 		return nil, err
 	}
-	itemcount, _ := rlp.CountValues(elems)
+
+	itemcount, err := rlp.CountValues(elems)
+	if err != nil {
+		return nil, err
+	}
+
 	if kind != rlp.List && itemcount != numBranchChildren {
 		return nil, errNodeFormat
 	}
+
 	branchnode := &BranchNode{
 		Node: newPersistedNode(hash),
 	}
+
 	for i := 0; i < numBranchChildren; i++ {
 		kind, val, rest, err := rlp.Split(elems)
 		if err != nil {
 			return nil, err
 		}
+
 		elems = rest
+
 		if kind == rlp.String {
-			length := len(val)
-			if length == common.HashLength {
+			if length := len(val); length == common.HashLength {
 				branchnode.Children[i] = append(hashNode{}, val...)
 			} else {
 				branchnode.Children[i] = nil
 			}
 		}
 	}
+
 	return branchnode, nil
 }
 
