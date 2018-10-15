@@ -150,7 +150,7 @@ func generateCache(dest []uint32, epoch uint64, seed []byte) {
 		if elapsed > 3*time.Second {
 			logFn = logger.Info
 		}
-		logFn("Generated ethash verification cache", "elapsed", common.PrettyDuration(elapsed))
+		logFn("Generated ethash verification cache. elapsed %s", common.PrettyDuration(elapsed))
 	}()
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
@@ -329,7 +329,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 				copy(dataset[index*hashBytes:], item)
 
 				if status := atomic.AddUint32(&progress, 1); status%percent == 0 {
-					logger.Info("Generating DAG in progress. percentage %f, elapsed %s", uint64(status*100)/(size/hashBytes), common.PrettyDuration(time.Since(start)))
+					logger.Info("Generating DAG in progress. percentage %d, elapsed %s", uint64(status*100)/(size/hashBytes), common.PrettyDuration(time.Since(start)))
 				}
 			}
 		}(i)

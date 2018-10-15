@@ -51,7 +51,7 @@ type EthashWitness struct {
 
 // Seal implements consensus.Engine, attempting to find a nonce that satisfies
 // the block's difficulty requirements.
-func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
 	// Create a runner and the multiple search threads it directs
 	abort := make(chan struct{})
 
@@ -105,7 +105,7 @@ func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, resu
 		case <-ethash.update:
 			// Thread count was changed on user request, restart
 			close(abort)
-			if err := ethash.Seal(store, block, results, stop); err != nil {
+			if err := ethash.Seal(store, block, stop, results); err != nil {
 				ethash.log.Error("Failed to restart sealing after update, err %s", err)
 			}
 		}

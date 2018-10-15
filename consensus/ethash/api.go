@@ -92,10 +92,6 @@ func (api *API) SubmitWork(nonce BlockNonce, hash, digest common.Hash) bool {
 // It accepts the miner hash rate and an identifier which must be unique
 // between nodes.
 func (api *API) SubmitHashRate(rate hexutil.Uint64, id common.Hash) bool {
-	if api.ethash.config.PowMode != ModeNormal && api.ethash.config.PowMode != ModeTest {
-		return false
-	}
-
 	var done = make(chan struct{}, 1)
 
 	select {
