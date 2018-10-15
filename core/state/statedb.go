@@ -100,7 +100,7 @@ func (s *Statedb) AddBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-// SubBalance substracts the specified amount from the balance for the specified account if exists.
+// SubBalance subtracts the specified amount from the balance for the specified account if exists.
 func (s *Statedb) SubBalance(addr common.Address, amount *big.Int) {
 	if object := s.getStateObject(addr); object != nil {
 		s.curJournal.append(balanceChange{&addr, object.getAmount()})

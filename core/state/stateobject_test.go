@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_AccountClone(t *testing.T) {
@@ -70,15 +70,15 @@ func Test_StateObject_AmountDirty(t *testing.T) {
 	assert.Equal(t, so.getNonce(), nonce)
 	assert.Equal(t, so.dirtyAccount, true)
 
-	// Ammount
+	// Amount
 	so.dirtyAccount = false
-	ammount := big.NewInt(101)
-	so.setAmount(ammount)
-	assert.Equal(t, so.getAmount(), ammount)
+	amount := big.NewInt(101)
+	so.setAmount(amount)
+	assert.Equal(t, so.getAmount(), amount)
 	assert.Equal(t, so.dirtyAccount, true)
 
 	so.dirtyAccount = false
-	so.subAmount(ammount)
+	so.subAmount(amount)
 	assert.Equal(t, so.getAmount(), big.NewInt(0))
 	assert.Equal(t, so.dirtyAccount, true)
 }
