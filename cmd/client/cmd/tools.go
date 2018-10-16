@@ -167,7 +167,7 @@ func generatePayload(abiStr, methodName string, args []string) ([]byte, error) {
 
 func readABIFile(abiFile string) (string, error) {
 	if !common.FileOrFolderExists(abiFile) {
-		return "", fmt.Errorf("The specified abi file[%s] does not exist,", abiFile)
+		return "", fmt.Errorf("The specified abi file[%s] does not exist", abiFile)
 	}
 
 	bytes, err := ioutil.ReadFile(abiFile)
