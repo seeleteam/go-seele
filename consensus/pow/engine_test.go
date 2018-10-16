@@ -23,13 +23,13 @@ func Test_SetThreads(t *testing.T) {
 
 	assert.Equal(t, engine.threads, 1)
 
-	engine.SetThreadNum(1)
+	engine.SetThreads(1)
 	assert.Equal(t, engine.threads, 1)
 
-	engine.SetThreadNum(2)
+	engine.SetThreads(2)
 	assert.Equal(t, engine.threads, 2)
 
-	engine.SetThreadNum(0)
+	engine.SetThreads(0)
 	assert.Equal(t, engine.threads, runtime.NumCPU())
 }
 

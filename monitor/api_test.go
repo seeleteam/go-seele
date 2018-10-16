@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
@@ -72,7 +73,7 @@ func createTestAPI(t *testing.T) (api *PublicMonitorAPI, dispose func()) {
 		return
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, conf, log)
+	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -150,7 +151,7 @@ func createTestAPIErr(errBranch int) (api *PublicMonitorAPI, dispose func()) {
 		return
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, conf, log)
+	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
 	if err != nil {
 		fmt.Println(err)
 		return

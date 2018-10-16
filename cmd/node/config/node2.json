@@ -4,7 +4,8 @@
     "version": "1.0",
     "dataDir": "node2",
     "address": "0.0.0.0:8028",
-    "coinbase": "0x0ea2a45ab5a909c309439b0e004c61b7b2a3e831"
+    "coinbase": "0x0ea2a45ab5a909c309439b0e004c61b7b2a3e831",
+    "algorithm": "ethash"
   },
   "p2p": {
     "address": "0.0.0.0:8058",

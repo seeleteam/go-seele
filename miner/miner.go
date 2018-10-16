@@ -15,7 +15,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
-	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
@@ -64,7 +63,7 @@ type Miner struct {
 }
 
 // NewMiner constructs and returns a miner instance
-func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifier) *Miner {
+func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifier, engine consensus.Engine) *Miner {
 	miner := &Miner{
 		coinbase:             addr,
 		canStart:             1,
@@ -76,9 +75,8 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 		isFirstDownloader:    1,
 		isFirstBlockPrepared: 0,
 		debtVerifier:         verifier,
+		engine:               engine,
 	}
-
-	miner.engine = pow.NewEngine(1)
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
@@ -91,10 +89,9 @@ func (miner *Miner) GetEngine() consensus.Engine {
 }
 
 // SetThreads sets the number of mining threads.
-func (miner *Miner) SetThreads(threads uint) {
-	powEngine := miner.engine.(*pow.Engine)
-	if powEngine != nil {
-		powEngine.SetThreadNum(threads)
+func (miner *Miner) SetThreads(threads int) {
+	if miner.engine != nil {
+		miner.engine.SetThreads(threads)
 	}
 }
 

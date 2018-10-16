@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/api"
-	"github.com/seeleteam/go-seele/consensus/pow"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/database"
@@ -39,7 +39,7 @@ type ServiceClient struct {
 }
 
 // NewServiceClient create ServiceClient
-func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog, dbFolder string, shard uint) (s *ServiceClient, err error) {
+func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog, dbFolder string, shard uint, engine consensus.Engine) (s *ServiceClient, err error) {
 	s = &ServiceClient{
 		log:        log,
 		networkID:  conf.P2PConfig.NetworkID,
@@ -70,7 +70,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog,
 		return nil, err
 	}
 
-	s.chain, err = newLightChain(bcStore, s.lightDB, s.odrBackend, pow.NewEngine(1))
+	s.chain, err = newLightChain(bcStore, s.lightDB, s.odrBackend, engine)
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()

@@ -43,7 +43,7 @@ var (
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum ethash engine.
-func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader, seal bool) error {
+func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error {
 	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
 	if err != nil || parent == nil {
 		return consensus.ErrBlockInvalidParentHash

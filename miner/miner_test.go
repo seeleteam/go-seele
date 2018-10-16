@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
@@ -76,7 +77,7 @@ func Test_Start(t *testing.T) {
 }
 
 func createMiner() *Miner {
-	return NewMiner(defaultMinerAddr, seele, nil)
+	return NewMiner(defaultMinerAddr, seele, nil, factory.MustGetConsensusEngine(common.Sha256Algorithm))
 }
 
 func checkMinerMembers(miner *Miner, addr common.Address, seele SeeleBackend, t *testing.T) {

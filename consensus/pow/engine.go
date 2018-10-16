@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 var (
@@ -40,13 +41,23 @@ func NewEngine(threads int) *Engine {
 	}
 }
 
-func (engine *Engine) SetThreadNum(threads uint) {
-	if threads == 0 {
+func (engine *Engine) SetThreads(threads int) {
+	if threads <= 0 {
 		engine.threads = runtime.NumCPU()
-		return
+	} else {
+		engine.threads = threads
 	}
+}
 
-	engine.threads = int(threads)
+func (engine *Engine) APIs() []rpc.API {
+	return []rpc.API{
+		{
+			Namespace: "seele",
+			Version:   "1.0",
+			Service:   &API{engine},
+			Public:    true,
+		},
+	}
 }
 
 func (engine *Engine) GetEngineInfo() interface{} {

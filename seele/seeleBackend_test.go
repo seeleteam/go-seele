@@ -15,6 +15,7 @@ import (
 	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -120,7 +121,7 @@ func newTestTxPoolAPI(t *testing.T, dbPath string) *TransactionPoolAPI {
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
-	ss, err := NewSeeleService(ctx, conf, log)
+	ss, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
 	if err != nil {
 		panic("new seele service error")
 	}
