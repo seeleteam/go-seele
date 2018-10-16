@@ -133,8 +133,7 @@ func GeneratePayloadAction(c *cli.Context) error {
 
 	abiJSON, err := readABIFile(abiFile)
 	if err != nil {
-		fmt.Println("failed to read abi file,", err)
-		return nil
+		return err
 	}
 
 	payload, err := generatePayload(abiJSON, methodName, c.StringSlice("args"))
@@ -142,7 +141,7 @@ func GeneratePayloadAction(c *cli.Context) error {
 		return fmt.Errorf("failed to parse the abi, err:%s", err)
 	}
 
-	fmt.Printf("payload:  %s\n", hexutil.BytesToHex(payload))
+	fmt.Printf("payload: %s\n", hexutil.BytesToHex(payload))
 	return nil
 }
 

@@ -223,8 +223,7 @@ func getReceiptArgs(c *cli.Context, client *rpc.Client) ([]interface{}, error) {
 	if abiFile != "" {
 		var err error
 		if abiJSON, err = readABIFile(abiFile); err != nil {
-			fmt.Println("failed to read abi file,", err)
-			return nil, nil
+			return nil, fmt.Errorf("failed to read abi file, err: %s", err)
 		}
 	}
 
