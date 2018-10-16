@@ -166,7 +166,8 @@ func Test_Commit_AccountStorages(t *testing.T) {
 	trie, err := trie.NewTrie(root1, TrieDbPrefix, db)
 	assert.Equal(t, err, nil)
 	storageKey := stateObj.dataKey(dataTypeStorage, crypto.MustHash(common.StringToHash("test key")).Bytes()...)
-	storageValue, found := trie.Get(storageKey)
+	storageValue, found, err := trie.Get(storageKey)
+	assert.Nil(t, err)
 	assert.Equal(t, found, true)
 	assert.Equal(t, storageValue, []byte("test value"))
 }
