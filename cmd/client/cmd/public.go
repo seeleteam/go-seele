@@ -217,3 +217,15 @@ func onTxAdded(inputs []interface{}, result interface{}) error {
 
 	return nil
 }
+
+func getReceiptArgs(c *cli.Context, client *rpc.Client) ([]interface{}, error) {
+	var abiJSON string
+	if abiFile != "" {
+		var err error
+		if abiJSON, err = readABIFile(abiFile); err != nil {
+			return nil, fmt.Errorf("failed to read abi file, err: %s", err)
+		}
+	}
+
+	return []interface{}{hashValue, abiJSON}, nil
+}

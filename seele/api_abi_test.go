@@ -5,7 +5,6 @@
 package seele
 
 import (
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -54,46 +53,4 @@ func Test_GeneratePayload(t *testing.T) {
 	payload5, err5 := api.GeneratePayload("SimpleStorageABI:asdf", "set", args)
 	assert.Error(t, err5)
 	assert.Empty(t, payload5)
-}
-
-func Test_GetAPI(t *testing.T) {
-	dbPath := filepath.Join(common.GetTempFolder(), ".GetAPI")
-	if common.FileOrFolderExists(dbPath) {
-		os.RemoveAll(dbPath)
-	}
-	api := newTestAPI(t, dbPath)
-
-	from, err := saveABI(api)
-	assert.NoError(t, err)
-
-	// Correctness test
-	abiObj1, err1 := api.GetABI(from)
-	assert.NoError(t, err1)
-	assert.Equal(t, abiObj1, SimpleStorageABI)
-
-	// Invalid address test
-	abiObj2, err2 := api.GetABI(common.EmptyAddress)
-	assert.Error(t, err2)
-	assert.Equal(t, abiObj2, "")
-}
-
-func saveABI(api *PublicSeeleAPI) (common.Address, error) {
-	statedb, err := api.s.chain.GetCurrentState()
-	if err != nil {
-		return common.EmptyAddress, err
-	}
-
-	from := getFromAddress(statedb)
-	statedb.SetData(from, KeyABIHash, []byte(SimpleStorageABI))
-
-	// save the statedb
-	batch := api.s.accountStateDB.NewBatch()
-	block := api.s.chain.CurrentBlock()
-	block.Header.StateHash, _ = statedb.Commit(batch)
-	block.Header.Height++
-	block.Header.PreviousBlockHash = block.HeaderHash
-	block.HeaderHash = block.Header.Hash()
-	api.s.chain.GetStore().PutBlock(block, big.NewInt(1), true)
-	batch.Commit()
-	return from, nil
 }
