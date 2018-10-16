@@ -52,20 +52,12 @@ func (engine *Engine) SetThreads(threads int) {
 func (engine *Engine) APIs() []rpc.API {
 	return []rpc.API{
 		{
-			Namespace: "seele",
+			Namespace: "sha256",
 			Version:   "1.0",
 			Service:   &API{engine},
 			Public:    true,
 		},
 	}
-}
-
-func (engine *Engine) GetEngineInfo() interface{} {
-	info := make(map[string]interface{})
-	info["threads"] = engine.threads
-	info["hashrate"] = engine.hashrate.Rate1()
-
-	return info
 }
 
 // ValidateHeader validates the specified header and returns error if validation failed.
