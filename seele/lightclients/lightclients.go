@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
-	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
@@ -34,7 +33,7 @@ type LightClientsManager struct {
 }
 
 // NewLightClientManager create a new LightClientManager instance.
-func NewLightClientManager(targetShard uint, context context.Context, config *node.Config) (*LightClientsManager, error) {
+func NewLightClientManager(targetShard uint, context context.Context, config *node.Config, engine consensus.Engine) (*LightClientsManager, error) {
 	clients := make([]*light.ServiceClient, common.ShardCount+1)
 	backends := make([]*light.LightBackend, common.ShardCount+1)
 
@@ -49,12 +48,6 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 		copyConf.SeeleConfig.GenesisConfig.ShardNumber = shard
 
 		dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", i))
-		var engine consensus.Engine
-		engine, err = factory.GetConsensusEngine(copyConf.BasicConfig.MinerAlgorithm)
-		if err != nil {
-			return nil, err
-		}
-
 		clients[i], err = light.NewServiceClient(context, copyConf, log.GetLogger(fmt.Sprintf("lightclient_%d", i)), dbFolder, shard, engine)
 		if err != nil {
 			return nil, err

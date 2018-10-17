@@ -14,6 +14,8 @@ import (
 	"github.com/seeleteam/go-seele/consensus/pow"
 )
 
+// GetConsensusEngine get consensus engine according to miner algorithm name
+// WARNING: engine may be a heavy instance. we should have as less as possible in our process.
 func GetConsensusEngine(minerAlgorithm string) (consensus.Engine, error) {
 	var minerEngine consensus.Engine
 	if minerAlgorithm == common.EthashAlgorithm {
