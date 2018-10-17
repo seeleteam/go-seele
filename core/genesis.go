@@ -44,6 +44,9 @@ type GenesisInfo struct {
 
 	// ShardNumber is the shard number of genesis block.
 	ShardNumber uint `json:"shard"`
+
+	// CreateTimestamp is the initial time of genesis
+	CreateTimestamp *big.Int `json:"timestamp"`
 }
 
 // genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
@@ -77,7 +80,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 			TxHash:            types.MerkleRootHash(nil),
 			Difficulty:        big.NewInt(info.Difficult),
 			Height:            genesisBlockHeight,
-			CreateTimestamp:   big.NewInt(0),
+			CreateTimestamp:   info.CreateTimestamp,
 			Witness:           make([]byte, 0),
 			ExtraData:         common.SerializePanic(extraData),
 		},

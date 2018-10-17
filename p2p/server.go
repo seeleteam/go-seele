@@ -399,10 +399,11 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
 	var genesis core.GenesisInfo
 	err := json.Unmarshal(recvMsg.Params, &genesis)
+
 	if err != nil {
 		return nil, false
 	}
-
+	
 	for key, val := range genesis.Accounts {
 		v, ok := srv.genesis.Accounts[key]
 		if !ok {
@@ -412,11 +413,15 @@ func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
 			return nil, false
 		}
 	}
-
+	
 	if srv.Config.NetworkID != recvMsg.NetworkID {
 		return nil, false
 	}
-
+	
+	if srv.genesis.CreateTimestamp.Cmp(genesis.CreateTimestamp) != 0 {
+		return nil, false
+	}
+	
 	localCapSet := set.New()
 	for _, proto := range srv.Protocols {
 		localCapSet.Add(proto.cap())
@@ -428,11 +433,11 @@ func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
 			capNameList = append(capNameList, cap)
 		}
 	}
-
+	
 	if len(capNameList) == 0 {
 		return nil, false
 	}
-
+	
 	return capNameList, true
 }
 
@@ -477,7 +482,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
-
+		
 		recvMsg, renounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
@@ -486,7 +491,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if renounceCnt != nounceCnt {
 			return nil, 0, errors.New("client nounceCnt is changed")
 		}
-
+		
 		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
 		} else {
@@ -500,24 +505,24 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
-
+		
 		recvMsg, nounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
 		}
-
+		
 		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
 		} else {
 			sort.Sort(capsByNameAndVersion(capList))
 			peer.setProtocols(srv.getProtocolsByCaps(capList))
 		}
-
+		
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err
 		}
-
+		
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}
