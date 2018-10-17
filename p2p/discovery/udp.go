@@ -522,7 +522,7 @@ func (u *udp) loadNodes(nodeDir string) {
 	fileFullPath := filepath.Join(nodeDir, NodesBackupFileName)
 
 	if !common.FileOrFolderExists(fileFullPath) {
-		u.log.Debug("nodes info backup file isn't exists in the path:%s", fileFullPath)
+		u.log.Debug("nodes info backup file doesn't exist in the path:%s", fileFullPath)
 		return
 	}
 

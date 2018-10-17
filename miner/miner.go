@@ -223,7 +223,7 @@ out:
 					break
 				}
 
-				miner.log.Info("block and notify p2p saved successfully")
+				miner.log.Info("saved mined block successfully")
 				event.BlockMinedEventManager.Fire(result) // notify p2p to broadcast the block
 				break
 			}
@@ -266,8 +266,11 @@ func (miner *Miner) prepareNewBlock() error {
 		CreateTimestamp:   big.NewInt(timestamp),
 	}
 
-	miner.log.Debug("miner a block with coinbase %s", miner.coinbase.ToHex())
-	miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
+	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.ToHex())
+	err = miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
+	if err != nil {
+		return fmt.Errorf("failed to prepare header, %s", err)
+	}
 
 	miner.current = &Task{
 		header:       header,

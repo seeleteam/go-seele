@@ -67,7 +67,7 @@ func (header *BlockHeader) Clone() *BlockHeader {
 	return &clone
 }
 
-// Hash calculates and returns the hash of the bloch header.
+// Hash calculates and returns the hash of the block header.
 func (header *BlockHeader) Hash() common.Hash {
 	return crypto.MustHash(header)
 }
