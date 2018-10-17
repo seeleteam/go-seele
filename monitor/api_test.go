@@ -8,6 +8,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,8 +32,9 @@ func getTmpConfig() *node.Config {
 			TxConf:   *core.DefaultTxPoolConfig(),
 			Coinbase: *acctAddr,
 			GenesisConfig: core.GenesisInfo{
-				Difficult:   1,
-				ShardNumber: 1,
+				Difficult:       1,
+				ShardNumber:     1,
+				CreateTimestamp: big.NewInt(0),
 			},
 		},
 	}
