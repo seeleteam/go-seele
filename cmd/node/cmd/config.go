@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -37,6 +38,10 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	cmdConfig, err := GetConfigFromFile(configFile)
 	if err != nil {
 		return nil, err
+	}
+
+	if cmdConfig.GenesisConfig.CreateTimestamp == nil {
+		return nil, errors.New("Failed to get genesis timestamp")
 	}
 
 	cmdConfig.GenesisConfig.Accounts, err = LoadAccountConfig(accounts)

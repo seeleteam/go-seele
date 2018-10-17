@@ -5,7 +5,7 @@
     "dataDir": "node4",
     "address": "0.0.0.0:8026",
     "coinbase": "0x0b252fa6de61be780facf36815e4d4b763352f81",
-    "algorithm": "ethash"
+    "algorithm": "sha256"
   },
   "p2p": {
     "address": "0.0.0.0:8056",
@@ -43,6 +43,7 @@
   },
   "genesis": {
     "difficult":8000000,
-    "shard":1
+    "shard":1,
+    "timestamp":1539742676
   }
 }

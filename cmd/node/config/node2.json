@@ -5,7 +5,7 @@
     "dataDir": "node2",
     "address": "0.0.0.0:8028",
     "coinbase": "0x0ea2a45ab5a909c309439b0e004c61b7b2a3e831",
-    "algorithm": "ethash"
+    "algorithm": "sha256"
   },
   "p2p": {
     "address": "0.0.0.0:8058",
@@ -16,7 +16,7 @@
     "networkID": "seele"
   },
   "log": {
-    "isDebug": false,
+    "isDebug": true,
     "printLog": true
   },
   "httpServer": {
@@ -43,6 +43,7 @@
   },
   "genesis": {
     "difficult":8000000,
-    "shard":2
+    "shard":2,
+    "timestamp":1539742676
   }
 }
