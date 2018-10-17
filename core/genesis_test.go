@@ -20,11 +20,11 @@ import (
 
 func Test_Genesis_GetGenesis(t *testing.T) {
 	// case 1
-	genesis1 := GetGenesis(GenesisInfo{})
-	genesis2 := GetGenesis(GenesisInfo{})
+	genesis1 := GetGenesis(GenesisInfo{CreateTimestamp: big.NewInt(0)})
+	genesis2 := GetGenesis(GenesisInfo{CreateTimestamp: big.NewInt(0)})
 	assert.Equal(t, genesis1.header, genesis2.header)
-	assert.Equal(t, genesis1.info, GenesisInfo{nil, 1, 0})
-	assert.Equal(t, genesis2.info, GenesisInfo{nil, 1, 0})
+	assert.Equal(t, genesis1.info, GenesisInfo{nil, 1, 0, big.NewInt(0)})
+	assert.Equal(t, genesis2.info, GenesisInfo{nil, 1, 0, big.NewInt(0)})
 	validateGenesisDefaultMembers(t, genesis1)
 	validateGenesisDefaultMembers(t, genesis2)
 
@@ -32,7 +32,7 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 	addr := crypto.MustGenerateRandomAddress()
 	accounts := make(map[common.Address]*big.Int)
 	accounts[*addr] = big.NewInt(10)
-	genesis3 := GetGenesis(GenesisInfo{accounts, 1, 0})
+	genesis3 := GetGenesis(GenesisInfo{accounts, 1, 0, big.NewInt(0)})
 	if genesis3.header.StateHash == common.EmptyHash {
 		panic("genesis3 state hash should not equal to empty hash")
 	}
@@ -41,30 +41,30 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 		panic("genesis3 should not equal to genesis2")
 	}
 
-	assert.Equal(t, genesis3.info, GenesisInfo{accounts, 1, 0})
+	assert.Equal(t, genesis3.info, GenesisInfo{accounts, 1, 0, big.NewInt(0)})
 	validateGenesisDefaultMembers(t, genesis3)
 
 	// case 3
 	var difficult int64
-	genesis4 := GetGenesis(GenesisInfo{nil, difficult, 0})
+	genesis4 := GetGenesis(GenesisInfo{nil, difficult, 0, big.NewInt(0)})
 	assert.Equal(t, genesis4.header.Difficulty, big.NewInt(1))
 	assert.Equal(t, genesis4.header.ExtraData, common.SerializePanic(genesisExtraData{0}))
-	assert.Equal(t, genesis4.info, GenesisInfo{nil, 1, 0})
+	assert.Equal(t, genesis4.info, GenesisInfo{nil, 1, 0, big.NewInt(0)})
 	validateGenesisDefaultMembers(t, genesis4)
 
 	difficult = 10
-	genesis4 = GetGenesis(GenesisInfo{nil, difficult, 0})
+	genesis4 = GetGenesis(GenesisInfo{nil, difficult, 0, big.NewInt(0)})
 	assert.Equal(t, genesis4.header.Difficulty, big.NewInt(difficult))
 	assert.Equal(t, genesis4.header.ExtraData, common.SerializePanic(genesisExtraData{0}))
-	assert.Equal(t, genesis4.info, GenesisInfo{nil, difficult, 0})
+	assert.Equal(t, genesis4.info, GenesisInfo{nil, difficult, 0, big.NewInt(0)})
 	validateGenesisDefaultMembers(t, genesis4)
 
 	// case 4
 	var shardNumber uint = 1
-	genesis5 := GetGenesis(GenesisInfo{nil, difficult, shardNumber})
+	genesis5 := GetGenesis(GenesisInfo{nil, difficult, shardNumber, big.NewInt(0)})
 	assert.Equal(t, genesis5.header.Difficulty, big.NewInt(difficult))
 	assert.Equal(t, genesis5.header.ExtraData, common.SerializePanic(genesisExtraData{shardNumber}))
-	assert.Equal(t, genesis5.info, GenesisInfo{nil, difficult, shardNumber})
+	assert.Equal(t, genesis5.info, GenesisInfo{nil, difficult, shardNumber, big.NewInt(0)})
 	validateGenesisDefaultMembers(t, genesis5)
 }
 
@@ -72,7 +72,7 @@ func Test_Genesis_GetShardNumber(t *testing.T) {
 	genesis := GetGenesis(GenesisInfo{})
 	assert.Equal(t, genesis.GetShardNumber(), uint(0))
 
-	genesis = GetGenesis(GenesisInfo{nil, 0, 10})
+	genesis = GetGenesis(GenesisInfo{nil, 0, 10, big.NewInt(0)})
 	assert.Equal(t, genesis.GetShardNumber(), uint(10))
 }
 

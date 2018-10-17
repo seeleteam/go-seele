@@ -124,11 +124,11 @@ needQuit:
 			curHeight := uint64(0)
 			for _, head := range headMsg.Hearders[1:] {
 				if err := d.chain.WriteHeader(head); err != nil {
-					d.log.Debug("Downloader.doSynchronise WriteHeader error. %s", err)
+					d.log.Warn("Downloader.doSynchronise WriteHeader error. %s", err)
 					break needQuit
 				}
 
-				d.log.Debug("Downloader.doSynchronise WriteHeader to chain. Height=%d", head.Height)
+				d.log.Info("Downloader.doSynchronise WriteHeader to chain. Height=%d. hash=%s", head.Height, head.Hash())
 				curHeight = head.Height
 			}
 
@@ -151,7 +151,7 @@ needQuit:
 		}
 	}
 
-	d.log.Info("Downloader.doSynchronise runs out")
+	d.log.Debug("Downloader.doSynchronise runs out")
 	return
 }
 

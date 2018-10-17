@@ -161,7 +161,7 @@ func newTestGenesis() *core.Genesis {
 		accounts[account.addr] = account.amount
 	}
 
-	return core.GetGenesis(core.GenesisInfo{accounts, 1, 0})
+	return core.GetGenesis(core.GenesisInfo{accounts, 1, 0, big.NewInt(0)})
 }
 
 var testGenesisAccounts = []*testAccount{

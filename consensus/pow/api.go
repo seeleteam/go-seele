@@ -13,3 +13,8 @@ type API struct {
 func (api *API) GetHashrate() uint64 {
 	return uint64(api.engine.hashrate.Rate1())
 }
+
+// GetThreads returns the thread number of the miner engine
+func (api *API) GetThreads() int {
+	return api.engine.threads
+}
