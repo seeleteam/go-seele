@@ -11,9 +11,12 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const purgeBlockLimit = 500
+
+var blockIndexLogger = log.GetLogger("BlockIndex")
 
 // BlockIndex is the index of the block chain
 type BlockIndex struct {
@@ -162,21 +165,30 @@ func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
 }
 
 // Purge purges the worst chain in forking tree.
-func (bf *BlockLeaves) Purge(bcStore store.BlockchainStore) error {
+func (bf *BlockLeaves) Purge(bcStore store.BlockchainStore) {
 	best, worst := bf.GetBestBlockIndex(), bf.GetWorstBlockIndex()
 	if best == nil || worst == nil {
-		return nil
+		return
 	}
 
 	// purge only when worst chain is far away from best chain.
 	if best.blockHeight-worst.blockHeight < purgeBlockLimit {
-		return nil
+		return
 	}
 
 	hash := worst.blockHash
 	bf.Remove(hash)
 
-	// remove blocks in worst chain until the common ancestor found in canonical chain.
+	// asynchronously purge blocks
+	go func() {
+		if err := purgeBlock(hash, bcStore); err != nil {
+			blockIndexLogger.Error("Failed to purge block %v, %v", hash, err.Error())
+		}
+	}()
+}
+
+// purgeBlock purges the blocks in forking chain util the common ancestor found in canonical chain.
+func purgeBlock(hash common.Hash, bcStore store.BlockchainStore) error {
 	for !hash.IsEmpty() {
 		header, err := bcStore.GetBlockHeader(hash)
 		if err != nil {
