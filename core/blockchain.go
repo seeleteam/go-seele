@@ -327,7 +327,12 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	committed = true
 	if isHead {
 		bc.currentBlock = currentBlock
-		bc.blockLeaves.Purge(bc.bcStore)
+
+		bc.blockLeaves.PurgeAsync(bc.bcStore, func(err error) {
+			if err != nil {
+				bc.log.Error("Failed to purge block, %v", err.Error())
+			}
+		})
 
 		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
 	}
