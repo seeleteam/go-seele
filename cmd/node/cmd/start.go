@@ -115,7 +115,7 @@ var startCmd = &cobra.Command{
 			}
 
 			// light client manager
-			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg)
+			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, miningEngine)
 			if err != nil {
 				fmt.Printf("create light client manager failed. %s", err)
 				return

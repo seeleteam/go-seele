@@ -99,7 +99,7 @@ func (ethash *Ethash) Seal(store store.BlockchainStore, block *types.Block, stop
 			select {
 			case results <- result:
 			default:
-				ethash.log.Warn("Sealing result is not read by miner. mode: local, seelhash:%s", ethash.SealHash(block.Header))
+				ethash.log.Warn("Sealing result is not read by miner. mode: local, seelhash:%s", sealHash(block.Header))
 			}
 			close(abort)
 		case <-ethash.update:
@@ -121,7 +121,7 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 	// Extract some data from the header
 	var (
 		header  = block.Header
-		hash    = ethash.SealHash(header).Bytes()
+		hash    = sealHash(header).Bytes()
 		target  = new(big.Int).Div(two256, header.Difficulty)
 		number  = header.Height
 		dataset = ethash.dataset(number, false)
@@ -236,7 +236,7 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 	//   result[1], 32 bytes hex encoded seed hash used for DAG
 	//   result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
 	makeWork := func(block *types.Block) {
-		hash := ethash.SealHash(block.Header)
+		hash := sealHash(block.Header)
 
 		currentWork[0] = hash.ToHex()
 		currentWork[1] = common.BytesToHash(SeedHash(block.Header.Height)).ToHex()
