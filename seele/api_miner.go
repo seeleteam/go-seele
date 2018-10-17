@@ -63,11 +63,6 @@ func (api *PrivateMinerAPI) SetThreads(threads int) (bool, error) {
 	return true, nil
 }
 
-// GetEngineInfo  API is used to get engine information.
-func (api *PrivateMinerAPI) GetEngineInfo() (interface{}, error) {
-	return api.s.miner.GetEngine().GetEngineInfo(), nil
-}
-
 // SetCoinbase API is used to set the coinbase.
 func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr string) (bool, error) {
 	coinbase, err := common.HexToAddress(coinbaseStr)

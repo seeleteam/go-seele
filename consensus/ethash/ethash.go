@@ -190,10 +190,6 @@ func (ethash *Ethash) Close() error {
 	return err
 }
 
-func (ethash *Ethash) GetEngineInfo() interface{} {
-	return nil
-}
-
 // cache tries to retrieve a verification cache for the specified block number
 // by first checking against a list of in-memory caches, then against caches
 // stored on disk, and finally generating one if none can be found.
@@ -301,12 +297,6 @@ func (ethash *Ethash) APIs() []rpc.API {
 	// In order to ensure backward compatibility, we exposes ethash RPC APIs
 	// to both eth and ethash namespaces.
 	return []rpc.API{
-		{
-			Namespace: "seele",
-			Version:   "1.0",
-			Service:   &API{ethash},
-			Public:    true,
-		},
 		{
 			Namespace: "ethash",
 			Version:   "1.0",

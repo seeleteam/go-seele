@@ -21,9 +21,6 @@ type Engine interface {
 	// Seal generate block
 	Seal(store store.BlockchainStore, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error
 
-	// GetEngineInfo get engine basic info
-	GetEngineInfo() interface{}
-
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs() []rpc.API
 
