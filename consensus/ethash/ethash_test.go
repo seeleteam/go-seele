@@ -100,7 +100,7 @@ func TestRemoteSealer(t *testing.T) {
 	}
 	header := &types.BlockHeader{Height: 1, Difficulty: big.NewInt(100)}
 	block := types.NewBlockWithHeader(header)
-	sealhash := ethash.SealHash(header)
+	sealhash := sealHash(header)
 
 	// Push new work.
 	results := make(chan *types.Block)
@@ -120,7 +120,7 @@ func TestRemoteSealer(t *testing.T) {
 	// Push new block with same block number to replace the original one.
 	header = &types.BlockHeader{Height: 1, Difficulty: big.NewInt(1000)}
 	block = types.NewBlockWithHeader(header)
-	sealhash = ethash.SealHash(header)
+	sealhash = sealHash(header)
 	ethash.Seal(nil, block, nil, results)
 
 	if work, err = api.GetWork(); err != nil || work[0] != sealhash.ToHex() {

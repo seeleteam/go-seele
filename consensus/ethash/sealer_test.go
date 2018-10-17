@@ -65,7 +65,7 @@ func TestRemoteNotify(t *testing.T) {
 	ethash.Seal(nil, block, nil, nil)
 	select {
 	case work := <-sink:
-		if want := ethash.SealHash(header).ToHex(); work[0] != want {
+		if want := sealHash(header).ToHex(); work[0] != want {
 			t.Errorf("work packet hash mismatch: have %s, want %s", work[0], want)
 		}
 		if want := common.BytesToHash(SeedHash(header.Height)).ToHex(); work[1] != want {
