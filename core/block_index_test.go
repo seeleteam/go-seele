@@ -80,14 +80,18 @@ func Test_BlockLeaf_Purge_NoAction(t *testing.T) {
 	bf := NewBlockLeaves()
 
 	// purge on empty case
-	bf.Purge(nil)
+	bf.PurgeAsync(nil, func(err error) {
+		assert.Nil(t, err)
+	})
 
 	bf.Add(newTestBlockIndex("b1", 1000, 1000))
 	bf.Add(newTestBlockIndex("b2", 501, 501))
 
 	// do nothing purgeBlockLimit not reached.
-	bf.Purge(nil)
-	assert.Equal(t, bf.Count(), 2)
+	bf.PurgeAsync(nil, func(err error) {
+		assert.Nil(t, err)
+		assert.Equal(t, bf.Count(), 2)
+	})
 }
 
 func Test_BlockLeaf_Purge(t *testing.T) {
@@ -141,18 +145,20 @@ func Test_BlockLeaf_Purge(t *testing.T) {
 	assert.Equal(t, forkingBlock.HeaderHash, bf.GetWorstBlockIndex().blockHash)
 
 	// purge once
-	assert.Nil(t, bf.Purge(bcStore))
-
-	// check states after purge
-	assert.Equal(t, 1, bf.Count())
-	assert.Equal(t, canonicalBlock.HeaderHash, bf.GetBestBlockIndex().blockHash)
-	assert.Equal(t, canonicalBlock.HeaderHash, bf.GetWorstBlockIndex().blockHash)
-
-	// check the blockchain store to ensure forking blocks purged.
-	for _, block := range forkingBlocks {
-		exists, err := bcStore.HasBlock(block.HeaderHash)
+	bf.PurgeAsync(bcStore, func(err error) {
 		assert.Nil(t, err)
-		// all forking blocks purged except the ancestor.
-		assert.Equal(t, block.HeaderHash.Equal(ancestor.HeaderHash), exists)
-	}
+
+		// check states after purge
+		assert.Equal(t, 1, bf.Count())
+		assert.Equal(t, canonicalBlock.HeaderHash, bf.GetBestBlockIndex().blockHash)
+		assert.Equal(t, canonicalBlock.HeaderHash, bf.GetWorstBlockIndex().blockHash)
+
+		// check the blockchain store to ensure forking blocks purged.
+		for _, block := range forkingBlocks {
+			exists, err := bcStore.HasBlock(block.HeaderHash)
+			assert.Nil(t, err)
+			// all forking blocks purged except the ancestor.
+			assert.Equal(t, block.HeaderHash.Equal(ancestor.HeaderHash), exists)
+		}
+	})
 }

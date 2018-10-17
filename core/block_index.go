@@ -161,22 +161,32 @@ func (bf *BlockLeaves) IsBestBlockIndex(index *BlockIndex) bool {
 	return best == nil || index.cmp(best) > 0
 }
 
-// Purge purges the worst chain in forking tree.
-func (bf *BlockLeaves) Purge(bcStore store.BlockchainStore) error {
+// PurgeAsync purges the worst chain in forking tree.
+func (bf *BlockLeaves) PurgeAsync(bcStore store.BlockchainStore, callback func(error)) {
 	best, worst := bf.GetBestBlockIndex(), bf.GetWorstBlockIndex()
 	if best == nil || worst == nil {
-		return nil
+		return
 	}
 
 	// purge only when worst chain is far away from best chain.
 	if best.blockHeight-worst.blockHeight < purgeBlockLimit {
-		return nil
+		return
 	}
 
 	hash := worst.blockHash
 	bf.Remove(hash)
 
-	// remove blocks in worst chain until the common ancestor found in canonical chain.
+	// asynchronously purge blocks
+	go func() {
+		err := purgeBlock(hash, bcStore)
+		if callback != nil {
+			callback(err)
+		}
+	}()
+}
+
+// purgeBlock purges the blocks in forking chain util the common ancestor found in canonical chain.
+func purgeBlock(hash common.Hash, bcStore store.BlockchainStore) error {
 	for !hash.IsEmpty() {
 		header, err := bcStore.GetBlockHeader(hash)
 		if err != nil {
