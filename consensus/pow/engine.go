@@ -52,7 +52,7 @@ func (engine *Engine) SetThreads(threads int) {
 func (engine *Engine) APIs() []rpc.API {
 	return []rpc.API{
 		{
-			Namespace: "sha256",
+			Namespace: "miner",
 			Version:   "1.0",
 			Service:   &API{engine},
 			Public:    true,

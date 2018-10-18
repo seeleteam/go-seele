@@ -298,7 +298,7 @@ func (ethash *Ethash) APIs() []rpc.API {
 	// to both eth and ethash namespaces.
 	return []rpc.API{
 		{
-			Namespace: "ethash",
+			Namespace: "miner",
 			Version:   "1.0",
 			Service:   &API{ethash},
 			Public:    true,

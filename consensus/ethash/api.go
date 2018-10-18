@@ -110,3 +110,8 @@ func (api *API) SubmitHashRate(rate hexutil.Uint64, id common.Hash) bool {
 func (api *API) GetHashrate() uint64 {
 	return uint64(api.ethash.Hashrate())
 }
+
+// GetThreads returns the thread number of the miner engine
+func (api *API) GetThreads() int {
+	return api.ethash.threads
+}

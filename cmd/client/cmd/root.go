@@ -287,12 +287,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Action: rpcAction("miner", "stop"),
 			},
 			{
-				Name:   "getengineinfo",
-				Usage:  "get miner engine information",
-				Flags:  rpcFlags(),
-				Action: rpcAction("miner", "getEngineInfo"),
-			},
-			{
 				Name:   "setthreads",
 				Usage:  "set miner thread number",
 				Flags:  rpcFlags(threadsFlag),
@@ -315,6 +309,18 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Usage:  "get miner status",
 				Flags:  rpcFlags(),
 				Action: rpcAction("miner", "status"),
+			},
+			{
+				Name:   "hashrate",
+				Usage:  "get hashrate",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getHashrate"),
+			},
+			{
+				Name:   "threads",
+				Usage:  "get thread number",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getThreads"),
 			},
 		},
 	}
