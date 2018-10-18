@@ -18,7 +18,7 @@ func NewPrivateDebugAPI(s Backend) *PrivateDebugAPI {
 // GetTxPoolContent returns the transactions contained within the transaction pool
 func (api *PrivateDebugAPI) GetTxPoolContent() (map[string][]map[string]interface{}, error) {
 	txPool := api.s.TxPoolBackend()
-	data := txPool.GetTransactions(false, true)
+	data := txPool.GetTransactions(true, true)
 
 	content := make(map[string][]map[string]interface{})
 	for _, tx := range data {
@@ -32,12 +32,12 @@ func (api *PrivateDebugAPI) GetTxPoolContent() (map[string][]map[string]interfac
 // GetTxPoolTxCount returns the number of transaction in the pool
 func (api *PrivateDebugAPI) GetTxPoolTxCount() (uint64, error) {
 	txPool := api.s.TxPoolBackend()
-	return uint64(txPool.GetPendingTxCount()), nil
+	return uint64(len(txPool.GetTransactions(true, true))), nil
 }
 
 // GetPendingTransactions returns all pending transactions
 func (api *PrivateDebugAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
-	pendingTxs := api.s.TxPoolBackend().GetTransactions(true, true)
+	pendingTxs := api.s.TxPoolBackend().GetTransactions(false, true)
 	transactions := make([]map[string]interface{}, 0)
 	for _, tx := range pendingTxs {
 		transactions = append(transactions, PrintableOutputTx(tx))
