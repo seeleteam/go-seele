@@ -166,24 +166,27 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 	if body != nil {
 		batch.Put(hashToBodyKey(hashBytes), common.SerializePanic(body))
-
-		// Write index for each tx.
-		for i, tx := range body.Txs {
-			idx := types.TxIndex{BlockHash: hash, Index: uint(i)}
-			encodedTxIndex := common.SerializePanic(idx)
-			batch.Put(txHashToIndexKey(tx.Hash.Bytes()), encodedTxIndex)
-		}
-
-		for i, d := range body.Debts {
-			idx := types.DebtIndex{BlockHash: hash, Index: uint(i)}
-			encodedDebtIndex := common.SerializePanic(idx)
-			batch.Put(debtHashToIndexKey(d.Hash.Bytes()), encodedDebtIndex)
-		}
 	}
 
 	if isHead {
 		batch.Put(heightToHashKey(header.Height), hashBytes)
 		batch.Put(keyHeadBlockHash, hashBytes)
+
+		if body != nil {
+			// Write index for each tx.
+			for i, tx := range body.Txs {
+				idx := types.TxIndex{BlockHash: hash, Index: uint(i)}
+				encodedTxIndex := common.SerializePanic(idx)
+				batch.Put(txHashToIndexKey(tx.Hash.Bytes()), encodedTxIndex)
+			}
+
+			// Write index for each debt
+			for i, d := range body.Debts {
+				idx := types.DebtIndex{BlockHash: hash, Index: uint(i)}
+				encodedDebtIndex := common.SerializePanic(idx)
+				batch.Put(debtHashToIndexKey(d.Hash.Bytes()), encodedDebtIndex)
+			}
+		}
 	}
 
 	return batch.Commit()
