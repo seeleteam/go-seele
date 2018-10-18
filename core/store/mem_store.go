@@ -130,17 +130,13 @@ func (store *MemStore) PutBlock(block *types.Block, td *big.Int, isHead bool) er
 		return ErrDBCorrupt
 	}
 
-	for i, tx := range block.Transactions {
-		store.TxLookups[tx.Hash] = types.TxIndex{BlockHash: block.HeaderHash, Index: uint(i)}
-	}
-
-	for i, d := range block.Debts {
-		store.DebtLookups[d.Hash] = types.DebtIndex{BlockHash: block.HeaderHash, Index: uint(i)}
-	}
-
 	if isHead {
 		store.CanonicalBlocks[block.Header.Height] = block.HeaderHash
 		store.HeadBlockHash = block.HeaderHash
+
+		if err := store.AddIndices(block); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -222,6 +218,18 @@ func (store *MemStore) GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, e
 	return receipts[txIndex.Index], nil
 }
 
+func (store *MemStore) AddIndices(block *types.Block) error {
+	for i, tx := range block.Transactions {
+		store.TxLookups[tx.Hash] = types.TxIndex{BlockHash: block.HeaderHash, Index: uint(i)}
+	}
+
+	for i, d := range block.Debts {
+		store.DebtLookups[d.Hash] = types.DebtIndex{BlockHash: block.HeaderHash, Index: uint(i)}
+	}
+
+	return nil
+}
+
 func (store *MemStore) GetTxIndex(txHash common.Hash) (*types.TxIndex, error) {
 	txIndex, found := store.TxLookups[txHash]
 	if !found {
@@ -238,4 +246,20 @@ func (store *MemStore) GetDebtIndex(txHash common.Hash) (*types.DebtIndex, error
 	}
 
 	return &debtIndex, nil
+}
+
+func (store *MemStore) DeleteIndices(block *types.Block) error {
+	for _, tx := range block.Transactions {
+		if txIdx := store.TxLookups[tx.Hash]; txIdx.BlockHash.Equal(block.HeaderHash) {
+			delete(store.TxLookups, tx.Hash)
+		}
+	}
+
+	for _, debt := range block.Debts {
+		if debtIdx := store.DebtLookups[debt.Hash]; debtIdx.BlockHash.Equal(block.HeaderHash) {
+			delete(store.DebtLookups, debt.Hash)
+		}
+	}
+
+	return nil
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/metrics"
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 const (
@@ -568,7 +569,7 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 // DeleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.
 func DeleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64, rp *recoveryPoint) error {
 	// When recover the blockchain, the larger height block hash may be already deleted before program crash.
-	if _, err := bcStore.DeleteBlockHash(largerHeight); err != nil {
+	if _, err := deleteCanonicalBlock(bcStore, largerHeight); err != nil {
 		return err
 	}
 
@@ -577,7 +578,7 @@ func DeleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64
 			rp.onDeleteLargerHeightBlocks(i)
 		}
 
-		deleted, err := bcStore.DeleteBlockHash(i)
+		deleted, err := deleteCanonicalBlock(bcStore, i)
 		if err != nil {
 			return err
 		}
@@ -592,6 +593,31 @@ func DeleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64
 	}
 
 	return nil
+}
+
+// deleteCanonicalBlock deletes the canonical block info for the specified height.
+func deleteCanonicalBlock(bcStore store.BlockchainStore, height uint64) (bool, error) {
+	hash, err := bcStore.GetBlockHash(height)
+	if err == leveldbErrors.ErrNotFound {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	// delete the tx/debt indices
+	block, err := bcStore.GetBlock(hash)
+	if err != nil {
+		return false, err
+	}
+
+	if err = bcStore.DeleteIndices(block); err != nil {
+		return false, err
+	}
+
+	// delete the block hash in canonical chain.
+	return bcStore.DeleteBlockHash(height)
 }
 
 // OverwriteStaleBlocks overwrites the stale canonical height-to-hash mappings.
@@ -640,6 +666,27 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 		return false, header.PreviousBlockHash, nil
 	}
 
+	// delete the tx/debt indices in previous canonical chain.
+	canonicalBlock, err := bcStore.GetBlock(canonicalHash)
+	if err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	if err = bcStore.DeleteIndices(canonicalBlock); err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	// add the tx/debt indices in new canonical chain.
+	block, err := bcStore.GetBlock(hash)
+	if err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	if err = bcStore.AddIndices(block); err != nil {
+		return false, common.EmptyHash, err
+	}
+
+	// update the block hash in canonical chain.
 	if err = bcStore.PutBlockHash(header.Height, hash); err != nil {
 		return false, common.EmptyHash, err
 	}

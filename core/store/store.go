@@ -64,9 +64,15 @@ type BlockchainStore interface {
 	// GetReceiptByTxHash retrieves the receipt for the specified tx hash.
 	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
 
+	// AddIndices addes tx/debt indices for the specified block.
+	AddIndices(block *types.Block) error
+
 	// GetTxIndex retrieves the tx index for the specified tx hash.
 	GetTxIndex(txHash common.Hash) (*types.TxIndex, error)
 
 	// GetDebtIndex retrieves the debt index for the specified debt hash
 	GetDebtIndex(debtHash common.Hash) (*types.DebtIndex, error)
+
+	// DeleteIndices deletes tx/debt indices of the specified block.
+	DeleteIndices(block *types.Block) error
 }

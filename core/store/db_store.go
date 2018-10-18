@@ -173,19 +173,7 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 		batch.Put(keyHeadBlockHash, hashBytes)
 
 		if body != nil {
-			// Write index for each tx.
-			for i, tx := range body.Txs {
-				idx := types.TxIndex{BlockHash: hash, Index: uint(i)}
-				encodedTxIndex := common.SerializePanic(idx)
-				batch.Put(txHashToIndexKey(tx.Hash.Bytes()), encodedTxIndex)
-			}
-
-			// Write index for each debt
-			for i, d := range body.Debts {
-				idx := types.DebtIndex{BlockHash: hash, Index: uint(i)}
-				encodedDebtIndex := common.SerializePanic(idx)
-				batch.Put(debtHashToIndexKey(d.Hash.Bytes()), encodedDebtIndex)
-			}
+			store.batchAddIndices(batch, hash, body.Txs, body.Debts)
 		}
 	}
 
@@ -289,17 +277,9 @@ func (store *blockchainDatabase) DeleteBlock(hash common.Hash) error {
 		return err
 	}
 
-	// delete all tx index in block
-	for _, tx := range body.Txs {
-		if err = store.delete(batch, txHashToIndexKey(tx.Hash.Bytes())); err != nil {
-			return err
-		}
-	}
-
-	for _, d := range body.Debts {
-		if err = store.delete(batch, debtHashToIndexKey(d.Hash.Bytes())); err != nil {
-			return err
-		}
+	// delete the tx/debt indices of the block.
+	if err = store.batchDeleteIndices(batch, hash, body.Txs, body.Debts); err != nil {
+		return err
 	}
 
 	// delete body
@@ -383,6 +363,25 @@ func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.
 	return receipts[txIndex.Index], nil
 }
 
+// AddIndices addes tx/debt indices for the specified block.
+func (store *blockchainDatabase) AddIndices(block *types.Block) error {
+	batch := store.db.NewBatch()
+	store.batchAddIndices(batch, block.HeaderHash, block.Transactions, block.Debts)
+	return batch.Commit()
+}
+
+func (store *blockchainDatabase) batchAddIndices(batch database.Batch, blockHash common.Hash, txs []*types.Transaction, debts []*types.Debt) {
+	for i, tx := range txs {
+		idx := types.TxIndex{BlockHash: blockHash, Index: uint(i)}
+		batch.Put(txHashToIndexKey(tx.Hash.Bytes()), common.SerializePanic(idx))
+	}
+
+	for i, debt := range debts {
+		idx := types.DebtIndex{BlockHash: blockHash, Index: uint(i)}
+		batch.Put(debtHashToIndexKey(debt.Hash.Bytes()), common.SerializePanic(idx))
+	}
+}
+
 // GetTxIndex retrieves the tx index for the specified tx hash.
 func (store *blockchainDatabase) GetTxIndex(txHash common.Hash) (*types.TxIndex, error) {
 	data, err := store.db.Get(txHashToIndexKey(txHash.Bytes()))
@@ -411,4 +410,41 @@ func (store *blockchainDatabase) GetDebtIndex(debtHash common.Hash) (*types.Debt
 	}
 
 	return index, nil
+}
+
+// DeleteIndices deletes tx/debt indices of the specified block.
+func (store *blockchainDatabase) DeleteIndices(block *types.Block) error {
+	batch := store.db.NewBatch()
+
+	if err := store.batchDeleteIndices(batch, block.HeaderHash, block.Transactions, block.Debts); err != nil {
+		return err
+	}
+
+	return batch.Commit()
+}
+
+func (store *blockchainDatabase) batchDeleteIndices(batch database.Batch, blockHash common.Hash, txs []*types.Transaction, debts []*types.Debt) error {
+	for _, tx := range txs {
+		idx, err := store.GetTxIndex(tx.Hash)
+		if err != nil {
+			return err
+		}
+
+		if idx.BlockHash.Equal(blockHash) {
+			batch.Delete(txHashToIndexKey(tx.Hash.Bytes()))
+		}
+	}
+
+	for _, debt := range debts {
+		idx, err := store.GetDebtIndex(debt.Hash)
+		if err != nil {
+			return err
+		}
+
+		if idx.BlockHash.Equal(blockHash) {
+			batch.Delete(debtHashToIndexKey(debt.Hash.Bytes()))
+		}
+	}
+
+	return nil
 }

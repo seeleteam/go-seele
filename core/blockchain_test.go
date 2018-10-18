@@ -338,8 +338,8 @@ func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
 	assertCanonicalHash(t, bc, 1, block21.HeaderHash)
 	assertCanonicalHash(t, bc, 2, block22.HeaderHash)
 	assertCanonicalHash(t, bc, 3, block23.HeaderHash)
-	// assertTxDebtIndex(t, bc, false, block11, block12)
-	// assertTxDebtIndex(t, bc, true, block21, block22, block23)
+	assertTxDebtIndex(t, bc, false, block11, block12)
+	assertTxDebtIndex(t, bc, true, block21, block22, block23)
 }
 
 func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHash common.Hash) {

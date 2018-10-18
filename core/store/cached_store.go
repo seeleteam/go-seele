@@ -210,6 +210,11 @@ func (store *cachedStore) GetReceiptByTxHash(txHash common.Hash) (*types.Receipt
 	return store.raw.GetReceiptByTxHash(txHash)
 }
 
+// AddIndices addes tx/debt indices for the specified block.
+func (store *cachedStore) AddIndices(block *types.Block) error {
+	return store.raw.AddIndices(block)
+}
+
 // GetTxIndex retrieves the tx index for the specified tx hash.
 func (store *cachedStore) GetTxIndex(txHash common.Hash) (*types.TxIndex, error) {
 	return store.raw.GetTxIndex(txHash)
@@ -218,4 +223,9 @@ func (store *cachedStore) GetTxIndex(txHash common.Hash) (*types.TxIndex, error)
 // GetDebtIndex retrieves the debt index for the specified debt hash
 func (store *cachedStore) GetDebtIndex(txHash common.Hash) (*types.DebtIndex, error) {
 	return store.raw.GetDebtIndex(txHash)
+}
+
+// DeleteIndices deletes tx/debt indices of the specified block.
+func (store *cachedStore) DeleteIndices(block *types.Block) error {
+	return store.raw.DeleteIndices(block)
 }
