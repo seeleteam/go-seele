@@ -143,6 +143,14 @@ func (q *pendingQueue) pop() *types.Transaction {
 	return tx
 }
 
+func (q *pendingQueue) peekWorst() *txCollection {
+	if item := q.worstHeap.Peek(); item != nil {
+		return item.(*heapedTxList).txCollection
+	}
+
+	return nil
+}
+
 // discard removes and returns the txs of worst account.
 func (q *pendingQueue) discard() *txCollection {
 	if q.worstHeap.Len() == 0 {
