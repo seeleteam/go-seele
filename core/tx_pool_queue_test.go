@@ -209,12 +209,14 @@ func Test_pendingQueue_discard_cmp(t *testing.T) {
 	// tx2: lower price, discard tx2, left tx1
 	ptx2 := newMockPooledTx(2, 37, 1)
 	q.add(ptx2)
+	assert.Equal(t, ptx2, q.peekWorst().peek())
 	assert.Equal(t, ptx2, q.discard().peek())
 	assert.Equal(t, ptx1, q.peek().peek())
 
 	// tx3: higher price, discard tx1, left tx3
 	ptx3 := newMockPooledTx(3, 40, 1)
 	q.add(ptx3)
+	assert.Equal(t, ptx1, q.peekWorst().peek())
 	assert.Equal(t, ptx1, q.discard().peek())
 	assert.Equal(t, ptx3, q.peek().peek())
 
@@ -222,6 +224,7 @@ func Test_pendingQueue_discard_cmp(t *testing.T) {
 	ptx4 := newMockPooledTx(4, 40, 1)
 	ptx4.timestamp = ptx3.timestamp.Add(time.Second)
 	q.add(ptx4)
+	assert.Equal(t, ptx4, q.peekWorst().peek())
 	assert.Equal(t, ptx4, q.discard().peek())
 	assert.Equal(t, ptx3, q.peek().peek())
 
@@ -229,6 +232,7 @@ func Test_pendingQueue_discard_cmp(t *testing.T) {
 	ptx5 := newMockPooledTx(5, 40, 1)
 	ptx5.timestamp = ptx3.timestamp.Add(-time.Second)
 	q.add(ptx5)
+	assert.Equal(t, ptx3, q.peekWorst().peek())
 	assert.Equal(t, ptx3, q.discard().peek())
 	assert.Equal(t, ptx5, q.peek().peek())
 
@@ -236,6 +240,7 @@ func Test_pendingQueue_discard_cmp(t *testing.T) {
 	ptx6 := newMockPooledTx(6, 40, 1)
 	ptx6.timestamp = ptx5.timestamp
 	q.add(ptx6)
+	assert.Equal(t, ptx6, q.peekWorst().peek())
 	assert.Equal(t, ptx6, q.discard().peek())
 	assert.Equal(t, ptx5, q.peek().peek())
 }
