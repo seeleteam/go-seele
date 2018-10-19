@@ -42,6 +42,7 @@ type SubChainInfo struct {
 
 	GenesisDifficulty uint64                      `json:"genesisDifficulty"`
 	GenesisAccounts   map[common.Address]*big.Int `json:"genesisAccounts"`
+	CreateTimestamp   *big.Int                    `json:"timestamp"`
 
 	// SubChain owner publick key
 	Owner common.Address `json:"owner,omitempty"`
@@ -69,6 +70,7 @@ func registerSubChain(jsonRegInfo []byte, context *Context) ([]byte, error) {
 
 	// set transaction sender to subchain owner
 	info.Owner = context.tx.Data.From
+	info.CreateTimestamp = context.BlockHeader.CreateTimestamp
 
 	value, err := json.MarshalIndent(info, "", "\t")
 	if err != nil {

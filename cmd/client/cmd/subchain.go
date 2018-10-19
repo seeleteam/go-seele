@@ -251,11 +251,12 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 
 	config := &util.Config{}
 	config.BasicConfig = node.BasicConfig{
-		Name:     subChainInfo.Name,
-		Version:  subChainInfo.Version,
-		DataDir:  subChainInfo.Name,
-		RPCAddr:  "0.0.0.0:8127",
-		Coinbase: coinbaseValue,
+		Name:           subChainInfo.Name,
+		Version:        subChainInfo.Version,
+		DataDir:        subChainInfo.Name,
+		RPCAddr:        "0.0.0.0:8127",
+		Coinbase:       coinbaseValue,
+		MinerAlgorithm: "sha256",
 	}
 
 	config.P2PConfig = p2p.Config{
@@ -289,8 +290,9 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 	}
 
 	config.GenesisConfig = core.GenesisInfo{
-		Difficult:   int64(subChainInfo.GenesisDifficulty),
-		ShardNumber: shardValue,
+		Difficult:       int64(subChainInfo.GenesisDifficulty),
+		ShardNumber:     shardValue,
+		CreateTimestamp: subChainInfo.CreateTimestamp,
 	}
 
 	return config, nil
