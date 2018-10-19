@@ -180,19 +180,23 @@ func Test_pendingQueue_pop(t *testing.T) {
 
 func Test_pendingQueue_discard_emptyQueue(t *testing.T) {
 	q := newPendingQueue()
-	assert.Nil(t, q.discard())
+	assert.Nil(t, q.discard(big.NewInt(10)))
 }
 
 func Test_pendingQueue_discard_oneAccount(t *testing.T) {
 	q := newPendingQueue()
 
-	// add a tx in queue
+	// add a tx in queue, price is 38
 	ptx1 := newMockPooledTx(1, 38, 1)
 	q.add(ptx1)
 	assert.False(t, q.empty())
 
-	// discard the only tx
-	assert.Equal(t, ptx1, q.discard().peek())
+	// failed to discard with lower or same price
+	assert.Nil(t, q.discard(big.NewInt(37)))
+	assert.Nil(t, q.discard(big.NewInt(38)))
+
+	// succeed to discard with higher price
+	assert.Equal(t, ptx1, q.discard(big.NewInt(39)).peek())
 	assert.True(t, q.empty())
 	assert.Equal(t, 0, len(q.txs))
 	assert.Equal(t, 0, q.bestHeap.Len())
@@ -209,39 +213,34 @@ func Test_pendingQueue_discard_cmp(t *testing.T) {
 	// tx2: lower price, discard tx2, left tx1
 	ptx2 := newMockPooledTx(2, 37, 1)
 	q.add(ptx2)
-	assert.Equal(t, ptx2, q.peekWorst().peek())
-	assert.Equal(t, ptx2, q.discard().peek())
+	assert.Equal(t, ptx2, q.discard(big.NewInt(100)).peek())
 	assert.Equal(t, ptx1, q.peek().peek())
 
 	// tx3: higher price, discard tx1, left tx3
 	ptx3 := newMockPooledTx(3, 40, 1)
 	q.add(ptx3)
-	assert.Equal(t, ptx1, q.peekWorst().peek())
-	assert.Equal(t, ptx1, q.discard().peek())
+	assert.Equal(t, ptx1, q.discard(big.NewInt(100)).peek())
 	assert.Equal(t, ptx3, q.peek().peek())
 
 	// tx4: same price with later timestamp, discard tx4, left tx3
 	ptx4 := newMockPooledTx(4, 40, 1)
 	ptx4.timestamp = ptx3.timestamp.Add(time.Second)
 	q.add(ptx4)
-	assert.Equal(t, ptx4, q.peekWorst().peek())
-	assert.Equal(t, ptx4, q.discard().peek())
+	assert.Equal(t, ptx4, q.discard(big.NewInt(100)).peek())
 	assert.Equal(t, ptx3, q.peek().peek())
 
 	// tx5: same price with earlier timestamp, discard tx3, left tx5
 	ptx5 := newMockPooledTx(5, 40, 1)
 	ptx5.timestamp = ptx3.timestamp.Add(-time.Second)
 	q.add(ptx5)
-	assert.Equal(t, ptx3, q.peekWorst().peek())
-	assert.Equal(t, ptx3, q.discard().peek())
+	assert.Equal(t, ptx3, q.discard(big.NewInt(100)).peek())
 	assert.Equal(t, ptx5, q.peek().peek())
 
 	// tx6: same price and timestamp, discard tx6, left tx5 (LIFO)
 	ptx6 := newMockPooledTx(6, 40, 1)
 	ptx6.timestamp = ptx5.timestamp
 	q.add(ptx6)
-	assert.Equal(t, ptx6, q.peekWorst().peek())
-	assert.Equal(t, ptx6, q.discard().peek())
+	assert.Equal(t, ptx6, q.discard(big.NewInt(100)).peek())
 	assert.Equal(t, ptx5, q.peek().peek())
 }
 
