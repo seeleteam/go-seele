@@ -7,6 +7,7 @@ package core
 
 import (
 	"container/heap"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
@@ -143,32 +144,26 @@ func (q *pendingQueue) pop() *types.Transaction {
 	return tx
 }
 
-func (q *pendingQueue) peekWorst() *txCollection {
-	if item := q.worstHeap.Peek(); item != nil {
-		return item.(*heapedTxList).txCollection
-	}
-
-	return nil
-}
-
-// discard removes and returns the txs of worst account.
-func (q *pendingQueue) discard() *txCollection {
-	if q.worstHeap.Len() == 0 {
+// discard removes and returns the txs of worst account that has
+// lower price than the specified price. Return nil if no lower
+// price txs found.
+func (q *pendingQueue) discard(price *big.Int) *txCollection {
+	if q.empty() {
 		return nil
 	}
 
-	// pop the worst txs
-	item := heap.Pop(q.worstHeap).(*heapedTxList).txCollection
+	worstCollection := q.worstHeap.Peek().(*heapedTxList).txCollection
+	worstTx := worstCollection.peek()
+	if worstTx == nil || price.Cmp(worstTx.Data.GasPrice) <= 0 {
+		return nil
+	}
 
-	// peek will never return nil, since empty txCollection
-	// will be removed when remove() or pop() invoked.
-	account := item.peek().Data.From
-
-	// remove the txs from best heap and txs of discarded account.
+	heap.Pop(q.worstHeap)
+	account := worstTx.Data.From
 	heap.Remove(q.bestHeap, q.txs[account].best.GetHeapIndex())
 	delete(q.txs, account)
 
-	return item
+	return worstCollection
 }
 
 func (q *pendingQueue) list() []*types.Transaction {
