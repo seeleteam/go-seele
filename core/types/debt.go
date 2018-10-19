@@ -102,6 +102,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 		Account: tx.Data.To,
 		Amount:  big.NewInt(0).Set(tx.Data.Amount),
 		Fee:     GetDebtShareFee(txIntrFee),
+		Code:    make([]byte, 0),
 	}
 
 	if tx.Data.To.IsEVMContract() {

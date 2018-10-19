@@ -14,6 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 func newTestBlockchainDatabase() (BlockchainStore, func()) {
@@ -58,11 +59,7 @@ func Test_blockchainDatabase_Header_invalid(t *testing.T) {
 	assert.Equal(t, err3 != nil, true)
 
 	// Invalid block hash
-	block2 := &types.Block{
-		HeaderHash:   common.StringToHash("heh"),
-		Header:       header,
-		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
-	}
+	block2 := newTestFullBlock(3, 3)
 	_, err4 := bcStore.GetBlock(block2.HeaderHash)
 	assert.Equal(t, err4 != nil, true)
 
@@ -147,18 +144,12 @@ func newTestDebt() *types.Debt {
 }
 
 func Test_blockchainDatabase_Block(t *testing.T) {
-	header := newTestBlockHeader()
-	block := &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
-		Debts:        make([]*types.Debt, 0),
-	}
+	block := newTestFullBlock(3, 3)
 
 	bcStore, dispose := newTestBlockchainDatabase()
 	defer dispose()
 
-	err := bcStore.PutBlock(block, header.Difficulty, true)
+	err := bcStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.Equal(t, err, error(nil))
 
 	storedBlock, err := bcStore.GetBlock(block.HeaderHash)
@@ -176,12 +167,7 @@ func Test_blockchainDatabase_Block(t *testing.T) {
 }
 
 func Test_blockchainDatabase_Receipt(t *testing.T) {
-	header := newTestBlockHeader()
-	block := &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: []*types.Transaction{newTestTx(), newTestTx(), newTestTx()},
-	}
+	block := newTestFullBlock(3, 3)
 
 	receipts := []*types.Receipt{
 		&types.Receipt{TxHash: block.Transactions[0].Hash},
@@ -192,7 +178,7 @@ func Test_blockchainDatabase_Receipt(t *testing.T) {
 	bcStore, dispose := newTestBlockchainDatabase()
 	defer dispose()
 
-	if err := bcStore.PutBlock(block, header.Difficulty, true); err != nil {
+	if err := bcStore.PutBlock(block, block.Header.Difficulty, true); err != nil {
 		t.Fatal()
 	}
 
@@ -215,25 +201,15 @@ func Test_blockchainDatabase_Receipt(t *testing.T) {
 }
 
 func Test_blockchainDatabase_GetTxIndex(t *testing.T) {
-	tx1 := newTestTx()
-	tx2 := newTestTx()
-	tx3 := newTestTx()
-	transactions := []*types.Transaction{tx1, tx2, tx3}
-
-	header := newTestBlockHeader()
-	block := &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: transactions,
-	}
+	block := newTestFullBlock(3, 3)
 
 	bcStore, dispose := newTestBlockchainDatabase()
 	defer dispose()
 
-	err := bcStore.PutBlock(block, header.Difficulty, true)
+	err := bcStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.Equal(t, err, error(nil))
 
-	for i, tx := range transactions {
+	for i, tx := range block.Transactions {
 		txIdx, err := bcStore.GetTxIndex(tx.Hash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, txIdx != nil, true)
@@ -254,22 +230,12 @@ func Test_blockchainDatabase_GetDebtIndex(t *testing.T) {
 }
 
 func GetDebtIndexTest(t *testing.T, bcStore BlockchainStore) {
-	d1 := newTestDebt()
-	d2 := newTestDebt()
-	d3 := newTestDebt()
-	debts := []*types.Debt{d1, d2, d3}
+	block := newTestFullBlock(3, 3)
 
-	header := newTestBlockHeader()
-	block := &types.Block{
-		HeaderHash: header.Hash(),
-		Header:     header,
-		Debts:      debts,
-	}
-
-	err := bcStore.PutBlock(block, header.Difficulty, true)
+	err := bcStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.Equal(t, err, error(nil))
 
-	for i, d := range debts {
+	for i, d := range block.Debts {
 		debtIndex, err := bcStore.GetDebtIndex(d.Hash)
 		assert.Equal(t, err, error(nil))
 		assert.Equal(t, debtIndex != nil, true)
@@ -281,4 +247,86 @@ func GetDebtIndexTest(t *testing.T, bcStore BlockchainStore) {
 	debtNoExist := newTestDebt()
 	_, err = bcStore.GetTxIndex(debtNoExist.Hash)
 	assert.Equal(t, err != nil, true)
+}
+
+func Test_blockchainDatabase_AddIndices(t *testing.T) {
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	block := newTestFullBlock(3, 3)
+	assert.Nil(t, bcStore.AddIndices(block))
+
+	for i, tx := range block.Transactions {
+		idx, _ := bcStore.GetTxIndex(tx.Hash)
+		assert.Equal(t, idx.BlockHash, block.HeaderHash)
+		assert.Equal(t, idx.Index, uint(i))
+	}
+
+	for i, d := range block.Debts {
+		idx, _ := bcStore.GetDebtIndex(d.Hash)
+		assert.Equal(t, idx.BlockHash, block.HeaderHash)
+		assert.Equal(t, idx.Index, uint(i))
+	}
+}
+
+func Test_blockchainDatabase_DeleteIndices(t *testing.T) {
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	block := newTestFullBlock(3, 3)
+	assert.Nil(t, bcStore.AddIndices(block))
+	assert.Nil(t, bcStore.DeleteIndices(block))
+
+	for _, tx := range block.Transactions {
+		_, err := bcStore.GetTxIndex(tx.Hash)
+		assert.Equal(t, errors.ErrNotFound, err)
+	}
+
+	for _, d := range block.Debts {
+		_, err := bcStore.GetDebtIndex(d.Hash)
+		assert.Equal(t, errors.ErrNotFound, err)
+	}
+}
+
+func Test_blockchainDatabase_DeleteIndices_BlockHashMismatch(t *testing.T) {
+	bcStore, dispose := newTestBlockchainDatabase()
+	defer dispose()
+
+	txs := []*types.Transaction{newTestTx(), newTestTx(), newTestTx()}
+	debts := []*types.Debt{newTestDebt(), newTestDebt(), newTestDebt()}
+
+	// old canonical chain
+	block1 := &types.Block{
+		HeaderHash:   common.StringToHash("block 1"),
+		Transactions: txs[0:2],   // tx0, tx1
+		Debts:        debts[0:2], // debt0, debt1
+	}
+	assert.Nil(t, bcStore.AddIndices(block1))
+
+	// new canonical chain
+	block2 := &types.Block{
+		HeaderHash:   common.StringToHash("block 2"),
+		Transactions: txs[1:3],   // tx1, tx2
+		Debts:        debts[1:3], // debt1, debt2
+	}
+
+	// reorg the canonical chain
+	assert.Nil(t, bcStore.AddIndices(block2))    // will update tx1's index
+	assert.Nil(t, bcStore.DeleteIndices(block1)) // will not delete the tx1's index
+
+	// tx0/debt0 's index deleted
+	_, err := bcStore.GetTxIndex(txs[0].Hash)
+	assert.Equal(t, errors.ErrNotFound, err)
+	_, err = bcStore.GetDebtIndex(debts[0].Hash)
+	assert.Equal(t, errors.ErrNotFound, err)
+
+	// tx1/tx2/debt1/debt/2 exists
+	txIdx1, _ := bcStore.GetTxIndex(txs[1].Hash)
+	assert.Equal(t, txIdx1.BlockHash, common.StringToHash("block 2"))
+	txIdx2, _ := bcStore.GetTxIndex(txs[2].Hash)
+	assert.Equal(t, txIdx2.BlockHash, common.StringToHash("block 2"))
+	debtIdx1, _ := bcStore.GetDebtIndex(debts[1].Hash)
+	assert.Equal(t, debtIdx1.BlockHash, common.StringToHash("block 2"))
+	debtIdx2, _ := bcStore.GetDebtIndex(debts[2].Hash)
+	assert.Equal(t, debtIdx2.BlockHash, common.StringToHash("block 2"))
 }

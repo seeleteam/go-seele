@@ -20,6 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 type testAccount struct {
@@ -304,11 +305,13 @@ func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
 	block11 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(block11), error(nil))
 	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
+	assertTxDebtIndex(t, bc, true, block11)
 
 	// genesis <- block11 <- block12
 	block12 := newTestBlock(bc, block11.HeaderHash, 2, 3, 3)
 	assert.Equal(t, bc.WriteBlock(block12), error(nil))
 	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+	assertTxDebtIndex(t, bc, true, block11, block12)
 
 	// genesis <- block11 <- block12 (canonical)
 	//         <- block21
@@ -316,6 +319,8 @@ func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
 	assert.Equal(t, bc.WriteBlock(block21), error(nil))
 	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
 	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+	assertTxDebtIndex(t, bc, true, block11, block12)
+	assertTxDebtIndex(t, bc, false, block21)
 
 	// genesis <- block11 <- block12 (canonical)
 	//         <- block21 <- block22
@@ -323,6 +328,8 @@ func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
 	assert.Equal(t, bc.WriteBlock(block22), error(nil))
 	assertCanonicalHash(t, bc, 1, block11.HeaderHash)
 	assertCanonicalHash(t, bc, 2, block12.HeaderHash)
+	assertTxDebtIndex(t, bc, true, block11, block12)
+	assertTxDebtIndex(t, bc, false, block21, block22)
 
 	// genesis <- block11 <- block12
 	//         <- block21 <- block22 <- block23 (canonical)
@@ -331,12 +338,38 @@ func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
 	assertCanonicalHash(t, bc, 1, block21.HeaderHash)
 	assertCanonicalHash(t, bc, 2, block22.HeaderHash)
 	assertCanonicalHash(t, bc, 3, block23.HeaderHash)
+	assertTxDebtIndex(t, bc, false, block11, block12)
+	assertTxDebtIndex(t, bc, true, block21, block22, block23)
 }
 
 func assertCanonicalHash(t *testing.T, bc *Blockchain, height uint64, expectedHash common.Hash) {
 	hash, err := bc.bcStore.GetBlockHash(height)
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, hash, expectedHash)
+}
+
+func assertTxDebtIndex(t *testing.T, bc *Blockchain, exists bool, blocks ...*types.Block) {
+	for _, block := range blocks {
+		for i, tx := range block.Transactions {
+			idx, err := bc.bcStore.GetTxIndex(tx.Hash)
+			if exists {
+				assert.Equal(t, block.HeaderHash, idx.BlockHash)
+				assert.Equal(t, uint(i), idx.Index)
+			} else {
+				assert.Equal(t, errors.ErrNotFound, err)
+			}
+		}
+
+		for i, debt := range block.Debts {
+			idx, err := bc.bcStore.GetDebtIndex(debt.Hash)
+			if exists {
+				assert.Equal(t, block.HeaderHash, idx.BlockHash)
+				assert.Equal(t, uint(i), idx.Index)
+			} else {
+				assert.Equal(t, errors.ErrNotFound, err)
+			}
+		}
+	}
 }
 
 func Test_Blockchain_Shard(t *testing.T) {
