@@ -43,6 +43,21 @@ func Test_PendingQueue_add(t *testing.T) {
 	assert.Equal(t, q.count(), 2)
 }
 
+func Test_PendingQueue_update(t *testing.T) {
+	q := newPendingQueue()
+
+	tx1 := newMockPooledTx(1, 2, 5)
+	q.add(tx1)
+	assert.Equal(t, 1, q.count())
+	assert.Equal(t, tx1, q.peek().peek())
+
+	// update tx with higher price
+	tx2 := newMockPooledTx(1, 3, 5)
+	q.add(tx2)
+	assert.Equal(t, 1, q.count())
+	assert.Equal(t, tx2, q.peek().peek())
+}
+
 func Test_PendingQueue_get(t *testing.T) {
 	q := newPendingQueue()
 
@@ -161,6 +176,68 @@ func Test_pendingQueue_pop(t *testing.T) {
 	assert.Equal(t, q.pop(), ptx2.Transaction)
 	assert.Equal(t, q.pop(), ptx4.Transaction)
 	assert.Equal(t, q.pop(), ptx3.Transaction)
+}
+
+func Test_pendingQueue_discard_emptyQueue(t *testing.T) {
+	q := newPendingQueue()
+	assert.Nil(t, q.discard())
+}
+
+func Test_pendingQueue_discard_oneAccount(t *testing.T) {
+	q := newPendingQueue()
+
+	// add a tx in queue
+	ptx1 := newMockPooledTx(1, 38, 1)
+	q.add(ptx1)
+	assert.False(t, q.empty())
+
+	// discard the only tx
+	assert.Equal(t, ptx1, q.discard().peek())
+	assert.True(t, q.empty())
+	assert.Equal(t, 0, len(q.txs))
+	assert.Equal(t, 0, q.bestHeap.Len())
+	assert.Equal(t, 0, q.worstHeap.Len())
+}
+
+func Test_pendingQueue_discard_cmp(t *testing.T) {
+	q := newPendingQueue()
+
+	// tx1
+	ptx1 := newMockPooledTx(1, 38, 1)
+	q.add(ptx1)
+
+	// tx2: lower price, discard tx2, left tx1
+	ptx2 := newMockPooledTx(2, 37, 1)
+	q.add(ptx2)
+	assert.Equal(t, ptx2, q.discard().peek())
+	assert.Equal(t, ptx1, q.peek().peek())
+
+	// tx3: higher price, discard tx1, left tx3
+	ptx3 := newMockPooledTx(3, 40, 1)
+	q.add(ptx3)
+	assert.Equal(t, ptx1, q.discard().peek())
+	assert.Equal(t, ptx3, q.peek().peek())
+
+	// tx4: same price with later timestamp, discard tx4, left tx3
+	ptx4 := newMockPooledTx(4, 40, 1)
+	ptx4.timestamp = ptx3.timestamp.Add(time.Second)
+	q.add(ptx4)
+	assert.Equal(t, ptx4, q.discard().peek())
+	assert.Equal(t, ptx3, q.peek().peek())
+
+	// tx5: same price with earlier timestamp, discard tx3, left tx5
+	ptx5 := newMockPooledTx(5, 40, 1)
+	ptx5.timestamp = ptx3.timestamp.Add(-time.Second)
+	q.add(ptx5)
+	assert.Equal(t, ptx3, q.discard().peek())
+	assert.Equal(t, ptx5, q.peek().peek())
+
+	// tx6: same price and timestamp, discard tx6, left tx5 (LIFO)
+	ptx6 := newMockPooledTx(6, 40, 1)
+	ptx6.timestamp = ptx5.timestamp
+	q.add(ptx6)
+	assert.Equal(t, ptx6, q.discard().peek())
+	assert.Equal(t, ptx5, q.peek().peek())
 }
 
 func Test_pendingQueue_list(t *testing.T) {
