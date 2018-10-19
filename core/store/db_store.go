@@ -363,7 +363,7 @@ func (store *blockchainDatabase) GetReceiptByTxHash(txHash common.Hash) (*types.
 	return receipts[txIndex.Index], nil
 }
 
-// AddIndices addes tx/debt indices for the specified block.
+// AddIndices adds tx/debt indices for the specified block.
 func (store *blockchainDatabase) AddIndices(block *types.Block) error {
 	batch := store.db.NewBatch()
 	store.batchAddIndices(batch, block.HeaderHash, block.Transactions, block.Debts)
