@@ -256,7 +256,7 @@ func getConfigFromSubChain(networkID string, subChainInfo *system.SubChainInfo) 
 		DataDir:        subChainInfo.Name,
 		RPCAddr:        "0.0.0.0:8127",
 		Coinbase:       coinbaseValue,
-		MinerAlgorithm: "sha256",
+		MinerAlgorithm: algorithmValue,
 	}
 
 	config.P2PConfig = p2p.Config{
