@@ -88,7 +88,6 @@ type PoolCore interface {
 type Pool interface {
 	PoolCore
 	GetTransactions(processing, pending bool) []*types.Transaction
-	GetPendingTxCount() int
 }
 
 type Chain interface {
