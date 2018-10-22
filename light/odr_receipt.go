@@ -7,6 +7,7 @@ package light
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
@@ -27,17 +28,25 @@ type odrReceiptResponse struct {
 	Proof        []proofNode
 }
 
+// newOdrReceiptResponse return odrReceiptResponse pointer
+func newOdrReceiptResponse() *odrReceiptResponse {
+	return &odrReceiptResponse{
+		ReceiptIndex: new(types.ReceiptIndex),
+		Receipt:      new(types.Receipt),
+	}
+}
+
 func (odr *odrReceiptRequest) code() uint16 {
 	return receiptRequestCode
 }
 
 func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
-	var result odrReceiptResponse
+	result := newOdrReceiptResponse()
 	txIndex, err := lp.chain.GetStore().GetTxIndex(odr.TxHash)
 	result.ReqID = odr.ReqID
 	if err != nil {
 		result.Error = err.Error()
-		return receiptResponseCode, &result
+		return receiptResponseCode, result
 	}
 
 	receipts, err := lp.chain.GetStore().GetReceiptsByBlockHash(txIndex.BlockHash)
@@ -52,12 +61,20 @@ func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 		proof, err := receiptTrie.GetProof(crypto.MustHash(result.Receipt).Bytes())
 		if err != nil {
 			result.Error = err.Error()
-			return receiptResponseCode, &result
+			return receiptResponseCode, result
 		}
 		result.Proof = mapToArray(proof)
 	}
 
-	return receiptResponseCode, &result
+	return receiptResponseCode, result
+}
+
+func (odr *odrReceiptResponse) getRequestID() uint32 {
+	return odr.ReqID
+}
+
+func (odr *odrReceiptResponse) getError() error {
+	return errors.New(odr.Error)
 }
 
 func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
