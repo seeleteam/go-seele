@@ -242,6 +242,14 @@ var (
 		Usage: "subchain static node, for example:-n address:port -n address:prot",
 		Value: &staticNodesValue,
 	}
+
+	algorithmValue string
+	algorithmFlag  = cli.StringFlag{
+		Name:        "algorithm",
+		Usage:       "miner algorithm",
+		Value:       "sha256",
+		Destination: &algorithmValue,
+	}
 )
 
 // GeneratePayload

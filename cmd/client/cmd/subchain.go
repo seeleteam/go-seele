@@ -111,7 +111,12 @@ func createSubChainConfigFile(c *cli.Context) error {
 		return err
 	}
 
-	config, err := getConfigFromSubChain(client, subChainInfo)
+	networkID, err := util.GetNetworkID(client)
+	if err != nil {
+		return err
+	}
+
+	config, err := getConfigFromSubChain(networkID, subChainInfo)
 	if err != nil {
 		return err
 	}
@@ -219,7 +224,7 @@ func getStaticNodes() ([]*discovery.Node, error) {
 	return arrayNode, nil
 }
 
-func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo) (*util.Config, error) {
+func getConfigFromSubChain(networkID string, subChainInfo *system.SubChainInfo) (*util.Config, error) {
 	addr, err := common.HexToAddress(coinbaseValue)
 	if err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
@@ -240,11 +245,6 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 	}
 
 	staticNodes, err := getStaticNodes()
-	if err != nil {
-		return nil, err
-	}
-
-	networkID, err := util.GetNetworkID(client)
 	if err != nil {
 		return nil, err
 	}
