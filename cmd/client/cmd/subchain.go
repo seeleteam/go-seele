@@ -38,6 +38,9 @@ var (
 	errInvalidTokenShortName = errors.New("invalid subchain token short name")
 	errInvalidTokenAmount    = errors.New("invalid subchain token amount")
 	errSubChainInfo          = errors.New("failed to get sub-chain information")
+
+	defaultTokenFullName  = "seelecoin"
+	defaultTokenShortName = "seele"
 )
 
 func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
@@ -56,11 +59,11 @@ func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, errInvalidVersion
 	}
 
-	if len(subChain.TokenFullName) == 0 || strings.ToLower(subChain.TokenFullName) == "seelecoin" {
+	if len(subChain.TokenFullName) == 0 || strings.ToLower(subChain.TokenFullName) == defaultTokenFullName {
 		return nil, nil, errInvalidTokenFullName
 	}
 
-	if len(subChain.TokenShortName) == 0 || strings.ToLower(subChain.TokenShortName) == "seele" {
+	if len(subChain.TokenShortName) == 0 || strings.ToLower(subChain.TokenShortName) == defaultTokenShortName {
 		return nil, nil, errInvalidTokenShortName
 	}
 
@@ -309,8 +312,8 @@ func generateTemplate(c *cli.Context) error {
 		Name:              nameValue,
 		Version:           "1.0",
 		StaticNodes:       []*discovery.Node{},
-		TokenFullName:     "SeeleCoin",
-		TokenShortName:    "Seele",
+		TokenFullName:     defaultTokenFullName,
+		TokenShortName:    defaultTokenShortName,
 		TokenAmount:       0,
 		GenesisDifficulty: 8000000,
 		GenesisAccounts:   map[common.Address]*big.Int{},
@@ -320,6 +323,7 @@ func generateTemplate(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
 	if err = common.SaveFile(filepath.Join(subChainJSONFileVale, "subChainTemplate.json"), byteSubChainInfo); err != nil {
 		return err
 	}
