@@ -227,7 +227,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			cli.Command{
 				Name:   "config",
 				Usage:  "generate sub chain config file",
-				Flags:  rpcFlags(coinbaseFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
+				Flags:  rpcFlags(coinbaseFlag, algorithmFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
 				Action: createSubChainConfigFile,
 			},
 		},

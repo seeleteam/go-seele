@@ -35,6 +35,7 @@ func Test_RegisterSubChain(t *testing.T) {
 	context := newTestContext(db, SubChainContractAddress)
 
 	regInfo.Owner = context.tx.Data.From
+	regInfo.CreateTimestamp = context.BlockHeader.CreateTimestamp
 
 	encoded, err := json.Marshal(regInfo)
 	if err != nil {

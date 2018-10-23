@@ -111,7 +111,12 @@ func createSubChainConfigFile(c *cli.Context) error {
 		return err
 	}
 
-	config, err := getConfigFromSubChain(client, subChainInfo)
+	networkID, err := util.GetNetworkID(client)
+	if err != nil {
+		return err
+	}
+
+	config, err := getConfigFromSubChain(networkID, subChainInfo)
 	if err != nil {
 		return err
 	}
@@ -219,7 +224,7 @@ func getStaticNodes() ([]*discovery.Node, error) {
 	return arrayNode, nil
 }
 
-func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo) (*util.Config, error) {
+func getConfigFromSubChain(networkID string, subChainInfo *system.SubChainInfo) (*util.Config, error) {
 	addr, err := common.HexToAddress(coinbaseValue)
 	if err != nil {
 		return nil, fmt.Errorf("invalid coinbase, err:%s", err.Error())
@@ -244,18 +249,14 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 		return nil, err
 	}
 
-	networkID, err := util.GetNetworkID(client)
-	if err != nil {
-		return nil, err
-	}
-
 	config := &util.Config{}
 	config.BasicConfig = node.BasicConfig{
-		Name:     subChainInfo.Name,
-		Version:  subChainInfo.Version,
-		DataDir:  subChainInfo.Name,
-		RPCAddr:  "0.0.0.0:8127",
-		Coinbase: coinbaseValue,
+		Name:           subChainInfo.Name,
+		Version:        subChainInfo.Version,
+		DataDir:        subChainInfo.Name,
+		RPCAddr:        "0.0.0.0:8127",
+		Coinbase:       coinbaseValue,
+		MinerAlgorithm: algorithmValue,
 	}
 
 	config.P2PConfig = p2p.Config{
@@ -289,8 +290,9 @@ func getConfigFromSubChain(client *rpc.Client, subChainInfo *system.SubChainInfo
 	}
 
 	config.GenesisConfig = core.GenesisInfo{
-		Difficult:   int64(subChainInfo.GenesisDifficulty),
-		ShardNumber: shardValue,
+		Difficult:       int64(subChainInfo.GenesisDifficulty),
+		ShardNumber:     shardValue,
+		CreateTimestamp: subChainInfo.CreateTimestamp,
 	}
 
 	return config, nil
