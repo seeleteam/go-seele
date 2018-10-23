@@ -12,7 +12,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/seeleteam/go-seele/cmd/util"
@@ -54,11 +56,11 @@ func registerSubChain(client *rpc.Client) (interface{}, interface{}, error) {
 		return nil, nil, errInvalidVersion
 	}
 
-	if len(subChain.TokenFullName) == 0 {
+	if len(subChain.TokenFullName) == 0 || strings.ToLower(subChain.TokenFullName) == "seelecoin" {
 		return nil, nil, errInvalidTokenFullName
 	}
 
-	if len(subChain.TokenShortName) == 0 {
+	if len(subChain.TokenShortName) == 0 || strings.ToLower(subChain.TokenShortName) == "seele" {
 		return nil, nil, errInvalidTokenShortName
 	}
 
@@ -139,7 +141,7 @@ func createSubChainConfigFile(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println("generate subchain config files successfully")
+	fmt.Println("generate sub chain config files successfully")
 	return nil
 }
 
@@ -296,4 +298,32 @@ func getConfigFromSubChain(networkID string, subChainInfo *system.SubChainInfo) 
 	}
 
 	return config, nil
+}
+
+func generateTemplate(c *cli.Context) error {
+	if err := system.ValidateDomainName([]byte(nameValue)); err != nil {
+		return err
+	}
+
+	subChainInfo := system.SubChainInfo{
+		Name:              nameValue,
+		Version:           "1.0",
+		StaticNodes:       []*discovery.Node{},
+		TokenFullName:     "SeeleCoin",
+		TokenShortName:    "Seele",
+		TokenAmount:       0,
+		GenesisDifficulty: 8000000,
+		GenesisAccounts:   map[common.Address]*big.Int{},
+	}
+
+	byteSubChainInfo, err := json.MarshalIndent(subChainInfo, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err = common.SaveFile(filepath.Join(subChainJSONFileVale, "subChainTemplate.json"), byteSubChainInfo); err != nil {
+		return err
+	}
+
+	fmt.Println("generate template json file for sub chain register successfully")
+	return nil
 }

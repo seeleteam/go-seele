@@ -42,7 +42,7 @@ type SubChainInfo struct {
 
 	GenesisDifficulty uint64                      `json:"genesisDifficulty"`
 	GenesisAccounts   map[common.Address]*big.Int `json:"genesisAccounts"`
-	CreateTimestamp   *big.Int                    `json:"timestamp"`
+	CreateTimestamp   *big.Int                    `json:"timestamp,omitempty"`
 
 	// SubChain owner publick key
 	Owner common.Address `json:"owner,omitempty"`
