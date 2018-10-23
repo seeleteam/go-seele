@@ -118,6 +118,11 @@ func (pool *txPool) GetPendingTxCount() int {
 	return len(pool.pendingTxs)
 }
 
+// GetTxCount return the total number of transactions in the transaction pool.
+func (pool *txPool) GetTxCount() int {
+	return pool.GetPendingTxCount()
+}
+
 func (pool *txPool) stop() {
 	pool.headerChangedEventManager.RemoveListener(pool.onBlockHeaderChanged)
 	close(pool.headerCh)

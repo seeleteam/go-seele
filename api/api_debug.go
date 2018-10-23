@@ -32,7 +32,7 @@ func (api *PrivateDebugAPI) GetTxPoolContent() (map[string][]map[string]interfac
 // GetTxPoolTxCount returns the number of transaction in the pool
 func (api *PrivateDebugAPI) GetTxPoolTxCount() (uint64, error) {
 	txPool := api.s.TxPoolBackend()
-	return uint64(len(txPool.GetTransactions(true, true))), nil
+	return uint64(txPool.GetTxCount()), nil
 }
 
 // GetPendingTransactions returns all pending transactions

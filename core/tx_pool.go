@@ -322,6 +322,14 @@ func (pool *TransactionPool) GetPendingTxCount() int {
 	return pool.pendingQueue.count()
 }
 
+// GetTxCount return the total number of transactions in the transaction pool.
+func (pool *TransactionPool) GetTxCount() int {
+	pool.mutex.RLock()
+	defer pool.mutex.RUnlock()
+
+	return pool.pendingQueue.count() + len(pool.processingTxs)
+}
+
 // GetTransactions return the transactions in the transaction pool.
 func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.Transaction {
 	pool.mutex.RLock()
