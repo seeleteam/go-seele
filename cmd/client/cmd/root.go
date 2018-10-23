@@ -230,6 +230,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Flags:  rpcFlags(coinbaseFlag, algorithmFlag, privateKeyFlag, nameFlag, outPutFlag, shardFlag, staticNodesFlag),
 				Action: createSubChainConfigFile,
 			},
+			{
+				Name:   "template",
+				Usage:  "generate template json file for sub chain register",
+				Flags:  []cli.Flag{nameFlag, subChainJSONFileFlag},
+				Action: generateTemplate,
+			},
 		},
 	}
 
