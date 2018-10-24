@@ -19,8 +19,8 @@ var (
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	// ErrOddLength hex string of odd length
 	ErrOddLength = &decError{"hex string of odd length"}
-	//ErrOnly0xPrefix hex string only with 0x prefix
-	ErrOnly0xPrefix = &decError{"hex string only with 0x prefix"}
+	//ErrOnlyOrWithout0xPrefix hex string only with 0x prefix or without 0x prefix
+	ErrOnlyOrWithout0xPrefix = &decError{"hex string only with 0x prefix or without 0x prefix"}
 )
 
 type decError struct{ msg string }
@@ -40,11 +40,8 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	if Only0xPrefix(input) {
-		return nil, ErrOnly0xPrefix
-	}
-	if !Has0xPrefix(input) {
-		return nil, ErrMissingPrefix
+	if CheckOnlyOrWithout0xPrefix(input) {
+		return nil, ErrOnlyOrWithout0xPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
 	if err != nil {
@@ -58,9 +55,9 @@ func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
-// Only0xPrefix returns true if input only with 0x or 0X, otherwise false
-func Only0xPrefix(input string) bool {
-	return strings.EqualFold(input, "0x")
+// CheckOnlyOrWithout0xPrefix returns true if input only with 0x or without 0x, otherwise false
+func CheckOnlyOrWithout0xPrefix(input string) bool {
+	return strings.EqualFold(input, "0x") || !Has0xPrefix(input)
 }
 
 // mapError maps err to a more specific error
