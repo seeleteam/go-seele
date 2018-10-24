@@ -7,6 +7,7 @@ package hexutil
 
 import (
 	"encoding/hex"
+	"strings"
 )
 
 var (
@@ -18,7 +19,7 @@ var (
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	// ErrOddLength hex string of odd length
 	ErrOddLength = &decError{"hex string of odd length"}
-	//ErrOnly0xPrefix "hex string only with 0x prefix
+	//ErrOnly0xPrefix hex string only with 0x prefix
 	ErrOnly0xPrefix = &decError{"hex string only with 0x prefix"}
 )
 
@@ -39,10 +40,10 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	if HasOnly0xPrefix(input) {
+	if Has0xPrefix(input) {
 		return nil, ErrOnly0xPrefix
 	}
-	if !Has0xPrefix(input) {
+	if Missing0xPrefix(input) {
 		return nil, ErrMissingPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
@@ -52,14 +53,14 @@ func HexToBytes(input string) ([]byte, error) {
 	return b, err
 }
 
-// Has0xPrefix returns true if input starts with 0x, otherwise false
+// Has0xPrefix returns true if input only with 0x, otherwise false
 func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
-//HasOnly0xPrefix returns true if input=="0x" or input=="0X",otherwise false
-func HasOnly0xPrefix(input string) bool {
-	return len(input) == 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+// Missing0xPrefix returns true if input not starts with 0x, otherwise true
+func Missing0xPrefix(input string) bool {
+	return !strings.HasPrefix(input, "0x") && !strings.HasPrefix(input, "0X")
 }
 
 // mapError maps err to a more specific error
