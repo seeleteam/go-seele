@@ -40,10 +40,10 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	if HasOnly0xPrefix(input) {
+	if Only0xPrefix(input) {
 		return nil, ErrOnly0xPrefix
 	}
-	if Missing0xPrefix(input) {
+	if !Has0xPrefix(input) {
 		return nil, ErrMissingPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
@@ -58,14 +58,9 @@ func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
-// HasOnly0xPrefix returns true if input only with 0x or 0X, otherwise false
-func HasOnly0xPrefix(input string) bool {
+// Only0xPrefix returns true if input only with 0x or 0X, otherwise false
+func Only0xPrefix(input string) bool {
 	return strings.EqualFold(input, "0x")
-}
-
-// Missing0xPrefix returns true if input not starts with 0x, otherwise true
-func Missing0xPrefix(input string) bool {
-	return !strings.HasPrefix(input, "0x") && !strings.HasPrefix(input, "0X")
 }
 
 // mapError maps err to a more specific error
