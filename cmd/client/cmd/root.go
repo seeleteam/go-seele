@@ -136,7 +136,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: GeneratePayloadAction,
 		},
 		{
-			Name:  "dekeyfile",
+			Name:  "deckeyfile",
 			Usage: "Decrypt key file",
 			Flags: []cli.Flag{
 				fileNameFlag,

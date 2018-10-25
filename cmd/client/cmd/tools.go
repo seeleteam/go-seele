@@ -134,7 +134,7 @@ func DecryptKeyFileAction(c *cli.Context) error {
 
 	key, err := keystore.GetKey(fileNameValue, pass)
 	if err != nil {
-		return fmt.Errorf("invalid key file. it should be a private key: %s", err)
+		return fmt.Errorf("invalid key file: %s", err)
 	}
 
 	fmt.Printf("public key:  %s\n", key.Address.ToHex())
