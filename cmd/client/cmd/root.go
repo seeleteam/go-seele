@@ -135,6 +135,14 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			},
 			Action: GeneratePayloadAction,
 		},
+		{
+			Name:  "dekeyfile",
+			Usage: "Decrypt key file",
+			Flags: []cli.Flag{
+				fileNameFlag,
+			},
+			Action: DecryptKeyFileAction,
+		},
 	}
 
 	htlcCommands := cli.Command{
