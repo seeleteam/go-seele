@@ -34,7 +34,12 @@ func Test_Hex(t *testing.T) {
 	bytes, err = HexToBytes(str)
 	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
 
-	// ErrOnlyWith0xPrefix
+	// ErrOnlyWith0xPrefix,lowercase letter x
+	str = "0x"
+	bytes, err = HexToBytes(str)
+	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
+
+	// ErrOnlyWith0XPrefix,capital letter X
 	str = "0X"
 	bytes, err = HexToBytes(str)
 	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
