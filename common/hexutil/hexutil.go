@@ -19,7 +19,7 @@ var (
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	// ErrOddLength hex string of odd length
 	ErrOddLength = &decError{"hex string of odd length"}
-	//ErrOnly0xPrefix hex string only with 0x or 0X prefix
+	// ErrOnly0xPrefix hex string only with 0x or 0X prefix
 	ErrOnly0xPrefix = &decError{"hex string only with 0x or 0X prefix"}
 )
 
