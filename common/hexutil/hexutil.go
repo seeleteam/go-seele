@@ -40,8 +40,7 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	errPrefix := checkOnlyOrWithout0xPrefix(input)
-	if errPrefix != nil {
+	if errPrefix := checkOnlyOrWithout0xPrefix(input); errPrefix != nil {
 		return nil, errPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
