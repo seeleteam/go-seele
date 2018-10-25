@@ -32,17 +32,17 @@ func Test_Hex(t *testing.T) {
 	// ErrMissingPrefix
 	str = "5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"
 	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
+	assert.Equal(t, err, ErrMissingPrefix)
 
-	// ErrOnlyWith0xPrefix,lowercase letter x
+	// ErrOnly0xPrefix
 	str = "0x"
 	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
+	assert.Equal(t, err, ErrOnly0xPrefix)
 
-	// ErrOnlyWith0XPrefix,capital letter X
+	// ErrOnly0xPrefix
 	str = "0X"
 	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOnlyOrWithout0xPrefix)
+	assert.Equal(t, err, ErrOnly0xPrefix)
 
 	// ErrOddLength
 	str = "0x5aaeb6053f3e94c9b9a09f3"
