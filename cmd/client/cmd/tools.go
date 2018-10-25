@@ -125,6 +125,23 @@ func GenerateKeyAction(c *cli.Context) error {
 	return nil
 }
 
+// DecryptKeyFileAction decrypt key file
+func DecryptKeyFileAction(c *cli.Context) error {
+	pass, err := common.GetPassword()
+	if err != nil {
+		return fmt.Errorf("failed to get password %s", err)
+	}
+
+	key, err := keystore.GetKey(fileNameValue, pass)
+	if err != nil {
+		return fmt.Errorf("invalid key file: %s", err)
+	}
+
+	fmt.Printf("public key:  %s\n", key.Address.ToHex())
+	fmt.Printf("private key: %s\n", hexutil.BytesToHex(crypto.FromECDSA(key.PrivateKey)))
+	return nil
+}
+
 // GeneratePayloadAction is a action to generate the payload according to the abi string and method name and args
 func GeneratePayloadAction(c *cli.Context) error {
 	if abiFile == "" || methodName == "" {
