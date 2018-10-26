@@ -65,8 +65,8 @@ func (a Hash) ToHex() string {
 }
 
 // HexToHash return the hash form of the hex
-func HexToHash(hex string) (Hash, error) {
-	byte, err := hexutil.HexToBytes(hex)
+func HexToHash(hex ...string) (Hash, error) {
+	byte, err := hexutil.HexToBytes(hex...)
 	if err != nil {
 		return EmptyHash, err
 	}

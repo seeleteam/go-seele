@@ -7,7 +7,11 @@ package hexutil
 
 import (
 	"encoding/hex"
-	"strings"
+)
+
+const (
+	// AddressLen is the valid address length
+	AddressLen = 20
 )
 
 var (
@@ -19,8 +23,8 @@ var (
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	// ErrOddLength hex string of odd length
 	ErrOddLength = &decError{"hex string of odd length"}
-	// ErrOnly0xPrefix hex string only with 0x or 0X prefix
-	ErrOnly0xPrefix = &decError{"hex string only with 0x or 0X prefix"}
+	// ErrInvalidLength hex string's length must be  equal or gratter than 20
+	ErrInvalidLength = &decError{"hex string's length must be  equal or gratter than 20"}
 )
 
 type decError struct{ msg string }
@@ -36,12 +40,24 @@ func BytesToHex(b []byte) string {
 }
 
 // HexToBytes decodes a hex string with 0x prefix.
-func HexToBytes(input string) ([]byte, error) {
+func HexToBytes(inputs ...string) ([]byte, error) {
+	input := inputs[0]
+	var flag string
+	if len(inputs) >= 2 {
+		flag = inputs[1]
+	}
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	if errPrefix := checkOnlyOrWithout0xPrefix(input); errPrefix != nil {
-		return nil, errPrefix
+	if flag == "client" { //if the request come from client command
+		//length less 20 is valid length
+		if len(input) < AddressLen {
+			return nil, ErrInvalidLength
+		}
+	}
+	//MissingPrefix
+	if !Has0xPrefix(input) {
+		return nil, ErrMissingPrefix
 	}
 	b, err := hex.DecodeString(input[2:])
 	if err != nil {
@@ -53,17 +69,6 @@ func HexToBytes(input string) ([]byte, error) {
 // Has0xPrefix returns true if input start with 0x, otherwise false
 func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
-}
-
-// CheckOnlyOrWithout0xPrefix returns true if input only with 0x or without 0x, otherwise false
-func checkOnlyOrWithout0xPrefix(input string) *decError {
-	if strings.EqualFold(input, "0x") {
-		return ErrOnly0xPrefix
-	}
-	if !Has0xPrefix(input) {
-		return ErrMissingPrefix
-	}
-	return nil
 }
 
 // mapError maps err to a more specific error

@@ -24,6 +24,16 @@ func Test_Hex(t *testing.T) {
 	bytes, err = HexToBytes("")
 	assert.Equal(t, err, ErrEmptyString)
 
+	// ErrInvalidLength
+	str = "0x"
+	bytes, err = HexToBytes(str, "client")
+	assert.Equal(t, err, ErrInvalidLength)
+
+	// ErrInvalidLength
+	str = "0X"
+	bytes, err = HexToBytes(str, "client")
+	assert.Equal(t, err, ErrInvalidLength)
+
 	// ErrSyntax
 	str = "0x78780d010387113120864842000ccbe40d0-"
 	bytes, err = HexToBytes(str)
@@ -33,16 +43,6 @@ func Test_Hex(t *testing.T) {
 	str = "5aaeb6053f3e94c9b9a09f33669435e7ef1beaed"
 	bytes, err = HexToBytes(str)
 	assert.Equal(t, err, ErrMissingPrefix)
-
-	// ErrOnly0xPrefix
-	str = "0x"
-	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOnly0xPrefix)
-
-	// ErrOnly0xPrefix
-	str = "0X"
-	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOnly0xPrefix)
 
 	// ErrOddLength
 	str = "0x5aaeb6053f3e94c9b9a09f3"
