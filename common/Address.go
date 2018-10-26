@@ -27,7 +27,7 @@ type AddressType byte
 
 const (
 	addressLen = 20 // length in bytes
-
+	AddressLen = addressLen
 	// AddressTypeExternal is the address type for external account.
 	AddressTypeExternal = AddressType(1)
 	// AddressTypeContract is the address type for contract account.

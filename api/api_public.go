@@ -19,8 +19,7 @@ import (
 var ErrInvalidAccount = errors.New("invalid account")
 
 const (
-	addressLen   = 20
-	hexLen       = addressLen*2 + 2
+	hexLen       = common.AddressLen
 	maxSizeLimit = 64
 )
 
@@ -148,14 +147,13 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	if len(hashHex) < hexLen {
-		return nil, hexutil.ErrInvalidLength
-	}
 	hash, err := common.HexToHash(hashHex)
 	if err != nil {
 		return nil, err
 	}
-
+	if len(hashHex) != (hexLen*2 + 2) {
+		return nil, hexutil.ErrInvalidLength
+	}
 	block, err := api.s.GetBlock(hash, 0)
 	if err != nil {
 		return nil, err

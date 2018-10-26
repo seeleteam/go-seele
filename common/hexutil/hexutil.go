@@ -16,10 +16,8 @@ var (
 	ErrSyntax = &decError{"invalid hex string"}
 	// ErrMissingPrefix hex string without 0x prefix
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
-	// ErrOddLength hex string of odd length
-	ErrOddLength = &decError{"hex string of odd length"}
-	// ErrInvalidLength hex string's length must be  equal or gratter than 42
-	ErrInvalidLength = &decError{"hex string's length must be  equal or gratter than 42"}
+	// ErrInvalidLength hex string is invalid length
+	ErrInvalidLength = &decError{"hex string is invalid length"}
 )
 
 type decError struct{ msg string }
@@ -61,7 +59,7 @@ func mapError(err error) error {
 		return ErrSyntax
 	}
 	if err == hex.ErrLength {
-		return ErrOddLength
+		return ErrInvalidLength
 	}
 	return err
 }
