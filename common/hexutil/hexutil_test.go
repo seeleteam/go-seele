@@ -24,16 +24,6 @@ func Test_Hex(t *testing.T) {
 	bytes, err = HexToBytes("")
 	assert.Equal(t, err, ErrEmptyString)
 
-	// ErrInvalidLength
-	str = "0x"
-	bytes, err = HexToBytes(str, "client")
-	assert.Equal(t, err, ErrInvalidLength)
-
-	// ErrInvalidLength
-	str = "0X"
-	bytes, err = HexToBytes(str, "client")
-	assert.Equal(t, err, ErrInvalidLength)
-
 	// ErrSyntax
 	str = "0x78780d010387113120864842000ccbe40d0-"
 	bytes, err = HexToBytes(str)

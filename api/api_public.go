@@ -12,12 +12,17 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
 var ErrInvalidAccount = errors.New("invalid account")
 
-const maxSizeLimit = 64
+const (
+	addressLen   = 20
+	hexLen       = addressLen*2 + 2
+	maxSizeLimit = 64
+)
 
 // PublicSeeleAPI provides an API to access full node-related information.
 type PublicSeeleAPI struct {
@@ -143,7 +148,10 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	hash, err := common.HexToHash(hashHex, "client")
+	if len(hashHex) < hexLen {
+		return nil, hexutil.ErrInvalidLength
+	}
+	hash, err := common.HexToHash(hashHex)
 	if err != nil {
 		return nil, err
 	}

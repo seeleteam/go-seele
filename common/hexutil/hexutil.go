@@ -9,11 +9,6 @@ import (
 	"encoding/hex"
 )
 
-const (
-	// AddressLen is the valid address length
-	AddressLen = 20
-)
-
 var (
 	// ErrEmptyString empty hex string
 	ErrEmptyString = &decError{"empty hex string"}
@@ -23,8 +18,8 @@ var (
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
 	// ErrOddLength hex string of odd length
 	ErrOddLength = &decError{"hex string of odd length"}
-	// ErrInvalidLength hex string's length must be  equal or gratter than 20
-	ErrInvalidLength = &decError{"hex string's length must be  equal or gratter than 20"}
+	// ErrInvalidLength hex string's length must be  equal or gratter than 42
+	ErrInvalidLength = &decError{"hex string's length must be  equal or gratter than 42"}
 )
 
 type decError struct{ msg string }
@@ -40,20 +35,9 @@ func BytesToHex(b []byte) string {
 }
 
 // HexToBytes decodes a hex string with 0x prefix.
-func HexToBytes(inputs ...string) ([]byte, error) {
-	input := inputs[0]
-	var flag string
-	if len(inputs) >= 2 {
-		flag = inputs[1]
-	}
+func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
-	}
-	if flag == "client" { //if the request come from client command
-		//length less 20 is valid length
-		if len(input) < AddressLen {
-			return nil, ErrInvalidLength
-		}
 	}
 	//MissingPrefix
 	if !Has0xPrefix(input) {
