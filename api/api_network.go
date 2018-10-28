@@ -41,3 +41,6 @@ func (n *PrivateNetworkAPI) GetNetworkID() (string, error) {
 func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
 	return n.s.ProtocolBackend().GetProtocolVersion()
 }
+
+// Always listening
+func (n *PrivateNetworkAPI) IsListening() bool { return true }
