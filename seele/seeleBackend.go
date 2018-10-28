@@ -9,6 +9,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/seele/download"
 )
 
 type SeeleBackend struct {
@@ -30,6 +31,11 @@ func (sd *SeeleBackend) GetP2pServer() *p2p.Server { return sd.s.p2pServer }
 func (sd *SeeleBackend) ChainBackend() api.Chain { return sd.s.chain }
 
 func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
+
+func (sd *SeeleBackend) IsSyncing() bool {
+	d := downloader.NewPrivatedownloaderAPI(sd.s.seeleProtocol.downloader)
+	return d.IsSyncing()
+}
 
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
