@@ -84,7 +84,6 @@ func HexToHash(hex string) (Hash, error) {
 }
 
 // CheckOnly0xPrefix return true if the string only 0x or 0X,otherwise return false
-//
 func CheckOnly0xPrefix(hashHex string) bool {
 	if strings.EqualFold(hashHex, "0x") {
 		return true

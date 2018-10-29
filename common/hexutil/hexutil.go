@@ -37,6 +37,7 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
+
 	// MissingPrefix
 	if !Has0xPrefix(input) {
 		return nil, ErrMissingPrefix
