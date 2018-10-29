@@ -34,7 +34,7 @@ func Test_OdrBlock_Handle(t *testing.T) {
 	code, resp := ob1.handle(lp)
 	assert.Equal(t, code, blockResponseCode)
 	assert.NotNil(t, resp)
-	assert.Nil(t, resp.getError())
+	assert.NotNil(t, resp.getError())
 	assert.Equal(t, resp.getRequestID(), uint32(1))
 
 	// case 2: invalid block hash
@@ -80,7 +80,6 @@ func newTestOdrBlock(hash common.Hash) *odrBlock {
 	return &odrBlock{
 		OdrItem: newTestOdrItem(),
 		Hash:    hash,
-		Height:  1,
 	}
 }
 
@@ -88,7 +87,6 @@ func newTestOdrBlockWithBlock(hash common.Hash) *odrBlock {
 	return &odrBlock{
 		OdrItem: newTestOdrItem(),
 		Hash:    hash,
-		Height:  1,
 		Block:   newTestBlock(),
 	}
 }

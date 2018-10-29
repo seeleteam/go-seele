@@ -53,9 +53,14 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 
 	if hash.IsEmpty() {
 		if height < 0 {
-			request.Height = l.ChainBackend().CurrentHeader().Height
+			request.Hash = l.ChainBackend().CurrentHeader().Hash()
 		} else {
-			request.Height = uint64(height)
+			hash, err := l.ChainBackend().GetStore().GetBlockHash(uint64(height))
+			if err != nil {
+				return nil, err
+			}
+
+			request.Hash = hash
 		}
 	}
 
