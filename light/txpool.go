@@ -110,6 +110,14 @@ func (pool *txPool) GetTransactions(processing, pending bool) []*types.Transacti
 	return txs
 }
 
+// Remove removes tx of specified tx hash from pool.
+func (pool *txPool) Remove(txHash common.Hash) {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+
+	delete(pool.pendingTxs, txHash)
+}
+
 // GetPendingTxCount return the total number of pending transactions in the transaction pool.
 func (pool *txPool) GetPendingTxCount() int {
 	pool.mutex.RLock()
