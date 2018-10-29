@@ -87,7 +87,6 @@ func StartSend(balanceList []*balance, threadNum int) {
 		// same shard and different shard
 		go loopSendMode5(balanceList, lock, threadNum)
 	default:
-		wg.Add(1)
 		go loopSendMode1_2(balanceList, lock, threadNum)
 	}
 }
