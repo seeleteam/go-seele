@@ -122,9 +122,11 @@ func Test_txCollection_pop(t *testing.T) {
 }
 
 func Test_txCollection_cmp(t *testing.T) {
-	c1, c2 := newTxCollection(), newTxCollection()
+	// compare with nil collection
+	assert.Equal(t, 1, newTxCollection().cmp(nil))
 
 	// compare 2 empty collections
+	c1, c2 := newTxCollection(), newTxCollection()
 	assert.Equal(t, 0, c1.cmp(c2))
 
 	// compare with empty collection
