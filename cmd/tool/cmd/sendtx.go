@@ -70,17 +70,31 @@ var sendTxCmd = &cobra.Command{
 // StartSend start send tx by specific thread and mode
 func StartSend(balanceList []*balance, threadNum int) {
 	lock := &sync.Mutex{}
-	if mode == 3 {
-		wg.Add(1)
-		loopSendMode3(balanceList)
-	} else {
-		wg.Add(1)
-		go loopSendMode1_2(balanceList, lock, threadNum)
-	}
 
 	if mode == 1 {
 		wg.Add(1)
+		go loopSendMode1_2(balanceList, lock, threadNum)
+		wg.Add(1)
 		go loopCheckMode1(balanceList, lock)
+	} else if mode == 2 {
+		wg.Add(1)
+		go loopSendMode1_2(balanceList, lock, threadNum)
+	} else if mode == 3 {
+		wg.Add(1)
+		loopSendMode3(balanceList)
+	} else if mode == 4 {
+		wg.Add(1)
+
+		// different shard
+		go loopSendMode4(balanceList, lock, threadNum)
+	} else if mode == 5 {
+		wg.Add(1)
+
+		// same shard and different shard
+		go loopSendMode5(balanceList, lock, threadNum)
+	} else {
+		wg.Add(1)
+		go loopSendMode1_2(balanceList, lock, threadNum)
 	}
 }
 
@@ -150,6 +164,92 @@ func SendMode3(current []*balance, next []*balance) {
 }
 
 var txCh = make(chan *balance, 100000)
+
+// loopSendMode5 is used to send tx in same shard or different shard
+func loopSendMode5(balanceList []*balance, lock *sync.Mutex, threadNum int) {
+	defer wg.Done()
+
+	count := 0
+	tpsStartTime = time.Now()
+
+	for {
+		lock.Lock()
+		copyBalances := make([]*balance, len(balanceList))
+		copy(copyBalances, balanceList)
+		fmt.Printf("balance total length %d at thread %d\n", len(balanceList), threadNum)
+		lock.Unlock()
+
+		for _, b := range copyBalances {
+			sendDiffrentOrSameShard(b)
+
+			count++
+			if count == tps {
+				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
+				elapse := time.Now().Sub(tpsStartTime)
+				if elapse < time.Second {
+					time.Sleep(time.Second - elapse)
+				}
+
+				count = 0
+				tpsStartTime = time.Now()
+			}
+		}
+
+		lock.Lock()
+		nextBalanceList := make([]*balance, 0)
+		for _, b := range balanceList {
+			if b.amount > 0 {
+				nextBalanceList = append(nextBalanceList, b)
+			}
+		}
+
+		balanceList = nextBalanceList
+		lock.Unlock()
+	}
+}
+
+// loopSendMode4 is just used to send tx in different tx
+func loopSendMode4(balanceList []*balance, lock *sync.Mutex, threadNum int) {
+	defer wg.Done()
+
+	count := 0
+	tpsStartTime = time.Now()
+
+	for {
+		lock.Lock()
+		copyBalances := make([]*balance, len(balanceList))
+		copy(copyBalances, balanceList)
+		fmt.Printf("balance total length %d at thread %d\n", len(balanceList), threadNum)
+		lock.Unlock()
+
+		for _, b := range copyBalances {
+			sendDifferentShard(b)
+
+			count++
+			if count == tps {
+				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
+				elapse := time.Now().Sub(tpsStartTime)
+				if elapse < time.Second {
+					time.Sleep(time.Second - elapse)
+				}
+
+				count = 0
+				tpsStartTime = time.Now()
+			}
+		}
+
+		lock.Lock()
+		nextBalanceList := make([]*balance, 0)
+		for _, b := range balanceList {
+			if b.amount > 0 {
+				nextBalanceList = append(nextBalanceList, b)
+			}
+		}
+
+		balanceList = nextBalanceList
+		lock.Unlock()
+	}
+}
 
 func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 	defer wg.Done()
@@ -279,8 +379,33 @@ func send(b *balance) *balance {
 	} else if mode == 3 {
 		amount = b.amount
 	}
+	return sendtx(b, amount, b.address.Shard())
+}
 
-	addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
+// sendDiffrentOrSameShard tx is in different shard or in same shard
+func sendDiffrentOrSameShard(b *balance) *balance {
+	var amount = 1
+	rand.Seed(time.Now().UnixNano())
+	shard := uint(rand.Int31n(common.ShardCount) + 1)
+
+	return sendtx(b, amount, shard)
+}
+
+// sendDifferentShard is used to send tx from different shard in mode 4
+func sendDifferentShard(b *balance) *balance {
+	var amount = 1
+	var shard uint
+	if b.address.Shard() == common.ShardCount {
+		shard = 1
+	} else {
+		shard = 2
+	}
+
+	return sendtx(b, amount, shard)
+}
+
+func sendtx(b *balance, amount int, shard uint) *balance {
+	addr, privateKey := crypto.MustGenerateShardKeyPair(shard)
 	newBalance := &balance{
 		address:    addr,
 		privateKey: privateKey,
