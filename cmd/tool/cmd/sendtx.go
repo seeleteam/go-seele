@@ -70,29 +70,23 @@ var sendTxCmd = &cobra.Command{
 // StartSend start send tx by specific thread and mode
 func StartSend(balanceList []*balance, threadNum int) {
 	lock := &sync.Mutex{}
-
-	if mode == 1 {
-		wg.Add(1)
+	wg.Add(1)
+	switch mode {
+	case 1:
 		go loopSendMode1_2(balanceList, lock, threadNum)
 		wg.Add(1)
 		go loopCheckMode1(balanceList, lock)
-	} else if mode == 2 {
-		wg.Add(1)
+	case 2:
 		go loopSendMode1_2(balanceList, lock, threadNum)
-	} else if mode == 3 {
-		wg.Add(1)
+	case 3:
 		loopSendMode3(balanceList)
-	} else if mode == 4 {
-		wg.Add(1)
-
+	case 4:
 		// different shard
 		go loopSendMode4(balanceList, lock, threadNum)
-	} else if mode == 5 {
-		wg.Add(1)
-
+	case 5:
 		// same shard and different shard
 		go loopSendMode5(balanceList, lock, threadNum)
-	} else {
+	default:
 		wg.Add(1)
 		go loopSendMode1_2(balanceList, lock, threadNum)
 	}
@@ -379,6 +373,7 @@ func send(b *balance) *balance {
 	} else if mode == 3 {
 		amount = b.amount
 	}
+
 	return sendtx(b, amount, b.address.Shard())
 }
 
