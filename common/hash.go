@@ -71,7 +71,7 @@ func (a Hash) ToHex() string {
 
 // HexToHash return the hash form of the hex
 func HexToHash(hex string) (Hash, error) {
-	if CheckOnly0xPrefix(hex) {
+	if ok := strings.EqualFold(hex, "0x"); ok {
 		return EmptyHash, ErrOnly0xPrefix
 	}
 	byte, err := hexutil.HexToBytes(hex)
@@ -81,14 +81,6 @@ func HexToHash(hex string) (Hash, error) {
 
 	hash := BytesToHash(byte)
 	return hash, nil
-}
-
-// CheckOnly0xPrefix return true if the string only 0x or 0X,otherwise return false
-func CheckOnly0xPrefix(hashHex string) bool {
-	if strings.EqualFold(hashHex, "0x") {
-		return true
-	}
-	return false
 }
 
 // IsEmpty return true if this hash is empty. Otherwise, false.
