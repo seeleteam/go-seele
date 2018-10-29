@@ -16,8 +16,8 @@ var (
 	ErrSyntax = &decError{"invalid hex string"}
 	// ErrMissingPrefix hex string without 0x prefix
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
-	// ErrInvalidLength hex string is invalid length
-	ErrInvalidLength = &decError{"hex string is invalid length"}
+	// ErrInvalidOddLength hex string is invalid odd length
+	ErrInvalidOddLength = &decError{"hex string is invalid odd length"}
 )
 
 type decError struct{ msg string }
@@ -37,7 +37,7 @@ func HexToBytes(input string) ([]byte, error) {
 	if len(input) == 0 {
 		return nil, ErrEmptyString
 	}
-	//MissingPrefix
+	// MissingPrefix
 	if !Has0xPrefix(input) {
 		return nil, ErrMissingPrefix
 	}
@@ -59,7 +59,7 @@ func mapError(err error) error {
 		return ErrSyntax
 	}
 	if err == hex.ErrLength {
-		return ErrInvalidLength
+		return ErrInvalidOddLength
 	}
 	return err
 }

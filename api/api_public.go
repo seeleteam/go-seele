@@ -12,14 +12,16 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
+// ErrInvalidAccount the account is invalid
 var ErrInvalidAccount = errors.New("invalid account")
 
+// ErrInvalidFortyTwoLength the string must be forty-two length
+var ErrInvalidFortyTwoLength = errors.New("the string must be forty-two length")
+
 const (
-	hexLen       = common.AddressLen
 	maxSizeLimit = 64
 )
 
@@ -151,8 +153,8 @@ func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[stri
 	if err != nil {
 		return nil, err
 	}
-	if len(hashHex) != (hexLen*2 + 2) {
-		return nil, hexutil.ErrInvalidLength
+	if !CheckValidLength(hashHex, (common.AddressLen*2 + 2)) {
+		return nil, ErrInvalidFortyTwoLength
 	}
 	block, err := api.s.GetBlock(hash, 0)
 	if err != nil {
@@ -164,6 +166,15 @@ func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[stri
 		return nil, err
 	}
 	return rpcOutputBlock(block, fulltx, totalDifficulty)
+}
+
+// CheckValidLength return true if the string's length equal the paramter length's length
+// otherwise return false
+func CheckValidLength(hashHex string, length int) bool {
+	if len(hashHex) == length {
+		return true
+	}
+	return false
 }
 
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx

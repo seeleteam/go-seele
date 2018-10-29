@@ -26,8 +26,7 @@ import (
 type AddressType byte
 
 const (
-	addressLen = 20 // length in bytes
-	AddressLen = addressLen
+	AddressLen = 20 // length in bytes
 	// AddressTypeExternal is the address type for external account.
 	AddressTypeExternal = AddressType(1)
 	// AddressTypeContract is the address type for contract account.
@@ -43,13 +42,13 @@ var EmptyAddress = Address{}
 var MaxSystemContractAddress = BytesToAddress([]byte{4, 255})
 
 // Address we use public key as node id
-type Address [addressLen]byte
+type Address [AddressLen]byte
 
 // NewAddress converts a byte slice to a Address
 func NewAddress(b []byte) (Address, error) {
 	// Validate length
-	if len(b) != addressLen {
-		return EmptyAddress, errors.Create(errors.ErrAddressLenInvalid, len(b), addressLen)
+	if len(b) != AddressLen {
+		return EmptyAddress, errors.Create(errors.ErrAddressLenInvalid, len(b), AddressLen)
 	}
 
 	var id Address
@@ -83,7 +82,7 @@ func (id *Address) Type() AddressType {
 		return AddressTypeReserved
 	}
 
-	return AddressType(id[addressLen-1] & 0x0F)
+	return AddressType(id[AddressLen-1] & 0x0F)
 }
 
 // IsReserved returns true if the address is reserved
