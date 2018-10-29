@@ -173,7 +173,7 @@ func loopSendMode5(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 		lock.Unlock()
 
 		for _, b := range copyBalances {
-			sendDiffrentOrSameShard(b)
+			sendDifferentOrSameShard(b)
 
 			count++
 			if count == tps {
@@ -376,8 +376,8 @@ func send(b *balance) *balance {
 	return sendtx(b, amount, b.address.Shard())
 }
 
-// sendDiffrentOrSameShard tx is in different shard or in same shard
-func sendDiffrentOrSameShard(b *balance) *balance {
+// sendDifferentOrSameShard tx is in different shard or in same shard
+func sendDifferentOrSameShard(b *balance) *balance {
 	var amount = 1
 	rand.Seed(time.Now().UnixNano())
 	shard := uint(rand.Int31n(common.ShardCount) + 1)
