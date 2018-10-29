@@ -150,7 +150,7 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	if !CheckOnly0xPrefix(hashHex) {
+	if CheckOnly0xPrefix(hashHex) {
 		return nil, ErrOnly0xPrefix
 	}
 	hash, err := common.HexToHash(hashHex)
