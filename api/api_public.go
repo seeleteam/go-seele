@@ -8,7 +8,6 @@ package api
 import (
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,9 +17,6 @@ import (
 
 // ErrInvalidAccount the account is invalid
 var ErrInvalidAccount = errors.New("invalid account")
-
-// ErrOnly0xPrefix the string is invalid length only 0x or 0X prefix
-var ErrOnly0xPrefix = errors.New("the string is invalid length only 0x or 0X prefix")
 
 const (
 	maxSizeLimit = 64
@@ -150,9 +146,6 @@ func (api *PublicSeeleAPI) GetBlocks(height int64, fulltx bool, size uint) ([]ma
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned
 func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[string]interface{}, error) {
-	if CheckOnly0xPrefix(hashHex) {
-		return nil, ErrOnly0xPrefix
-	}
 	hash, err := common.HexToHash(hashHex)
 	if err != nil {
 		return nil, err
@@ -168,15 +161,6 @@ func (api *PublicSeeleAPI) GetBlockByHash(hashHex string, fulltx bool) (map[stri
 		return nil, err
 	}
 	return rpcOutputBlock(block, fulltx, totalDifficulty)
-}
-
-// CheckOnly0xPrefix return true if the string only 0x or 0X,otherwise return false
-//
-func CheckOnly0xPrefix(hashHex string) bool {
-	if strings.EqualFold(hashHex, "0x") {
-		return true
-	}
-	return false
 }
 
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx
