@@ -45,3 +45,6 @@ func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
 func (n *PrivateNetworkAPI) IsSyncing() bool {
 	return n.s.IsSyncing()
 }
+
+// Always listening
+func (n *PrivateNetworkAPI) IsListening() bool { return true }

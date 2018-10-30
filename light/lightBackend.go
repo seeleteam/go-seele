@@ -97,3 +97,8 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 
 	return result.Tx, result.BlockIndex, nil
 }
+
+// RemoveTransaction removes tx of the specified tx hash from tx pool.
+func (l *LightBackend) RemoveTransaction(txHash common.Hash) {
+	l.s.txPool.Remove(txHash)
+}

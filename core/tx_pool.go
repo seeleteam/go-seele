@@ -212,9 +212,20 @@ func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, 
 		}
 	}
 
-	// check txpool capacity
+	// if txpool capacity reached, then discard lower price txs if any.
+	// Otherwise, return errTxPoolFull.
 	if uint(len(pool.hashToTxMap)) >= pool.config.Capacity {
-		return errTxPoolFull
+		c := pool.pendingQueue.discard(tx.Data.GasPrice)
+		if c == nil || c.len() == 0 {
+			return errTxPoolFull
+		}
+
+		discardedAccount := c.peek().Data.From
+		pool.log.Info("txpool is full, discarded account = %v, txs = %v", discardedAccount.ToHex(), c.len())
+
+		for c.len() > 0 {
+			delete(pool.hashToTxMap, c.pop().Hash)
+		}
 	}
 
 	pool.addTransaction(tx)

@@ -39,7 +39,7 @@ func newTestPoolTx(t *testing.T, amount int64, nonce uint64) *pooledTx {
 func newTestPoolTxWithNonce(t *testing.T, amount int64, nonce uint64, price int64) *pooledTx {
 	fromPrivKey, fromAddress := randomAccount(t)
 
-	return newTestPoolEx(t, fromPrivKey, fromAddress, amount, nonce, 1)
+	return newTestPoolEx(t, fromPrivKey, fromAddress, amount, nonce, price)
 }
 
 func newTestPoolEx(t *testing.T, fromPrivKey *ecdsa.PrivateKey, fromAddress common.Address, amount int64, nonce uint64, price int64) *pooledTx {
@@ -149,16 +149,22 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	pool, chain := newTestPool(config)
 	defer chain.dispose()
 
-	poolTx1 := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx1.Data.From, 50000, 100)
-	poolTx2 := newTestPoolTx(t, 19, 101)
-	chain.addAccount(poolTx2.Data.From, 50000, 101)
+	// tx with price 5
+	poolTx1 := newTestPoolTxWithNonce(t, 10, 100, 5)
+	chain.addAccount(poolTx1.Data.From, 5000000, 100)
+	assert.Nil(t, pool.AddTransaction(poolTx1.Transaction))
 
-	err := pool.AddTransaction(poolTx1.Transaction)
-	assert.Equal(t, err, error(nil))
+	// failed to add tx with same price
+	poolTx2 := newTestPoolTxWithNonce(t, 10, 100, 5)
+	chain.addAccount(poolTx2.Data.From, 5000000, 100)
+	assert.Equal(t, errTxPoolFull, pool.AddTransaction(poolTx2.Transaction))
 
-	err = pool.AddTransaction(poolTx2.Transaction)
-	assert.Equal(t, err, errTxPoolFull)
+	// succeed to add tx with higher price
+	poolTx3 := newTestPoolTxWithNonce(t, 10, 100, 6)
+	chain.addAccount(poolTx3.Data.From, 5000000, 100)
+	assert.Nil(t, pool.AddTransaction(poolTx3.Transaction))
+	assert.Nil(t, pool.hashToTxMap[poolTx1.Hash])
+	assert.Equal(t, poolTx3.Transaction, pool.hashToTxMap[poolTx3.Hash].Transaction)
 }
 
 func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
