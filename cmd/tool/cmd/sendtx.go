@@ -73,21 +73,13 @@ func StartSend(balanceList []*balance, threadNum int) {
 	wg.Add(1)
 	switch mode {
 	case 1:
-		go loopSendMode1_2(balanceList, lock, threadNum)
+		go loopSendMode(balanceList, lock, threadNum)
 		wg.Add(1)
 		go loopCheckMode1(balanceList, lock)
-	case 2:
-		go loopSendMode1_2(balanceList, lock, threadNum)
 	case 3:
 		go loopSendMode3(balanceList)
-	case 4:
-		// different shards
-		go loopSendMode4(balanceList, lock, threadNum)
-	case 5:
-		// same shards and different shards
-		go loopSendMode5(balanceList, lock, threadNum)
 	default:
-		go loopSendMode1_2(balanceList, lock, threadNum)
+		go loopSendMode(balanceList, lock, threadNum)
 	}
 }
 
@@ -158,93 +150,7 @@ func SendMode3(current []*balance, next []*balance) {
 
 var txCh = make(chan *balance, 100000)
 
-// loopSendMode5 is used to send tx in same shards or different shards
-func loopSendMode5(balanceList []*balance, lock *sync.Mutex, threadNum int) {
-	defer wg.Done()
-
-	count := 0
-	tpsStartTime = time.Now()
-
-	for {
-		lock.Lock()
-		copyBalances := make([]*balance, len(balanceList))
-		copy(copyBalances, balanceList)
-		fmt.Printf("balance total length %d at thread %d\n", len(balanceList), threadNum)
-		lock.Unlock()
-
-		for _, b := range copyBalances {
-			sendDifferentOrSameShard(b)
-
-			count++
-			if count == tps {
-				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
-				elapse := time.Now().Sub(tpsStartTime)
-				if elapse < time.Second {
-					time.Sleep(time.Second - elapse)
-				}
-
-				count = 0
-				tpsStartTime = time.Now()
-			}
-		}
-
-		lock.Lock()
-		nextBalanceList := make([]*balance, 0)
-		for _, b := range balanceList {
-			if b.amount > 0 {
-				nextBalanceList = append(nextBalanceList, b)
-			}
-		}
-
-		balanceList = nextBalanceList
-		lock.Unlock()
-	}
-}
-
-// loopSendMode4 is just used to send tx in different shards
-func loopSendMode4(balanceList []*balance, lock *sync.Mutex, threadNum int) {
-	defer wg.Done()
-
-	count := 0
-	tpsStartTime = time.Now()
-
-	for {
-		lock.Lock()
-		copyBalances := make([]*balance, len(balanceList))
-		copy(copyBalances, balanceList)
-		fmt.Printf("balance total length %d at thread %d\n", len(balanceList), threadNum)
-		lock.Unlock()
-
-		for _, b := range copyBalances {
-			sendDifferentShard(b)
-
-			count++
-			if count == tps {
-				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
-				elapse := time.Now().Sub(tpsStartTime)
-				if elapse < time.Second {
-					time.Sleep(time.Second - elapse)
-				}
-
-				count = 0
-				tpsStartTime = time.Now()
-			}
-		}
-
-		lock.Lock()
-		nextBalanceList := make([]*balance, 0)
-		for _, b := range balanceList {
-			if b.amount > 0 {
-				nextBalanceList = append(nextBalanceList, b)
-			}
-		}
-
-		balanceList = nextBalanceList
-		lock.Unlock()
-	}
-}
-
-func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
+func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 	defer wg.Done()
 
 	count := 0
@@ -259,11 +165,29 @@ func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 		lock.Unlock()
 
 		for _, b := range copyBalances {
-			newBalance := send(b)
-			if mode == 1 {
+			switch mode {
+
+			// 1 is used to send tx and print txs which are in pending and and block
+			case 1:
+				newBalance := send(b)
 				if newBalance.amount > 0 {
 					txCh <- newBalance
 				}
+
+				// 2 is used to senx tx in same shard
+			case 2:
+				send(b)
+
+				// 4 is just used to send tx in different shards
+			case 4:
+				sendDifferentShard(b)
+
+				// 5 is used to send tx in same shards or different shards
+			case 5:
+				sendDifferentOrSameShard(b)
+
+			default:
+				send(b)
 			}
 
 			count++
