@@ -33,7 +33,7 @@ func (sd *SeeleBackend) ChainBackend() api.Chain { return sd.s.chain }
 func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
 
 func (sd *SeeleBackend) IsSyncing() bool {
-	seeleserviceAPI := sd.s.APIs()[6]
+	seeleserviceAPI := sd.s.APIs()[5]
 	d := seeleserviceAPI.Service.(downloader.PrivatedownloaderAPI)
 
 	return d.IsSyncing()
