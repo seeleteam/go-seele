@@ -16,7 +16,6 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
@@ -70,6 +69,7 @@ func Test_Process_SysContract(t *testing.T) {
 
 	// DomainNameOwner
 	ctx1 := ctx
+	ctx1.Tx.Data.AccountNonce++
 	ctx1.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner}, testBytes...) // 0x017365656c652e66616e
 
 	receipt1, err1 := Process(ctx1)
@@ -82,6 +82,7 @@ func Test_Process_SysContract(t *testing.T) {
 
 	// Do not transfer the amount of the run error
 	ctx2 := ctx1
+	ctx2.Tx.Data.AccountNonce++
 	ctx2.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner + 1}, testBytes...) // 0x007365656c652e66616e
 	ctx2.Tx.Data.Amount = big.NewInt(7)
 
@@ -108,7 +109,7 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	balanceF1 := big.NewInt(0)
 	ctx1.Statedb.SetBalance(ctx1.Tx.Data.From, balanceF1)
 	receipt1, err1 := Process(ctx1)
-	assert.Equal(t, err1, vm.ErrInsufficientBalance)
+	assert.NotNil(t, err1)
 	assert.Empty(t, receipt1)
 
 	// can apply the tx but not enough fee
@@ -118,7 +119,7 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	balanceF2 := big.NewInt(0).Sub(big.NewInt(0).SetUint64(totalFee), intrGasFee)
 	ctx2.Statedb.SetBalance(ctx2.Tx.Data.From, balanceF2)
 	receipt2, err2 := Process(ctx2)
-	assert.Equal(t, err2, vm.ErrInsufficientBalance)
+	assert.NotNil(t, err2)
 	assert.Empty(t, receipt2)
 
 	// nonce not changed
