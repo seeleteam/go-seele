@@ -34,10 +34,10 @@ func Test_Hex(t *testing.T) {
 	bytes, err = HexToBytes(str)
 	assert.Equal(t, err, ErrMissingPrefix)
 
-	// ErrOddLength
+	// ErrInvalidOddLength
 	str = "0x5aaeb6053f3e94c9b9a09f3"
 	bytes, err = HexToBytes(str)
-	assert.Equal(t, err, ErrOddLength)
+	assert.Equal(t, err, ErrInvalidOddLength)
 }
 
 func Test_Has0xPrefix(t *testing.T) {

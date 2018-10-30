@@ -15,6 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
+// ErrInvalidAccount the account is invalid
 var ErrInvalidAccount = errors.New("invalid account")
 
 const maxSizeLimit = 64
