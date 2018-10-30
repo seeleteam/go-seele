@@ -45,7 +45,7 @@ func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
 func (l *LightBackend) IsSyncing() bool {
-	return l.s.seeleProtocol.downloader.syncStatus != statusNotDownloading
+	return l.s.seeleProtocol.downloader.syncStatus == statusDownloading
 }
 
 // ProtocolBackend gets instance of seeleProtocol

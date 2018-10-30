@@ -259,6 +259,7 @@ func (s *SeeleService) Stop() error {
 }
 
 // APIs implements node.Service, returning the collection of RPC services the seele package offers.
+// must to make sure that the order of the download api is 6
 func (s *SeeleService) APIs() (apis []rpc.API) {
 	apis = append(apis, api.GetAPIs(NewSeeleBackend(s))...)
 	apis = append(apis, []rpc.API{
