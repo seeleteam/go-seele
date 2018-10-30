@@ -48,7 +48,7 @@ var sendTxCmd = &cobra.Command{
 	Use:   "sendtx",
 	Short: "send tx peroidly",
 	Long: `For example:
-	tool.exe sendtx`,
+	 tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
 		balanceList := initAccount(threads)
@@ -70,17 +70,19 @@ var sendTxCmd = &cobra.Command{
 // StartSend start send tx by specific thread and mode
 func StartSend(balanceList []*balance, threadNum int) {
 	lock := &sync.Mutex{}
-	if mode == 3 {
-		wg.Add(1)
-		loopSendMode3(balanceList)
-	} else {
-		wg.Add(1)
-		go loopSendMode1_2(balanceList, lock, threadNum)
-	}
-
-	if mode == 1 {
+	wg.Add(1)
+	switch mode {
+	case 1:
+		go loopSendMode(balanceList, lock, threadNum)
 		wg.Add(1)
 		go loopCheckMode1(balanceList, lock)
+	case 3:
+		go loopSendMode3(balanceList)
+	case 2, 4, 5:
+		go loopSendMode(balanceList, lock, threadNum)
+	default:
+		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5", mode)
+		break
 	}
 }
 
@@ -151,7 +153,7 @@ func SendMode3(current []*balance, next []*balance) {
 
 var txCh = make(chan *balance, 100000)
 
-func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
+func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 	defer wg.Done()
 
 	count := 0
@@ -166,11 +168,33 @@ func loopSendMode1_2(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 		lock.Unlock()
 
 		for _, b := range copyBalances {
-			newBalance := send(b)
-			if mode == 1 {
+			switch mode {
+
+			// 1 is used to send tx and print txs which are in pending and and block
+			case 1:
+				newBalance := send(b)
 				if newBalance.amount > 0 {
 					txCh <- newBalance
 				}
+
+				// 2 is used to senx tx in same shard
+			case 2:
+				send(b)
+
+				// 4 is just used to send tx in different shards
+			case 4:
+				if common.ShardCount > 1 {
+					sendDifferentShard(b)
+				} else {
+					panic(fmt.Sprintf("Failed to send tx in different shards, common shardcount is: %d", common.ShardCount))
+				}
+
+				// 5 is used to send tx in same shards or different shards
+			case 5:
+				sendDifferentOrSameShard(b)
+
+			default:
+				send(b)
 			}
 
 			count++
@@ -280,7 +304,44 @@ func send(b *balance) *balance {
 		amount = b.amount
 	}
 
-	addr, privateKey := crypto.MustGenerateShardKeyPair(b.address.Shard())
+	return sendtx(b, amount, b.address.Shard())
+}
+
+// getRandomShard get random sahrd
+func getRandomShard() uint {
+	rand.Seed(time.Now().UnixNano())
+
+	return uint(rand.Int31n(common.ShardCount) + 1)
+}
+
+// sendDifferentOrSameShard tx is in different shard or in same shard
+func sendDifferentOrSameShard(b *balance) *balance {
+	var amount = 1
+	shard := getRandomShard()
+
+	return sendtx(b, amount, shard)
+}
+
+// sendDifferentShard is used to send tx from different shard in mode 4
+func sendDifferentShard(b *balance) *balance {
+	var amount = 1
+	var shard uint
+	if common.ShardCount > 1 {
+		for {
+			shard = getRandomShard()
+			if shard != b.address.Shard() {
+				break
+			}
+		}
+
+		return sendtx(b, amount, shard)
+	}
+
+	return nil
+}
+
+func sendtx(b *balance, amount int, shard uint) *balance {
+	addr, privateKey := crypto.MustGenerateShardKeyPair(shard)
 	newBalance := &balance{
 		address:    addr,
 		privateKey: privateKey,
