@@ -71,7 +71,7 @@ func (a Hash) ToHex() string {
 
 // HexToHash return the hash form of the hex
 func HexToHash(hex string) (Hash, error) {
-	if ok := strings.EqualFold(hex, "0x"); ok {
+	if strings.EqualFold(hex, "0x") {
 		return EmptyHash, ErrOnly0xPrefix
 	}
 	byte, err := hexutil.HexToBytes(hex)

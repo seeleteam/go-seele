@@ -26,11 +26,15 @@ import (
 type AddressType byte
 
 const (
-	AddressLen = 20 // length in bytes
+	// AddressLen length in bytes
+	AddressLen = 20
+
 	// AddressTypeExternal is the address type for external account.
 	AddressTypeExternal = AddressType(1)
+
 	// AddressTypeContract is the address type for contract account.
 	AddressTypeContract = AddressType(2)
+
 	// AddressTypeReserved is the reserved address type for system contract.
 	AddressTypeReserved = AddressType(3)
 )

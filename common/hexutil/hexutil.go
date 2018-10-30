@@ -16,8 +16,8 @@ var (
 	ErrSyntax = &decError{"invalid hex string"}
 	// ErrMissingPrefix hex string without 0x prefix
 	ErrMissingPrefix = &decError{"hex string without 0x prefix"}
-	// ErrInvalidOddLength hex string is invalid odd length
-	ErrInvalidOddLength = &decError{"hex string is invalid odd length"}
+	// ErrInvalidOddLength hex string of odd length
+	ErrInvalidOddLength = &decError{"hex string of odd length"}
 )
 
 type decError struct{ msg string }

@@ -18,9 +18,7 @@ import (
 // ErrInvalidAccount the account is invalid
 var ErrInvalidAccount = errors.New("invalid account")
 
-const (
-	maxSizeLimit = 64
-)
+const maxSizeLimit = 64
 
 // PublicSeeleAPI provides an API to access full node-related information.
 type PublicSeeleAPI struct {
