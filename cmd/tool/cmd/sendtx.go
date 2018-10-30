@@ -78,8 +78,11 @@ func StartSend(balanceList []*balance, threadNum int) {
 		go loopCheckMode1(balanceList, lock)
 	case 3:
 		go loopSendMode3(balanceList)
-	default:
+	case 2, 4, 5:
 		go loopSendMode(balanceList, lock, threadNum)
+	default:
+		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5", mode)
+		break
 	}
 }
 
