@@ -180,7 +180,11 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 
 				// 4 is just used to send tx in different shards
 			case 4:
-				sendDifferentShard(b)
+				if common.ShardCount > 1 {
+					sendDifferentShard(b)
+				} else {
+					panic(fmt.Sprintf("Failed to send tx in different shards, common shardcount is: %d", common.ShardCount))
+				}
 
 				// 5 is used to send tx in same shards or different shards
 			case 5:
@@ -300,11 +304,17 @@ func send(b *balance) *balance {
 	return sendtx(b, amount, b.address.Shard())
 }
 
+// getRandomShard get random sahrd
+func getRandomShard() uint {
+	rand.Seed(time.Now().UnixNano())
+
+	return uint(rand.Int31n(common.ShardCount) + 1)
+}
+
 // sendDifferentOrSameShard tx is in different shard or in same shard
 func sendDifferentOrSameShard(b *balance) *balance {
 	var amount = 1
-	rand.Seed(time.Now().UnixNano())
-	shard := uint(rand.Int31n(common.ShardCount) + 1)
+	shard := getRandomShard()
 
 	return sendtx(b, amount, shard)
 }
@@ -313,13 +323,18 @@ func sendDifferentOrSameShard(b *balance) *balance {
 func sendDifferentShard(b *balance) *balance {
 	var amount = 1
 	var shard uint
-	if b.address.Shard() == common.ShardCount {
-		shard = 1
-	} else {
-		shard = 2
+	if common.ShardCount > 1 {
+		for {
+			shard = getRandomShard()
+			if shard != b.address.Shard() {
+				break
+			}
+		}
+
+		return sendtx(b, amount, shard)
 	}
 
-	return sendtx(b, amount, shard)
+	return nil
 }
 
 func sendtx(b *balance, amount int, shard uint) *balance {
