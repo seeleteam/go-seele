@@ -110,11 +110,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	// add genesisHash with shard set to 0 to calculate hash
 	shard := genesis.ShardNumber
 	genesis.ShardNumber = 0
-	hash, err := genesis.Hash()
-	if err != nil {
-		panic(fmt.Sprintf("Failed to get genesis hash err: %s", err))
-	}
-
+	hash := genesis.Hash()
 	genesis.ShardNumber = shard
 
 	return &Server{

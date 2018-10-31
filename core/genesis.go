@@ -52,13 +52,13 @@ type GenesisInfo struct {
 }
 
 // Hash returns GenesisInfo hash
-func (info *GenesisInfo) Hash() (common.Hash, error) {
+func (info *GenesisInfo) Hash() common.Hash {
 	data, err := json.Marshal(info)
 	if err != nil {
-		return common.EmptyHash, fmt.Errorf("Failed to marshal err: %s", err)
+		panic(fmt.Sprintf("Failed to marshal err: %s", err))
 	}
 
-	return crypto.HashBytes(data), nil
+	return crypto.HashBytes(data)
 }
 
 // genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
