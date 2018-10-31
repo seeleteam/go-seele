@@ -44,6 +44,10 @@ func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 // Log gets instance of log
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
+func (l *LightBackend) IsSyncing() bool {
+	return l.s.seeleProtocol.downloader.syncStatus == statusDownloading
+}
+
 // ProtocolBackend gets instance of seeleProtocol
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
