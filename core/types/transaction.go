@@ -110,6 +110,7 @@ func GetTransactionsSize(txs []*Transaction) int {
 	return size
 }
 
+// GetTxFeeShare returns the miner fee on sender shard of cross-shard tx.
 func GetTxFeeShare(fee *big.Int) *big.Int {
 	mod := big.NewInt(0).Mod(fee, big.NewInt(10))
 	unit := big.NewInt(0).Div(fee, big.NewInt(10))
@@ -118,20 +119,9 @@ func GetTxFeeShare(fee *big.Int) *big.Int {
 	return big.NewInt(0).Add(unit, mod)
 }
 
+// IsCrossShardTx indicates whether the tx is to another shard.
 func (tx *Transaction) IsCrossShardTx() bool {
-	if tx.Data.To.IsEmpty() {
-		return false
-	}
-
-	if tx.Data.To.IsReserved() {
-		return false
-	}
-
-	if tx.Data.From.Shard() != tx.Data.To.Shard() {
-		return true
-	}
-
-	return false
+	return !tx.Data.To.IsEmpty() && !tx.Data.To.IsReserved() && tx.Data.From.Shard() != tx.Data.To.Shard()
 }
 
 // Size return the transaction size
@@ -181,7 +171,7 @@ func newTx(from common.Address, to common.Address, amount *big.Int, price *big.I
 }
 
 // ValidateWithoutState validates state independent fields in tx.
-func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) error {
+func (tx *Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) error {
 	// validate amount
 	if tx.Data.Amount == nil {
 		return ErrAmountNil
@@ -210,16 +200,14 @@ func (tx Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) er
 		return ErrPayloadOversized
 	}
 
-	if (tx.Data.To.IsEmpty() || tx.Data.To.Type() == common.AddressTypeContract) && len(tx.Data.Payload) == 0 {
+	if (tx.Data.To.IsEmpty() || tx.Data.To.Type() != common.AddressTypeExternal) && len(tx.Data.Payload) == 0 {
 		return ErrPayloadEmpty
 	}
 
 	// validate shard of from address
-	if shardNeeded {
-		if common.IsShardEnabled() {
-			if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
-				return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
-			}
+	if shardNeeded && common.IsShardEnabled() {
+		if fromShardNum := tx.Data.From.Shard(); fromShardNum != common.LocalShardNumber {
+			return fmt.Errorf("invalid from address, shard number is [%v], but coinbase shard number is [%v]", fromShardNum, common.LocalShardNumber)
 		}
 	}
 
