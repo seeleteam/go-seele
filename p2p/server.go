@@ -11,7 +11,6 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -102,21 +101,20 @@ type Server struct {
 
 	genesis core.GenesisInfo
 
-	// genesisP2P is used for handshake
-	genesisP2P common.Hash
+	// genesisHash is used for handshake
+	genesisHash common.Hash
 }
 
 // NewServer initialize a server
 func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *Server {
-	// add genesisP2P with 0 shard to calculate hash
+	// add genesisHash with shard set to 0 to calculate hash
 	shard := genesis.ShardNumber
 	genesis.ShardNumber = 0
-	data, err := json.Marshal(genesis)
+	hash, err := genesis.Hash()
 	if err != nil {
-		panic(fmt.Sprintf("Failed to marshal err: %s", err))
+		panic(fmt.Sprintf("Failed to get genesis hash err: %s", err))
 	}
 
-	hash := crypto.HashBytes(data)
 	genesis.ShardNumber = shard
 
 	return &Server{
@@ -129,7 +127,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
 		genesis:         genesis,
-		genesisP2P:      hash,
+		genesisHash:     hash,
 	}
 }
 
@@ -412,8 +410,8 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 }
 
 func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
-	// validate hash of genesisP2P without shard
-	if !bytes.Equal(srv.genesisP2P.Bytes(), recvMsg.Params) {
+	// validate hash of genesisHash without shard
+	if !bytes.Equal(srv.genesisHash.Bytes(), recvMsg.Params) {
 		return nil, false
 	}
 
@@ -458,7 +456,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 	var renounceCnt uint64
 	handshakeMsg := &ProtoHandShake{Caps: caps}
 	handshakeMsg.NetworkID = srv.Config.NetworkID
-	handshakeMsg.Params = srv.genesisP2P.Bytes()
+	handshakeMsg.Params = srv.genesisHash.Bytes()
 	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
 	if flags == outboundConn {

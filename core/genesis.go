@@ -6,6 +6,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 )
@@ -47,6 +49,16 @@ type GenesisInfo struct {
 
 	// CreateTimestamp is the initial time of genesis
 	CreateTimestamp *big.Int `json:"timestamp"`
+}
+
+// Hash returns GenesisInfo hash
+func (info *GenesisInfo) Hash() (common.Hash, error) {
+	data, err := json.Marshal(info)
+	if err != nil {
+		return common.EmptyHash, fmt.Errorf("Failed to marshal err: %s", err)
+	}
+
+	return crypto.HashBytes(data), nil
 }
 
 // genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
