@@ -355,7 +355,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return err
 	}
 
-	if types.GetTransactionsSize(block.Transactions) > BlockByteLimit {
+	if (types.GetTransactionsSize(block.Transactions[1:]) + types.GetDebtsSize(block.Debts)) > BlockByteLimit {
 		return ErrBlockTooManyTxs
 	}
 

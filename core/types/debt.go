@@ -16,6 +16,7 @@ import (
 // DebtSize debt serialized size
 const DebtSize = 98
 
+// DebtData debt data
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction
 	Shard   uint           // target shard
@@ -25,15 +26,18 @@ type DebtData struct {
 	Code    common.Bytes   // debt contract code
 }
 
+// Debt debt class
 type Debt struct {
 	Hash common.Hash // Debt hash of DebtData
 	Data DebtData
 }
 
+// DebtVerifier interface
 type DebtVerifier interface {
 	ValidateDebt(debt *Debt) (bool, error)
 }
 
+// DebtIndex debt index
 type DebtIndex indexInBlock
 
 // DebtMerkleRootHash calculates and returns the merkle root hash of the specified debts.
@@ -60,10 +64,22 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	return debtTrie.Hash()
 }
 
+// Size is the bytes of debt
 func (d *Debt) Size() int {
-	return DebtSize
+	return DebtSize + len(d.Data.Code)
 }
 
+// GetDebtsSize is the bytes of debts
+func GetDebtsSize(debts []*Debt) int {
+	size := 0
+	for _, d := range debts {
+		size += d.Size()
+	}
+
+	return size
+}
+
+// GetDebtShareFee get debt share fee
 func GetDebtShareFee(fee *big.Int) *big.Int {
 	unit := big.NewInt(0).Div(fee, big.NewInt(10))
 
@@ -71,10 +87,12 @@ func GetDebtShareFee(fee *big.Int) *big.Int {
 	return share
 }
 
+// NewDebt new a debt
 func NewDebt(tx *Transaction) *Debt {
 	return newDebt(tx, true)
 }
 
+// NewDebtWithoutContext new debt
 func NewDebtWithoutContext(tx *Transaction) *Debt {
 	return newDebt(tx, false)
 }
@@ -117,6 +135,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 	return debt
 }
 
+// NewDebts new debts
 func NewDebts(txs []*Transaction) []*Debt {
 	debts := make([]*Debt, 0)
 
@@ -130,6 +149,7 @@ func NewDebts(txs []*Transaction) []*Debt {
 	return debts
 }
 
+// NewDebtMap new debt map
 func NewDebtMap(txs []*Transaction) [][]*Debt {
 	debts := make([][]*Debt, common.ShardCount+1)
 
