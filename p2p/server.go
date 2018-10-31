@@ -101,10 +101,24 @@ type Server struct {
 	SelfNode *discovery.Node
 
 	genesis core.GenesisInfo
+
+	// genesisP2P is used for handshake
+	genesisP2P common.Hash
 }
 
 // NewServer initialize a server
 func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *Server {
+	// add genesisP2P with 0 shard to calculate hash
+	shard := genesis.ShardNumber
+	genesis.ShardNumber = 0
+	data, err := json.Marshal(genesis)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to marshal err: %s", err))
+	}
+
+	hash := crypto.HashBytes(data)
+	genesis.ShardNumber = shard
+
 	return &Server{
 		Config:          config,
 		running:         false,
@@ -115,6 +129,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		MaxPendingPeers: 0,
 		Protocols:       protocols,
 		genesis:         genesis,
+		genesisP2P:      hash,
 	}
 }
 
@@ -397,31 +412,15 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 }
 
 func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
-	var genesis core.GenesisInfo
-	err := json.Unmarshal(recvMsg.Params, &genesis)
-
-	if err != nil {
+	// validate hash of genesisP2P without shard
+	if !bytes.Equal(srv.genesisP2P.Bytes(), recvMsg.Params) {
 		return nil, false
 	}
-	
-	for key, val := range genesis.Accounts {
-		v, ok := srv.genesis.Accounts[key]
-		if !ok {
-			return nil, false
-		}
-		if val.Cmp(v) != 0 {
-			return nil, false
-		}
-	}
-	
+
 	if srv.Config.NetworkID != recvMsg.NetworkID {
 		return nil, false
 	}
-	
-	if srv.genesis.CreateTimestamp.Cmp(genesis.CreateTimestamp) != 0 {
-		return nil, false
-	}
-	
+
 	localCapSet := set.New()
 	for _, proto := range srv.Protocols {
 		localCapSet.Add(proto.cap())
@@ -433,11 +432,11 @@ func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
 			capNameList = append(capNameList, cap)
 		}
 	}
-	
+
 	if len(capNameList) == 0 {
 		return nil, false
 	}
-	
+
 	return capNameList, true
 }
 
@@ -459,11 +458,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 	var renounceCnt uint64
 	handshakeMsg := &ProtoHandShake{Caps: caps}
 	handshakeMsg.NetworkID = srv.Config.NetworkID
-	params, err := json.Marshal(srv.genesis)
-	if err != nil {
-		return nil, 0, err
-	}
-	handshakeMsg.Params = params
+	handshakeMsg.Params = srv.genesisP2P.Bytes()
 	nodeID := srv.SelfNode.ID
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
 	if flags == outboundConn {
@@ -482,7 +477,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
-		
+
 		recvMsg, renounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
@@ -491,13 +486,14 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if renounceCnt != nounceCnt {
 			return nil, 0, errors.New("client nounceCnt is changed")
 		}
-		
-		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
+
+		capList, bValid := srv.peerIsValidate(recvMsg)
+		if !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
-		} else {
-			sort.Sort(capsByNameAndVersion(capList))
-			peer.setProtocols(srv.getProtocolsByCaps(capList))
 		}
+
+		sort.Sort(capsByNameAndVersion(capList))
+		peer.setProtocols(srv.getProtocolsByCaps(capList))
 
 	} else {
 		// server side. Receive handshake msg first
@@ -505,24 +501,25 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err != nil {
 			return nil, 0, err
 		}
-		
+
 		recvMsg, nounceCnt, err = srv.unPackWrapHSMsg(recvWrapMsg)
 		if err != nil {
 			return nil, 0, err
 		}
-		
-		if capList, bValid := srv.peerIsValidate(recvMsg); !bValid {
+
+		capList, bValid := srv.peerIsValidate(recvMsg)
+		if !bValid {
 			return nil, 0, errors.New("node is not consitent with groups")
-		} else {
-			sort.Sort(capsByNameAndVersion(capList))
-			peer.setProtocols(srv.getProtocolsByCaps(capList))
 		}
-		
+
+		sort.Sort(capsByNameAndVersion(capList))
+		peer.setProtocols(srv.getProtocolsByCaps(capList))
+
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, recvMsg.NodeID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err
 		}
-		
+
 		if err = peer.rw.WriteMsg(wrapMsg); err != nil {
 			return nil, 0, err
 		}
