@@ -12,6 +12,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/stretchr/testify/assert"
 )
@@ -213,8 +214,8 @@ func newTestBlocks() []*types.Block {
 }
 
 func newTestBlockTx(amount, price, nonce uint64) *types.Transaction {
-	fromAddr := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781")
-	toAddr := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01780")
+	fromAddr := *crypto.MustGenerateShardAddress(1)
+	toAddr := *crypto.MustGenerateShardAddress(1)
 
 	tx, err := types.NewTransaction(fromAddr, toAddr, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
 	if err != nil {
