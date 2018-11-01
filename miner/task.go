@@ -68,6 +68,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		for _, d := range debts {
 			err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
 			if err != nil {
+				size += d.Size()
 				continue
 			}
 
