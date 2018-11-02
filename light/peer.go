@@ -459,14 +459,11 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 		return err
 	}
 
-	p.log.Info("wait for handshake %s", p.protocolManager.Protocol.Name)
-
 	retMsg, err := p.rw.ReadMsg()
 	if err != nil {
 		return err
 	}
 
-	p.log.Info("got handshake msg")
 	if retMsg.Code != statusDataMsgCode {
 		return errMsgNotMatch
 	}

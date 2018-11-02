@@ -147,7 +147,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 	}
 
 	// @todo for contract case, should use the fee in tx receipt
-	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas))
+	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
 
 	data := DebtData{
 		TxHash:  tx.Hash,

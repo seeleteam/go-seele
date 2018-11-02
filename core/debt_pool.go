@@ -11,8 +11,8 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/event"
+	"github.com/seeleteam/go-seele/log"
 )
 
 var DebtDataFlag = []byte{0x01}
@@ -157,12 +157,12 @@ func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
 	for _, d := range debts {
 		err := d.Validate(dp.verifier, true)
 		if err != nil {
+			dp.log.Warn("validate debt failed. err %s", err)
 			continue
 		}
 
 		results = append(results, d)
 	}
-
 
 	dp.add(results)
 	event.DebtsInsertedEventManager.Fire(results)

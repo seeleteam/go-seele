@@ -170,9 +170,9 @@ func (lp *LightProtocol) syncer() {
 	for {
 		select {
 		case <-lp.syncCh:
-			go lp.synchronise(lp.peerSet.bestPeer(lp.shard))
+			go lp.synchronise(lp.peerSet.bestPeer())
 		case <-forceSync.C:
-			go lp.synchronise(lp.peerSet.bestPeer(lp.shard))
+			go lp.synchronise(lp.peerSet.bestPeer())
 		case <-lp.quitCh:
 			return
 		}
@@ -217,10 +217,6 @@ func (lp *LightProtocol) synchronise(p *peer) {
 }
 
 func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
-	if p2pPeer.Node.Shard != lp.shard {
-		return false
-	}
-
 	if lp.peerSet.Find(p2pPeer.Node.ID) != nil {
 		lp.log.Error("handleAddPeer called, but peer of this public-key has already existed, so need quit!")
 		return false
