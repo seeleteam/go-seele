@@ -394,7 +394,8 @@ handler:
 	}
 
 	lp.handleDelPeer(peer.Peer)
-	lp.log.Debug("seele.peer.run out!peer=%s!", peer.peerStrID)
+	lp.log.Debug("light.protocol.handlemsg run out!peer= %s!", peer.peerStrID)
+	peer.Disconnect(fmt.Sprintf("called from light.protocol.handlemsg. id=%s", peer.peerStrID))
 }
 
 func (lp *LightProtocol) handleOdrRequest(peer *peer, msg *p2p.Message) error {
