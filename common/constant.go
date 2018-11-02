@@ -13,6 +13,13 @@ import (
 )
 
 const (
+
+	// SeeleProtoName protoName of Seele service
+	SeeleProtoName = "seele"
+
+	// SeeleVersion Version number of Seele protocol
+	SeeleVersion uint = 1
+
 	// ShardCount represents the total number of shards.
 	ShardCount = 2
 
