@@ -390,7 +390,7 @@ handler:
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
 			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
-			break
+			break handler
 		}
 
 		// skip unsupported message from different shard peer
@@ -400,269 +400,342 @@ handler:
 			}
 		}
 
-		if common.PrintExplosionLog {
-			p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
-		}
-
-		switch msg.Code {
-		case transactionHashMsgCode:
-			var txHash common.Hash
-			err := common.Deserialize(msg.Payload, &txHash)
-			if err != nil {
-				p.log.Warn("failed to deserialize transaction hash msg, %s", err.Error())
-				continue
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("got tx hash %s", txHash.ToHex())
-			}
-
-			if !peer.knownTxs.Contains(txHash) {
-				peer.knownTxs.Add(txHash, nil) //update peer known transaction
-				go peer.sendTransactionRequest(txHash)
-
-			} else {
-				if common.PrintExplosionLog {
-					p.log.Debug("already have this tx %s", txHash.ToHex())
-				}
-			}
-
-		case transactionRequestMsgCode:
-			var txHash common.Hash
-			err := common.Deserialize(msg.Payload, &txHash)
-			if err != nil {
-				p.log.Warn("failed to deserialize transaction request msg %s", err.Error())
-				continue
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("got tx request %s", txHash.ToHex())
-			}
-
-			tx := p.txPool.GetTransaction(txHash)
-			if tx == nil {
-				p.log.Debug("[transactionRequestMsgCode] not found tx in tx pool %s", txHash.ToHex())
-				continue
-			}
-
-			go peer.sendTransaction(tx)
-
-		case transactionsMsgCode:
-			var txs []*types.Transaction
-			err := common.Deserialize(msg.Payload, &txs)
-			if err != nil {
-				p.log.Warn("failed to deserialize transaction msg %s", err.Error())
-				break
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("received %d transactions", len(txs))
-			}
-
-			go func() {
-				for _, tx := range txs {
-					peer.knownTxs.Add(tx.Hash, nil)
-					shard := tx.Data.From.Shard()
-					if shard != common.LocalShardNumber {
-						p.SendDifferentShardTx(tx, shard)
-						continue
-					} else {
-						p.txPool.AddTransaction(tx)
-					}
-				}
-			}()
-
-		case blockHashMsgCode:
-			var blockHash common.Hash
-			err := common.Deserialize(msg.Payload, &blockHash)
-			if err != nil {
-				p.log.Warn("failed to deserialize block hash msg %s", err.Error())
-				continue
-			}
-
-			p.log.Debug("got block hash msg %s", blockHash.ToHex())
-
-			if !peer.knownBlocks.Contains(blockHash) {
-				peer.knownBlocks.Add(blockHash, nil)
-
-				go peer.SendBlockRequest(blockHash)
-			}
-
-		case blockRequestMsgCode:
-			var blockHash common.Hash
-			err := common.Deserialize(msg.Payload, &blockHash)
-			if err != nil {
-				p.log.Warn("failed to deserialize block request msg %s", err.Error())
-				continue
-			}
-
-			p.log.Debug("got block request msg %s", blockHash.ToHex())
-			block, err := p.chain.GetStore().GetBlock(blockHash)
-			if err != nil {
-				p.log.Warn("not found request block %s", err.Error())
-				continue
-			}
-
-			go peer.SendBlock(block)
-
-		case blockMsgCode:
-			var block types.Block
-			err := common.Deserialize(msg.Payload, &block)
-			if err != nil {
-				p.log.Warn("failed to deserialize block msg %s", err.Error())
-				continue
-			}
-
-			p.log.Info("got block message and save it. height:%d, hash:%s, time: %d", block.Header.Height, block.HeaderHash.ToHex(), time.Now().UnixNano())
-			peer.knownBlocks.Add(block.HeaderHash, nil)
-			if block.GetShardNumber() == common.LocalShardNumber {
-				// @todo need to make sure WriteBlock handle block fork
-				p.chain.WriteBlock(&block)
-			}
-
-		case debtMsgCode:
-			var debts []*types.Debt
-			err := common.Deserialize(msg.Payload, &debts)
-			if err != nil {
-				p.log.Warn("failed to deserialize debts msg %s", err)
-				continue
-			}
-
-			p.log.Debug("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
-			for _, d := range debts {
-				peer.knownDebts.Add(d.Hash, nil)
-			}
-
-			p.debtPool.Add(debts)
-			go p.propagateDebt(debts)
-
-		case downloader.GetBlockHeadersMsg:
-			var query blockHeadersQuery
-			err := common.Deserialize(msg.Payload, &query)
-			if err != nil {
-				p.log.Error("failed to deserialize downloader.GetBlockHeadersMsg, quit! %s", err.Error())
-				break
-			}
-			var headList []*types.BlockHeader
-			var head *types.BlockHeader
-			orgNum := query.Number
-
-			if query.Hash != common.EmptyHash {
-				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
-					p.log.Error("HandleMsg GetBlockHeader err from query hash.err= %s magic= %d id= %d ip= %s", err, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
-					break
-				}
-				orgNum = head.Height
-			}
-
-			maxHeight := p.chain.CurrentBlock().Header.Height
-			for cnt := uint64(0); cnt < query.Amount; cnt++ {
-				var curNum uint64
-				if query.Reverse {
-					curNum = orgNum - cnt
-				} else {
-					curNum = orgNum + cnt
-				}
-
-				if curNum > maxHeight {
-					break
-				}
-				hash, err := p.chain.GetStore().GetBlockHash(curNum)
-				if err != nil {
-					p.log.Error("get error when get block hash by height. err= %s curNum= %d magic= %d id= %s ip= %s", err, curNum, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
-					break
-				}
-
-				if head, err = p.chain.GetStore().GetBlockHeader(hash); err != nil {
-					p.log.Error("get error when get block by block hash. err: %s, hash:%s magic=%d id=%s ip=%s", err, hash, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
-					break
-				}
-				headList = append(headList, head)
-			}
-
-			go peer.sendBlockHeaders(query.Magic, headList)
-
-		case downloader.GetBlocksMsg:
-			p.log.Debug("Received downloader.GetBlocksMsg")
-			var query blocksQuery
-			err := common.Deserialize(msg.Payload, &query)
-			if err != nil {
-				p.log.Error("failed to deserialize downloader.GetBlocksMsg, quit! %s", err.Error())
-				break
-			}
-
-			var blocksL []*types.Block
-			var head *types.BlockHeader
-			var block *types.Block
-			orgNum := query.Number
-			if query.Hash != common.EmptyHash {
-				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
-					p.log.Error("HandleMsg GetBlockHeader err. %s", err)
-					break
-				}
-				orgNum = head.Height
-			}
-
-			p.log.Debug("Received downloader.GetBlocksMsg length %d, start %d, end %d magic= %d id= %s ip= %s", query.Amount, orgNum, orgNum+query.Amount, query.Magic, peer.peerStrID, peer.Peer.RemoteAddr())
-
-			totalLen := 0
-			var numL []uint64
-			for cnt := uint64(0); cnt < query.Amount; cnt++ {
-				curNum := orgNum + cnt
-				hash, err := p.chain.GetStore().GetBlockHash(curNum)
-				if err != nil {
-					p.log.Warn("failed to get block with height %d, err %s", curNum, err)
-					break
-				}
-
-				if block, err = p.chain.GetStore().GetBlock(hash); err != nil {
-					p.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
-					break handler
-				}
-
-				curLen := len(common.SerializePanic(block))
-				if totalLen > 0 && (totalLen+curLen) > downloader.MaxMessageLength {
-					break
-				}
-				totalLen += curLen
-				blocksL = append(blocksL, block)
-				numL = append(numL, curNum)
-			}
-
-			if len(blocksL) == 0 {
-				p.log.Debug("send blocks with empty")
-			} else {
-				p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL)-1].Header.Height)
-			}
-
-			go peer.sendBlocks(query.Magic, blocksL)
-
-		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
-			p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
-			p.downloader.DeliverMsg(peer.peerStrID, msg)
-
-		case statusChainHeadMsgCode:
-			var status chainHeadStatus
-			err := common.Deserialize(msg.Payload, &status)
-			if err != nil {
-				p.log.Error("failed to deserialize statusChainHeadMsgCode, quit! %s", err.Error())
-				break
-			}
-
-			p.log.Debug("Received statusChainHeadMsgCode")
-			peer.SetHead(status.CurrentBlock, status.TD)
-			p.syncCh <- struct{}{}
-
-		default:
-			p.log.Warn("unknown code %d", msg.Code)
-		}
+		go p.task(msg, peer)
 	}
 
+	// close peer tcp and delete peer
+	p.exitPeer(peer)
+}
+
+// exitPeer close tcp and delete peer
+func (p *SeeleProtocol) exitPeer(peer *peer) {
 	p.handleDelPeer(peer.Peer)
 	p.log.Debug("seele.protocol.handlemsg run out! peer= %s!", peer.peerStrID)
 	peer.Disconnect(fmt.Sprintf("called from seeleprotocol.handlemsg. id=%s", peer.peerStrID))
 }
 
+// GetProtocolVersion get protocol version
 func (p *SeeleProtocol) GetProtocolVersion() (uint, error) {
 	return p.Protocol.Version, nil
+}
+
+// msgTransactionHash receive tx hash and check whether need to request tx or not
+func (p *SeeleProtocol) msgTransactionHash(msg *p2p.Message, peer *peer) {
+	var txHash common.Hash
+	err := common.Deserialize(msg.Payload, &txHash)
+	if err != nil {
+		p.log.Error("failed to deserialize transaction hash msg, %s", err.Error())
+		return
+	}
+
+	if common.PrintExplosionLog {
+		p.log.Debug("got tx hash %s", txHash.ToHex())
+	}
+
+	if !peer.knownTxs.Contains(txHash) {
+		//update peer known transaction
+		peer.knownTxs.Add(txHash, nil)
+		peer.sendTransactionRequest(txHash)
+	} else {
+		if common.PrintExplosionLog {
+			p.log.Debug("already have this tx %s", txHash.ToHex())
+		}
+	}
+}
+
+// msgTransactionRequest request tx
+func (p *SeeleProtocol) msgTransactionRequest(msg *p2p.Message, peer *peer) {
+	var txHash common.Hash
+	err := common.Deserialize(msg.Payload, &txHash)
+	if err != nil {
+		p.log.Warn("failed to deserialize transaction request msg %s", err.Error())
+		return
+	}
+
+	if common.PrintExplosionLog {
+		p.log.Debug("got tx request %s", txHash.ToHex())
+	}
+
+	tx := p.txPool.GetTransaction(txHash)
+	if tx == nil {
+		p.log.Debug("[transactionRequestMsgCode] not found tx in tx pool %s", txHash.ToHex())
+		return
+	}
+
+	peer.sendTransaction(tx)
+}
+
+// msgTransactions receive txs
+func (p *SeeleProtocol) msgTransactions(msg *p2p.Message, peer *peer) {
+	var txs []*types.Transaction
+	err := common.Deserialize(msg.Payload, &txs)
+	if err != nil {
+		p.log.Warn("failed to deserialize transaction msg %s", err.Error())
+		return
+	}
+
+	if common.PrintExplosionLog {
+		p.log.Debug("received %d transactions", len(txs))
+	}
+
+	for _, tx := range txs {
+		peer.knownTxs.Add(tx.Hash, nil)
+		shard := tx.Data.From.Shard()
+
+		if shard != common.LocalShardNumber {
+			p.SendDifferentShardTx(tx, shard)
+			continue
+		} else {
+			p.txPool.AddTransaction(tx)
+		}
+	}
+}
+
+// msgBlockHash receive block hash
+func (p *SeeleProtocol) msgBlockHash(msg *p2p.Message, peer *peer) {
+	var blockHash common.Hash
+	err := common.Deserialize(msg.Payload, &blockHash)
+	if err != nil {
+		p.log.Warn("failed to deserialize block hash msg %s", err.Error())
+		return
+	}
+
+	p.log.Debug("got block hash msg %s", blockHash.ToHex())
+
+	if !peer.knownBlocks.Contains(blockHash) {
+		peer.knownBlocks.Add(blockHash, nil)
+		peer.SendBlockRequest(blockHash)
+	}
+}
+
+// msgBlockRequest request block
+func (p *SeeleProtocol) msgBlockRequest(msg *p2p.Message, peer *peer) {
+	var blockHash common.Hash
+	err := common.Deserialize(msg.Payload, &blockHash)
+	if err != nil {
+		p.log.Warn("failed to deserialize block request msg %s", err.Error())
+		return
+	}
+
+	p.log.Debug("got block request msg %s", blockHash.ToHex())
+
+	block, err := p.chain.GetStore().GetBlock(blockHash)
+	if err != nil {
+		p.log.Warn("not found request block %s", err.Error())
+		return
+	}
+
+	peer.SendBlock(block)
+}
+
+// msgBlock receive block
+func (p *SeeleProtocol) msgBlock(msg *p2p.Message, peer *peer) {
+	var block types.Block
+	err := common.Deserialize(msg.Payload, &block)
+	if err != nil {
+		p.log.Warn("failed to deserialize block msg %s", err.Error())
+		return
+	}
+
+	p.log.Info("got block message and save it. height:%d, hash:%s, time: %d", block.Header.Height, block.HeaderHash.ToHex(), time.Now().UnixNano())
+
+	peer.knownBlocks.Add(block.HeaderHash, nil)
+
+	if block.GetShardNumber() == common.LocalShardNumber {
+		// @todo need to make sure WriteBlock handle block fork
+		p.chain.WriteBlock(&block)
+	}
+}
+
+// msgDebt deal debt
+func (p *SeeleProtocol) msgDebt(msg *p2p.Message, peer *peer) {
+	var debts []*types.Debt
+	err := common.Deserialize(msg.Payload, &debts)
+	if err != nil {
+		p.log.Warn("failed to deserialize debts msg %s", err)
+		return
+	}
+
+	p.log.Debug("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
+
+	for _, d := range debts {
+		peer.knownDebts.Add(d.Hash, nil)
+	}
+
+	p.debtPool.Add(debts)
+	p.propagateDebt(debts)
+}
+
+// msgDownloaderGetBlockHeader in downloading module get block header
+func (p *SeeleProtocol) msgDownloaderGetBlockHeader(msg *p2p.Message, peer *peer) {
+	var query blockHeadersQuery
+	err := common.Deserialize(msg.Payload, &query)
+	if err != nil {
+		p.log.Error("failed to deserialize downloader.GetBlockHeadersMsg, quit! %s", err.Error())
+		return
+	}
+
+	var headList []*types.BlockHeader
+	var head *types.BlockHeader
+	orgNum := query.Number
+
+	if query.Hash != common.EmptyHash {
+		if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
+			p.log.Error("HandleMsg GetBlockHeader err from query hash.err= %s magic= %d id= %d ip= %s", err, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
+			return
+		}
+
+		orgNum = head.Height
+	}
+
+	maxHeight := p.chain.CurrentBlock().Header.Height
+	for cnt := uint64(0); cnt < query.Amount; cnt++ {
+		var curNum uint64
+
+		if query.Reverse {
+			curNum = orgNum - cnt
+		} else {
+			curNum = orgNum + cnt
+		}
+
+		if curNum > maxHeight {
+			break
+		}
+
+		hash, err := p.chain.GetStore().GetBlockHash(curNum)
+
+		if err != nil {
+			p.log.Error("get error when get block hash by height. err= %s curNum= %d magic= %d id= %s ip= %s", err, curNum, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
+			break
+		}
+
+		if head, err = p.chain.GetStore().GetBlockHeader(hash); err != nil {
+			p.log.Error("get error when get block by block hash. err: %s, hash:%s magic=%d id=%s ip=%s", err, hash, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
+			break
+		}
+
+		headList = append(headList, head)
+	}
+
+	peer.sendBlockHeaders(query.Magic, headList)
+}
+
+// msgDownloaderGetBlocks in downloading module get blocks
+func (p *SeeleProtocol) msgDownloaderGetBlocks(msg *p2p.Message, peer *peer) {
+	p.log.Debug("Received downloader.GetBlocksMsg")
+
+	var query blocksQuery
+	err := common.Deserialize(msg.Payload, &query)
+	if err != nil {
+		p.log.Error("failed to deserialize downloader.GetBlocksMsg, quit! %s", err.Error())
+		return
+	}
+
+	var blocksL []*types.Block
+	var head *types.BlockHeader
+	var block *types.Block
+	orgNum := query.Number
+	if query.Hash != common.EmptyHash {
+		if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
+			p.log.Error("HandleMsg GetBlockHeader err. %s", err)
+			return
+		}
+
+		orgNum = head.Height
+	}
+
+	p.log.Debug("Received downloader.GetBlocksMsg length %d, start %d, end %d magic= %d id= %s ip= %s", query.Amount, orgNum, orgNum+query.Amount, query.Magic, peer.peerStrID, peer.Peer.RemoteAddr())
+
+	totalLen := 0
+	var numL []uint64
+
+	for cnt := uint64(0); cnt < query.Amount; cnt++ {
+		curNum := orgNum + cnt
+		hash, err := p.chain.GetStore().GetBlockHash(curNum)
+
+		if err != nil {
+			p.log.Warn("failed to get block with height %d, err %s", curNum, err)
+			break
+		}
+
+		if block, err = p.chain.GetStore().GetBlock(hash); err != nil {
+			p.log.Error("HandleMsg GetBlocksMsg p.chain.GetStore().GetBlock err. %s", err)
+			p.exitPeer(peer)
+			break
+		}
+
+		curLen := len(common.SerializePanic(block))
+		if totalLen > 0 && (totalLen+curLen) > downloader.MaxMessageLength {
+			break
+		}
+
+		totalLen += curLen
+		blocksL = append(blocksL, block)
+		numL = append(numL, curNum)
+	}
+
+	if len(blocksL) == 0 {
+		p.log.Debug("send blocks with empty")
+	} else {
+		p.log.Debug("send blocks length %d, start %d, end %d", len(blocksL), blocksL[0].Header.Height, blocksL[len(blocksL)-1].Header.Height)
+	}
+
+	peer.sendBlocks(query.Magic, blocksL)
+}
+
+// msgStatusChainHead chain head changed
+func (p *SeeleProtocol) msgStatusChainHead(msg *p2p.Message, peer *peer) {
+	var status chainHeadStatus
+	err := common.Deserialize(msg.Payload, &status)
+	if err != nil {
+		p.log.Error("failed to deserialize statusChainHeadMsgCode, quit! %s", err.Error())
+		return
+	}
+
+	p.log.Debug("Received statusChainHeadMsgCode")
+
+	peer.SetHead(status.CurrentBlock, status.TD)
+	p.syncCh <- struct{}{}
+}
+
+// task deal every msg
+func (p *SeeleProtocol) task(msg *p2p.Message, peer *peer) {
+	switch msg.Code {
+	case transactionHashMsgCode:
+		p.msgTransactionHash(msg, peer)
+
+	case transactionRequestMsgCode:
+		p.msgTransactionRequest(msg, peer)
+
+	case transactionsMsgCode:
+		p.msgTransactions(msg, peer)
+
+	case blockHashMsgCode:
+		p.msgBlockHash(msg, peer)
+
+	case blockRequestMsgCode:
+		p.msgBlockRequest(msg, peer)
+
+	case blockMsgCode:
+		p.msgBlock(msg, peer)
+
+	case debtMsgCode:
+		p.msgDebt(msg, peer)
+
+	case downloader.GetBlockHeadersMsg:
+		p.msgDownloaderGetBlockHeader(msg, peer)
+
+	case downloader.GetBlocksMsg:
+		p.msgDownloaderGetBlocks(msg, peer)
+
+	case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
+		p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
+		p.downloader.DeliverMsg(peer.peerStrID, msg)
+
+	case statusChainHeadMsgCode:
+		p.msgStatusChainHead(msg, peer)
+
+	default:
+		p.log.Warn("unknown code %d", msg.Code)
+	}
 }
