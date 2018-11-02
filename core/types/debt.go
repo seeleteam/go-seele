@@ -11,6 +11,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
+	"github.com/pkg/errors"
 )
 
 // DebtSize debt serialized size
@@ -62,6 +63,26 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	}
 
 	return debtTrie.Hash()
+}
+
+func (d *Debt) Validate() error {
+	if d.Data.Shard != common.LocalShardNumber {
+		return errors.New("wrong shard number")
+	}
+
+	if d.Data.Shard != d.Data.Account.Shard() {
+		return errors.New("account is invalid")
+	}
+
+	if d.Hash != d.Data.Hash() {
+		return errors.New("wrong hash")
+	}
+
+	return nil
+}
+
+func (data *DebtData) Hash() common.Hash {
+	return crypto.MustHash(data)
 }
 
 // Size is the bytes of debt
@@ -129,7 +150,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 
 	debt := &Debt{
 		Data: data,
-		Hash: crypto.MustHash(data),
+		Hash: data.Hash(),
 	}
 
 	return debt
