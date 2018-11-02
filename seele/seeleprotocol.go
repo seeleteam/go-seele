@@ -385,12 +385,11 @@ func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) 
 }
 
 func (p *SeeleProtocol) handleMsg(peer *peer) {
-handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
 			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
-			break handler
+			break
 		}
 
 		// skip unsupported message from different shard peer
