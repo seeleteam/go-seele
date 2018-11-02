@@ -81,10 +81,8 @@ func GetDebtsSize(debts []*Debt) int {
 
 // GetDebtShareFee get debt share fee
 func GetDebtShareFee(fee *big.Int) *big.Int {
-	unit := big.NewInt(0).Div(fee, big.NewInt(10))
-
-	share := big.NewInt(0).Mul(unit, big.NewInt(9))
-	return share
+	unit := big.NewInt(0).Div(fee, big.NewInt(2))
+	return unit
 }
 
 // NewDebt new a debt
