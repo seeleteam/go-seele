@@ -275,7 +275,8 @@ func (p *SeeleProtocol) handleNewDebt(e event.Event) {
 	debtsMap := make([][]*types.Debt, common.ShardCount+1)
 
 	for _, d := range debts {
-		debtsMap[d.Data.Account.Shard()] = append(debtsMap[d.Data.Account.Shard()], d)
+		shard := d.Data.Account.Shard()
+		debtsMap[shard] = append(debtsMap[shard], d)
 	}
 
 	p.propagateDebtMap(debtsMap)
@@ -483,7 +484,7 @@ handler:
 					go p.SendDifferentShardTx(tx, shard)
 					continue
 				} else {
-					go p.txPool.AddTransaction(tx)
+					p.txPool.AddTransaction(tx)
 				}
 			}
 

@@ -14,7 +14,7 @@
     "networkID": "seele"
   },
   "log": {
-    "isDebug": false,
+    "isDebug": true,
     "printLog": true
   },
   "httpServer": {

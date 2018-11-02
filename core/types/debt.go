@@ -6,9 +6,8 @@
 package types
 
 import (
-	"math/big"
-
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
@@ -21,12 +20,12 @@ const DebtSize = 98
 
 // DebtData debt data
 type DebtData struct {
-	TxHash  common.Hash    // the hash of the executed transaction
-	Shard   uint           // tx shard
-	Account common.Address // debt for account
-	Amount  *big.Int       // debt amount
-	Fee     *big.Int       // debt fee
-	Code    common.Bytes   // debt contract code
+	TxHash    common.Hash    // the hash of the executed transaction
+	FromShard uint           // tx shard
+	Account   common.Address // debt for account
+	Amount    *big.Int       // debt amount
+	Fee       *big.Int       // debt fee
+	Code      common.Bytes   // debt contract code
 }
 
 // Debt debt class
@@ -70,12 +69,15 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	return debtTrie.Hash()
 }
 
+// Validate validate debt with verifier
+// If verifier is nil, will skip it.
+// If isPool is true, we don't return error when the error is recoverable
 func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
-	if d.Data.Shard == common.LocalShardNumber {
-		return errors.New("wrong shard number")
+	if d.Data.FromShard == common.LocalShardNumber {
+		return errors.New("wrong from shard number")
 	}
 
-	if d.Data.Account.Shard() == d.Data.Shard {
+	if d.Data.Account.Shard() == d.Data.FromShard {
 		return errors.New("invalid account")
 	}
 
@@ -150,12 +152,12 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
 
 	data := DebtData{
-		TxHash:  tx.Hash,
-		Shard:   fromShard,
-		Account: tx.Data.To,
-		Amount:  big.NewInt(0).Set(tx.Data.Amount),
-		Fee:     GetDebtShareFee(txIntrFee),
-		Code:    make([]byte, 0),
+		TxHash:    tx.Hash,
+		FromShard: fromShard,
+		Account:   tx.Data.To,
+		Amount:    big.NewInt(0).Set(tx.Data.Amount),
+		Fee:       GetDebtShareFee(txIntrFee),
+		Code:      make([]byte, 0),
 	}
 
 	if tx.Data.To.IsEVMContract() {
@@ -191,7 +193,8 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	for _, tx := range txs {
 		d := NewDebt(tx)
 		if d != nil {
-			debts[d.Data.Account.Shard()] = append(debts[d.Data.Account.Shard()], d)
+			shard := d.Data.Account.Shard()
+			debts[shard] = append(debts[shard], d)
 		}
 	}
 

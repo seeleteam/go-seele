@@ -32,16 +32,13 @@ func Test_PeerSet_Add(t *testing.T) {
 	peer1 := getTestPeer(0)
 	set.Add(peer1)
 	assert.Equal(t, len(set.peerMap), 1)
-	assert.Equal(t, len(set.shardPeers[0]), 1)
 
 	set.Add(peer1)
 	assert.Equal(t, len(set.peerMap), 1)
-	assert.Equal(t, len(set.shardPeers[0]), 1)
 
 	peer2 := getTestPeer(1)
 	set.Add(peer2)
 	assert.Equal(t, len(set.peerMap), 2)
-	assert.Equal(t, len(set.shardPeers[1]), 1)
 }
 
 func Test_PeerSet_Find(t *testing.T) {
@@ -63,14 +60,14 @@ func TestPeerSet_ForEach(t *testing.T) {
 	set.Add(peer2)
 
 	count := 0
-	set.ForEach(0, func(peer *peer) bool {
+	set.ForEach(func(peer *peer) bool {
 		count++
 		return true
 	})
 
 	assert.Equal(t, count, 2)
 
-	set.ForEach(0, func(peer *peer) bool {
+	set.ForEach(func(peer *peer) bool {
 		count++
 		if count == 3 {
 			return false
@@ -91,12 +88,8 @@ func Test_PeerSet_Remove(t *testing.T) {
 	assert.Equal(t, len(set.peerMap), 2)
 	set.Remove(peer1.Node.ID)
 	assert.Equal(t, len(set.peerMap), 1)
-	assert.Equal(t, len(set.shardPeers[0]), 0)
-	assert.Equal(t, len(set.shardPeers[1]), 1)
 	set.Remove(peer1.Node.ID)
 	assert.Equal(t, len(set.peerMap), 1)
 	set.Remove(peer2.Node.ID)
 	assert.Equal(t, len(set.peerMap), 0)
-	assert.Equal(t, len(set.shardPeers[0]), 0)
-	assert.Equal(t, len(set.shardPeers[1]), 0)
 }
