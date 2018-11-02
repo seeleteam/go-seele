@@ -180,6 +180,16 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
+	pool.mutex.Lock()
+
+	if pool.hashToTxMap[tx.Hash] != nil {
+		pool.mutex.Unlock()
+
+		return errTxHashExists
+	}
+
+	pool.mutex.Unlock()
+
 	statedb, err := pool.chain.GetCurrentState()
 	if err != nil {
 		return fmt.Errorf("get current state db failed, error %s", err)
