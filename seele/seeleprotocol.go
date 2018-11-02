@@ -88,8 +88,8 @@ func (s *SeeleProtocol) Downloader() *downloader.Downloader { return s.downloade
 func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol, err error) {
 	s = &SeeleProtocol{
 		Protocol: p2p.Protocol{
-			Name:    SeeleProtoName,
-			Version: SeeleVersion,
+			Name:    common.SeeleProtoName,
+			Version: common.SeeleVersion,
 			Length:  protocolMsgCodeLength,
 		},
 		networkID:  seele.networkID,
@@ -327,7 +327,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 		return false
 	}
 
-	newPeer := newPeer(SeeleVersion, p2pPeer, rw, p.log)
+	newPeer := newPeer(common.SeeleVersion, p2pPeer, rw, p.log)
 
 	block := p.chain.CurrentBlock()
 	head := block.HeaderHash
