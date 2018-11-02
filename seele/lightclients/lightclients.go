@@ -64,6 +64,8 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 }
 
 // ValidateDebt validate debt
+// returns bool recoverable error
+// returns error error info
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error) {
 	if debt.Data.Shard == 0 || debt.Data.Shard == manager.localShard {
 		return false, errWrongShardDebt
@@ -76,13 +78,13 @@ func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error)
 	}
 
 	if index == nil {
-		return false, nil
+		return false, errors.New("not found debt's transaction")
 	}
 
 	header := backend.ChainBackend().CurrentHeader()
 	duration := header.Height - index.BlockHeight
 	if duration < common.ConfirmedBlockNumber {
-		return false, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+		return true, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
 	}
 
 	checkDebt := types.NewDebt(tx)

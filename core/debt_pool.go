@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/event"
 )
 
 var DebtDataFlag = []byte{0x01}
@@ -23,6 +24,8 @@ type DebtPool struct {
 
 	chain blockchain
 	log   *log.SeeleLog
+
+	verifier types.DebtVerifier
 }
 
 func NewDebtPool(chain blockchain) *DebtPool {
@@ -34,13 +37,17 @@ func NewDebtPool(chain blockchain) *DebtPool {
 	}
 }
 
+func (dp *DebtPool) SetVerifier(v types.DebtVerifier) {
+	dp.verifier = v
+}
+
 func (dp *DebtPool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
 	reinject := dp.getReinjectDebts(newHeader, lastHeader)
 	if len(reinject) > 0 {
 		dp.log.Info("reinject %d debts", len(reinject))
 	}
 
-	dp.Add(reinject)
+	dp.add(reinject)
 	dp.removeDebts()
 }
 
@@ -144,14 +151,29 @@ func (dp *DebtPool) removeDebts() {
 	}
 }
 
-func (dp *DebtPool) Add(debts []*types.Debt) {
+func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
+	var results []*types.Debt
+
+	for _, d := range debts {
+		err := d.Validate(dp.verifier, true)
+		if err != nil {
+			continue
+		}
+
+		results = append(results, d)
+	}
+
+
+	dp.add(results)
+	event.DebtsInsertedEventManager.Fire(results)
+}
+
+func (dp *DebtPool) add(debts []*types.Debt) {
 	dp.mutex.Lock()
 	defer dp.mutex.Unlock()
 
 	for _, debt := range debts {
-		if debt.Data.Shard == common.LocalShardNumber {
-			dp.hashMap[debt.Hash] = debt
-		}
+		dp.hashMap[debt.Hash] = debt
 	}
 }
 

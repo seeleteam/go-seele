@@ -129,8 +129,8 @@ func Test_DebtPool(t *testing.T) {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
 
-	pool.Add(b1.Debts)
-	pool.Add(b2.Debts)
+	pool.add(b1.Debts)
+	pool.add(b2.Debts)
 
 	assert.Equal(t, 4, len(pool.hashMap))
 

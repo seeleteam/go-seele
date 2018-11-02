@@ -79,7 +79,8 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	}
 
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
-	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxCallback)
+	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
+	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
 
 	return miner
 }
@@ -190,8 +191,8 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 	}
 }
 
-// newTxCallback handles the new tx event
-func (miner *Miner) newTxCallback(e event.Event) {
+// newTxOrDebtCallback handles the new tx event
+func (miner *Miner) newTxOrDebtCallback(e event.Event) {
 	if common.PrintExplosionLog {
 		miner.log.Debug("got the new tx event")
 	}
@@ -230,7 +231,7 @@ out:
 
 			atomic.StoreInt32(&miner.mining, 0)
 			// loop mining after mining completed
-			miner.newTxCallback(event.EmptyEvent)
+			miner.newTxOrDebtCallback(event.EmptyEvent)
 		case <-miner.stopChan:
 			break out
 		}

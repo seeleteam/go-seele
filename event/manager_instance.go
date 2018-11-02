@@ -23,3 +23,5 @@ var TransactionInsertedEventManager = NewEventManager()
 
 // ChainHeaderChangedEventMananger represents the event that chain header is changed
 var ChainHeaderChangedEventMananger = NewEventManager()
+
+var DebtsInsertedEventManager = NewEventManager()

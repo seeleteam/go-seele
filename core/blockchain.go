@@ -546,12 +546,8 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
 	}
 
-	// validate debt, skip validation when verifier is nil for test
-	if verifier != nil {
-		ok, err := verifier.ValidateDebt(d)
-		if !ok || err != nil {
-			return fmt.Errorf("validate debt failed, error: %s", err)
-		}
+	if err := d.Validate(verifier, false); err != nil {
+		return err
 	}
 
 	if !statedb.Exist(d.Data.Account) {

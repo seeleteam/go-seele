@@ -16,7 +16,7 @@
     "networkID": "seele"
   },
   "log": {
-    "isDebug": true,
+    "isDebug": false,
     "printLog": true
   },
   "httpServer": {
@@ -42,7 +42,7 @@
     "password": "test123"
   },
   "genesis": {
-    "difficult":8000000,
+    "difficult":6000000,
     "shard":2,
     "timestamp":1539742676
   }

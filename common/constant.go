@@ -26,7 +26,7 @@ const (
 	CPUMetricsRefreshTime = time.Second
 
 	// ConfirmedBlockNumber is the block number for confirmed a block, it should be more than 12 in product
-	ConfirmedBlockNumber = 120
+	ConfirmedBlockNumber = 1
 
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"

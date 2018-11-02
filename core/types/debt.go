@@ -8,10 +8,12 @@ package types
 import (
 	"math/big"
 
+	"fmt"
+
+	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
-	"github.com/pkg/errors"
 )
 
 // DebtSize debt serialized size
@@ -20,7 +22,7 @@ const DebtSize = 98
 // DebtData debt data
 type DebtData struct {
 	TxHash  common.Hash    // the hash of the executed transaction
-	Shard   uint           // target shard
+	Shard   uint           // tx shard
 	Account common.Address // debt for account
 	Amount  *big.Int       // debt amount
 	Fee     *big.Int       // debt fee
@@ -35,6 +37,9 @@ type Debt struct {
 
 // DebtVerifier interface
 type DebtVerifier interface {
+	// ValidateDebt validate debt
+	// returns bool recoverable error
+	// returns error error info
 	ValidateDebt(debt *Debt) (bool, error)
 }
 
@@ -65,17 +70,27 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	return debtTrie.Hash()
 }
 
-func (d *Debt) Validate() error {
-	if d.Data.Shard != common.LocalShardNumber {
+func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
+	if d.Data.Shard == common.LocalShardNumber {
 		return errors.New("wrong shard number")
 	}
 
-	if d.Data.Shard != d.Data.Account.Shard() {
-		return errors.New("account is invalid")
+	if d.Data.Account.Shard() == d.Data.Shard {
+		return errors.New("invalid account")
 	}
 
 	if d.Hash != d.Data.Hash() {
 		return errors.New("wrong hash")
+	}
+
+	// validate debt, skip validation when verifier is nil for test
+	if verifier != nil {
+		ok, err := verifier.ValidateDebt(d)
+		if err != nil {
+			if (isPool && !ok) || !isPool {
+				return fmt.Errorf("validate debt failed, error: %s", err)
+			}
+		}
 	}
 
 	return nil
@@ -123,12 +138,13 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 		return nil
 	}
 
-	shard := tx.Data.To.Shard()
-	if withContext && shard == common.LocalShardNumber {
+	toShard := tx.Data.To.Shard()
+	if withContext && toShard == common.LocalShardNumber {
 		return nil
 	}
 
-	if !withContext && tx.Data.From.Shard() == shard {
+	fromShard := tx.Data.From.Shard()
+	if !withContext && fromShard == toShard {
 		return nil
 	}
 
@@ -137,7 +153,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 
 	data := DebtData{
 		TxHash:  tx.Hash,
-		Shard:   shard,
+		Shard:   fromShard,
 		Account: tx.Data.To,
 		Amount:  big.NewInt(0).Set(tx.Data.Amount),
 		Fee:     GetDebtShareFee(txIntrFee),
@@ -177,7 +193,7 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	for _, tx := range txs {
 		d := NewDebt(tx)
 		if d != nil {
-			debts[d.Data.Shard] = append(debts[d.Data.Shard], d)
+			debts[d.Data.Account.Shard()] = append(debts[d.Data.Account.Shard()], d)
 		}
 	}
 
