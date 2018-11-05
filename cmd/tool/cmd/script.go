@@ -46,7 +46,7 @@ var (
 	hostsFile   = "hosts.json"
 	keyNodeFile = "keyStore.json"
 	configDir   = "config"
-	seeleLog    = "seele_node_log"
+	seeleDir    = "seele_node"
 	port        = 8057
 	staticNum   = 20
 
@@ -141,8 +141,8 @@ func MakeConfigFile() {
 // changed change the config base info
 func changed(config *util.Config, host string, shard uint) error {
 	config.GenesisConfig.ShardNumber = shard
-	config.BasicConfig.Name = seeleLog
-	config.BasicConfig.DataDir = seeleLog
+	config.BasicConfig.Name = seeleDir
+	config.BasicConfig.DataDir = seeleDir
 	publicKey, privateKey, err := util.GenerateKey(shard)
 	if err != nil {
 		return err

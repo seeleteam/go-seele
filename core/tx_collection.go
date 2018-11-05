@@ -15,7 +15,6 @@ import (
 
 // txCollection represents the nonce sorted transactions of an account.
 type txCollection struct {
-	common.BaseHeapItem
 	txs       map[uint64]*pooledTx
 	nonceHeap *common.Heap
 }
@@ -100,7 +99,22 @@ func (collection *txCollection) list() []*types.Transaction {
 //     For later timestamp, return -1.
 //     Otherwise, return 0.
 func (collection *txCollection) cmp(other *txCollection) int {
+	if other == nil {
+		return 1
+	}
+
 	iTx, jTx := collection.peek(), other.peek()
+	if iTx == nil && jTx == nil {
+		return 0
+	}
+
+	if jTx == nil {
+		return 1
+	}
+
+	if iTx == nil {
+		return -1
+	}
 
 	if r := iTx.Data.GasPrice.Cmp(jTx.Data.GasPrice); r != 0 {
 		return r

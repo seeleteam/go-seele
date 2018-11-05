@@ -45,6 +45,10 @@ func (l *LightBackend) ChainBackend() api.Chain { return l.s.chain }
 // Log gets instance of log
 func (l *LightBackend) Log() *log.SeeleLog { return l.s.log }
 
+func (l *LightBackend) IsSyncing() bool {
+	return l.s.seeleProtocol.downloader.syncStatus == statusDownloading
+}
+
 // ProtocolBackend gets instance of seeleProtocol
 func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol }
 
@@ -106,4 +110,9 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 	result := response.(*odrTxByHashResponse)
 
 	return result.Tx, result.BlockIndex, nil
+}
+
+// RemoveTransaction removes tx of the specified tx hash from tx pool.
+func (l *LightBackend) RemoveTransaction(txHash common.Hash) {
+	l.s.txPool.Remove(txHash)
 }

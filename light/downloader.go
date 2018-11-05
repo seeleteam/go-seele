@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -123,12 +124,12 @@ needQuit:
 
 			curHeight := uint64(0)
 			for _, head := range headMsg.Hearders[1:] {
-				if err := d.chain.WriteHeader(head); err != nil {
+				if err = d.chain.WriteHeader(head); err != nil && err != core.ErrBlockAlreadyExists {
 					d.log.Warn("Downloader.doSynchronise WriteHeader error. %s", err)
 					break needQuit
 				}
 
-				d.log.Info("Downloader.doSynchronise WriteHeader to chain. Height=%d. hash=%s", head.Height, head.Hash())
+				d.log.Info("Downloader.doSynchronise WriteHeader to chain, Height=%d, hash=%s, newHeader=%v", head.Height, head.Hash(), err == nil)
 				curHeight = head.Height
 			}
 

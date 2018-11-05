@@ -28,13 +28,11 @@ func Test_Download_GetStatus(t *testing.T) {
 	dl := newTestDownloader(db)
 	api := NewPrivatedownloaderAPI(dl)
 
-	result := map[string]interface{}{}
-	err := api.GetStatus(nil, &result)
+	result := api.GetStatus()
 
-	assert.Equal(t, err, nil)
-	assert.Equal(t, result["status"], "NotSyncing")
-	assert.Equal(t, result["duration"], "")
-	assert.Equal(t, result["startNum"], uint64(0))
-	assert.Equal(t, result["amount"], uint64(0))
-	assert.Equal(t, result["downloaded"], uint64(0))
+	assert.Equal(t, result.Status, "NotSyncing")
+	assert.Equal(t, result.Duration, "")
+	assert.Equal(t, result.StartNum, uint64(0))
+	assert.Equal(t, result.Amount, uint64(0))
+	assert.Equal(t, result.Downloaded, uint64(0))
 }

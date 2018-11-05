@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common"
+
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 )
@@ -134,7 +136,7 @@ func (p *Peer) pingLoop() {
 }
 
 func (p *Peer) readLoop(readErr chan<- error) {
-	defer p.log.Debug("exit read loop")
+	defer p.log.Debug("exit read loop, remote: %s", p.RemoteAddr())
 	defer p.wg.Done()
 	for {
 		msgRecv, err := p.rw.ReadMsg()
@@ -142,6 +144,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 			readErr <- err
 			return
 		}
+
 		if err = p.handle(msgRecv); err != nil {
 			readErr <- err
 			return
@@ -151,16 +154,22 @@ func (p *Peer) readLoop(readErr chan<- error) {
 
 func (p *Peer) notifyProtocolsAddPeer() {
 	p.wg.Add(len(p.protocolMap))
-	p.log.Info("notifyProtocolsAddPeer called, len(protocolMap)=%d, %s -> %s",
-		len(p.protocolMap), p.LocalAddr(), p.RemoteAddr())
+	p.log.Info("notifyProtocolsAddPeer called, len(protocolMap)= %d, %s -> %s", len(p.protocolMap), p.LocalAddr(), p.RemoteAddr())
 	for _, proto := range p.protocolMap {
 		go func(proto protocolRW) {
 			defer p.wg.Done()
 
 			if proto.AddPeer != nil {
-				p.log.Debug("protocol.AddPeer called. protocol:%s", proto.cap())
+				p.log.Debug("protocol.AddPeer called. protocol: %s", proto.cap())
 				if !proto.AddPeer(p, &proto) {
 					proto.bQuited = true
+
+					// seele protocol is the highest weight, tcp of peer need to be closed
+					if proto.Name == common.SeeleProtoName {
+						p.log.Debug("notifyProtocolsAddPeer AddPeer err got. name=%s node=%s", proto.Name, fmt.Sprintf("%x", p.Node.ID))
+						// close connection of peer
+						p.Disconnect("Seeleproto addpeer err, close connection")
+					}
 				}
 			}
 		}(proto)

@@ -28,6 +28,11 @@ type Context struct {
 
 // Process the tx
 func Process(ctx *Context) (*types.Receipt, error) {
+	// check the tx against the latest statedb, e.g. balance, nonce.
+	if err := ctx.Tx.ValidateState(ctx.Statedb); err != nil {
+		return nil, err
+	}
+
 	// Pay intrinsic gas all the time
 	gasLimit := ctx.Tx.Data.GasLimit
 	intrGas := ctx.Tx.IntrinsicGas()
@@ -50,9 +55,9 @@ func Process(ctx *Context) (*types.Receipt, error) {
 		receipt, err = processEvmContract(ctx, leftOverGas)
 	}
 
-	// Gas is not enough
+	// account balance is not enough (account.balance < tx.amount)
 	if err == vm.ErrInsufficientBalance {
-		return nil, err
+		return nil, revertStatedb(ctx.Statedb, snapshot, err)
 	}
 
 	if err != nil {
@@ -76,7 +81,8 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, error) {
 	receipt := &types.Receipt{
-		TxHash: ctx.Tx.Hash,
+		TxHash:  ctx.Tx.Hash,
+		UsedGas: types.TransferAmountIntrinsicGas * 2,
 	}
 
 	// Add from nonce
@@ -91,7 +97,7 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 	ctx.Statedb.SubBalance(sender, amount)
 
 	// check fee, only support non-contract tx.
-	txFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(types.TransferAmountIntrinsicGas))
+	txFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(receipt.UsedGas))
 	if ctx.Statedb.GetBalance(sender).Cmp(txFee) < 0 {
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
@@ -167,12 +173,8 @@ func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Recei
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)
 	totalFee := new(big.Int).Mul(usedGas, ctx.Tx.Data.GasPrice)
 
-	// Calculating the From account balance is enough
-	if balance := ctx.Statedb.GetBalance(ctx.Tx.Data.From); balance.Cmp(totalFee) < 0 {
-		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
-	}
-
 	// Transfer fee to coinbase
+	// Note, the sender should always have enough balance.
 	ctx.Statedb.SubBalance(ctx.Tx.Data.From, totalFee)
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, totalFee)
 	receipt.TotalFee = totalFee.Uint64()
@@ -180,7 +182,7 @@ func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Recei
 	// Record statedb hash
 	var err error
 	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
-		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
+		return nil, revertStatedb(ctx.Statedb, snapshot, err)
 	}
 
 	// Add logs
@@ -188,6 +190,7 @@ func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Recei
 	if receipt.Logs == nil {
 		receipt.Logs = make([]*types.Log, 0)
 	}
+
 	return receipt, nil
 }
 

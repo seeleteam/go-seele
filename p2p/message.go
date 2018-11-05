@@ -106,11 +106,13 @@ type ProtoHandShake struct {
 	NetworkID string
 }
 
+// MsgReader interface
 type MsgReader interface {
 	// ReadMsg read a message. It will block until send the message out or get errors
 	ReadMsg() (*Message, error)
 }
 
+// MsgWriter interface
 type MsgWriter interface {
 	// WriteMsg sends a message. It will block until the message's
 	// Payload has been consumed by the other end.

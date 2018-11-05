@@ -18,6 +18,7 @@ type peerSet struct {
 	lock         sync.RWMutex
 }
 
+// NewPeerSet returns peerSet pointer
 func NewPeerSet() *peerSet {
 	peers := make(map[uint]map[common.Address]*Peer)
 	for i := 1; i < common.ShardCount+1; i++ {

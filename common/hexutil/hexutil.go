@@ -54,6 +54,11 @@ func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
 }
 
+//HasOnly0xPrefix returns true if input=="0x" or input=="0X",otherwise false
+func HasOnly0xPrefix(input string) bool {
+	return len(input) == 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')
+}
+
 // mapError maps err to a more specific error
 func mapError(err error) error {
 	if _, ok := err.(hex.InvalidByteError); ok {
