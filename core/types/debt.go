@@ -149,6 +149,11 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 		return nil
 	}
 
+	// reward transaction
+	if tx.Data.From == common.EmptyAddress {
+		return nil
+	}
+
 	toShard := tx.Data.To.Shard()
 	if withContext && toShard == common.LocalShardNumber {
 		return nil
