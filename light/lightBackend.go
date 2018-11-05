@@ -102,3 +102,15 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 func (l *LightBackend) RemoveTransaction(txHash common.Hash) {
 	l.s.txPool.Remove(txHash)
 }
+
+// GetDebt returns the debt and its index for the specified debt hash.
+func (l *LightBackend) GetDebt(debtHash common.Hash) (*types.Debt, *api.BlockIndex, error) {
+	response, err := l.s.odrBackend.retrieve(&odrDebtRequest{DebtHash: debtHash})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := response.(*odrDebtResponse)
+
+	return result.Debt, result.BlockIndex, nil
+}

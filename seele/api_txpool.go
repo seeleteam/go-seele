@@ -29,36 +29,23 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 	}
 	hash := common.BytesToHash(hashByte)
 
-	output := make(map[string]interface{})
-	debt := api.s.DebtPool().GetDebtByHash(hash)
-	if debt != nil {
-		output["debt"] = debt
-		output["status"] = "pool"
-
-		return output, nil
-	}
-
-	store := api.s.chain.GetStore()
-	debtIndex, err := store.GetDebtIndex(hash)
+	debt, blockIdx, err := api2.GetDebt(api.s.DebtPool(), api.s.chain.GetStore(), hash)
 	if err != nil {
-		api.s.log.Info(err.Error())
-		return nil, api2.ErrDebtNotFound
+		return nil, err
 	}
 
-	if debtIndex != nil {
-		block, err := store.GetBlock(debtIndex.BlockHash)
-		if err != nil {
-			return nil, err
-		}
+	output := map[string]interface{}{
+		"debt": debt,
+	}
 
-		output["debt"] = block.Debts[debtIndex.Index]
+	if blockIdx == nil {
+		output["status"] = "pool"
+	} else {
 		output["status"] = "block"
-		output["blockHash"] = block.HeaderHash.ToHex()
-		output["blockHeight"] = block.Header.Height
-		output["debtIndex"] = debtIndex
-
-		return output, nil
+		output["blockHash"] = blockIdx.BlockHash.ToHex()
+		output["blockHeight"] = blockIdx.BlockHeight
+		output["debtIndex"] = blockIdx.Index
 	}
 
-	return nil, nil
+	return output, nil
 }

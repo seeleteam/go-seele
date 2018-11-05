@@ -80,7 +80,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog,
 
 	s.txPool = newTxPool(s.chain, s.odrBackend, s.chain.headerChangedEventManager)
 
-	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, s.chain, false, s.odrBackend, log, shard)
+	s.seeleProtocol, err = NewLightProtocol(conf.P2PConfig.NetworkID, s.txPool, nil, s.chain, false, s.odrBackend, log, shard)
 	if err != nil {
 		s.lightDB.Close()
 		s.odrBackend.close()

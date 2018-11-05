@@ -13,6 +13,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -279,4 +280,32 @@ func GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.
 	tx := block.Transactions[txIdx.Index]
 	idx := &BlockIndex{block.HeaderHash, block.Header.Height, txIdx.Index}
 	return tx, idx, nil
+}
+
+// GetDebt returns the debt for the specified debt hash.
+func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common.Hash) (*types.Debt, *BlockIndex, error) {
+	// Try to get the debt in debt pool.
+	if debt := pool.GetDebtByHash(debtHash); debt != nil {
+		return debt, nil, nil
+	}
+
+	// Try to find debt in blockchain.
+	debtIdx, err := bcStore.GetDebtIndex(debtHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	block, err := bcStore.GetBlock(debtIdx.BlockHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	debt := block.Debts[debtIdx.Index]
+	idx := &BlockIndex{
+		BlockHash:   block.HeaderHash,
+		BlockHeight: block.Header.Height,
+		Index:       debtIdx.Index,
+	}
+
+	return debt, idx, nil
 }

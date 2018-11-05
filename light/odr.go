@@ -22,6 +22,8 @@ const (
 	receiptResponseCode
 	txByHashRequestCode
 	txByHashResponseCode
+	debtRequestCode
+	debtResponseCode
 	protocolMsgCodeLength // protocolMsgCodeLength always defined in the end.
 )
 
@@ -32,6 +34,7 @@ var (
 		trieRequestCode:     func() odrRequest { return &odrTriePoof{} },
 		receiptRequestCode:  func() odrRequest { return &odrReceiptRequest{} },
 		txByHashRequestCode: func() odrRequest { return &odrTxByHashRequest{} },
+		debtRequestCode:     func() odrRequest { return &odrDebtRequest{} },
 	}
 
 	odrResponseFactories = map[uint16]func() odrResponse{
@@ -40,6 +43,7 @@ var (
 		trieResponseCode:     func() odrResponse { return &odrTriePoof{} },
 		receiptResponseCode:  func() odrResponse { return &odrReceiptResponse{} },
 		txByHashResponseCode: func() odrResponse { return &odrTxByHashResponse{} },
+		debtResponseCode:     func() odrResponse { return &odrDebtResponse{} },
 	}
 )
 

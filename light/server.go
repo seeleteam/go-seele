@@ -28,7 +28,7 @@ type ServiceServer struct {
 
 // NewServiceServer create ServiceServer
 func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.SeeleLog, shard uint) (*ServiceServer, error) {
-	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.BlockChain(), true, nil, log, shard)
+	seeleProtocol, err := NewLightProtocol(conf.P2PConfig.NetworkID, service.TxPool(), service.DebtPool(), service.BlockChain(), true, nil, log, shard)
 	if err != nil {
 		return nil, err
 	}

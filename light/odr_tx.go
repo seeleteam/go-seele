@@ -50,6 +50,15 @@ type odrTxByHashResponse struct {
 	Proof      []proofNode
 }
 
+func newOrdTxByHashErrorResponse(reqID uint32, err error) *odrTxByHashResponse {
+	return &odrTxByHashResponse{
+		OdrItem: OdrItem{
+			ReqID: reqID,
+			Error: err.Error(),
+		},
+	}
+}
+
 func (req *odrTxByHashRequest) code() uint16 {
 	return txByHashRequestCode
 }
@@ -61,19 +70,19 @@ func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	result.ReqID = req.ReqID
 
 	if err != nil {
-		req.Error = err.Error()
+		return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
 	}
 
 	if result.Tx != nil && result.BlockIndex != nil && !result.BlockIndex.BlockHash.IsEmpty() {
 		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
 		if err != nil {
-			req.Error = err.Error()
+			return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
 		}
 
 		txTrie := types.GetTxTrie(block.Transactions)
 		proof, err := txTrie.GetProof(req.TxHash.Bytes())
 		if err != nil {
-			req.Error = err.Error()
+			return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
 		}
 
 		result.Proof = mapToArray(proof)
