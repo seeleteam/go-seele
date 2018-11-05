@@ -30,6 +30,31 @@ func NewPublicSeeleAPI(s *SeeleService) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
+// EstimateGas returns an estimate of the amount of gas needed to execute the
+// given transaction against the current pending block.
+func (api *PublicSeeleAPI) EstimateGas(tx *types.Transaction) (uint64, error) {
+	// Get the block by block height, if the height is less than zero, get the current block.
+	block, err := getBlock(api.s.chain, -1)
+	if err != nil {
+		return 0, err
+	}
+
+	// Get the statedb by the given block height
+	statedb, err := state.NewStatedb(block.Header.StateHash, api.s.accountStateDB)
+	if err != nil {
+		return 0, err
+	}
+
+	coinbase := api.s.miner.GetCoinbase()
+	// Get the transaction receipt, and the fee give to the miner coinbase
+	receipt, err := api.s.chain.ApplyTransaction(tx, 0, coinbase, statedb, block.Header)
+	if err != nil {
+		return 0, err
+	}
+
+	return receipt.UsedGas, nil
+}
+
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	block := api.s.chain.CurrentBlock()
