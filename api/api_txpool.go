@@ -282,7 +282,7 @@ func GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.
 	return tx, idx, nil
 }
 
-// GetDebt returns  the debt for the specified debt hash.
+// GetDebt returns the debt for the specified debt hash.
 func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common.Hash) (*types.Debt, *BlockIndex, error) {
 	// Try to get the debt in debt pool.
 	if debt := pool.GetDebtByHash(debtHash); debt != nil {
