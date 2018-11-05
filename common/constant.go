@@ -43,6 +43,9 @@ const (
 
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
+
+	// increase evm stack limit to 8192
+	EVMStackLimit = 8192
 )
 
 var (
