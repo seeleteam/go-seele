@@ -293,6 +293,12 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	if len(blocks) == 0 {
+		return
+	}
+
+	toHeight := uint64(0)
+
 	for _, b := range blocks {
 		headInfo := t.downloadInfoList[int(b.Header.Height-t.fromNo)]
 		if headInfo.peerID != peerID {
@@ -303,5 +309,19 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 		headInfo.block = b
 		headInfo.status = taskStatusWaitProcessing
 		t.downloadedNum++
+		toHeight = b.Header.Height
+	}
+
+	if toHeight == t.toNo {
+		return
+	}
+
+	for cur := toHeight + 1; cur <= t.toNo; cur++ {
+		headInfo := t.downloadInfoList[int(cur-t.fromNo)]
+		if headInfo.peerID != peerID {
+			break
+		}
+
+		headInfo.status = taskStatusIdle
 	}
 }
