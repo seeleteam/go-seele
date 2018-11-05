@@ -44,6 +44,7 @@ var (
 )
 
 type odrRequest interface {
+	getRequestID() uint32                                         // get the random request ID.
 	setRequestID(requestID uint32)                                // set the random request ID.
 	code() uint16                                                 // get request code.
 	handle(lp *LightProtocol) (respCode uint16, resp odrResponse) // handle the request and return response to remote peer.
