@@ -112,8 +112,8 @@ func GetTransactionsSize(txs []*Transaction) int {
 
 // GetTxFeeShare returns the miner fee on sender shard of cross-shard tx.
 func GetTxFeeShare(fee *big.Int) *big.Int {
-	mod := big.NewInt(0).Mod(fee, big.NewInt(10))
-	unit := big.NewInt(0).Div(fee, big.NewInt(10))
+	mod := big.NewInt(0).Mod(fee, big.NewInt(2))
+	unit := big.NewInt(0).Div(fee, big.NewInt(2))
 
 	// give mod value to transaction fee share
 	return big.NewInt(0).Add(unit, mod)

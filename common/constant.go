@@ -13,6 +13,13 @@ import (
 )
 
 const (
+
+	// SeeleProtoName protoName of Seele service
+	SeeleProtoName = "seele"
+
+	// SeeleVersion Version number of Seele protocol
+	SeeleVersion uint = 1
+
 	// ShardCount represents the total number of shards.
 	ShardCount = 2
 
@@ -25,8 +32,8 @@ const (
 	// CPUMetricsRefreshTime is the time of metrics monitor cpu
 	CPUMetricsRefreshTime = time.Second
 
-	// ConfirmedBlockNumber is the block number fot confirmed a block, it should be more than 10 in product
-	ConfirmedBlockNumber = 6
+	// ConfirmedBlockNumber is the block number for confirmed a block, it should be more than 12 in product
+	ConfirmedBlockNumber = 120
 
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"

@@ -280,7 +280,7 @@ func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
 // handShake exchange networkid td etc between two connected peers.
 func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, genesis common.Hash, difficult uint64) error {
 	msg := &statusData{
-		ProtocolVersion: uint32(SeeleVersion),
+		ProtocolVersion: uint32(common.SeeleVersion),
 		NetworkID:       networkID,
 		TD:              td,
 		CurrentBlock:    head,
