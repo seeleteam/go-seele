@@ -174,6 +174,11 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 
 			return &Message{}, err
 		}
+
+		/*todo disable zip
+		if err = msgRecv.UnZip(); err != nil {
+			return &Message{}, err
+		}*/
 	}
 
 	metricsReceiveMessageCountMeter.Mark(1)
@@ -186,6 +191,12 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 func (c *connection) WriteMsg(msg *Message) error {
 	c.wmutux.Lock()
 	defer c.wmutux.Unlock()
+
+	/*	todo disable zip
+		if err := msg.Zip(); err != nil {
+				return err
+			}
+	*/
 
 	b := make([]byte, headBuffLength)
 	binary.BigEndian.PutUint32(b[headBuffSizeStart:headBuffSizeEnd], uint32(len(msg.Payload)))
