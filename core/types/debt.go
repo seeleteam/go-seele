@@ -40,27 +40,23 @@ type DebtVerifier interface {
 // DebtIndex debt index
 type DebtIndex indexInBlock
 
+// GetDebtTrie generates a debt trie for the specified debts.
+func GetDebtTrie(debts []*Debt) *trie.Trie {
+	debtTrie := trie.NewEmptyTrie(make([]byte, 0), nil)
+
+	for _, debt := range debts {
+		if debt != nil {
+			debtTrie.Put(debt.Hash.Bytes(), common.SerializePanic(debt))
+		}
+	}
+
+	return debtTrie
+}
+
 // DebtMerkleRootHash calculates and returns the merkle root hash of the specified debts.
 // If the given receipts are empty, return empty hash.
 func DebtMerkleRootHash(debts []*Debt) common.Hash {
-	if len(debts) == 0 {
-		return common.EmptyHash
-	}
-
-	debtTrie, err := trie.NewTrie(common.EmptyHash, make([]byte, 0), nil)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, d := range debts {
-		if d == nil {
-			continue
-		}
-
-		buff := common.SerializePanic(d)
-		debtTrie.Put(d.Hash.Bytes(), buff)
-	}
-
+	debtTrie := GetDebtTrie(debts)
 	return debtTrie.Hash()
 }
 
