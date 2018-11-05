@@ -84,7 +84,7 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
 		return errWrongShardNumber
 	}
 
-	if d.Data.Account.Shard() == d.Data.FromShard {
+	if d.Data.Account.Shard() != common.LocalShardNumber {
 		return errInvalidAccount
 	}
 
