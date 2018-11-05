@@ -362,7 +362,7 @@ func (srv *Server) listenLoop() {
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	srv.log.Info("setup connection with peer %s", dialDest)
-	peer := NewPeer(&connection{fd: fd}, srv.log, dialDest)
+	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.cap())

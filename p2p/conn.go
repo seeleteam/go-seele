@@ -50,17 +50,20 @@ type connection struct {
 	// write msg lock
 	wmutux sync.Mutex
 
-	// writeErr if error appeared, tcp need to be closed
+	// writeErr if error appeared, tcp connection needs to be closed
 	writeErr error
+
+	// log
+	log *log.SeeleLog
 }
 
 // readFull receive from fd till outBuf is full,
 // if no data is read (with deadline of frameReadTimeout), returns timeout.
 func (c *connection) readFull(outBuf []byte) (err error) {
-	return c.readFullo(outBuf, frameReadTimeout)
+	return c.readFullTimeout(outBuf, frameReadTimeout)
 }
 
-func (c *connection) readFullo(outBuf []byte, timeout time.Duration) (err error) {
+func (c *connection) readFullTimeout(outBuf []byte, timeout time.Duration) (err error) {
 	needLen, curPos := len(outBuf), 0
 
 	err = c.fd.SetReadDeadline(time.Now().Add(timeout))
@@ -81,15 +84,15 @@ func (c *connection) readFullo(outBuf []byte, timeout time.Duration) (err error)
 // writeFull write to fd till all outBuf is sended,
 // if no data is writed (with deadline of connWriteTimeout), returns errConnWriteTimeout.
 func (c *connection) writeFull(outBuf []byte) (err error) {
-	return c.writeFullo(outBuf, connWriteTimeout)
+	return c.writeFullTimeout(outBuf, connWriteTimeout)
 }
 
-func (c *connection) writeFullo(outBuf []byte, timeout time.Duration) (err error) {
+func (c *connection) writeFullTimeout(outBuf []byte, timeout time.Duration) (err error) {
 	needLen, curPos := len(outBuf), 0
 	for needLen > 0 {
 		err = c.fd.SetWriteDeadline(time.Now().Add(timeout))
 		if err != nil {
-			// set writeErr with err, tcp will be close when read again
+			// set writeErr with err, tcp connection will be closed when read again
 			c.writeErr = err
 
 			return err
@@ -118,7 +121,7 @@ func (c *connection) writeFullo(outBuf []byte, timeout time.Duration) (err error
 	}
 
 	if err != nil {
-		// set writeErr with err, tcp will be close when read again
+		// set writeErr with err, tcp connection will be closed when read again
 		c.writeErr = err
 	}
 
@@ -134,12 +137,11 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	c.rmutux.Lock()
 	defer c.rmutux.Unlock()
 
-	mlog := log.GetLogger("p2p")
-
 	if c.writeErr != nil {
-		mlog.Debug("conn ReadMsg writeErr not nil. err= %s. sender is %s", c.writeErr, c.fd.RemoteAddr().String())
-
-		return &Message{}, c.writeErr
+		c.log.Debug("conn ReadMsg writeErr not nil. sender is %s, err= %s. ", c.fd.RemoteAddr().String(), c.writeErr)
+		err = c.writeErr
+		c.writeErr = nil
+		return &Message{}, err
 	}
 
 	headbuff := make([]byte, headBuffLength)
@@ -155,13 +157,13 @@ func (c *connection) ReadMsg() (msgRecv *Message, err error) {
 	size := binary.BigEndian.Uint32(headbuff[headBuffSizeStart:headBuffSizeEnd])
 	receive := binary.BigEndian.Uint16(headbuff[headBuffMagicStart:headBuffMagicEnd])
 	if magicNumber != receive {
-		mlog.Debug("Failed to wait magic %d, got %d, sender is %s", magicNumber, receive, c.fd.RemoteAddr().String())
+		c.log.Debug("Failed to wait magic %d, got %d, sender is %s", magicNumber, receive, c.fd.RemoteAddr().String())
 
 		return &Message{}, errMagic
 	}
 
 	if size > maxSize {
-		mlog.Debug("Failed to get data, payload size %d exceeds the limit %d, sender is %s", size, maxSize, c.fd.RemoteAddr().String())
+		c.log.Debug("Failed to get data, payload size %d exceeds the limit %d, sender is %s", size, maxSize, c.fd.RemoteAddr().String())
 
 		return &Message{}, errSize
 	}
