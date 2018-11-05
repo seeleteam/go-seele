@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -101,6 +102,7 @@ type LightProtocol struct {
 	bServerMode         bool
 	networkID           string
 	txPool              TransactionPool
+	debtPool            *core.DebtPool
 	chain               BlockChain
 	peerSet             *peerSet
 	odrBackend          *odrBackend
@@ -115,7 +117,7 @@ type LightProtocol struct {
 }
 
 // NewLightProtocol create LightProtocol
-func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain, serverMode bool, odrBackend *odrBackend,
+func NewLightProtocol(networkID string, txPool TransactionPool, debtPool *core.DebtPool, chain BlockChain, serverMode bool, odrBackend *odrBackend,
 	log *log.SeeleLog, shard uint) (s *LightProtocol, err error) {
 	s = &LightProtocol{
 		Protocol: p2p.Protocol{
@@ -126,6 +128,7 @@ func NewLightProtocol(networkID string, txPool TransactionPool, chain BlockChain
 		bServerMode: serverMode,
 		networkID:   networkID,
 		txPool:      txPool,
+		debtPool:    debtPool,
 		chain:       chain,
 		log:         log,
 		odrBackend:  odrBackend,
