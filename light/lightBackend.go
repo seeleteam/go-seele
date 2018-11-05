@@ -2,6 +2,7 @@ package light
 
 import (
 	"math/big"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/api"
@@ -57,6 +58,10 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 		} else {
 			request.Height = uint64(height)
 		}
+	} else {
+		if strings.EqualFold(hash.String(), "0x") {
+			return nil, common.ErrOnly0xPrefix
+		}
 	}
 
 	response, err := l.s.odrBackend.retrieve(request)
@@ -69,11 +74,17 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 
 // GetBlockTotalDifficulty gets total difficulty by block hash
 func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
+	if strings.EqualFold(hash.String(), "0x") {
+		return nil, common.ErrOnly0xPrefix
+	}
 	return l.ChainBackend().GetStore().GetBlockTotalDifficulty(hash)
 }
 
 // GetReceiptByTxHash gets block's receipt by block hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
+	if strings.EqualFold(hash.String(), "0x") {
+		return nil, common.ErrOnly0xPrefix
+	}
 	response, err := l.s.odrBackend.retrieve(&odrReceiptRequest{TxHash: hash})
 	if err != nil {
 		return nil, err
@@ -84,6 +95,9 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 
 // GetTransaction gets tx, block index and its debt by tx hash
 func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, error) {
+	if strings.EqualFold(txHash.String(), "0x") {
+		return nil, nil, common.ErrOnly0xPrefix
+	}
 	response, err := l.s.odrBackend.retrieve(&odrTxByHashRequest{TxHash: txHash})
 	if err != nil {
 		return nil, nil, err
