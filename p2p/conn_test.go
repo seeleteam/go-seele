@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +21,7 @@ func newConnection() (*connection, net.Listener, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return &connection{fd: c}, ln, nil
+	return &connection{fd: c, log: log.GetLogger("p2p")}, ln, nil
 }
 
 func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
@@ -41,13 +42,13 @@ func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	readBuff := make([]byte, 10)
-	err = con1.readFullo(readBuff, readTimeout)
+	err = con1.readFullTimeout(readBuff, readTimeout)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, readBuff, writeBuff)
 
 	// Case 2: read with empty buff
 	readBuff1 := make([]byte, 0)
-	err = con1.readFullo(readBuff1, readTimeout)
+	err = con1.readFullTimeout(readBuff1, readTimeout)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(readBuff1), 0)
 
@@ -56,7 +57,7 @@ func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	readBuff2 := make([]byte, 20)
-	err = con1.readFullo(readBuff2, readTimeout)
+	err = con1.readFullTimeout(readBuff2, readTimeout)
 	netErr, _ := err.(net.Error)
 	assert.Equal(t, netErr.Timeout(), true)
 
@@ -70,7 +71,7 @@ func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	readBuff3 := make([]byte, 10)
-	err = con1.readFullo(readBuff3, readTimeout)
+	err = con1.readFullTimeout(readBuff3, readTimeout)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, readBuff3[0:], writeBuff[0:10])
 }
@@ -84,7 +85,7 @@ func Test_connection(t *testing.T) {
 	fd1, err := ln.Accept()
 	assert.Equal(t, err, nil)
 
-	con1 := connection{fd: fd1}
+	con1 := connection{fd: fd1, log: log.GetLogger("p2p")}
 	randStr1 := getRandomString(zipBytesLimit * 10)
 	msg1 := newMessage(randStr1)
 	msg1Copy := *msg1
