@@ -56,7 +56,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 	// quit message
 	pc := testPeerConn()
 	go func() {
-		_, err := pc.waitMsg(magic, msgCode, cancelCh)
+		_, err := pc.waitMsg(magic, msgCode, &cancelCh)
 		assert.Equal(t, err, errPeerQuit)
 	}()
 
@@ -66,7 +66,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 	// cancel message
 	pc = testPeerConn()
 	go func() {
-		_, err := pc.waitMsg(magic, msgCode, cancelCh)
+		_, err := pc.waitMsg(magic, msgCode, &cancelCh)
 		assert.Equal(t, err, errReceivedQuitMsg)
 	}()
 
@@ -82,7 +82,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 	pc = testPeerConn()
 
 	go func() {
-		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
+		ret, err := pc.waitMsg(magic, msgCode, &cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
 		assert.Equal(t, ret, blockHeadersMsgHeader.Headers)
@@ -100,7 +100,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 	pc = testPeerConn()
 
 	go func() {
-		ret, err := pc.waitMsg(magic, msgCode, cancelCh)
+		ret, err := pc.waitMsg(magic, msgCode, &cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
 		blocks := ret.([]*types.Block)
@@ -118,7 +118,7 @@ func Test_Download_WaitMsg(t *testing.T) {
 	pc2 := testPeerConn()
 	go func() {
 		cancelCh2 := make(chan struct{})
-		ret2, err := pc2.waitMsg(magic, BlocksMsg, cancelCh2)
+		ret2, err := pc2.waitMsg(magic, BlocksMsg, &cancelCh2)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret2 != nil, true)
 		blocks := ret2.([]*types.Block)
