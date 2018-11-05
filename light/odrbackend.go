@@ -31,7 +31,6 @@ type odrBackend struct {
 	wg         sync.WaitGroup
 	peers      *peerSet
 	bcStore    store.BlockchainStore // used to validate the retrieved ODR object.
-	cache      *odrCache
 	log        *log.SeeleLog
 
 	shard uint
@@ -43,7 +42,6 @@ func newOdrBackend(bcStore store.BlockchainStore, shard uint) *odrBackend {
 		requestMap: make(map[uint32]chan odrResponse),
 		quitCh:     make(chan struct{}),
 		bcStore:    bcStore,
-		cache:      newOdrCache(),
 		log:        log.GetLogger("odrBackend"),
 		shard:      shard,
 	}
@@ -112,10 +110,6 @@ func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
 
 // retrieve retrieves the requested ODR object from remote peer.
 func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
-	if resp, ok := o.cache.get(request); ok {
-		return resp, nil
-	}
-
 	reqID, ch, peerL, err := o.getReqInfo()
 	if err != nil {
 		return nil, err
@@ -144,9 +138,6 @@ func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
 		if err := resp.validate(request, o.bcStore); err != nil {
 			return nil, err
 		}
-
-		// add request/response into cache if no error and validation succeeded.
-		o.cache.add(request, resp)
 
 		return resp, nil
 	case <-o.quitCh:
