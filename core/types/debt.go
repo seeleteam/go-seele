@@ -92,7 +92,7 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
 		return errInvalidHash
 	}
 
-	if d.Data.Fee != nil && d.Data.Fee.Sign() > 0 {
+	if d.Data.Fee == nil || d.Data.Fee.Sign() <= 0 {
 		return errInvalidFee
 	}
 
