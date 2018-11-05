@@ -57,7 +57,7 @@ func (p *peerConn) close() {
 	close(p.quitCh)
 }
 
-func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh *chan struct{}) (ret interface{}, err error) {
+func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh chan struct{}) (ret interface{}, err error) {
 	rcvCh := make(chan *p2p.Message)
 	p.lockForWaiting.Lock()
 	p.waitingMsgMap[msgCode] = rcvCh
@@ -68,7 +68,7 @@ Again:
 	select {
 	case <-p.quitCh:
 		err = errPeerQuit
-	case <-*cancelCh:
+	case <-cancelCh:
 		err = errReceivedQuitMsg
 	case msg := <-rcvCh:
 		switch msgCode {
@@ -78,7 +78,7 @@ Again:
 				goto Again
 			}
 			if reqMsg.Magic != magic {
-				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg= %s magic= %d pid= %s", CodeToStr(msgCode), magic, p.peerID)
+				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg=%s, magic=%d, pid=%s", CodeToStr(msgCode), magic, p.peerID)
 				goto Again
 			}
 			ret = reqMsg.Headers

@@ -529,7 +529,7 @@ func Test_Downloader_DeliverMsg(t *testing.T) {
 	dl.peers["peerID"].waitingMsgMap[BlockHeadersMsg] = make(chan *p2p.Message)
 	cancelCh := make(chan struct{})
 	go func() {
-		ret, err := dl.peers["peerID"].waitMsg(uint32(1), BlockHeadersMsg, &cancelCh)
+		ret, err := dl.peers["peerID"].waitMsg(uint32(1), BlockHeadersMsg, cancelCh)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, ret != nil, true)
 	}()

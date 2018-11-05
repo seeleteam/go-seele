@@ -194,7 +194,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
-			d.log.Info("download end with failed, err %s", err)
+			d.log.Info("download end with failed, err=%s", err)
 			event.BlockDownloaderEventManager.Fire(event.DownloaderFailedEvent)
 		} else {
 			d.log.Debug("download end success")
@@ -214,7 +214,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		return err
 	}
 
-	d.log.Debug("Downloader.doSynchronise start task manager from height: %d, target height: %d", ancestor, height)
+	d.log.Debug("Downloader.doSynchronise start task manager from height=%d, target height=%d", ancestor, height)
 	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 
@@ -253,7 +253,7 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 	magic := rand2.Uint32()
 	go conn.peer.RequestHeadersByHashOrNumber(magic, head, 0, 1, false)
 
-	msg, err := conn.waitMsg(magic, BlockHeadersMsg, &d.cancelCh)
+	msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop, fetchCount uin
 	magic := rand2.Uint32()
 	go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, int(fetchCount), true)
 
-	msg, err := conn.waitMsg(magic, BlockHeadersMsg, &d.cancelCh)
+	msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +443,7 @@ func (d *Downloader) Terminate() {
 func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
 	defer d.sessionWG.Done()
 
-	d.log.Debug("Downloader.peerDownload start. peerID= %s", conn.peerID)
+	d.log.Debug("Downloader.peerDownload start. peerID=%s", conn.peerID)
 	isMaster := (conn.peerID == d.masterPeer)
 	peerID := conn.peerID
 
@@ -451,17 +451,17 @@ outLoop:
 	for !tm.isDone() {
 		hasReqData := false
 		if startNo, amount := tm.getReqHeaderInfo(conn); amount > 0 {
-			d.log.Debug("tm.getReqHeaderInfo. startNo:%d amount:%d", startNo, amount)
+			d.log.Debug("tm.getReqHeaderInfo. startNo=%d amount=%d", startNo, amount)
 			hasReqData = true
 
 			magic := rand2.Uint32()
-			d.log.Debug("request header by number. start= %d, amount= %d, magic= %d, id= %s", startNo, amount, magic, conn.peerID)
+			d.log.Debug("request header by number. start=%d, amount=%d, magic=%d, id=%s", startNo, amount, magic, conn.peerID)
 
 			go conn.peer.RequestHeadersByHashOrNumber(magic, common.Hash{}, startNo, amount, false)
 
-			msg, err := conn.waitMsg(magic, BlockHeadersMsg, &d.cancelCh)
+			msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
 			if err != nil {
-				d.log.Warn("peerDownload waitMsg BlockHeadersMsg err! err= %s, magic= %d, id= %s", err, magic, conn.peerID)
+				d.log.Warn("peerDownload waitMsg BlockHeadersMsg err! err=%s, magic=%d, id=%s", err, magic, conn.peerID)
 				break
 			}
 
@@ -473,7 +473,7 @@ outLoop:
 				endHeight = headers[len(headers)-1].Height
 			}
 
-			d.log.Debug("got block header msg length= %d. start= %d, end= %d, magic= %d, id= %s", len(headers), startHeight, endHeight, magic, conn.peerID)
+			d.log.Debug("got block header msg length= %d. start=%d, end=%d, magic=%d, id=%s", len(headers), startHeight, endHeight, magic, conn.peerID)
 
 			if err = tm.deliverHeaderMsg(peerID, headers); err != nil {
 				d.log.Warn("peerDownload deliverHeaderMsg err! %s", err)
@@ -488,13 +488,13 @@ outLoop:
 			hasReqData = true
 
 			magic := rand2.Uint32()
-			d.log.Debug("request block by number. start= %d, amount= %d, magic= %d, id= %s", startNo, amount, magic, conn.peerID)
+			d.log.Debug("request block by number. start=%d, amount=%d, magic=%d, id=%s", startNo, amount, magic, conn.peerID)
 
 			go conn.peer.RequestBlocksByHashOrNumber(magic, common.Hash{}, startNo, amount)
 
-			msg, err := conn.waitMsg(magic, BlocksMsg, &d.cancelCh)
+			msg, err := conn.waitMsg(magic, BlocksMsg, d.cancelCh)
 			if err != nil {
-				d.log.Warn("peerDownload waitMsg BlocksMsg err! err= %s", err)
+				d.log.Warn("peerDownload waitMsg BlocksMsg err! err=%s", err)
 				break
 			}
 
@@ -505,7 +505,7 @@ outLoop:
 				startHeight = blocks[0].Header.Height
 				endHeight = blocks[len(blocks)-1].Header.Height
 			}
-			d.log.Debug("got blocks message length= %d. start= %d, end= %d, magic= %d, id= %s", len(blocks), startHeight, endHeight, magic, conn.peerID)
+			d.log.Debug("got blocks message length=%d. start=%d, end=%d, magic=%d, id=%s", len(blocks), startHeight, endHeight, magic, conn.peerID)
 
 			tm.deliverBlockMsg(peerID, blocks)
 			d.log.Debug("get request blocks success")
@@ -534,17 +534,17 @@ outLoop:
 	if isMaster || tm.isDone() {
 		d.Cancel()
 	}
-	d.log.Debug("Downloader.peerDownload end. peerID= %s", conn.peerID)
+	d.log.Debug("Downloader.peerDownload end. peerID=%s", conn.peerID)
 }
 
 // processBlocks writes blocks to the blockchain.
 func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
 		// add it for all received block messages
-		d.log.Info("got block message and save it. height= %d, hash= %s, time= %d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
+		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
 
 		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
-			d.log.Error("failed to write block err= %s", err)
+			d.log.Error("failed to write block err=%s", err)
 			d.Cancel()
 			break
 		}
