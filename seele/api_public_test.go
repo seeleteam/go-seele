@@ -7,7 +7,6 @@ package seele
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -265,7 +264,6 @@ func Test_EstimateGas(t *testing.T) {
 	estimateGas4, err10 := api.EstimateGas(callContractTx)
 	assert.NoError(t, err10)
 	assert.NotZero(t, estimateGas4)
-	fmt.Println("estimateGas4:", estimateGas4)
 }
 
 func Test_GetInfo(t *testing.T) {
