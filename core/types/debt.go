@@ -18,6 +18,13 @@ import (
 // DebtSize debt serialized size
 const DebtSize = 98
 
+var (
+	errWrongShardNumber = errors.New("wrong from shard number")
+	errInvalidAccount   = errors.New("invalid account, unexpected shard number")
+	errInvalidHash      = errors.New("debt hash is invalid")
+	errInvalidFee       = errors.New("debt fee is invalid")
+)
+
 // DebtData debt data
 type DebtData struct {
 	TxHash    common.Hash    // the hash of the executed transaction
@@ -74,15 +81,19 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // If isPool is true, we don't return error when the error is recoverable
 func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
 	if d.Data.FromShard == common.LocalShardNumber {
-		return errors.New("wrong from shard number")
+		return errWrongShardNumber
 	}
 
 	if d.Data.Account.Shard() == d.Data.FromShard {
-		return errors.New("invalid account")
+		return errInvalidAccount
 	}
 
 	if d.Hash != d.Data.Hash() {
-		return errors.New("wrong hash")
+		return errInvalidHash
+	}
+
+	if d.Data.Fee != nil && d.Data.Fee.Sign() > 0 {
+		return errInvalidFee
 	}
 
 	// validate debt, skip validation when verifier is nil for test

@@ -155,6 +155,10 @@ func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
 	var results []*types.Debt
 
 	for _, d := range debts {
+		if dp.Has(d.Hash) {
+			continue
+		}
+
 		err := d.Validate(dp.verifier, true)
 		if err != nil {
 			dp.log.Warn("validate debt failed. err %s", err)
@@ -199,6 +203,13 @@ func (dp *DebtPool) Get(size int) ([]*types.Debt, int) {
 	}
 
 	return results, remainSize
+}
+
+func (dp *DebtPool) Has(debt common.Hash) bool {
+	dp.mutex.RLock()
+	defer dp.mutex.RUnlock()
+
+	return dp.hashMap[debt] != nil
 }
 
 func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
