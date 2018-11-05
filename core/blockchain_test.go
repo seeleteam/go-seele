@@ -31,13 +31,10 @@ type testAccount struct {
 }
 
 // genesis account with enough balance (100K seele) for benchmark test
-var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0)
+var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0, 1)
 
-func newTestAccount(amount *big.Int, nonce uint64) *testAccount {
-	addr, privKey, err := crypto.GenerateKeyPair()
-	if err != nil {
-		panic(err)
-	}
+func newTestAccount(amount *big.Int, nonce uint64, shard uint) *testAccount {
+	addr, privKey := crypto.MustGenerateShardKeyPair(shard)
 
 	return &testAccount{
 		addr:    *addr,
@@ -81,7 +78,7 @@ func newTestBlockTx(amount, price, nonce uint64) *types.Transaction {
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
-	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0)
+	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 1)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}

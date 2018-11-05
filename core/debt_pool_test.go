@@ -29,7 +29,7 @@ func newTestDebt(amount int64, price int64) *types.Debt {
 }
 
 func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64, num int) *types.Block {
-	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0)
+	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 2)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
@@ -61,6 +61,11 @@ func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64
 		if err != nil {
 			panic(err)
 		}
+
+		common.LocalShardNumber = 2
+		defer func() {
+			common.LocalShardNumber = 0
+		}()
 
 		for _, d := range debts {
 			err := ApplyDebt(statedb, d, minerAccount.addr, nil)
@@ -102,6 +107,11 @@ func Test_DebtPool(t *testing.T) {
 	b1 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)
 	b2 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)
 
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+
 	err := bc.WriteBlock(b1)
 	if err != nil {
 		panic(err)
@@ -129,8 +139,8 @@ func Test_DebtPool(t *testing.T) {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
 
-	pool.Add(b1.Debts)
-	pool.Add(b2.Debts)
+	pool.add(b1.Debts)
+	pool.add(b2.Debts)
 
 	assert.Equal(t, 4, len(pool.hashMap))
 

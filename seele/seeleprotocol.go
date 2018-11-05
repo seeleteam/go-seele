@@ -110,6 +110,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
+	event.DebtsInsertedEventManager.AddAsyncListener(s.handleNewDebt)
 	return s, nil
 }
 
@@ -122,6 +123,7 @@ func (sp *SeeleProtocol) Start() {
 func (sp *SeeleProtocol) Stop() {
 	event.BlockMinedEventManager.RemoveListener(sp.handleNewMinedBlock)
 	event.TransactionInsertedEventManager.RemoveListener(sp.handleNewTx)
+	event.DebtsInsertedEventManager.RemoveListener(sp.handleNewDebt)
 	close(sp.quitCh)
 	close(sp.syncCh)
 	sp.wg.Wait()
@@ -267,11 +269,14 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	})
 }
 
-func (p *SeeleProtocol) propagateDebt(debts []*types.Debt) {
+func (p *SeeleProtocol) handleNewDebt(e event.Event) {
+	debts := e.([]*types.Debt)
+
 	debtsMap := make([][]*types.Debt, common.ShardCount+1)
 
 	for _, d := range debts {
-		debtsMap[d.Data.Shard] = append(debtsMap[d.Data.Shard], d)
+		shard := d.Data.Account.Shard()
+		debtsMap[shard] = append(debtsMap[shard], d)
 	}
 
 	p.propagateDebtMap(debtsMap)
@@ -550,8 +555,7 @@ handler:
 				peer.knownDebts.Add(d.Hash, nil)
 			}
 
-			p.debtPool.Add(debts)
-			go p.propagateDebt(debts)
+			go p.debtPool.AddWithValidation(debts)
 
 		case downloader.GetBlockHeadersMsg:
 			var query blockHeadersQuery

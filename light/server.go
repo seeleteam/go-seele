@@ -88,7 +88,7 @@ needQuit:
 		case <-pm.chainHeaderChangeCh:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
-			pm.peerSet.ForEach(pm.shard, func(p *peer) bool {
+			pm.peerSet.ForEach(func(p *peer) bool {
 				p.sendAnnounce(magic, uint64(0), uint64(0))
 				return true
 			})

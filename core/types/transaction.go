@@ -253,7 +253,7 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 	}
 
 	rewardTxData := TransactionData{
-		From:      common.Address{},
+		From:      common.EmptyAddress,
 		To:        miner,
 		Amount:    new(big.Int).Set(reward),
 		GasPrice:  big.NewInt(0),

@@ -463,6 +463,7 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 	if err != nil {
 		return err
 	}
+
 	if retMsg.Code != statusDataMsgCode {
 		return errMsgNotMatch
 	}

@@ -13,9 +13,8 @@ import (
 )
 
 type peerSet struct {
-	peerMap    map[common.Address]*peer
-	shardPeers [1 + common.ShardCount]map[common.Address]*peer
-	lock       sync.RWMutex
+	peerMap map[common.Address]*peer
+	lock    sync.RWMutex
 }
 
 func newPeerSet() *peerSet {
@@ -24,37 +23,31 @@ func newPeerSet() *peerSet {
 		lock:    sync.RWMutex{},
 	}
 
-	for i := 0; i < 1+common.ShardCount; i++ {
-		ps.shardPeers[i] = make(map[common.Address]*peer)
-	}
-
 	return ps
 }
 
-func (p *peerSet) bestPeer(shard uint) *peer {
+func (p *peerSet) bestPeer() *peer {
 	var (
 		bestPeer *peer
 		bestTd   *big.Int
 	)
 
-	p.ForEach(shard, func(p *peer) bool {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			if !p.isSyncing() {
-				bestPeer, bestTd = p, td
+	for _, pe := range p.peerMap {
+		if _, td := pe.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+			if !pe.isSyncing() {
+				bestPeer, bestTd = pe, td
 			}
 		}
-
-		return true
-	})
+	}
 
 	return bestPeer
 }
 
-func (p *peerSet) ForEach(shard uint, handle func(*peer) bool) {
+func (p *peerSet) ForEach(handle func(*peer) bool) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	for _, v := range p.shardPeers[shard] {
+	for _, v := range p.peerMap {
 		if !handle(v) {
 			break
 		}
@@ -68,7 +61,6 @@ func (p *peerSet) Remove(peerID common.Address) {
 	result := p.peerMap[peerID]
 	if result != nil {
 		delete(p.peerMap, peerID)
-		delete(p.shardPeers[result.Node.Shard], peerID)
 	}
 }
 
@@ -77,14 +69,7 @@ func (p *peerSet) Add(pe *peer) {
 	defer p.lock.Unlock()
 
 	peerID := pe.peerID
-	result := p.peerMap[peerID]
-	if result != nil {
-		delete(p.peerMap, peerID)
-		delete(p.shardPeers[result.Node.Shard], peerID)
-	}
-
 	p.peerMap[peerID] = pe
-	p.shardPeers[pe.Node.Shard][peerID] = pe
 }
 
 func (p *peerSet) Find(address common.Address) *peer {
@@ -98,11 +83,11 @@ func (p *peerSet) choosePeers(shard uint) (choosePeers []*peer) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	mapLen := len(p.shardPeers[shard])
+	mapLen := len(p.peerMap)
 	peerL := make([]*peer, mapLen)
 
 	idx := 0
-	for _, v := range p.shardPeers[shard] {
+	for _, v := range p.peerMap {
 		peerL[idx] = v
 		idx++
 	}

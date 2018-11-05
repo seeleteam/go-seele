@@ -22,6 +22,7 @@ import (
 var (
 	errWrongShardDebt = errors.New("wrong debt with invalid shard")
 	errNotMatchedTx   = errors.New("transaction mismatch with request debt")
+	errNotFoundTx     = errors.New("not found debt's transaction")
 )
 
 // LightClientsManager manages light clients of other shards and provides services for debt validation.
@@ -64,25 +65,27 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 }
 
 // ValidateDebt validate debt
+// returns bool recoverable error
+// returns error error info
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error) {
-	if debt.Data.Shard == 0 || debt.Data.Shard == manager.localShard {
+	if debt.Data.FromShard == 0 || debt.Data.FromShard == manager.localShard {
 		return false, errWrongShardDebt
 	}
 
-	backend := manager.lightClientsBackend[int(debt.Data.Shard)]
+	backend := manager.lightClientsBackend[int(debt.Data.FromShard)]
 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 	if err != nil {
 		return false, err
 	}
 
 	if index == nil {
-		return false, nil
+		return false, errNotFoundTx
 	}
 
 	header := backend.ChainBackend().CurrentHeader()
 	duration := header.Height - index.BlockHeight
 	if duration < common.ConfirmedBlockNumber {
-		return false, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+		return true, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
 	}
 
 	checkDebt := types.NewDebt(tx)

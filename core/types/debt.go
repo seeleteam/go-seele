@@ -6,8 +6,10 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
@@ -16,14 +18,21 @@ import (
 // DebtSize debt serialized size
 const DebtSize = 98
 
+var (
+	errWrongShardNumber = errors.New("wrong from shard number")
+	errInvalidAccount   = errors.New("invalid account, unexpected shard number")
+	errInvalidHash      = errors.New("debt hash is invalid")
+	errInvalidFee       = errors.New("debt fee is invalid")
+)
+
 // DebtData debt data
 type DebtData struct {
-	TxHash  common.Hash    // the hash of the executed transaction
-	Shard   uint           // target shard
-	Account common.Address // debt for account
-	Amount  *big.Int       // debt amount
-	Fee     *big.Int       // debt fee
-	Code    common.Bytes   // debt contract code
+	TxHash    common.Hash    // the hash of the executed transaction
+	FromShard uint           // tx shard
+	Account   common.Address // debt for account
+	Amount    *big.Int       // debt amount
+	Fee       *big.Int       // debt fee
+	Code      common.Bytes   // debt contract code
 }
 
 // Debt debt class
@@ -34,6 +43,9 @@ type Debt struct {
 
 // DebtVerifier interface
 type DebtVerifier interface {
+	// ValidateDebt validate debt
+	// returns bool recoverable error
+	// returns error error info
 	ValidateDebt(debt *Debt) (bool, error)
 }
 
@@ -58,6 +70,43 @@ func GetDebtTrie(debts []*Debt) *trie.Trie {
 func DebtMerkleRootHash(debts []*Debt) common.Hash {
 	debtTrie := GetDebtTrie(debts)
 	return debtTrie.Hash()
+}
+
+// Validate validate debt with verifier
+// If verifier is nil, will skip it.
+// If isPool is true, we don't return error when the error is recoverable
+func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
+	if d.Data.FromShard == common.LocalShardNumber {
+		return errWrongShardNumber
+	}
+
+	if d.Data.Account.Shard() != common.LocalShardNumber {
+		return errInvalidAccount
+	}
+
+	if d.Hash != d.Data.Hash() {
+		return errInvalidHash
+	}
+
+	if d.Data.Fee == nil || d.Data.Fee.Sign() <= 0 {
+		return errInvalidFee
+	}
+
+	// validate debt, skip validation when verifier is nil for test
+	if verifier != nil {
+		ok, err := verifier.ValidateDebt(d)
+		if err != nil {
+			if (isPool && !ok) || !isPool {
+				return fmt.Errorf("validate debt failed, error: %s", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (data *DebtData) Hash() common.Hash {
+	return crypto.MustHash(data)
 }
 
 // Size is the bytes of debt
@@ -96,25 +145,31 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 		return nil
 	}
 
-	shard := tx.Data.To.Shard()
-	if withContext && shard == common.LocalShardNumber {
+	// reward transaction
+	if tx.Data.From == common.EmptyAddress {
 		return nil
 	}
 
-	if !withContext && tx.Data.From.Shard() == shard {
+	toShard := tx.Data.To.Shard()
+	if withContext && toShard == common.LocalShardNumber {
+		return nil
+	}
+
+	fromShard := tx.Data.From.Shard()
+	if !withContext && fromShard == toShard {
 		return nil
 	}
 
 	// @todo for contract case, should use the fee in tx receipt
-	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas))
+	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
 
 	data := DebtData{
-		TxHash:  tx.Hash,
-		Shard:   shard,
-		Account: tx.Data.To,
-		Amount:  big.NewInt(0).Set(tx.Data.Amount),
-		Fee:     GetDebtShareFee(txIntrFee),
-		Code:    make([]byte, 0),
+		TxHash:    tx.Hash,
+		FromShard: fromShard,
+		Account:   tx.Data.To,
+		Amount:    big.NewInt(0).Set(tx.Data.Amount),
+		Fee:       GetDebtShareFee(txIntrFee),
+		Code:      make([]byte, 0),
 	}
 
 	if tx.Data.To.IsEVMContract() {
@@ -123,7 +178,7 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 
 	debt := &Debt{
 		Data: data,
-		Hash: crypto.MustHash(data),
+		Hash: data.Hash(),
 	}
 
 	return debt
@@ -150,7 +205,8 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	for _, tx := range txs {
 		d := NewDebt(tx)
 		if d != nil {
-			debts[d.Data.Shard] = append(debts[d.Data.Shard], d)
+			shard := d.Data.Account.Shard()
+			debts[shard] = append(debts[shard], d)
 		}
 	}
 

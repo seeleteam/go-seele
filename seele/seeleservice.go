@@ -123,6 +123,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 
 func (s *SeeleService) SetDebtVerifier(verifier types.DebtVerifier) {
 	s.debtVerifier = verifier
+	s.debtPool.SetVerifier(verifier)
 }
 
 func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) (err error) {
