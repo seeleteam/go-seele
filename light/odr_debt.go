@@ -58,6 +58,7 @@ func (req *odrDebtRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 		BlockIndex: index,
 	}
 
+	// debt is still in pool.
 	if response.Debt == nil || response.BlockIndex == nil {
 		return debtResponseCode, response
 	}
