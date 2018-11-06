@@ -239,7 +239,7 @@ func (p *peer) sendBlockHeaders(magic uint32, headers []*types.BlockHeader) erro
 	p.log.Debug("peer send [downloader.BlockHeadersMsg] with length %d size %d byte peerid:%s", len(headers), len(buff), p.peerStrID)
 	err := p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, buff)
 	if err != nil {
-		p.log.Debug("peer send [downloader.BlockHeadersMsg] err=%s", err)
+		p.log.Error("peer send [downloader.BlockHeadersMsg] err=%s", err)
 	}
 
 	return err
@@ -274,7 +274,7 @@ func (p *peer) sendBlocks(magic uint32, blocks []*types.Block) error {
 	p.log.Debug("peer send [downloader.BlocksMsg] with length: %d, size:%d byte peerid:%s", len(blocks), len(buff), p.peerStrID)
 	err := p2p.SendMessage(p.rw, downloader.BlocksMsg, buff)
 	if err != nil {
-		p.log.Debug("peer send [downloader.BlocksMsg] err=%s", err)
+		p.log.Error("peer send [downloader.BlocksMsg] err=%s", err)
 	}
 
 	return err
