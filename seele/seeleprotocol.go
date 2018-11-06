@@ -423,12 +423,17 @@ handler:
 			}
 
 			if !peer.knownTxs.Contains(txHash) {
-				peer.knownTxs.Add(txHash, nil) //update peer known transaction
-				go peer.sendTransactionRequest(txHash)
+				//update peer known transaction
+				peer.knownTxs.Add(txHash, nil)
+
+				if err := peer.sendTransactionRequest(txHash); err != nil {
+					p.log.Warn("failed to send transaction request msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
+					break handler
+				}
 
 			} else {
 				if common.PrintExplosionLog {
-					p.log.Debug("already have this tx %s", txHash.ToHex())
+					p.log.Debug("peer=%s already have this tx %s", peer.RemoteAddr().String(), txHash.ToHex())
 				}
 			}
 
@@ -450,7 +455,11 @@ handler:
 				continue
 			}
 
-			go peer.sendTransaction(tx)
+			err = peer.sendTransaction(tx)
+			if err != nil {
+				p.log.Warn("failed to send transaction msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
+				break handler
+			}
 
 		case transactionsMsgCode:
 			var txs []*types.Transaction
@@ -490,7 +499,11 @@ handler:
 			if !peer.knownBlocks.Contains(blockHash) {
 				peer.knownBlocks.Add(blockHash, nil)
 
-				go peer.SendBlockRequest(blockHash)
+				err := peer.SendBlockRequest(blockHash)
+				if err != nil {
+					p.log.Warn("failed to send block request msg %s", err.Error())
+					break handler
+				}
 			}
 
 		case blockRequestMsgCode:
@@ -508,7 +521,10 @@ handler:
 				continue
 			}
 
-			go peer.SendBlock(block)
+			err = peer.SendBlock(block)
+			if err != nil {
+				p.log.Warn("failed to send block msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
+			}
 
 		case blockMsgCode:
 			var block types.Block
