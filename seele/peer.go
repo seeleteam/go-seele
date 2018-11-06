@@ -237,7 +237,12 @@ func (p *peer) sendBlockHeaders(magic uint32, headers []*types.BlockHeader) erro
 	buff := common.SerializePanic(sendMsg)
 
 	p.log.Debug("peer send [downloader.BlockHeadersMsg] with length %d size %d byte peerid:%s", len(headers), len(buff), p.peerStrID)
-	return p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, buff)
+	err := p2p.SendMessage(p.rw, downloader.BlockHeadersMsg, buff)
+	if err != nil {
+		p.log.Error("peer send [downloader.BlockHeadersMsg] err=%s", err)
+	}
+
+	return err
 }
 
 // RequestBlocksByHashOrNumber fetches a batch of blocks corresponding to the
@@ -267,7 +272,12 @@ func (p *peer) sendBlocks(magic uint32, blocks []*types.Block) error {
 	buff := common.SerializePanic(sendMsg)
 
 	p.log.Debug("peer send [downloader.BlocksMsg] with length: %d, size:%d byte peerid:%s", len(blocks), len(buff), p.peerStrID)
-	return p2p.SendMessage(p.rw, downloader.BlocksMsg, buff)
+	err := p2p.SendMessage(p.rw, downloader.BlocksMsg, buff)
+	if err != nil {
+		p.log.Error("peer send [downloader.BlocksMsg] err=%s", err)
+	}
+
+	return err
 }
 
 func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
