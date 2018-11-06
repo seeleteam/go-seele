@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -100,6 +101,7 @@ func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop
 
 	var isNonceFound int32
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	once := &sync.Once{}
 	for i := 0; i < threads; i++ {
 		if threads == 1 {
 			seed = r.Uint64()
@@ -118,7 +120,7 @@ func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop
 		}
 
 		go func(tseed uint64, tmin uint64, tmax uint64) {
-			StartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, engine.hashrate, engine.log)
+			StartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, once, engine.hashrate, engine.log)
 		}(tSeed, min, max)
 	}
 
