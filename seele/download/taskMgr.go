@@ -316,8 +316,14 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 		return
 	}
 
+	maxLen := len(t.downloadInfoList)
 	for cur := toHeight + 1; cur <= t.toNo; cur++ {
-		headInfo := t.downloadInfoList[int(cur-t.fromNo)]
+		idx := int(cur - t.fromNo)
+		if idx >= maxLen {
+			break
+		}
+
+		headInfo := t.downloadInfoList[idx]
 		if headInfo.peerID != peerID {
 			break
 		}
