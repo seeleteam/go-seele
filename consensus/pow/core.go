@@ -8,6 +8,7 @@ package pow
 import (
 	"math/big"
 	"strconv"
+	"sync"
 	"sync/atomic"
 
 	"github.com/rcrowley/go-metrics"
@@ -23,11 +24,13 @@ import (
 // abort is a channel by closing which you can stop mining
 // isNonceFound is a flag to mark nonce is found by other threads
 // hashrate is the average hashrate of miner
-func StartMining(block *types.Block, seed uint64, min uint64, max uint64, result chan<- *types.Block, abort <-chan struct{}, isNonceFound *int32, hashrate metrics.Meter, log *log.SeeleLog) {
+func StartMining(block *types.Block, seed uint64, min uint64, max uint64, result chan<- *types.Block, abort <-chan struct{},
+	isNonceFound *int32, once *sync.Once, hashrate metrics.Meter, log *log.SeeleLog) {
 	var nonce = seed
 	var hashInt big.Int
 	var caltimes = int64(0)
 	target := getMiningTarget(block.Header.Difficulty)
+	header := block.Header.Clone()
 
 miner:
 	for {
@@ -49,23 +52,24 @@ miner:
 				caltimes = 0
 			}
 
-			block.Header.Witness = []byte(strconv.FormatUint(nonce, 10))
-			hash := block.Header.Hash()
+			header.Witness = []byte(strconv.FormatUint(nonce, 10))
+			hash := header.Hash()
 			hashInt.SetBytes(hash.Bytes())
 
 			// found
 			if hashInt.Cmp(target) <= 0 {
-				block.HeaderHash = hash
+				once.Do(func() {
+					block.Header = header
+					block.HeaderHash = hash
 
-				select {
-				case <-abort:
-					logAbort(log)
-				case result <- block:
-					atomic.StoreInt32(isNonceFound, 1)
-					log.Debug("nonce finding succeeded")
-				default:
-					log.Warn("result channel is nil, this may be caused by miner stop")
-				}
+					select {
+					case <-abort:
+						logAbort(log)
+					case result <- block:
+						atomic.StoreInt32(isNonceFound, 1)
+						log.Info("nonce finding succeeded")
+					}
+				})
 
 				break miner
 			}

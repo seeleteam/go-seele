@@ -35,7 +35,7 @@ func Test_Worker(t *testing.T) {
 	isNonceFound := new(int32)
 	hashrate := metrics.NewMeter()
 
-	go StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
+	go StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, &sync.Once{}, hashrate, logger)
 
 	select {
 	case found := <-result:
@@ -56,7 +56,7 @@ func Test_Worker(t *testing.T) {
 			close(result)
 		}()
 
-		StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
+		StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, &sync.Once{}, hashrate, logger)
 	}()
 
 	found, ok := <-result
@@ -79,7 +79,7 @@ func Test_WorkerStop(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, hashrate, logger)
+		StartMining(block, 0, 0, math.MaxUint64, result, abort, isNonceFound, &sync.Once{}, hashrate, logger)
 	}()
 
 	close(abort)

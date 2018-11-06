@@ -8,6 +8,7 @@ package pow
 import (
 	"math/big"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -65,4 +66,51 @@ func randomAddress(t *testing.T) common.Address {
 	hexAddress := crypto.PubkeyToString(&privKey.PublicKey)
 
 	return common.HexMustToAddres(hexAddress)
+}
+
+func Test_Seal(t *testing.T) {
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go sealTest(t, &wg)
+	}
+
+	wg.Wait()
+}
+
+func sealTest(t *testing.T, wg *sync.WaitGroup) {
+	engine := NewEngine(10)
+
+	stop := make(chan struct{})
+	results := make(chan *types.Block)
+
+	header := newTestBlockHeader(t)
+	header.Difficulty = big.NewInt(900)
+
+	block := &types.Block{
+		Header: header,
+	}
+
+	go func() {
+		defer wg.Done()
+
+		timer := time.NewTimer(5 * time.Second)
+		count := 0
+	test:
+		for {
+			select {
+			case b := <-results:
+				if b != nil {
+					count++
+					if count > 1 {
+						t.Fatalf("got too many block, %d", count)
+					}
+				}
+			case <-timer.C:
+				break test
+			}
+		}
+	}()
+
+	engine.Seal(nil, block, stop, results)
 }
