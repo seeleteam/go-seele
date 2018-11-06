@@ -38,7 +38,7 @@ Here are some guidelines before you start:
 * [Seele Website](https://seele.pro/)
 * [Dev Chat Room](https://gitter.im/seleeteam/dev)
 * [Telegram Group](https://t.me/seeletech)
-* [White Paper](https://s3.ap-northeast-2.amazonaws.com/wp.s3.seele.pro/Seele_tech_whitepaper_EN_v1.9.pdf)
+* [White Paper](https://s3.ap-northeast-2.amazonaws.com/wp.s3.seele.pro/Seele_White_Paper_English_v3.1.pdf)
 * [Roadmap](https://seele.pro/)
 
 # License
