@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -54,6 +55,9 @@ var (
 
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
+
+	// defaultIPCPath used to store the ipc file
+	defaultIPCPath string
 )
 
 func init() {
@@ -64,6 +68,12 @@ func init() {
 		panic(err)
 	}
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
+
+	if runtime.GOOS == "windows" {
+		defaultIPCPath = `\\.\pipe\` + `\seele.ipc`
+	} else {
+		defaultIPCPath = filepath.Join(defaultDataFolder, `\seele.ipc`)
+	}
 }
 
 // GetTempFolder uses a getter to implement readonly
@@ -74,4 +84,8 @@ func GetTempFolder() string {
 // GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
+}
+
+func GetDefaultIPCPath() string {
+	return defaultIPCPath
 }

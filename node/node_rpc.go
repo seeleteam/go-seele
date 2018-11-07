@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/seeleteam/go-seele/common"
 	rpc "github.com/seeleteam/go-seele/rpc"
 )
 
@@ -23,7 +24,11 @@ func (n *Node) startRPC(services []Service) error {
 	}
 
 	// Start the various API endpoints, terminating all in case of errors
-	if err := n.startPRC(apis); err != nil {
+	if err := n.startIPC(apis); err != nil {
+		return err
+	}
+
+	if err := n.startTCP(apis); err != nil {
 		return err
 	}
 
@@ -41,8 +46,8 @@ func (n *Node) startRPC(services []Service) error {
 	return nil
 }
 
-// startIPC initializes and starts the IPC RPC endpoint.
-func (n *Node) startPRC(apis []rpc.API) error {
+// startTCP initializes and starts the IPC RPC endpoint.
+func (n *Node) startTCP(apis []rpc.API) error {
 	endpoint := n.config.BasicConfig.RPCAddr
 	// Short circuit if the IPC endpoint isn't being exposed
 	if endpoint == "" {
@@ -93,6 +98,40 @@ func (n *Node) startPRC(apis []rpc.API) error {
 	n.rpcHandler = handler
 
 	return nil
+}
+
+// startIPC initializes and starts the IPC RPC endpoint.
+func (n *Node) startIPC(apis []rpc.API) error {
+	ipcEndpoint := common.GetDefaultIPCPath()
+	listener, handler, err := n.StartIPCEndpoint(ipcEndpoint, apis)
+	if err != nil {
+		return err
+	}
+
+	// All listeners booted successfully
+	n.rpcListener = listener
+	n.rpcHandler = handler
+	n.log.Info("IPC endpoint opened", "url", ipcEndpoint)
+	return nil
+}
+
+// StartIPCEndpoint starts an IPC endpoint.
+func (n *Node) StartIPCEndpoint(ipcEndpoint string, apis []rpc.API) (net.Listener, *rpc.Server, error) {
+	// Register all the APIs exposed by the services.
+	handler := rpc.NewServer()
+	for _, api := range apis {
+		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
+			return nil, nil, err
+		}
+		n.log.Debug("IPC registered", "namespace", api.Namespace)
+	}
+	// All APIs registered, start the IPC listener.
+	listener, err := rpc.CreateIPCListener(ipcEndpoint)
+	if err != nil {
+		return nil, nil, err
+	}
+	go handler.ServeListener(listener)
+	return listener, handler, nil
 }
 
 // stopRPC terminates the IPC RPC endpoint.
