@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	seeleErrors "github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/state"
@@ -148,8 +149,7 @@ func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.HeaderHash = common.EmptyHash
-
-	assert.Equal(t, bc.WriteBlock(newBlock), types.ErrBlockHashMismatch)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(newBlock), types.ErrBlockHashMismatch))
 }
 
 func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
@@ -162,7 +162,7 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 	newBlock.Header.TxHash = common.EmptyHash
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), types.ErrBlockTxsHashMismatch)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(newBlock), types.ErrBlockTxsHashMismatch))
 }
 
 func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
@@ -175,7 +175,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 	newBlock.Header.Height = 10
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), consensus.ErrBlockInvalidHeight)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(newBlock), consensus.ErrBlockInvalidHeight))
 }
 
 func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
@@ -188,7 +188,7 @@ func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
 	newBlock.Header.ExtraData = []byte("test extra data")
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
-	assert.Equal(t, bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty))
 }
 
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
@@ -226,7 +226,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 	assert.Equal(t, currentBlock, newBlock)
 
 	err = bc.WriteBlock(newBlock)
-	assert.Equal(t, err, ErrBlockAlreadyExists)
+	assert.True(t, seeleErrors.IsOrContains(err, ErrBlockAlreadyExists))
 }
 
 func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
@@ -278,7 +278,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, common.EmptyHash, 1, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash))
 }
 
 func Test_Blockchain_InvalidHeight(t *testing.T) {
@@ -288,7 +288,7 @@ func Test_Blockchain_InvalidHeight(t *testing.T) {
 	bc := newTestBlockchain(db)
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
-	assert.Equal(t, bc.WriteBlock(block), consensus.ErrBlockInvalidHeight)
+	assert.True(t, seeleErrors.IsOrContains(bc.WriteBlock(block), consensus.ErrBlockInvalidHeight))
 }
 
 func Test_Blockchain_UpdateCanocialHash(t *testing.T) {

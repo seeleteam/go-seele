@@ -54,3 +54,21 @@ func (err *StackedError) Error() string {
 
 	return buf.String()
 }
+
+// IsOrContains indicates whether the err is the specified inner error,
+// or the err is StackedError and contains the specified inner error.
+func IsOrContains(err error, inner error) bool {
+	for err != nil {
+		if err == inner {
+			return true
+		}
+
+		if se, ok := err.(*StackedError); ok {
+			err = se.inner
+		} else {
+			break
+		}
+	}
+
+	return false
+}
