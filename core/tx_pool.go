@@ -6,12 +6,11 @@
 package core
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -72,6 +71,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	return pool
 }
 
+// HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
 func (pool *TransactionPool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
 	reinject := pool.getReinjectTransaction(newHeader, lastHeader)
 	count := pool.addTransactions(reinject)
@@ -180,6 +180,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
+	// return immediately if tx already exists
 	pool.mutex.RLock()
 
 	if pool.hashToTxMap[tx.Hash] != nil {
@@ -190,17 +191,14 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 
 	pool.mutex.RUnlock()
 
+	// validate tx against the latest statedb
 	statedb, err := pool.chain.GetCurrentState()
 	if err != nil {
-		return fmt.Errorf("get current state db failed, error %s", err)
+		return errors.NewStackedError(err, "failed to get current statedb")
 	}
 
-	return pool.addTransactionWithStateInfo(tx, statedb)
-}
-
-func (pool *TransactionPool) addTransactionWithStateInfo(tx *types.Transaction, statedb *state.Statedb) error {
 	if err := tx.Validate(statedb); err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to validate tx")
 	}
 
 	pool.mutex.Lock()
@@ -264,6 +262,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
+// RemoveTransaction removes tx of specified tx hash from pool
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	defer pool.mutex.Unlock()
 	pool.mutex.Lock()

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/store"
@@ -110,7 +111,7 @@ func Test_LightChain_WriteHeader(t *testing.T) {
 
 	blockHeader := newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 1)
 	err := lc.WriteHeader(blockHeader)
-	assert.Equal(t, err, consensus.ErrBlockInvalidHeight)
+	assert.True(t, errors.IsOrContains(err, consensus.ErrBlockInvalidHeight))
 
 	blockHeader = newTestNonGensisBlockHeader(newTestBlockHeader(), big.NewInt(1), 2)
 	err = lc.WriteHeader(blockHeader)

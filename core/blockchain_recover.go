@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -42,7 +43,7 @@ func loadRecoveryPoint(file string) (*recoveryPoint, error) {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		rpLog.Error("Failed to read bytes from recovery point file, %v", err.Error())
-		return &rp, err
+		return &rp, errors.NewStackedErrorf(err, "failed to read recovery point file %v", file)
 	}
 
 	if err = json.Unmarshal(bytes, &rp); err != nil {
@@ -60,7 +61,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if !rp.PreviousHeadBlockHash.IsEmpty() {
 		if err := bcStore.PutHeadBlockHash(rp.PreviousHeadBlockHash); err != nil {
 			rpLog.Error("Failed to recover HEAD block hash, hash = %v, error = %v", rp.PreviousCanonicalBlockHash.ToHex(), err.Error())
-			return err
+			return errors.NewStackedErrorf(err, "failed to put HEAD block hash %v", rp.PreviousHeadBlockHash)
 		}
 
 		rp.PreviousHeadBlockHash = common.EmptyHash
@@ -71,7 +72,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if rp.WritingBlockHeight > 0 && !rp.PreviousCanonicalBlockHash.IsEmpty() {
 		if err := bcStore.PutBlockHash(rp.WritingBlockHeight, rp.PreviousCanonicalBlockHash); err != nil {
 			rpLog.Error("Failed to recover the block hash by height in canonical chain, height = %v, hash = %v, error = %v", rp.LargerHeight, rp.PreviousCanonicalBlockHash, err.Error())
-			return err
+			return errors.NewStackedErrorf(err, "failed to put block hash, height = %v, hash = %v", rp.WritingBlockHeight, rp.PreviousCanonicalBlockHash)
 		}
 
 		rp.PreviousCanonicalBlockHash = common.EmptyHash
@@ -82,7 +83,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if !rp.WritingBlockHash.IsEmpty() {
 		if err := bcStore.DeleteBlock(rp.WritingBlockHash); err != nil {
 			rpLog.Error("Failed to delete the crashed block, hash = %v, error = %v", rp.WritingBlockHash, err.Error())
-			return err
+			return errors.NewStackedErrorf(err, "failed to delete block by hash %v", rp.WritingBlockHash)
 		}
 
 		rp.WritingBlockHash = common.EmptyHash
@@ -94,7 +95,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if saved && rp.LargerHeight > 0 {
 		if err := DeleteLargerHeightBlocks(bcStore, rp.LargerHeight, nil); err != nil {
 			rpLog.Error("Failed to delete the larger height blocks in canonical chain, height = %v, error = %v", rp.LargerHeight, err.Error())
-			return err
+			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", rp.LargerHeight)
 		}
 
 		rpLog.Info("the larger height blocks in canonical chain deleted successfully")
@@ -106,7 +107,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if saved && !rp.StaleHash.IsEmpty() {
 		if err := OverwriteStaleBlocks(bcStore, rp.StaleHash, nil); err != nil {
 			rpLog.Error("Failed to overwrite the stale blocks in canonical chain, hash = %v, error = %v", rp.StaleHash, err.Error())
-			return err
+			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", rp.StaleHash)
 		}
 
 		rpLog.Info("stale blocks in canonical chain overwrited successfully")
@@ -154,7 +155,7 @@ func (rp *recoveryPoint) onPutBlockStart(block *types.Block, bcStore store.Block
 	hash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
 		rpLog.Error("Failed to get HEAD block hash onPutBlockStart, %v", err.Error())
-		return err
+		return errors.NewStackedError(err, "failed to get HEAD block hash")
 	}
 
 	rp.PreviousHeadBlockHash = hash
