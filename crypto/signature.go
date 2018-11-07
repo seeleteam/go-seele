@@ -8,7 +8,9 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"math/big"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
@@ -76,5 +78,30 @@ func (s Signature) recoverPubKey(msg []byte) (*ecdsa.PublicKey, error) {
 
 	curve := secp256k1.S256()
 	x, y := elliptic.Unmarshal(curve, pubKey)
-	return &ecdsa.PublicKey{curve, x, y}, nil
+	return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+}
+
+var (
+	secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
+	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
+)
+
+// ValidateSignatureValues verifies whether the signature values are valid with
+// the given chain rules. The v value is assumed to be either 0 or 1.
+func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
+	if r.Cmp(ethCommon.Big1) < 0 || s.Cmp(ethCommon.Big1) < 0 {
+		return false
+	}
+	// reject upper range of s values (ECDSA malleability)
+	// see discussion in secp256k1/libsecp256k1/include/secp256k1.h
+	if homestead && s.Cmp(secp256k1halfN) > 0 {
+		return false
+	}
+	// Frontier: allow s to be in full N range
+	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
+}
+
+// Ecrecover returns the uncompressed public key that created the given signature.
+func Ecrecover(hash, sig []byte) ([]byte, error) {
+	return secp256k1.RecoverPubkey(hash, sig)
 }
