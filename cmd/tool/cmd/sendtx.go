@@ -59,10 +59,10 @@ var sendTxCmd = &cobra.Command{
 		balances := newBalancesList(balanceList, threads, true)
 
 		for i := 0; i < threads; i++ {
+			wg.Add(1)
 			go StartSend(balances[i], i)
 		}
 
-		time.Sleep(5 * time.Second)
 		wg.Wait()
 	},
 }
@@ -70,16 +70,19 @@ var sendTxCmd = &cobra.Command{
 // StartSend start send tx by specific thread and mode
 func StartSend(balanceList []*balance, threadNum int) {
 	lock := &sync.Mutex{}
-	wg.Add(1)
+
 	switch mode {
 	case 1:
 		go loopSendMode(balanceList, lock, threadNum)
 		wg.Add(1)
 		go loopCheckMode1(balanceList, lock)
+
 	case 3:
 		go loopSendMode3(balanceList)
+
 	case 2, 4, 5:
 		go loopSendMode(balanceList, lock, threadNum)
+
 	default:
 		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5", mode)
 		break
@@ -160,7 +163,7 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 	tpsStartTime = time.Now()
 
 	// send tx periodically
-	for {
+	for len(balanceList) > 0 {
 		lock.Lock()
 		copyBalances := make([]*balance, len(balanceList))
 		copy(copyBalances, balanceList)
@@ -199,8 +202,8 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 
 			count++
 			if count == tps {
-				fmt.Printf("send txs %d at thread %d\n", count, threadNum)
 				elapse := time.Now().Sub(tpsStartTime)
+				fmt.Printf("from shard is %d sending txs %d at thread %d during %.2fs\n", b.shard, count, threadNum, elapse.Seconds())
 				if elapse < time.Second {
 					time.Sleep(time.Second - elapse)
 				}
