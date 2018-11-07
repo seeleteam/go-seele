@@ -108,7 +108,7 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 	return services
 }
 
-func (manager *LightClientsManager) CheckIfDebtPacked(debt *types.Debt) (bool, error) {
+func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (bool, error) {
 	toShard := debt.Data.Account.Shard()
 	if toShard == 0 || toShard == manager.localShard {
 		return false, errWrongShardDebt

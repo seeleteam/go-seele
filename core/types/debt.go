@@ -48,10 +48,10 @@ type DebtVerifier interface {
 	// returns error error info
 	ValidateDebt(debt *Debt) (bool, error)
 
-	// CheckIfDebtPacked
+	// IfDebtPacked
 	// return bool whether it is packed
 	// return error whether get error when checking
-	CheckIfDebtPacked(debt *Debt) (bool, error)
+	IfDebtPacked(debt *Debt) (bool, error)
 }
 
 // DebtIndex debt index
@@ -218,6 +218,7 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	return debts
 }
 
+// DebtArrayToMap transfer debt array to debt map
 func DebtArrayToMap(debts []*Debt) [][]*Debt {
 	debtsMap := make([][]*Debt, common.ShardCount+1)
 

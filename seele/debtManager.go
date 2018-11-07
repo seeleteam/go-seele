@@ -15,6 +15,8 @@ import (
 )
 
 type propagateDebts interface {
+	// propagateDebtMap send debts to other connected peers.
+	// filter whether filter debt when it is marked as known debt for peer.
 	propagateDebtMap(debtsMap [][]*types.Debt, filter bool)
 }
 
@@ -92,7 +94,9 @@ func (m *DebtManager) checking() {
 	for _, d := range toChecking {
 		wg.Add(1)
 		go func() {
-			ok, err := m.checker.CheckIfDebtPacked(d)
+			defer wg.Done()
+
+			ok, err := m.checker.IfDebtPacked(d)
 			if err != nil || ok {
 				if ok {
 					m.log.Info("remove debt as packed %s", d.Hash.ToHex())
@@ -102,8 +106,6 @@ func (m *DebtManager) checking() {
 
 				m.Remove(d.Hash)
 			}
-
-			wg.Done()
 		}()
 	}
 
