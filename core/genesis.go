@@ -11,6 +11,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	seeleErrors "github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -72,10 +73,7 @@ func GetGenesis(info GenesisInfo) *Genesis {
 		info.Difficult = 1
 	}
 
-	statedb, err := getStateDB(info)
-	if err != nil {
-		panic(err)
-	}
+	statedb := getStateDB(info)
 
 	stateRootHash, err := statedb.Hash()
 	if err != nil {
@@ -116,25 +114,24 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	}
 
 	if err != nil {
-		return err
+		return seeleErrors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", genesisBlockHeight)
 	}
 
 	storedGenesis, err := bcStore.GetBlock(storedGenesisHash)
 	if err != nil {
-		return fmt.Errorf("failed to get genesis block. %s", err)
+		return seeleErrors.NewStackedErrorf(err, "failed to get genesis block by hash %v", storedGenesisHash)
 	}
 
 	data, err := getGenesisExtraData(storedGenesis)
 	if err != nil {
-		return fmt.Errorf("failed to get genesis extra data. %s", err)
+		return seeleErrors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {
 		return fmt.Errorf("specific shard number %d does not match with the shard number in genesis info %d", data.ShardNumber, genesis.info.ShardNumber)
 	}
 
-	headerHash := genesis.header.Hash()
-	if !headerHash.Equal(storedGenesisHash) {
+	if headerHash := genesis.header.Hash(); !headerHash.Equal(storedGenesisHash) {
 		return ErrGenesisHashMismatch
 	}
 
@@ -143,25 +140,23 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 
 // store atomically stores the genesis block in the blockchain store.
 func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB database.Database) error {
-	statedb, err := getStateDB(genesis.info)
-	if err != nil {
-		return err
-	}
+	statedb := getStateDB(genesis.info)
 
 	batch := accountStateDB.NewBatch()
 	statedb.Commit(batch)
-	if err = batch.Commit(); err != nil {
-		return err
+	if err := batch.Commit(); err != nil {
+		return seeleErrors.NewStackedError(err, "failed to commit batch into database")
 	}
 
-	return bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true)
+	if err := bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true); err != nil {
+		return seeleErrors.NewStackedError(err, "failed to put genesis block header into store")
+	}
+
+	return nil
 }
 
-func getStateDB(info GenesisInfo) (*state.Statedb, error) {
-	statedb, err := state.NewStatedb(common.EmptyHash, nil)
-	if err != nil {
-		return nil, err
-	}
+func getStateDB(info GenesisInfo) *state.Statedb {
+	statedb := state.NewEmptyStatedb(nil)
 
 	for addr, amount := range info.Accounts {
 		if !common.IsShardEnabled() || addr.Shard() == info.ShardNumber {
@@ -170,7 +165,7 @@ func getStateDB(info GenesisInfo) (*state.Statedb, error) {
 		}
 	}
 
-	return statedb, nil
+	return statedb
 }
 
 // getGenesisExtraData returns the extra data of specified genesis block.
@@ -181,7 +176,7 @@ func getGenesisExtraData(genesisBlock *types.Block) (*genesisExtraData, error) {
 
 	data := genesisExtraData{}
 	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
-		return nil, err
+		return nil, seeleErrors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
 	}
 
 	return &data, nil

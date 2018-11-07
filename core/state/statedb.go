@@ -58,6 +58,12 @@ func NewStatedb(root common.Hash, db database.Database) (*Statedb, error) {
 	return NewStatedbWithTrie(trie), nil
 }
 
+// NewEmptyStatedb creates an empty statedb instance.
+func NewEmptyStatedb(db database.Database) *Statedb {
+	trie := trie.NewEmptyTrie(TrieDbPrefix, db)
+	return NewStatedbWithTrie(trie)
+}
+
 // NewStatedbWithTrie creates a statedb instance with specified trie.
 func NewStatedbWithTrie(trie Trie) *Statedb {
 	return &Statedb{

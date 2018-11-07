@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 )
 
@@ -190,12 +191,12 @@ func purgeBlock(hash common.Hash, bcStore store.BlockchainStore) error {
 	for !hash.IsEmpty() {
 		header, err := bcStore.GetBlockHeader(hash)
 		if err != nil {
-			return err
+			return errors.NewStackedErrorf(err, "failed to get block header by hash %v", hash)
 		}
 
 		canonicalHash, err := bcStore.GetBlockHash(header.Height)
 		if err != nil {
-			return err
+			return errors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", header.Height)
 		}
 
 		// common ancestor found in canonical chain.
@@ -204,7 +205,7 @@ func purgeBlock(hash common.Hash, bcStore store.BlockchainStore) error {
 		}
 
 		if err := bcStore.DeleteBlock(hash); err != nil {
-			return err
+			return errors.NewStackedErrorf(err, "failed to delete block by hash %v", hash)
 		}
 
 		hash = header.PreviousBlockHash
