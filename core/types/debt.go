@@ -47,6 +47,11 @@ type DebtVerifier interface {
 	// returns bool recoverable error
 	// returns error error info
 	ValidateDebt(debt *Debt) (bool, error)
+
+	// CheckIfDebtPacked
+	// return bool whether it is packed
+	// return error whether get error when checking
+	CheckIfDebtPacked(debt *Debt) (bool, error)
 }
 
 // DebtIndex debt index
@@ -75,12 +80,12 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // Validate validate debt with verifier
 // If verifier is nil, will skip it.
 // If isPool is true, we don't return error when the error is recoverable
-func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
-	if d.Data.FromShard == common.LocalShardNumber {
+func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) error {
+	if d.Data.FromShard == targetShard {
 		return errWrongShardNumber
 	}
 
-	if d.Data.Account.Shard() != common.LocalShardNumber {
+	if d.Data.Account.Shard() != targetShard {
 		return errInvalidAccount
 	}
 
@@ -211,4 +216,15 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	}
 
 	return debts
+}
+
+func DebtArrayToMap(debts []*Debt) [][]*Debt {
+	debtsMap := make([][]*Debt, common.ShardCount+1)
+
+	for _, d := range debts {
+		shard := d.Data.Account.Shard()
+		debtsMap[shard] = append(debtsMap[shard], d)
+	}
+
+	return debtsMap
 }

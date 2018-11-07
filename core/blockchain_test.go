@@ -60,7 +60,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1))
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -379,7 +379,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1))
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}

@@ -102,7 +102,7 @@ func Test_DebtPool(t *testing.T) {
 	defer dispose()
 
 	bc := newTestBlockchain(db)
-	pool := NewDebtPool(bc)
+	pool := NewDebtPool(bc, nil)
 
 	b1 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)
 	b2 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)

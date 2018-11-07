@@ -92,8 +92,15 @@ var startCmd = &cobra.Command{
 				return
 			}
 		} else {
+			// light client manager
+			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, miningEngine)
+			if err != nil {
+				fmt.Printf("create light client manager failed. %s", err)
+				return
+			}
+
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, miningEngine)
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, miningEngine, manager)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -113,15 +120,6 @@ var startCmd = &cobra.Command{
 				fmt.Println(err.Error())
 				return
 			}
-
-			// light client manager
-			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, miningEngine)
-			if err != nil {
-				fmt.Printf("create light client manager failed. %s", err)
-				return
-			}
-
-			seeleService.SetDebtVerifier(manager)
 
 			services := manager.GetServices()
 			services = append(services, seeleService, monitorService, lightServerService)

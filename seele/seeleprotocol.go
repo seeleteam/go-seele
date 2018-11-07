@@ -80,6 +80,8 @@ type SeeleProtocol struct {
 	quitCh chan struct{}
 	syncCh chan struct{}
 	log    *log.SeeleLog
+
+	debtManager *DebtManager
 }
 
 // Downloader return a pointer of the downloader
@@ -109,6 +111,8 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	s.Protocol.DeletePeer = s.handleDelPeer
 	s.Protocol.GetPeer = s.handleGetPeer
 
+	s.debtManager = NewDebtManager(seele.debtVerifier, s)
+
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
 	event.DebtsInsertedEventManager.AddAsyncListener(s.handleNewDebt)
@@ -118,6 +122,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 func (sp *SeeleProtocol) Start() {
 	sp.log.Debug("SeeleProtocol.Start called!")
 	go sp.syncer()
+	go sp.debtManager.TimingChecking()
 }
 
 // Stop stops protocol, called when seeleService quits.
@@ -273,21 +278,13 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 func (p *SeeleProtocol) handleNewDebt(e event.Event) {
 	debts := e.([]*types.Debt)
-
-	debtsMap := make([][]*types.Debt, common.ShardCount+1)
-
-	for _, d := range debts {
-		shard := d.Data.Account.Shard()
-		debtsMap[shard] = append(debtsMap[shard], d)
-	}
-
-	p.propagateDebtMap(debtsMap)
+	p.propagateDebtMap(types.DebtArrayToMap(debts), true)
 }
 
-func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt) {
+func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) {
 	p.peerSet.ForEachAll(func(peer *peer) bool {
 		if len(debtsMap[peer.Node.Shard]) > 0 {
-			err := peer.sendDebts(debtsMap[peer.Node.Shard])
+			err := peer.sendDebts(debtsMap[peer.Node.Shard], filter)
 			if err != nil {
 				p.log.Warn("failed to send debts to %s %s", peer.Node, err)
 			}
@@ -309,7 +306,8 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 			p.log.Warn("failed to load confirmed block height %d, err %s", confirmedHeight, err)
 		} else {
 			debts := types.NewDebtMap(confirmedBlock.Transactions)
-			p.propagateDebtMap(debts)
+			p.debtManager.AddDebtMap(debts)
+			p.propagateDebtMap(debts, true)
 		}
 
 	}
@@ -549,7 +547,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
+			p.log.Error("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
 			for _, d := range debts {
 				peer.knownDebts.Add(d.Hash, nil)
 			}

@@ -95,12 +95,14 @@ type Blockchain struct {
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
-func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string, engine consensus.Engine) (*Blockchain, error) {
+func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string, engine consensus.Engine,
+	verifier types.DebtVerifier) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
 		engine:         engine,
 		log:            log.GetLogger("blockchain"),
+		debtVerifier:   verifier,
 	}
 
 	var err error
@@ -153,10 +155,6 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc.blockLeaves.Add(blockIndex)
 
 	return bc, nil
-}
-
-func (bc *Blockchain) SetDebtVerifier(verifier types.DebtVerifier) {
-	bc.debtVerifier = verifier
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
@@ -546,7 +544,7 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
 	}
 
-	if err := d.Validate(verifier, false); err != nil {
+	if err := d.Validate(verifier, false, common.LocalShardNumber); err != nil {
 		return err
 	}
 

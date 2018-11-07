@@ -24,9 +24,12 @@ const (
 	// DiscHandShakeErr peer handshake error
 	DiscHandShakeErr = "disconnect because got handshake error"
 
-	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list
-	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list
-	maxKnownDebts  = 32768 // Maximum debt hashes to keep in the known list
+	maxKnownTxs    = 25000 // Maximum transactions hashes to keep in the known list
+	maxKnownBlocks = 250   // Maximum block hashes to keep in the known list
+
+	// the known debts is not the bigger the better. we should forgot old debt for debt resend.
+	// Maximum debt hashes to keep in the known list
+	maxKnownDebts = 10000
 )
 
 var (
@@ -123,12 +126,16 @@ func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	return err
 }
 
-func (p *peer) sendDebts(debts []*types.Debt) error {
-	filterDebts := make([]*types.Debt, 0)
-	for _, d := range debts {
-		if d != nil && !p.knownDebts.Contains(d.Hash) {
-			filterDebts = append(filterDebts, d)
+func (p *peer) sendDebts(debts []*types.Debt, filter bool) error {
+	var filterDebts []*types.Debt
+	if filter {
+		for _, d := range debts {
+			if d != nil && !p.knownDebts.Contains(d.Hash) {
+				filterDebts = append(filterDebts, d)
+			}
 		}
+	} else {
+		filterDebts = debts
 	}
 
 	buff := common.SerializePanic(filterDebts)
