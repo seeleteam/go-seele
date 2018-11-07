@@ -6,14 +6,13 @@
 package light
 
 import (
-	"errors"
 	"fmt"
 	rand2 "math/rand"
 	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	seeleErrors "github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -123,7 +122,7 @@ func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
 		o.log.Debug("peer send request, code = %s, payloadSizeBytes = %v", codeToStr(code), len(payload))
 		if err = p2p.SendMessage(p.rw, code, payload); err != nil {
 			o.log.Info("Failed to send message with peer %v", p)
-			return nil, seeleErrors.NewStackedErrorf(err, "failed to send P2P message")
+			return nil, errors.NewStackedErrorf(err, "failed to send P2P message")
 		}
 	}
 
@@ -133,11 +132,11 @@ func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
 	select {
 	case resp := <-ch:
 		if err := resp.getError(); err != nil {
-			return nil, seeleErrors.NewStackedError(err, "failed to handle ODR request on server side")
+			return nil, errors.NewStackedError(err, "failed to handle ODR request on server side")
 		}
 
 		if err := resp.validate(request, o.bcStore); err != nil {
-			return nil, seeleErrors.NewStackedError(err, "failed to valdiate ODR response")
+			return nil, errors.NewStackedError(err, "failed to valdiate ODR response")
 		}
 
 		return resp, nil

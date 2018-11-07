@@ -11,13 +11,13 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
-	seeleErrors "github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
-	"github.com/syndtr/goleveldb/leveldb/errors"
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var (
@@ -109,22 +109,22 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	storedGenesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 
 	// FIXME use seele-defined common error instead of concrete levelDB error.
-	if err == errors.ErrNotFound {
+	if err == leveldbErrors.ErrNotFound {
 		return genesis.store(bcStore, accountStateDB)
 	}
 
 	if err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", genesisBlockHeight)
+		return errors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", genesisBlockHeight)
 	}
 
 	storedGenesis, err := bcStore.GetBlock(storedGenesisHash)
 	if err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to get genesis block by hash %v", storedGenesisHash)
+		return errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", storedGenesisHash)
 	}
 
 	data, err := getGenesisExtraData(storedGenesis)
 	if err != nil {
-		return seeleErrors.NewStackedError(err, "failed to get extra data in genesis block")
+		return errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
 
 	if data.ShardNumber != genesis.info.ShardNumber {
@@ -145,11 +145,11 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	batch := accountStateDB.NewBatch()
 	statedb.Commit(batch)
 	if err := batch.Commit(); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to commit batch into database")
+		return errors.NewStackedError(err, "failed to commit batch into database")
 	}
 
 	if err := bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to put genesis block header into store")
+		return errors.NewStackedError(err, "failed to put genesis block header into store")
 	}
 
 	return nil
@@ -176,7 +176,7 @@ func getGenesisExtraData(genesisBlock *types.Block) (*genesisExtraData, error) {
 
 	data := genesisExtraData{}
 	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
-		return nil, seeleErrors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
+		return nil, errors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
 	}
 
 	return &data, nil

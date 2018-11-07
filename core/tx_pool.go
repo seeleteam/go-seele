@@ -6,12 +6,11 @@
 package core
 
 import (
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	seeleErrors "github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -195,11 +194,11 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	// validate tx against the latest statedb
 	statedb, err := pool.chain.GetCurrentState()
 	if err != nil {
-		return seeleErrors.NewStackedError(err, "failed to get current statedb")
+		return errors.NewStackedError(err, "failed to get current statedb")
 	}
 
 	if err := tx.Validate(statedb); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to validate tx")
+		return errors.NewStackedError(err, "failed to validate tx")
 	}
 
 	pool.mutex.Lock()

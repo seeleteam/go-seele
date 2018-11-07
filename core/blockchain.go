@@ -7,14 +7,13 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	seeleErrors "github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -110,43 +109,43 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc.rp, err = loadRecoveryPoint(recoveryPointFile)
 	if err != nil {
 		bc.log.Error("Failed to load recovery point info from file, %v", err.Error())
-		return nil, seeleErrors.NewStackedError(err, "failed to load recovery point info")
+		return nil, errors.NewStackedError(err, "failed to load recovery point info")
 	}
 
 	if err = bc.rp.recover(bcStore); err != nil {
 		bc.log.Error("Failed to recover blockchain, info = %+v, error = %v", *bc.rp, err.Error())
-		return nil, seeleErrors.NewStackedError(err, "failed to recover blockchain")
+		return nil, errors.NewStackedError(err, "failed to recover blockchain")
 	}
 
 	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
 		bc.log.Error("Failed to get block hash of genesis block height, %v", err.Error())
-		return nil, seeleErrors.NewStackedErrorf(err, "failed to get genesis block hash by height %v", genesisBlockHeight)
+		return nil, errors.NewStackedErrorf(err, "failed to get genesis block hash by height %v", genesisBlockHeight)
 	}
 
 	bc.genesisBlock, err = bcStore.GetBlock(genesisHash)
 	if err != nil {
 		bc.log.Error("Failed to get block by genesis block hash, hash = %v, error = %v", genesisHash.ToHex(), err.Error())
-		return nil, seeleErrors.NewStackedErrorf(err, "failed to get genesis block by hash %v", genesisHash)
+		return nil, errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", genesisHash)
 	}
 
 	// Get the HEAD block from store
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
 		bc.log.Error("Failed to get HEAD block hash, %v", err.Error())
-		return nil, seeleErrors.NewStackedError(err, "failed to get HEAD block hash")
+		return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
 	}
 
 	if bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash); err != nil {
 		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
-		return nil, seeleErrors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", currentHeaderHash)
+		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", currentHeaderHash)
 	}
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
 		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
-		return nil, seeleErrors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
+		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
 	}
 
 	blockIndex := NewBlockIndex(currentHeaderHash, bc.currentBlock.Header.Height, td)
@@ -220,19 +219,19 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	defer bc.lock.Unlock()
 
 	if err := bc.validateBlock(block); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to validate block")
+		return errors.NewStackedError(err, "failed to validate block")
 	}
 
 	preHeader, err := bc.bcStore.GetBlockHeader(block.Header.PreviousBlockHash)
 	if err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to get block header by hash %v", block.Header.PreviousBlockHash)
+		return errors.NewStackedErrorf(err, "failed to get block header by hash %v", block.Header.PreviousBlockHash)
 	}
 
 	// Process the txs in the block and check the state root hash.
 	var blockStatedb *state.Statedb
 	var receipts []*types.Receipt
 	if blockStatedb, receipts, err = bc.applyTxs(block, preHeader.StateHash); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to apply block txs")
+		return errors.NewStackedError(err, "failed to apply block txs")
 	}
 
 	// Validate receipts root hash.
@@ -251,7 +250,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	var stateRootHash common.Hash
 	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to commit statedb changes to database batch")
+		return errors.NewStackedError(err, "failed to commit statedb changes to database batch")
 	}
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
@@ -273,7 +272,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	var previousTd *big.Int
 	if previousTd, err = bc.bcStore.GetBlockTotalDifficulty(block.Header.PreviousBlockHash); err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to get block TD by hash %v", block.Header.PreviousBlockHash)
+		return errors.NewStackedErrorf(err, "failed to get block TD by hash %v", block.Header.PreviousBlockHash)
 	}
 
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
@@ -289,22 +288,22 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	/////////////////////////////////////////////////////////////////
 	if err = batch.Commit(); err != nil {
 		bc.log.Error("Failed to batch commit account states, %v", err.Error())
-		return seeleErrors.NewStackedError(err, "failed to commit statedb changes into database")
+		return errors.NewStackedError(err, "failed to commit statedb changes into database")
 	}
 
 	if err = bc.rp.onPutBlockStart(block, bc.bcStore, isHead); err != nil {
 		bc.log.Error("Failed to set recovery point before put block into store, %v", err.Error())
-		return seeleErrors.NewStackedErrorf(err, "failed to set recovery point before put block into store, isNewHead = %v", isHead)
+		return errors.NewStackedErrorf(err, "failed to set recovery point before put block into store, isNewHead = %v", isHead)
 	}
 
 	if err = bc.bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
 		bc.log.Error("Failed to save receipts into store, %v", err.Error())
-		return seeleErrors.NewStackedErrorf(err, "failed to save receipts into store, blockHash = %v, receipts count = %v", block.HeaderHash, len(receipts))
+		return errors.NewStackedErrorf(err, "failed to save receipts into store, blockHash = %v, receipts count = %v", block.HeaderHash, len(receipts))
 	}
 
 	if err = bc.bcStore.PutBlock(block, currentTd, isHead); err != nil {
 		bc.log.Error("Failed to save block into store, %v", err.Error())
-		return seeleErrors.NewStackedErrorf(err, "failed to save block into store, blockHash = %v, newTD = %v, isNewHead = %v", block.HeaderHash, currentTd, isHead)
+		return errors.NewStackedErrorf(err, "failed to save block into store, blockHash = %v, newTD = %v, isNewHead = %v", block.HeaderHash, currentTd, isHead)
 	}
 
 	bc.rp.onPutBlockEnd()
@@ -314,12 +313,12 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if isHead {
 		if err = DeleteLargerHeightBlocks(bc.bcStore, block.Header.Height+1, bc.rp); err != nil {
 			bc.log.Error("Failed to delete larger height blocks when HEAD changed, larger height = %v, error = %v", block.Header.Height+1, err.Error())
-			return seeleErrors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", block.Header.Height+1)
+			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", block.Header.Height+1)
 		}
 
 		if err = OverwriteStaleBlocks(bc.bcStore, block.Header.PreviousBlockHash, bc.rp); err != nil {
 			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
-			return seeleErrors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", block.Header.PreviousBlockHash)
+			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", block.Header.PreviousBlockHash)
 		}
 	}
 
@@ -333,7 +332,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 		bc.blockLeaves.PurgeAsync(bc.bcStore, func(err error) {
 			if err != nil {
-				bc.log.Error(seeleErrors.NewStackedError(err, "failed to purge block").Error())
+				bc.log.Error(errors.NewStackedError(err, "failed to purge block").Error())
 			}
 		})
 
@@ -350,11 +349,11 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 	}
 
 	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to validate block header")
+		return errors.NewStackedError(err, "failed to validate block header")
 	}
 
 	if err := block.Validate(); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to validate block")
+		return errors.NewStackedError(err, "failed to validate block")
 	}
 
 	if (types.GetTransactionsSize(block.Transactions[1:]) + types.GetDebtsSize(block.Debts)) > BlockByteLimit {
@@ -396,7 +395,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 	blockHash := header.Hash()
 	exist, err := bcStore.HasBlock(blockHash)
 	if err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to check if block exists by hash %v", blockHash)
+		return errors.NewStackedErrorf(err, "failed to check if block exists by hash %v", blockHash)
 	}
 
 	if exist {
@@ -404,7 +403,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 	}
 
 	if err = engine.VerifyHeader(bcStore, header); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to verify header by consensus engine")
+		return errors.NewStackedError(err, "failed to verify header by consensus engine")
 	}
 
 	return nil
@@ -420,25 +419,25 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Statedb, []*types.Receipt, error) {
 	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
-		return nil, nil, seeleErrors.NewStackedError(err, "failed to validate miner reward tx")
+		return nil, nil, errors.NewStackedError(err, "failed to validate miner reward tx")
 	}
 
 	statedb, err := state.NewStatedb(root, bc.accountStateDB)
 	if err != nil {
-		return nil, nil, seeleErrors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
+		return nil, nil, errors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
 	}
 
 	// update debts
 	for _, d := range block.Debts {
 		err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
 		if err != nil {
-			return nil, nil, seeleErrors.NewStackedError(err, "failed to apply debt")
+			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
 	}
 
 	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
 	if err != nil {
-		return nil, nil, seeleErrors.NewStackedErrorf(err, "failed to update statedb")
+		return nil, nil, errors.NewStackedErrorf(err, "failed to update statedb")
 	}
 
 	return statedb, receipts, nil
@@ -483,7 +482,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	// process miner reward
 	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
 	if err != nil {
-		return nil, seeleErrors.NewStackedError(err, "failed to apply miner reward tx")
+		return nil, errors.NewStackedError(err, "failed to apply miner reward tx")
 	}
 
 	receipts := make([]*types.Receipt, len(txs)+1)
@@ -492,7 +491,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	receipts[0] = rewardTxReceipt
 
 	if err := types.BatchValidateTxs(txs); err != nil {
-		return nil, seeleErrors.NewStackedErrorf(err, "failed to batch validate %v txs", len(txs))
+		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(txs))
 	}
 
 	// process other txs
@@ -500,12 +499,12 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 		txIdx := i + 1
 
 		if err := tx.ValidateState(statedb); err != nil {
-			return nil, seeleErrors.NewStackedErrorf(err, "failed to validate tx[%v] against statedb", txIdx)
+			return nil, errors.NewStackedErrorf(err, "failed to validate tx[%v] against statedb", txIdx)
 		}
 
 		receipt, err := bc.ApplyTransaction(tx, txIdx, minerRewardTx.Data.To, statedb, blockHeader)
 		if err != nil {
-			return nil, seeleErrors.NewStackedErrorf(err, "failed to apply tx[%v]", txIdx)
+			return nil, errors.NewStackedErrorf(err, "failed to apply tx[%v]", txIdx)
 		}
 
 		receipts[txIdx] = receipt
@@ -521,7 +520,7 @@ func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.
 
 	hash, err := statedb.Hash()
 	if err != nil {
-		return nil, seeleErrors.NewStackedError(err, "failed to get statedb root hash")
+		return nil, errors.NewStackedError(err, "failed to get statedb root hash")
 	}
 
 	receipt := types.MakeRewardReceipt(rewardTx)
@@ -542,7 +541,7 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	}
 	receipt, err := svm.Process(ctx)
 	if err != nil {
-		return nil, seeleErrors.NewStackedError(err, "failed to process tx via svm")
+		return nil, errors.NewStackedError(err, "failed to process tx via svm")
 	}
 
 	return receipt, nil
@@ -556,7 +555,7 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 	}
 
 	if err := d.Validate(verifier, false); err != nil {
-		return seeleErrors.NewStackedError(err, "failed to validate debt")
+		return errors.NewStackedError(err, "failed to validate debt")
 	}
 
 	if !statedb.Exist(d.Data.Account) {
@@ -575,7 +574,7 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 func DeleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64, rp *recoveryPoint) error {
 	// When recover the blockchain, the larger height block hash may be already deleted before program crash.
 	if _, err := deleteCanonicalBlock(bcStore, largerHeight); err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to delete canonical block by height %v", largerHeight)
+		return errors.NewStackedErrorf(err, "failed to delete canonical block by height %v", largerHeight)
 	}
 
 	for i := largerHeight + 1; ; i++ {
@@ -585,7 +584,7 @@ func DeleteLargerHeightBlocks(bcStore store.BlockchainStore, largerHeight uint64
 
 		deleted, err := deleteCanonicalBlock(bcStore, i)
 		if err != nil {
-			return seeleErrors.NewStackedErrorf(err, "failed to delete canonical block by height %v", i)
+			return errors.NewStackedErrorf(err, "failed to delete canonical block by height %v", i)
 		}
 
 		if !deleted {
@@ -608,23 +607,23 @@ func deleteCanonicalBlock(bcStore store.BlockchainStore, height uint64) (bool, e
 	}
 
 	if err != nil {
-		return false, seeleErrors.NewStackedErrorf(err, "failed to get block hash by height %v", height)
+		return false, errors.NewStackedErrorf(err, "failed to get block hash by height %v", height)
 	}
 
 	// delete the tx/debt indices
 	block, err := bcStore.GetBlock(hash)
 	if err != nil {
-		return false, seeleErrors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
+		return false, errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
 	}
 
 	if err = bcStore.DeleteIndices(block); err != nil {
-		return false, seeleErrors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", block.HeaderHash)
+		return false, errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", block.HeaderHash)
 	}
 
 	// delete the block hash in canonical chain.
 	deleted, err := bcStore.DeleteBlockHash(height)
 	if err != nil {
-		return false, seeleErrors.NewStackedErrorf(err, "failed to delete block hash by height %v", height)
+		return false, errors.NewStackedErrorf(err, "failed to delete block hash by height %v", height)
 	}
 
 	return deleted, nil
@@ -637,7 +636,7 @@ func OverwriteStaleBlocks(bcStore store.BlockchainStore, staleHash common.Hash, 
 
 	// When recover the blockchain, the stale block hash my be already overwritten before program crash.
 	if _, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
-		return seeleErrors.NewStackedErrorf(err, "failed to overwrite single stale block, hash = %v", staleHash)
+		return errors.NewStackedErrorf(err, "failed to overwrite single stale block, hash = %v", staleHash)
 	}
 
 	for !staleHash.Equal(common.EmptyHash) {
@@ -646,7 +645,7 @@ func OverwriteStaleBlocks(bcStore store.BlockchainStore, staleHash common.Hash, 
 		}
 
 		if overwritten, staleHash, err = overwriteSingleStaleBlock(bcStore, staleHash); err != nil {
-			return seeleErrors.NewStackedErrorf(err, "failed to overwrite single stale block, hash = %v", staleHash)
+			return errors.NewStackedErrorf(err, "failed to overwrite single stale block, hash = %v", staleHash)
 		}
 
 		if !overwritten {
@@ -664,12 +663,12 @@ func OverwriteStaleBlocks(bcStore store.BlockchainStore, staleHash common.Hash, 
 func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) (overwritten bool, preBlockHash common.Hash, err error) {
 	header, err := bcStore.GetBlockHeader(hash)
 	if err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to get block header by hash %v", hash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block header by hash %v", hash)
 	}
 
 	canonicalHash, err := bcStore.GetBlockHash(header.Height)
 	if err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", header.Height)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", header.Height)
 	}
 
 	if hash.Equal(canonicalHash) {
@@ -679,26 +678,26 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 	// delete the tx/debt indices in previous canonical chain.
 	canonicalBlock, err := bcStore.GetBlock(canonicalHash)
 	if err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to get block by hash %v", canonicalHash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block by hash %v", canonicalHash)
 	}
 
 	if err = bcStore.DeleteIndices(canonicalBlock); err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", canonicalBlock.HeaderHash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", canonicalBlock.HeaderHash)
 	}
 
 	// add the tx/debt indices in new canonical chain.
 	block, err := bcStore.GetBlock(hash)
 	if err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
 	}
 
 	if err = bcStore.AddIndices(block); err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to add tx/debt indices of block %v", block.HeaderHash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to add tx/debt indices of block %v", block.HeaderHash)
 	}
 
 	// update the block hash in canonical chain.
 	if err = bcStore.PutBlockHash(header.Height, hash); err != nil {
-		return false, common.EmptyHash, seeleErrors.NewStackedErrorf(err, "failed to put block height to hash map in canonical chain, height = %v, hash = %v", header.Height, hash)
+		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to put block height to hash map in canonical chain, height = %v, hash = %v", header.Height, hash)
 	}
 
 	return true, header.PreviousBlockHash, nil
@@ -708,7 +707,7 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 func (bc *Blockchain) GetShardNumber() (uint, error) {
 	data, err := getGenesisExtraData(bc.genesisBlock)
 	if err != nil {
-		return 0, seeleErrors.NewStackedError(err, "failed to get extra data in genesis block")
+		return 0, errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
 
 	return data.ShardNumber, nil
