@@ -291,7 +291,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "start",
 				Usage:  "start miner",
-				Flags:  rpcFlags(threadsFlag),
+				Flags:  rpcFlags(),
 				Action: rpcAction("miner", "start"),
 			},
 			{

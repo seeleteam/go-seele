@@ -24,9 +24,7 @@ func NewPrivateMinerAPI(s *SeeleService) *PrivateMinerAPI {
 }
 
 // Start API is used to start the miner with the given number of threads.
-func (api *PrivateMinerAPI) Start(threads int) (bool, error) {
-	api.s.miner.SetThreads(threads)
-
+func (api *PrivateMinerAPI) Start() (bool, error) {
 	if api.s.miner.IsMining() {
 		return true, miner.ErrMinerIsRunning
 	}
