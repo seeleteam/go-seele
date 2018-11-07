@@ -105,23 +105,23 @@ func invalidWSConfig() *Config {
 	}
 }
 
-func Test_startRPC(t *testing.T) {
+func Test_startTCP(t *testing.T) {
 	// valid node config
 	stack := newNode(validRPCConfig(), t)
 	apis := newAPIs()
-	err := stack.startPRC(apis)
+	err := stack.startTCP(apis)
 	assert.Equal(t, err, nil)
 	stack.stopRPC()
 
 	// invalid node config
 	stack = newNode(invalidRPCConfigWithoutEndpoint(), t)
-	err = stack.startPRC(apis)
+	err = stack.startTCP(apis)
 	assert.Equal(t, err, nil)
 	stack.stopRPC()
 
 	// invalid node config
 	stack = newNode(invalidRPCConfig(), t)
-	err = stack.startPRC(apis)
+	err = stack.startTCP(apis)
 	assert.Equal(t, err != nil, true)
 	stack.stopRPC()
 
