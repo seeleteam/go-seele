@@ -9,6 +9,7 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/contract/system"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
@@ -30,7 +31,7 @@ type Context struct {
 func Process(ctx *Context) (*types.Receipt, error) {
 	// check the tx against the latest statedb, e.g. balance, nonce.
 	if err := ctx.Tx.ValidateState(ctx.Statedb); err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to validate tx against statedb")
 	}
 
 	// Pay intrinsic gas all the time
@@ -182,6 +183,7 @@ func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Recei
 	// Record statedb hash
 	var err error
 	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
+		err = errors.NewStackedError(err, "failed to get statedb root hash")
 		return nil, revertStatedb(ctx.Statedb, snapshot, err)
 	}
 
