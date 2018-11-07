@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	seeleErrors "github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -47,6 +48,7 @@ func newOdrDebtErrorResponse(reqID uint32, err error) *odrDebtResponse {
 func (req *odrDebtRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	debt, index, err := api.GetDebt(lp.debtPool, lp.chain.GetStore(), req.DebtHash)
 	if err != nil {
+		err = seeleErrors.NewStackedErrorf(err, "failed to get debt by hash %v", req.DebtHash)
 		return debtResponseCode, newOdrDebtErrorResponse(req.ReqID, err)
 	}
 
@@ -65,12 +67,14 @@ func (req *odrDebtRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 
 	block, err := lp.chain.GetStore().GetBlock(response.BlockIndex.BlockHash)
 	if err != nil {
+		err = seeleErrors.NewStackedErrorf(err, "failed to get block by hash %v", response.BlockIndex.BlockHash)
 		return debtResponseCode, newOdrDebtErrorResponse(req.ReqID, err)
 	}
 
 	debtTrie := types.GetDebtTrie(block.Debts)
 	proof, err := debtTrie.GetProof(req.DebtHash.Bytes())
 	if err != nil {
+		err = seeleErrors.NewStackedError(err, "failed to get debt trie proof")
 		return debtResponseCode, newOdrDebtErrorResponse(req.ReqID, err)
 	}
 
@@ -98,13 +102,13 @@ func (response *odrDebtResponse) validate(request odrRequest, bcStore store.Bloc
 	if response.BlockIndex != nil {
 		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
 		if err != nil {
-			return err
+			return seeleErrors.NewStackedErrorf(err, "failed to get block header by hash %v", response.BlockIndex.BlockHash)
 		}
 
 		proof := arrayToMap(response.Proof)
 		value, err := trie.VerifyProof(header.DebtHash, debtHash.Bytes(), proof)
 		if err != nil {
-			return err
+			return seeleErrors.NewStackedError(err, "failed to verify the debt trie proof")
 		}
 
 		if buff := common.SerializePanic(response.Debt); !bytes.Equal(buff, value) {

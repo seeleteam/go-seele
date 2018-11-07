@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
@@ -63,7 +64,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	}
 
 	if err := tx.ValidateWithoutState(true, false); err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to validate tx without state")
 	}
 
 	pool.mutex.Lock()
@@ -74,7 +75,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	}
 
 	if _, err := pool.odrBackend.retrieve(&odrAddTx{Tx: *tx}); err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to add tx via ODR backend")
 	}
 
 	pool.pendingTxs[tx.Hash] = tx
@@ -145,7 +146,7 @@ func (pool *txPool) eventLoop() {
 		select {
 		case newHeader := <-pool.headerCh:
 			if err := pool.setNewHeader(newHeader); err != nil {
-				pool.log.Error("Failed to set new header, %v", err.Error())
+				pool.log.Error(errors.NewStackedError(err, "failed to set new header").Error())
 			}
 		}
 	}
@@ -164,7 +165,7 @@ func (pool *txPool) setNewHeader(newHeader *types.BlockHeader) error {
 
 	oldHashes, newHashes, err := pool.commonAncestor(oldHeader, newHeader)
 	if err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to find common ancestor, old = %+v, new = %+v", oldHeader, newHeader)
 	}
 
 	for _, blockHash := range oldHashes {
@@ -173,7 +174,7 @@ func (pool *txPool) setNewHeader(newHeader *types.BlockHeader) error {
 
 	for _, blockHash := range newHashes {
 		if err := pool.checkMinedTxs(blockHash); err != nil {
-			return err
+			return errors.NewStackedErrorf(err, "failed to check mined txs for block %v", blockHash)
 		}
 	}
 
@@ -194,7 +195,7 @@ func (pool *txPool) commonAncestor(oldHeader, newHeader *types.BlockHeader) (old
 			oldHashes = append(oldHashes, oldHash)
 			preHash = oldHeader.PreviousBlockHash
 			if oldHeader, err = pool.chain.GetStore().GetBlockHeader(preHash); err != nil {
-				return
+				return nil, nil, errors.NewStackedErrorf(err, "failed to get block header by hash %v", preHash)
 			}
 			oldHash = preHash
 		} else {
@@ -202,13 +203,13 @@ func (pool *txPool) commonAncestor(oldHeader, newHeader *types.BlockHeader) (old
 			newHashes = append(newHashes, newHash)
 			preHash = newHeader.PreviousBlockHash
 			if newHeader, err = pool.chain.GetStore().GetBlockHeader(preHash); err != nil {
-				return
+				return nil, nil, errors.NewStackedErrorf(err, "failed to get block header by hash %v", preHash)
 			}
 			newHash = preHash
 		}
 	}
 
-	return
+	return oldHashes, newHashes, nil
 }
 
 // rollbackTxs roll back txs of the specified block hash back into tx pool.
@@ -235,7 +236,7 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 
 	block, err := pool.getBlock(blockHash)
 	if err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to get block from remote peer, hash = %v", blockHash)
 	}
 
 	var minedTxs []*types.Transaction
@@ -263,7 +264,7 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 func (pool *txPool) getBlock(hash common.Hash) (*types.Block, error) {
 	response, err := pool.odrBackend.retrieve(&odrBlock{Hash: hash})
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to retrieve ODR block")
 	}
 
 	return response.(*odrBlock).Block, nil
