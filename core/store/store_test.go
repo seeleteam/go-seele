@@ -140,7 +140,7 @@ func newTestTx() *types.Transaction {
 }
 
 func newTestDebt() *types.Debt {
-	return types.NewDebt(newTestTx())
+	return types.NewDebtWithContext(newTestTx())
 }
 
 func Test_blockchainDatabase_Block(t *testing.T) {

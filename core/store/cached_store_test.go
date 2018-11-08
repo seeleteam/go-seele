@@ -89,7 +89,7 @@ func newTestFullBlock(debtNum, txNum int) *types.Block {
 
 	var debts []*types.Debt
 	for i := 0; i < debtNum; i++ {
-		d := types.NewDebt(getRandomTx())
+		d := types.NewDebtWithContext(getRandomTx())
 		debts = append(debts, d)
 	}
 

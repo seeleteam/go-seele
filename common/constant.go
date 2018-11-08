@@ -23,9 +23,6 @@ const (
 	// ShardCount represents the total number of shards.
 	ShardCount = 2
 
-	// PrintExplosionLog whether print explosion log flag. Most of them are transaction track logs
-	PrintExplosionLog = false
-
 	// MetricsRefreshTime is the time of metrics sleep 1 minute
 	MetricsRefreshTime = time.Minute
 

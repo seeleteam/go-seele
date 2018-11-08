@@ -187,10 +187,6 @@ func (lp *LightProtocol) synchronise(p *peer) {
 		return
 	}
 
-	if common.PrintExplosionLog {
-		lp.log.Debug("lp.synchronise called.")
-	}
-
 	hash, err := lp.chain.GetStore().GetHeadBlockHash()
 	if err != nil {
 		lp.log.Error("lp.synchronise GetHeadBlockHash err.[%s]", err)
@@ -302,10 +298,6 @@ handler:
 		if err != nil {
 			lp.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
-		}
-
-		if common.PrintExplosionLog {
-			lp.log.Debug("got msg with type:%s", codeToStr(msg.Code))
 		}
 
 		bNeedDeliverOdr := false
