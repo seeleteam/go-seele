@@ -15,7 +15,7 @@ import (
 )
 
 // DebtSize debt serialized size
-const DebtSize = 98
+const DebtSize = 97
 
 var (
 	errWrongShardNumber = errors.New("wrong from shard number")

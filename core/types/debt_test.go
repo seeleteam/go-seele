@@ -52,9 +52,30 @@ func Test_DebtSize(t *testing.T) {
 
 	d := NewDebtWithContext(tx)
 
-	array := []*Debt{d, d}
+	array := []*Debt{d}
 	buff := common.SerializePanic(array)
-	assert.Equal(t, len(buff)/2, DebtSize)
+	fmt.Println(len(buff))
+	assert.Equal(t, len(buff), DebtSize)
+
+	array = []*Debt{d, d}
+	buff = common.SerializePanic(array)
+	fmt.Println(len(buff) / 2)
+	assert.Equal(t, len(buff)/2, DebtSize-1)
+
+	array = []*Debt{d, d, d}
+	buff = common.SerializePanic(array)
+	fmt.Println(len(buff) / 3)
+	assert.Equal(t, len(buff)/3, DebtSize-1)
+
+	array = []*Debt{d, d, d, d}
+	buff = common.SerializePanic(array)
+	fmt.Println(len(buff) / 4)
+	assert.Equal(t, len(buff)/4, DebtSize-2)
+
+	array = []*Debt{d, d, d, d, d}
+	buff = common.SerializePanic(array)
+	fmt.Println(len(buff) / 5)
+	assert.Equal(t, len(buff)/5, DebtSize-2)
 }
 
 func Test_FeeShare(t *testing.T) {
