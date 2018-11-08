@@ -51,9 +51,9 @@ const (
 	// BlockPackInterval it's an estimate time.
 	BlockPackInterval = 15 * time.Second
 
-	WindowsPipeDir = `\\.\pipe\`
+	windowsPipeDir = `\\.\pipe\`
 
-	DefaultPipeFile = `\seele.ipc`
+	defaultPipeFile = `\seele.ipc`
 )
 
 var (
@@ -77,9 +77,9 @@ func init() {
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
 
 	if runtime.GOOS == "windows" {
-		defaultIPCPath = WindowsPipeDir + DefaultPipeFile
+		defaultIPCPath = windowsPipeDir + defaultPipeFile
 	} else {
-		defaultIPCPath = filepath.Join(defaultDataFolder, DefaultPipeFile)
+		defaultIPCPath = filepath.Join(defaultDataFolder, defaultPipeFile)
 	}
 }
 
