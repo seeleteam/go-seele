@@ -10,7 +10,6 @@ import (
 	"crypto/elliptic"
 	"math/big"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto/secp256k1"
@@ -95,7 +94,7 @@ var (
 // ValidateSignatureValues verifies whether the signature values are valid with
 // the given chain rules. The v value is assumed to be either 0 or 1.
 func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
-	if r.Cmp(ethCommon.Big1) < 0 || s.Cmp(ethCommon.Big1) < 0 {
+	if r.Cmp(common.Big1) < 0 || s.Cmp(common.Big1) < 0 {
 		return false
 	}
 	// reject upper range of s values (ECDSA malleability)

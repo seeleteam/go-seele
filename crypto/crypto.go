@@ -188,3 +188,10 @@ func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
 	return addr.CreateContractAddress(nonce, MustHash)
 }
+
+// CreateAddress2 creates an ethereum address given the address bytes, initial
+// contract code hash and a salt.
+func CreateAddress2(b common.Address, salt common.Hash, inithash []byte) common.Address {
+	// @todo
+	return common.BytesToAddress(Keccak256([]byte{0xff}, b.Bytes(), salt[:], inithash)[12:])
+}
