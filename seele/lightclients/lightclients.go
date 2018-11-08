@@ -75,7 +75,7 @@ func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error)
 	backend := manager.lightClientsBackend[int(debt.Data.FromShard)]
 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("got error when get transaction. %s", err)
 	}
 
 	if index == nil {
@@ -88,7 +88,7 @@ func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error)
 		return true, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
 	}
 
-	checkDebt := types.NewDebt(tx)
+	checkDebt := types.NewDebtWithoutContext(tx)
 	if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
 		return false, errNotMatchedTx
 	}
@@ -106,4 +106,29 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 	}
 
 	return services
+}
+
+func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (bool, error) {
+	toShard := debt.Data.Account.Shard()
+	if toShard == 0 || toShard == manager.localShard {
+		return false, errWrongShardDebt
+	}
+
+	backend := manager.lightClientsBackend[toShard]
+	result, index, err := backend.GetDebt(debt.Hash)
+
+	if err != nil {
+		return false, nil
+	}
+
+	if index == nil {
+		return false, nil
+	}
+
+	err = result.Validate(nil, false, toShard)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

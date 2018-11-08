@@ -80,11 +80,12 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine, verifier types.DebtVerifier) (s *SeeleService, err error) {
 	s = &SeeleService{
-		log:        log,
-		networkID:  conf.P2PConfig.NetworkID,
-		netVersion: conf.BasicConfig.Version,
+		log:          log,
+		networkID:    conf.P2PConfig.NetworkID,
+		netVersion:   conf.BasicConfig.Version,
+		debtVerifier: verifier,
 	}
 
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
@@ -119,11 +120,6 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 	}
 
 	return s, nil
-}
-
-func (s *SeeleService) SetDebtVerifier(verifier types.DebtVerifier) {
-	s.debtVerifier = verifier
-	s.debtPool.SetVerifier(verifier)
 }
 
 func (s *SeeleService) initBlockchainDB(serviceContext *ServiceContext) (err error) {
@@ -162,13 +158,11 @@ func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf 
 	}
 
 	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile, s.miner.GetEngine()); err != nil {
+	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile, s.miner.GetEngine(), s.debtVerifier); err != nil {
 		s.Stop()
 		s.log.Error("failed to init chain in NewSeeleService. %s", err)
 		return err
 	}
-
-	s.chain.SetDebtVerifier(s.debtVerifier)
 
 	return nil
 }
@@ -180,7 +174,7 @@ func (s *SeeleService) initPool(conf *node.Config) (err error) {
 	}
 
 	s.chainHeaderChangeChannel = make(chan common.Hash, chainHeaderChangeBuffSize)
-	s.debtPool = core.NewDebtPool(s.chain)
+	s.debtPool = core.NewDebtPool(s.chain, s.debtVerifier)
 	s.txPool = core.NewTransactionPool(conf.SeeleConfig.TxConf, s.chain)
 
 	event.ChainHeaderChangedEventMananger.AddAsyncListener(s.chainHeaderChanged)

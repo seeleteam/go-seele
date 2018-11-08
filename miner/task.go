@@ -59,21 +59,16 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 	size := core.BlockByteLimit
 
 	var debts []*types.Debt
-	for size > 0 {
-		debts, size = seele.DebtPool().Get(size)
-		if len(debts) == 0 {
-			return size
+	debts, size = seele.DebtPool().Get(size)
+	for _, d := range debts {
+		err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
+		if err != nil {
+			log.Warn("apply debt error %s", err)
+			continue
 		}
 
-		for _, d := range debts {
-			err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
-			if err != nil {
-				continue
-			}
-
-			// @TODO add debt reward
-			task.debts = append(task.debts, d)
-		}
+		// @TODO add debt reward
+		task.debts = append(task.debts, d)
 	}
 
 	return size

@@ -39,7 +39,7 @@ func newTestRecoverableBlockchain(bcStore store.BlockchainStore, stateDB databas
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, stateDB, rpFile, pow.NewEngine(1))
+	bc, err := NewBlockchain(bcStore, stateDB, rpFile, pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}

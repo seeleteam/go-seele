@@ -104,7 +104,7 @@ func NewTestSeeleBackend(db database.Database) *TestSeeleBackend {
 
 	seeleBeckend.txPool = newTestPool(core.DefaultTxPoolConfig(), db)
 	seeleBeckend.blockchain = newTestBlockchain(db)
-	seeleBeckend.debtPool = core.NewDebtPool(seeleBeckend.blockchain)
+	seeleBeckend.debtPool = core.NewDebtPool(seeleBeckend.blockchain, nil)
 
 	return seeleBeckend
 }
@@ -129,7 +129,7 @@ func newTestBlockchain(db database.Database) *core.Blockchain {
 		panic(err)
 	}
 
-	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1))
+	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}
