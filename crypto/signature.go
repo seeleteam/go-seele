@@ -57,7 +57,7 @@ func (s Signature) Verify(signer common.Address, hash []byte) bool {
 		return false
 	}
 
-	pubKey, err := s.recoverPubKey(hash)
+	pubKey, err := Ecrecover(hash, s.Sig)
 	if err != nil {
 		return false // Signature was modified
 	}
@@ -70,8 +70,9 @@ func (s Signature) Verify(signer common.Address, hash []byte) bool {
 	return secp256k1.VerifySignature(compressed, hash, s.Sig[:64])
 }
 
-func (s Signature) recoverPubKey(msg []byte) (*ecdsa.PublicKey, error) {
-	pubKey, err := secp256k1.RecoverPubkey(msg, s.Sig)
+// Ecrecover recovers public key from specified msg and signature.
+func Ecrecover(msg []byte, sig []byte) (*ecdsa.PublicKey, error) {
+	pubKey, err := secp256k1.RecoverPubkey(msg, sig)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +105,4 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	}
 	// Frontier: allow s to be in full N range
 	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
-}
-
-// Ecrecover returns the uncompressed public key that created the given signature.
-func Ecrecover(hash, sig []byte) ([]byte, error) {
-	return secp256k1.RecoverPubkey(hash, sig)
 }
