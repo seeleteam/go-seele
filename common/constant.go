@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -46,6 +47,10 @@ const (
 
 	// BlockPackInterval it's an estimate time.
 	BlockPackInterval = 15 * time.Second
+
+	windowsPipeDir = `\\.\pipe\`
+
+	defaultPipeFile = `\seele.ipc`
 )
 
 var (
@@ -54,6 +59,9 @@ var (
 
 	// defaultDataFolder used to store persistent data info, such as the database and keystore
 	defaultDataFolder string
+
+	// defaultIPCPath used to store the ipc file
+	defaultIPCPath string
 )
 
 func init() {
@@ -64,6 +72,12 @@ func init() {
 		panic(err)
 	}
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
+
+	if runtime.GOOS == "windows" {
+		defaultIPCPath = windowsPipeDir + defaultPipeFile
+	} else {
+		defaultIPCPath = filepath.Join(defaultDataFolder, defaultPipeFile)
+	}
 }
 
 // GetTempFolder uses a getter to implement readonly
@@ -74,4 +88,8 @@ func GetTempFolder() string {
 // GetDefaultDataFolder gets the default data Folder
 func GetDefaultDataFolder() string {
 	return defaultDataFolder
+}
+
+func GetDefaultIPCPath() string {
+	return defaultIPCPath
 }

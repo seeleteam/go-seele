@@ -35,7 +35,7 @@ func (s TestService1) Stop() error             { return nil }
 
 var testService1 TestService1
 
-func validRPCConfig() *Config {
+func validTCPConfig() *Config {
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",
@@ -46,7 +46,7 @@ func validRPCConfig() *Config {
 	}
 }
 
-func invalidRPCConfigWithoutEndpoint() *Config {
+func invalidTCPConfigWithoutEndpoint() *Config {
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",
@@ -56,13 +56,19 @@ func invalidRPCConfigWithoutEndpoint() *Config {
 	}
 }
 
-func invalidRPCConfig() *Config {
+func invalidTCPConfig() *Config {
 	return &Config{
 		BasicConfig: BasicConfig{
 			Name:    "test node",
 			Version: "test version",
 			RPCAddr: "127.0.0.1",
 		},
+		LogConfig: comm.LogConfig{PrintLog: true, IsDebug: true},
+	}
+}
+
+func validIPCConfig() *Config {
+	return &Config{
 		LogConfig: comm.LogConfig{PrintLog: true, IsDebug: true},
 	}
 }
@@ -105,24 +111,37 @@ func invalidWSConfig() *Config {
 	}
 }
 
-func Test_startRPC(t *testing.T) {
+func Test_startTCP(t *testing.T) {
 	// valid node config
-	stack := newNode(validRPCConfig(), t)
+	stack := newNode(validTCPConfig(), t)
 	apis := newAPIs()
-	err := stack.startPRC(apis)
+	err := stack.startTCP(apis)
 	assert.Equal(t, err, nil)
 	stack.stopRPC()
 
 	// invalid node config
-	stack = newNode(invalidRPCConfigWithoutEndpoint(), t)
-	err = stack.startPRC(apis)
+	stack = newNode(invalidTCPConfigWithoutEndpoint(), t)
+	err = stack.startTCP(apis)
 	assert.Equal(t, err, nil)
 	stack.stopRPC()
 
 	// invalid node config
-	stack = newNode(invalidRPCConfig(), t)
-	err = stack.startPRC(apis)
+	stack = newNode(invalidTCPConfig(), t)
+	err = stack.startTCP(apis)
 	assert.Equal(t, err != nil, true)
+	stack.stopRPC()
+
+	// Stop node that not started
+	err = stack.Stop()
+	assert.Equal(t, err, ErrNodeStopped)
+}
+
+func Test_startIPC(t *testing.T) {
+	// valid node config
+	stack := newNode(validIPCConfig(), t)
+	apis := newAPIs()
+	err := stack.startIPC(apis)
+	assert.Equal(t, err, nil)
 	stack.stopRPC()
 
 	// Stop node that not started
