@@ -81,6 +81,11 @@ func (s Signature) recoverPubKey(msg []byte) (*ecdsa.PublicKey, error) {
 	return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+// Below code is copied from ETH, and used to support precompiled contract 'ecrecover'.
+// If import ethereum crypto pkg as vendor code, there will be compilation error about
+// reference cgo code.
+/////////////////////////////////////////////////////////////////////////////////////////
 var (
 	secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
 	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
