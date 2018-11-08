@@ -408,7 +408,7 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 
 	// check before applying tx
 	assert.Equal(t, statedb.GetBalance(tx.Data.From), genesisAccount.amount)
-	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
+	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(-1))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
 
 	// apply tx
