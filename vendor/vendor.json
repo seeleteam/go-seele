@@ -70,10 +70,10 @@
 			"revisionTime": "2018-04-24T07:39:03Z"
 		},
 		{
-			"checksumSHA1": "jNVlZbBM0ebOzCf36pBJ733JKpU=",
+			"checksumSHA1": "r3h2zMF67TSNKVMUyyfvaqUSlFI=",
 			"path": "github.com/ethereum/go-ethereum/params",
-			"revision": "86be91b3e2dff5df28ee53c59df1ecfe9f97e007",
-			"revisionTime": "2018-04-24T07:39:03Z"
+			"revision": "79c7a69ac8066cc28ceee2ebaab3d0221a8adf57",
+			"revisionTime": "2018-11-06T23:04:18Z"
 		},
 		{
 			"checksumSHA1": "k0AFFj8B5/xCAw1+mF85+p8pJ1U=",
