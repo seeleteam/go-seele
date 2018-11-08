@@ -99,7 +99,15 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	}
 
 	// the first byte of pubkey is bitcoin heritage
-	return ethCommon.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
+	hash := crypto.MustHash(pubKey[1:])
+
+	var addr common.Address
+	copy(addr[:], hash[12:]) // use last 20 bytes of public key hash
+
+	// set address type in the last 4 bits
+	addr[19] &= 0xF0
+	addr[19] |= byte(common.AddressTypeExternal)
+	return ethCommon.LeftPadBytes(addr.Bytes(), 32), nil
 }
 
 // SHA256 implemented as a native contract.
