@@ -22,8 +22,17 @@ type propagateDebts interface {
 	propagateDebtMap(debtsMap [][]*types.Debt, filter bool)
 }
 
+const (
+	checkInterval = 12 * common.BlockPackInterval
+)
+
+type DebtInfo struct {
+	debt               *types.Debt
+	lastCheckTimestamp time.Time
+}
+
 type DebtManager struct {
-	debts map[common.Hash]*types.Debt
+	debts map[common.Hash]*DebtInfo
 	lock  *sync.RWMutex
 
 	checker     types.DebtVerifier
@@ -33,7 +42,7 @@ type DebtManager struct {
 
 func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts) *DebtManager {
 	return &DebtManager{
-		debts:       make(map[common.Hash]*types.Debt),
+		debts:       make(map[common.Hash]*DebtInfo),
 		checker:     debtChecker,
 		lock:        &sync.RWMutex{},
 		propagation: p,
@@ -46,7 +55,10 @@ func (m *DebtManager) AddDebts(debts []*types.Debt) {
 	defer m.lock.Unlock()
 
 	for _, d := range debts {
-		m.debts[d.Hash] = d
+		m.debts[d.Hash] = &DebtInfo{
+			debt:               d,
+			lastCheckTimestamp: time.Now(),
+		}
 	}
 }
 
@@ -56,7 +68,10 @@ func (m *DebtManager) AddDebtMap(debtMap [][]*types.Debt) {
 
 	for _, debts := range debtMap {
 		for _, d := range debts {
-			m.debts[d.Hash] = d
+			m.debts[d.Hash] = &DebtInfo{
+				debt:               d,
+				lastCheckTimestamp: time.Now(),
+			}
 		}
 	}
 }
@@ -68,11 +83,11 @@ func (m *DebtManager) Remove(hash common.Hash) {
 	delete(m.debts, hash)
 }
 
-func (m *DebtManager) GetAll() []*types.Debt {
+func (m *DebtManager) GetAll() []*DebtInfo {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	results := make([]*types.Debt, len(m.debts))
+	results := make([]*DebtInfo, len(m.debts))
 	index := 0
 	for _, d := range m.debts {
 		results[index] = d
@@ -95,17 +110,21 @@ func (m *DebtManager) checking() {
 	wg := sync.WaitGroup{}
 	pool := tunny.NewFunc(runtime.NumCPU(), func(i interface{}) interface{} {
 		defer wg.Done()
-		d := i.(*types.Debt)
+		info := i.(*DebtInfo)
+		debt := info.debt
+		if time.Now().Sub(info.lastCheckTimestamp) > checkInterval {
+			ok, err := m.checker.IfDebtPacked(debt)
+			if err != nil || ok {
+				if ok {
+					m.log.Info("remove debt as packed %s", debt.Hash.ToHex())
+				} else {
+					m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, debt.Hash.ToHex())
+				}
 
-		ok, err := m.checker.IfDebtPacked(d)
-		if err != nil || ok {
-			if ok {
-				m.log.Info("remove debt as packed %s", d.Hash.ToHex())
-			} else {
-				m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, d.Hash.ToHex())
+				m.Remove(debt.Hash)
 			}
 
-			m.Remove(d.Hash)
+			info.lastCheckTimestamp = time.Now()
 		}
 
 		return nil
@@ -122,11 +141,11 @@ func (m *DebtManager) checking() {
 	// resend
 	toSend := make([][]*types.Debt, common.ShardCount+1)
 	for _, d := range toChecking {
-		if m.Has(d.Hash) {
-			shard := d.Data.Account.Shard()
-			toSend[shard] = append(toSend[shard], d)
+		if m.Has(d.debt.Hash) {
+			shard := d.debt.Data.Account.Shard()
+			toSend[shard] = append(toSend[shard], d.debt)
 
-			m.log.Warn("not found debt info, send again. hash:%s", d.Hash.ToHex())
+			m.log.Warn("not found debt info, send again. hash:%s", d.debt.Hash.ToHex())
 		}
 	}
 
@@ -138,6 +157,6 @@ func (m *DebtManager) TimingChecking() {
 		m.log.Debug("start checking")
 		m.checking()
 
-		time.Sleep(5 * common.BlockPackInterval)
+		time.Sleep(2 * checkInterval)
 	}
 }

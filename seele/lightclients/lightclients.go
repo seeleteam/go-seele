@@ -130,5 +130,11 @@ func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (bool, error)
 		return false, err
 	}
 
-	return true, nil
+	// only marked as packed when the debt is confirmed
+	header := backend.ChainBackend().CurrentHeader()
+	if header.Height-index.BlockHeight > common.ConfirmedBlockNumber {
+		return true, nil
+	}
+
+	return false, nil
 }
