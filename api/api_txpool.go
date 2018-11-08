@@ -230,7 +230,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 		"transaction": PrintableOutputTx(tx),
 	}
 
-	debt := types.NewDebt(tx)
+	debt := types.NewDebtWithContext(tx)
 	if debt != nil {
 		output["debt"] = debt
 	}

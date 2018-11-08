@@ -25,7 +25,7 @@ func newTestDebt(amount int64, price int64) *types.Debt {
 	tx, _ := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), 1)
 	tx.Sign(fromPrivKey)
 
-	return types.NewDebt(tx)
+	return types.NewDebtWithContext(tx)
 }
 
 func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64, num int) *types.Block {

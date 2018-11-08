@@ -134,8 +134,8 @@ func GetDebtShareFee(fee *big.Int) *big.Int {
 	return unit
 }
 
-// NewDebt new a debt
-func NewDebt(tx *Transaction) *Debt {
+// NewDebtWithContext new a debt
+func NewDebtWithContext(tx *Transaction) *Debt {
 	return newDebt(tx, true)
 }
 
@@ -193,7 +193,7 @@ func NewDebts(txs []*Transaction) []*Debt {
 	debts := make([]*Debt, 0)
 
 	for _, tx := range txs {
-		d := NewDebt(tx)
+		d := NewDebtWithContext(tx)
 		if d != nil {
 			debts = append(debts, d)
 		}
@@ -207,7 +207,7 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	debts := make([][]*Debt, common.ShardCount+1)
 
 	for _, tx := range txs {
-		d := NewDebt(tx)
+		d := NewDebtWithContext(tx)
 		if d != nil {
 			shard := d.Data.Account.Shard()
 			debts[shard] = append(debts[shard], d)

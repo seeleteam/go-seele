@@ -159,10 +159,6 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		return
 	}
 
-	if common.PrintExplosionLog {
-		sp.log.Debug("sp.synchronise called.")
-	}
-
 	block := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
@@ -260,10 +256,6 @@ loopOut:
 }
 
 func (p *SeeleProtocol) handleNewTx(e event.Event) {
-	if common.PrintExplosionLog {
-		p.log.Debug("find new tx")
-	}
-
 	tx := e.(*types.Transaction)
 
 	// find shardId by tx from address.
@@ -403,10 +395,6 @@ handler:
 			}
 		}
 
-		if common.PrintExplosionLog {
-			p.log.Debug("got msg with type:%s", codeToStr(msg.Code))
-		}
-
 		switch msg.Code {
 		case transactionHashMsgCode:
 			var txHash common.Hash
@@ -414,10 +402,6 @@ handler:
 			if err != nil {
 				p.log.Warn("failed to deserialize transaction hash msg, %s", err.Error())
 				continue
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("got tx hash %s", txHash.ToHex())
 			}
 
 			if !peer.knownTxs.Contains(txHash) {
@@ -429,10 +413,6 @@ handler:
 					break handler
 				}
 
-			} else {
-				if common.PrintExplosionLog {
-					p.log.Debug("peer=%s already have this tx %s", peer.RemoteAddr().String(), txHash.ToHex())
-				}
 			}
 
 		case transactionRequestMsgCode:
@@ -441,10 +421,6 @@ handler:
 			if err != nil {
 				p.log.Warn("failed to deserialize transaction request msg %s", err.Error())
 				continue
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("got tx request %s", txHash.ToHex())
 			}
 
 			tx := p.txPool.GetTransaction(txHash)
@@ -465,10 +441,6 @@ handler:
 			if err != nil {
 				p.log.Warn("failed to deserialize transaction msg %s", err.Error())
 				break
-			}
-
-			if common.PrintExplosionLog {
-				p.log.Debug("received %d transactions", len(txs))
 			}
 
 			go func() {

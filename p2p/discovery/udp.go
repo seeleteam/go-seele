@@ -164,9 +164,6 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
 
-		if common.PrintExplosionLog {
-			u.log.Debug("receive msg type: %s", codeToStr(code))
-		}
 		switch code {
 		case pingMsgType:
 			msg := &ping{}

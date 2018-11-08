@@ -18,7 +18,7 @@ import (
 func Test_NewDebt(t *testing.T) {
 	tx1 := newTestTx(t, 1, 1, 1, true)
 
-	d1 := NewDebt(tx1)
+	d1 := NewDebtWithContext(tx1)
 	assert.Equal(t, d1.Data.Amount, big.NewInt(1))
 	assert.Equal(t, d1.Data.Account, tx1.Data.To)
 	assert.Equal(t, d1.Data.FromShard, tx1.Data.From.Shard())
@@ -31,7 +31,7 @@ func Test_MerkleRoot(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		tx := newTestTx(t, 1, 1, 1, true)
-		d := NewDebt(tx)
+		d := NewDebtWithContext(tx)
 
 		debts = append(debts, d)
 	}
@@ -50,7 +50,7 @@ func Test_MerkleRoot(t *testing.T) {
 func Test_DebtSize(t *testing.T) {
 	tx := newTestTx(t, 1, 1, 1, true)
 
-	d := NewDebt(tx)
+	d := NewDebtWithContext(tx)
 
 	array := []*Debt{d, d}
 	buff := common.SerializePanic(array)

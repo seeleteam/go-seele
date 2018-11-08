@@ -193,10 +193,6 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 
 // newTxOrDebtCallback handles the new tx event
 func (miner *Miner) newTxOrDebtCallback(e event.Event) {
-	if common.PrintExplosionLog {
-		miner.log.Debug("got the new tx event")
-	}
-
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
 		if err := miner.prepareNewBlock(); err != nil {
