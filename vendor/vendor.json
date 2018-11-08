@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "LCfbHUedpUA5G2BKnQBBKk1Wulo=",
+			"path": "github.com/Jeffail/tunny",
+			"revision": "59cfa8fcb19f5acba8db07a0dd3cb2fa7edbc228",
+			"revisionTime": "2018-03-04T20:46:16Z"
+		},
+		{
 			"checksumSHA1": "0QOXP59md3PRp12XzGtPiXHfrFg=",
 			"path": "github.com/StackExchange/wmi",
 			"revision": "cdffdb33acae0e14efff2628f9bae377b597840e",
