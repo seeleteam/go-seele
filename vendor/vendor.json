@@ -485,6 +485,12 @@
 			"revisionTime": "2018-04-17T17:58:37Z"
 		},
 		{
+			"checksumSHA1": "REkmyB368pIiip76LiqMLspgCRk=",
+			"path": "golang.org/x/sys/cpu",
+			"revision": "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399",
+			"revisionTime": "2018-11-07T12:45:52Z"
+		},
+		{
 			"checksumSHA1": "4f4dhWGIcoFdEfzXvuFCIHk+OtU=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "8f27ce8a604014414f8dfffc25cbcde83a3f2216",
