@@ -6,11 +6,10 @@
 package types
 
 import (
-	"fmt"
 	"math/big"
 
-	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
 )
@@ -102,7 +101,7 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) er
 		ok, err := verifier.ValidateDebt(d)
 		if err != nil {
 			if (isPool && !ok) || !isPool {
-				return fmt.Errorf("validate debt failed, error: %s", err)
+				return errors.NewStackedError(err, "failed to validate debt via verifier")
 			}
 		}
 	}

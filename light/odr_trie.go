@@ -7,6 +7,7 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/trie"
 )
@@ -48,13 +49,13 @@ func (odr *odrTriePoof) code() uint16 {
 func (odr *odrTriePoof) handle(lp *LightProtocol) (uint16, odrResponse) {
 	statedb, err := lp.chain.GetState(odr.Root)
 	if err != nil {
-		odr.Error = err.Error()
+		odr.Error = errors.NewStackedErrorf(err, "failed to get statedb by root hash %v", odr.Root).Error()
 		return trieResponseCode, odr
 	}
 
 	proof, err := statedb.Trie().GetProof(odr.Key)
 	if err != nil {
-		odr.Error = err.Error()
+		odr.Error = errors.NewStackedError(err, "failed to get trie proof").Error()
 		return trieResponseCode, odr
 	}
 
@@ -67,7 +68,7 @@ func (odr *odrTriePoof) validate(request odrRequest, bcStore store.BlockchainSto
 	proof := arrayToMap(odr.Proof)
 
 	if _, err := trie.VerifyProof(proofRequest.Root, proofRequest.Key, proof); err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to verify the trie proof")
 	}
 
 	return nil

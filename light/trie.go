@@ -7,6 +7,7 @@ package light
 
 import (
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/trie"
 )
@@ -62,7 +63,7 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool, error) {
 	// send ODR request to get trie proof.
 	response, err := t.odr.retrieve(request)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.NewStackedError(err, "failed to retrieve ODR trie proof")
 	}
 
 	// insert the trie proof in databse.
@@ -75,7 +76,7 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool, error) {
 	if t.trie == nil {
 		t.trie, err = trie.NewTrie(t.root, t.dbPrefix, t.db)
 		if err != nil {
-			return nil, false, err
+			return nil, false, errors.NewStackedError(err, "failed to create trie")
 		}
 	}
 
