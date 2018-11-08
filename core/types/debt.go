@@ -30,7 +30,7 @@ type DebtData struct {
 	FromShard uint           // tx shard
 	Account   common.Address // debt for account
 	Amount    *big.Int       // debt amount
-	Fee       *big.Int       // debt fee
+	Price     *big.Int       // debt price
 	Code      common.Bytes   // debt contract code
 }
 
@@ -43,13 +43,15 @@ type Debt struct {
 // DebtVerifier interface
 type DebtVerifier interface {
 	// ValidateDebt validate debt
-	// returns bool recoverable error
-	// returns error error info
-	ValidateDebt(debt *Debt) (bool, error)
+	// returns packed whether debt is packed
+	// returns confirmed whether debt is confirmed
+	// returns retErr error info
+	ValidateDebt(debt *Debt) (packed bool, confirmed bool, err error)
 
 	// IfDebtPacked
-	// return bool whether it is packed
-	// return error whether get error when checking
+	// returns packed whether debt is packed
+	// returns confirmed whether debt is confirmed
+	// returns retErr error info
 	IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error)
 }
 
@@ -79,34 +81,49 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // Validate validate debt with verifier
 // If verifier is nil, will skip it.
 // If isPool is true, we don't return error when the error is recoverable
-func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) error {
+func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (recoverable bool, retErr error) {
+	recoverable = false
+	retErr = nil
+
 	if d.Data.FromShard == targetShard {
-		return errWrongShardNumber
+		retErr = errWrongShardNumber
+		return
 	}
 
 	if d.Data.Account.Shard() != targetShard {
-		return errInvalidAccount
+		retErr = errInvalidAccount
+		return
 	}
 
 	if d.Hash != d.Data.Hash() {
-		return errInvalidHash
+		retErr = errInvalidHash
+		return
 	}
 
-	if d.Data.Fee == nil || d.Data.Fee.Sign() <= 0 {
-		return errInvalidFee
+	if d.Data.Price == nil || d.Data.Price.Sign() <= 0 {
+		retErr = errInvalidFee
+		return
 	}
 
 	// validate debt, skip validation when verifier is nil for test
 	if verifier != nil {
-		ok, err := verifier.ValidateDebt(d)
+		packed, confirmed, err := verifier.ValidateDebt(d)
+		if packed {
+			recoverable = true
+		}
+
+		if confirmed {
+			return
+		}
+
 		if err != nil {
-			if (isPool && !ok) || !isPool {
-				return errors.NewStackedError(err, "failed to validate debt via verifier")
+			if (isPool && !packed) || !isPool {
+				retErr = errors.NewStackedError(err, "failed to validate debt via verifier")
 			}
 		}
 	}
 
-	return nil
+	return
 }
 
 func (data *DebtData) Hash() common.Hash {
@@ -132,6 +149,13 @@ func GetDebtsSize(debts []*Debt) int {
 func GetDebtShareFee(fee *big.Int) *big.Int {
 	unit := big.NewInt(0).Div(fee, big.NewInt(2))
 	return unit
+}
+
+func (d *Debt) Fee() *big.Int {
+	// @todo for contract case, should use the fee in tx receipt
+	txIntrFee := new(big.Int).Mul(d.Data.Price, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
+
+	return GetDebtShareFee(txIntrFee)
 }
 
 // NewDebtWithContext new a debt
@@ -164,15 +188,12 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 		return nil
 	}
 
-	// @todo for contract case, should use the fee in tx receipt
-	txIntrFee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
-
 	data := DebtData{
 		TxHash:    tx.Hash,
 		FromShard: fromShard,
 		Account:   tx.Data.To,
 		Amount:    big.NewInt(0).Set(tx.Data.Amount),
-		Fee:       GetDebtShareFee(txIntrFee),
+		Price:     tx.Data.GasPrice,
 		Code:      make([]byte, 0),
 	}
 
