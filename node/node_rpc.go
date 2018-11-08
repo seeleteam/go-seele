@@ -30,19 +30,16 @@ func (n *Node) startRPC(services []Service) error {
 	}
 
 	if err := n.startTCP(apis); err != nil {
-		n.stopTCP()
 		n.stopRPC()
 		return err
 	}
 
 	if err := n.startHTTP(apis); err != nil {
-		n.stopHTTP()
 		n.stopRPC()
 		return err
 	}
 
 	if err := n.startWS(apis); err != nil {
-		n.stopWS()
 		n.stopRPC()
 		return err
 	}
