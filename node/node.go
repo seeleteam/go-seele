@@ -49,8 +49,11 @@ type Node struct {
 	log  *log.SeeleLog
 	lock sync.RWMutex
 
-	rpcListener net.Listener // IPC RPC listener socket to serve API requests
-	rpcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
+	tcpListener net.Listener // TCP RPC listener socket to serve API requests
+	tcpHandler  *rpc.Server  // TCP RPC request handler to process the API requests
+
+	ipcListener net.Listener // IPC RPC listener socket to serve API requests
+	ipcHandler  *rpc.Server  // IPC RPC request handler to process the API requests
 
 	httpEndpoint string       // HTTP endpoint (interface + port) to listen at (empty = HTTP disabled)
 	httpListener net.Listener // HTTP RPC listener socket to serve API requests

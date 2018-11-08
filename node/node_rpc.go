@@ -25,20 +25,24 @@ func (n *Node) startRPC(services []Service) error {
 
 	// Start the various API endpoints, terminating all in case of errors
 	if err := n.startIPC(apis); err != nil {
+		n.stopIPC()
 		return err
 	}
 
 	if err := n.startTCP(apis); err != nil {
+		n.stopTCP()
+		n.stopRPC()
 		return err
 	}
 
 	if err := n.startHTTP(apis); err != nil {
+		n.stopHTTP()
 		n.stopRPC()
 		return err
 	}
 
 	if err := n.startWS(apis); err != nil {
-		n.stopHTTP()
+		n.stopWS()
 		n.stopRPC()
 		return err
 	}
@@ -46,7 +50,7 @@ func (n *Node) startRPC(services []Service) error {
 	return nil
 }
 
-// startTCP initializes and starts the IPC RPC endpoint.
+// startTCP initializes and starts the TCP RPC endpoint.
 func (n *Node) startTCP(apis []rpc.API) error {
 	endpoint := n.config.BasicConfig.RPCAddr
 	// Short circuit if the IPC endpoint isn't being exposed
@@ -63,7 +67,7 @@ func (n *Node) startTCP(apis []rpc.API) error {
 		n.log.Debug("registered RPC service namespace %s", api.Namespace)
 	}
 
-	// All APIs registered, start the IPC listener
+	// All APIs registered, start the TCP listener
 	var (
 		listener net.Listener
 		err      error
@@ -80,7 +84,7 @@ func (n *Node) startTCP(apis []rpc.API) error {
 			if err != nil {
 				// Terminate if the listener was closed
 				n.lock.RLock()
-				closed := n.rpcListener == nil
+				closed := n.tcpListener == nil
 				n.lock.RUnlock()
 				if closed {
 					return
@@ -94,8 +98,8 @@ func (n *Node) startTCP(apis []rpc.API) error {
 	}()
 
 	// All listeners booted successfully
-	n.rpcListener = listener
-	n.rpcHandler = handler
+	n.tcpListener = listener
+	n.tcpHandler = handler
 
 	return nil
 }
@@ -103,27 +107,27 @@ func (n *Node) startTCP(apis []rpc.API) error {
 // startIPC initializes and starts the IPC RPC endpoint.
 func (n *Node) startIPC(apis []rpc.API) error {
 	ipcEndpoint := common.GetDefaultIPCPath()
-	listener, handler, err := n.StartIPCEndpoint(ipcEndpoint, apis)
+	listener, handler, err := n.startIPCEndpoint(ipcEndpoint, apis)
 	if err != nil {
 		return err
 	}
 
 	// All listeners booted successfully
-	n.rpcListener = listener
-	n.rpcHandler = handler
-	n.log.Info("IPC endpoint opened", "url", ipcEndpoint)
+	n.ipcListener = listener
+	n.ipcHandler = handler
+	n.log.Info("IPC endpoint opened url: %s", ipcEndpoint)
 	return nil
 }
 
 // StartIPCEndpoint starts an IPC endpoint.
-func (n *Node) StartIPCEndpoint(ipcEndpoint string, apis []rpc.API) (net.Listener, *rpc.Server, error) {
+func (n *Node) startIPCEndpoint(ipcEndpoint string, apis []rpc.API) (net.Listener, *rpc.Server, error) {
 	// Register all the APIs exposed by the services.
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return nil, nil, err
 		}
-		n.log.Debug("IPC registered", "namespace", api.Namespace)
+		n.log.Debug("IPC registered namespace: %s", api.Namespace)
 	}
 	// All APIs registered, start the IPC listener.
 	listener, err := rpc.CreateIPCListener(ipcEndpoint)
@@ -134,21 +138,39 @@ func (n *Node) StartIPCEndpoint(ipcEndpoint string, apis []rpc.API) (net.Listene
 	return listener, handler, nil
 }
 
-// stopRPC terminates the IPC RPC endpoint.
+// stopRPC terminates the RPC.
 func (n *Node) stopRPC() {
-	// Stop WS and HTTP server
+	// Stop server
 	n.stopWS()
 	n.stopHTTP()
+	n.stopIPC()
+	n.stopTCP()
+	n.log.Info("RPC closed")
+}
 
-	if n.rpcListener != nil {
-		n.rpcListener.Close()
-		n.rpcListener = nil
+func (n *Node) stopTCP() {
+	if n.tcpListener != nil {
+		n.tcpListener.Close()
+		n.tcpListener = nil
 
-		n.log.Info("RPC closed")
+		n.log.Info("TCP closed")
 	}
-	if n.rpcHandler != nil {
-		n.rpcHandler.Stop()
-		n.rpcHandler = nil
+	if n.tcpHandler != nil {
+		n.tcpHandler.Stop()
+		n.tcpHandler = nil
+	}
+}
+
+func (n *Node) stopIPC() {
+	if n.ipcListener != nil {
+		n.ipcListener.Close()
+		n.ipcListener = nil
+
+		n.log.Info("IPC closed")
+	}
+	if n.ipcHandler != nil {
+		n.ipcHandler.Stop()
+		n.ipcHandler = nil
 	}
 }
 
