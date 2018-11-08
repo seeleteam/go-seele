@@ -20,7 +20,7 @@ import (
 func NewEVMByDefaultConfig(tx *types.Transaction, statedb *StateDB, blockHeader *types.BlockHeader, bcStore store.BlockchainStore) *vm.EVM {
 	evmContext := newEVMContext(tx, blockHeader, blockHeader.Creator, bcStore)
 	chainConfig := &params.ChainConfig{
-		ChainId:             big.NewInt(1),
+		ChainID:             big.NewInt(1),
 		HomesteadBlock:      big.NewInt(0),
 		DAOForkBlock:        big.NewInt(0),
 		DAOForkSupport:      true,
@@ -53,15 +53,15 @@ func newEVMContext(tx *types.Transaction, header *types.BlockHeader, minerAddres
 	heightToHashMapping := map[uint64]common.Hash{
 		header.Height - 1: header.PreviousBlockHash,
 	}
-	getHashFunc := func(height uint64) (common.Hash, error) {
+	getHashFunc := func(height uint64) common.Hash {
 		for preHash := header.PreviousBlockHash; ; {
 			if hash, ok := heightToHashMapping[height]; ok {
-				return hash, nil
+				return hash
 			}
 
 			preHeader, err := bcStore.GetBlockHeader(preHash)
 			if err != nil {
-				return common.EmptyHash, err
+				return common.EmptyHash
 			}
 
 			heightToHashMapping[preHeader.Height-1] = preHeader.PreviousBlockHash
