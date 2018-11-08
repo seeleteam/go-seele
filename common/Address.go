@@ -202,7 +202,13 @@ func (id *Address) Shard() uint {
 
 // CreateContractAddress returns a contract address that in the same shard of this address.
 func (id *Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
-	hash := hashFunc([]interface{}{id, nonce}).Bytes()
+	hash := hashFunc([]interface{}{id, nonce})
+	return id.CreateContractAddressWithHash(hash)
+}
+
+// CreateContractAddressWithHash returns a contract address that in the same shard of this address.
+func (id *Address) CreateContractAddressWithHash(h Hash) Address {
+	hash := h.Bytes()
 
 	targetShardNum := id.Shard()
 	var sum uint
