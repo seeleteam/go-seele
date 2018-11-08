@@ -18,7 +18,7 @@ const (
 
 	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
 
-	txsyncPackSize = 100 * 1024
+	txsyncPackSize =  1024
 
 	// AccountStateDir account state info directory based on config.DataRoot
 	AccountStateDir = "/db/accountState"

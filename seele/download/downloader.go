@@ -63,7 +63,7 @@ var (
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
 
 	//MaxMessageLength maximum message length
-	MaxMessageLength = 8 * 1024 * 1024
+	MaxMessageLength = 2 * 1024 * 1024
 	statusNone       = 1 // no sync session
 	statusPreparing  = 2 // sync session is preparing
 	statusFetching   = 3 // sync session is downloading
