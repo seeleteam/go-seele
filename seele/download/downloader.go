@@ -6,7 +6,6 @@
 package downloader
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	rand2 "math/rand"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
@@ -63,7 +63,7 @@ var (
 	peerIdleTime    = time.Second // peer's wait time for next turn if no task now
 
 	//MaxMessageLength maximum message length
-	MaxMessageLength = 8 * 1024 * 1024
+	MaxMessageLength = 2 * 1024 * 1024
 	statusNone       = 1 // no sync session
 	statusPreparing  = 2 // sync session is preparing
 	statusFetching   = 3 // sync session is downloading
@@ -543,7 +543,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
 
-		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
+		if err := d.chain.WriteBlock(h.block); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
 			d.Cancel()
 			break
