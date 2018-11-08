@@ -30,7 +30,7 @@ const (
 var (
 	errNameEmpty   = errors.New("name is empty")
 	errNameTooLong = errors.New("name too long")
-	errInvalidName = errors.New("invalid name, only numbers, letters, and middle lines")
+	errInvalidName = errors.New("invalid name, only numbers, letters, and dash lines")
 
 	maxDomainNameLength = len(common.EmptyHash)
 
