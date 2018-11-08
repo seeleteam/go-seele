@@ -102,7 +102,7 @@ func (n *Node) startTCP(apis []rpc.API) error {
 
 // startIPC initializes and starts the IPC RPC endpoint.
 func (n *Node) startIPC(apis []rpc.API) error {
-	ipcEndpoint := n.config.IPCServer.Path
+	ipcEndpoint := n.config.IpcConfig.PipeName
 	// Short circuit if the IPC endpoint isn't being exposed
 	if ipcEndpoint == "" {
 		return nil
