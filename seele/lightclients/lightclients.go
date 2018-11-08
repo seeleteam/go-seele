@@ -69,10 +69,6 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 // returns confirmed whether debt is confirmed
 // returns retErr error info
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
-	packed = false
-	retErr = nil
-	confirmed = false
-
 	if debt.Data.FromShard == 0 || debt.Data.FromShard == manager.localShard {
 		retErr = errWrongShardDebt
 		return
@@ -123,14 +119,8 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 // IfDebtPacked
 // returns packed whether debt is packed
 // returns confirmed whether debt is confirmed
-// returns retErr error info
+// returns retErr this error is return when debt is found invalid. which means we need remove this debt.
 func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
-	packed = false
-	confirmed = false
-
-	// this error is return when debt is found invalid. which means we need remove this debt.
-	retErr = nil
-
 	toShard := debt.Data.Account.Shard()
 	if toShard == 0 || toShard == manager.localShard {
 		retErr = errWrongShardDebt

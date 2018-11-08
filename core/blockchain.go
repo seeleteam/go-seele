@@ -546,9 +546,6 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 
 // ApplyDebt applies a debt and update statedb.
 func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) (recoverable bool, retErr error) {
-	recoverable = false
-	retErr = nil
-
 	data := statedb.GetData(d.Data.Account, d.Hash)
 	if bytes.Equal(data, DebtDataFlag) {
 		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())

@@ -82,9 +82,6 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // If verifier is nil, will skip it.
 // If isPool is true, we don't return error when the error is recoverable
 func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (recoverable bool, retErr error) {
-	recoverable = false
-	retErr = nil
-
 	if d.Data.FromShard == targetShard {
 		retErr = errWrongShardNumber
 		return
