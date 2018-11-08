@@ -6,9 +6,11 @@
 package seele
 
 import (
+	"runtime"
 	"sync"
 	"time"
 
+	"github.com/Jeffail/tunny"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -91,25 +93,31 @@ func (m *DebtManager) checking() {
 	toChecking := m.GetAll()
 
 	wg := sync.WaitGroup{}
+	pool := tunny.NewFunc(runtime.NumCPU(), func(i interface{}) interface{} {
+		defer wg.Done()
+		d := i.(*types.Debt)
+
+		ok, err := m.checker.IfDebtPacked(d)
+		if err != nil || ok {
+			if ok {
+				m.log.Info("remove debt as packed %s", d.Hash.ToHex())
+			} else {
+				m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, d.Hash.ToHex())
+			}
+
+			m.Remove(d.Hash)
+		}
+
+		return nil
+	})
+
 	for _, d := range toChecking {
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			ok, err := m.checker.IfDebtPacked(d)
-			if err != nil || ok {
-				if ok {
-					m.log.Info("remove debt as packed %s", d.Hash.ToHex())
-				} else {
-					m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, d.Hash.ToHex())
-				}
-
-				m.Remove(d.Hash)
-			}
-		}()
+		pool.Process(d)
 	}
 
 	wg.Wait()
+	pool.Close()
 
 	// resend
 	toSend := make([][]*types.Debt, common.ShardCount+1)
