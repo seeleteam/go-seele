@@ -165,7 +165,7 @@ func BytesToAddress(bs []byte) Address {
 func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 
 // Big converts address to a big int.
-func (id *Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
+func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
 
 // MarshalText marshals the address to HEX string.
 func (id Address) MarshalText() ([]byte, error) {
