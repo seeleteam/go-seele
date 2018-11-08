@@ -34,14 +34,14 @@ type Config struct {
 	WSServerConfig WSServerConfig
 
 	// The configuration of ipc rpc service
-	IPCServer IPCServer
+	IpcConfig IpcConfig
 
 	// metrics config info
 	MetricsConfig *metrics.Config
 }
 
-// IPCServer config for ipc rpc service
-type IPCServer struct {
+// IpcConfig config for ipc rpc service
+type IpcConfig struct {
 	Path string `json:"path"`
 }
 
