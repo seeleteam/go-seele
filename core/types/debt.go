@@ -50,7 +50,7 @@ type DebtVerifier interface {
 	// IfDebtPacked
 	// return bool whether it is packed
 	// return error whether get error when checking
-	IfDebtPacked(debt *Debt) (bool, error)
+	IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error)
 }
 
 // DebtIndex debt index
