@@ -6,7 +6,6 @@
 package downloader
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	rand2 "math/rand"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
@@ -543,7 +543,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
 
-		if err := d.chain.WriteBlock(h.block); err != nil && err != core.ErrBlockAlreadyExists {
+		if err := d.chain.WriteBlock(h.block); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
 			d.Cancel()
 			break

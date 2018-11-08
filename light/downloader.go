@@ -6,11 +6,11 @@
 package light
 
 import (
-	"errors"
 	rand2 "math/rand"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -124,7 +124,7 @@ needQuit:
 
 			curHeight := uint64(0)
 			for _, head := range headMsg.Hearders[1:] {
-				if err = d.chain.WriteHeader(head); err != nil && err != core.ErrBlockAlreadyExists {
+				if err = d.chain.WriteHeader(head); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 					d.log.Warn("Downloader.doSynchronise WriteHeader error. %s", err)
 					break needQuit
 				}
