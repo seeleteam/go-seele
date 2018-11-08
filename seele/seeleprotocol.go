@@ -519,7 +519,7 @@ handler:
 				continue
 			}
 
-			p.log.Error("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
+			p.log.Info("got %d debts message [%s]", len(debts), codeToStr(msg.Code))
 			for _, d := range debts {
 				peer.knownDebts.Add(d.Hash, nil)
 			}

@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/light"
@@ -108,33 +108,43 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 	return services
 }
 
-func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (bool, error) {
+func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
+	packed = false
+	confirmed = false
+
+	// this error is return when debt is found invalid. which means we need remove this debt.
+	retErr = nil
+
 	toShard := debt.Data.Account.Shard()
 	if toShard == 0 || toShard == manager.localShard {
-		return false, errWrongShardDebt
+		retErr = errWrongShardDebt
+		return
 	}
 
 	backend := manager.lightClientsBackend[toShard]
 	result, index, err := backend.GetDebt(debt.Hash)
 
 	if err != nil {
-		return false, nil
+		return
 	}
 
 	if index == nil {
-		return false, nil
+		return
 	}
 
 	err = result.Validate(nil, false, toShard)
 	if err != nil {
-		return false, err
+		retErr = errors.NewStackedError(err, "debt validate failed")
+		return
 	}
+
+	packed = true
 
 	// only marked as packed when the debt is confirmed
 	header := backend.ChainBackend().CurrentHeader()
 	if header.Height-index.BlockHeight > common.ConfirmedBlockNumber {
-		return true, nil
+		confirmed = true
 	}
 
-	return false, nil
+	return
 }

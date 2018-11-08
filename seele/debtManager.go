@@ -29,6 +29,9 @@ const (
 type DebtInfo struct {
 	debt               *types.Debt
 	lastCheckTimestamp time.Time
+
+	// debt is packed, but not confirmed. confirmed block will be removed from debt manager.
+	isPacked bool
 }
 
 type DebtManager struct {
@@ -113,10 +116,12 @@ func (m *DebtManager) checking() {
 		info := i.(*DebtInfo)
 		debt := info.debt
 		if time.Now().Sub(info.lastCheckTimestamp) > checkInterval {
-			ok, err := m.checker.IfDebtPacked(debt)
-			if err != nil || ok {
-				if ok {
-					m.log.Info("remove debt as packed %s", debt.Hash.ToHex())
+			packed, confirmed, err := m.checker.IfDebtPacked(debt)
+
+			// remove invalid block or confirmed block.
+			if err != nil || confirmed {
+				if confirmed {
+					m.log.Info("remove debt as confirmed. hash:%s", debt.Hash.ToHex())
 				} else {
 					m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, debt.Hash.ToHex())
 				}
@@ -124,6 +129,7 @@ func (m *DebtManager) checking() {
 				m.Remove(debt.Hash)
 			}
 
+			info.isPacked = packed
 			info.lastCheckTimestamp = time.Now()
 		}
 
@@ -140,12 +146,13 @@ func (m *DebtManager) checking() {
 
 	// resend
 	toSend := make([][]*types.Debt, common.ShardCount+1)
-	for _, d := range toChecking {
-		if m.Has(d.debt.Hash) {
-			shard := d.debt.Data.Account.Shard()
-			toSend[shard] = append(toSend[shard], d.debt)
+	for _, info := range toChecking {
+		// if the debt is not packed or confirmed, we will send it again.
+		if !info.isPacked && m.Has(info.debt.Hash) {
+			shard := info.debt.Data.Account.Shard()
+			toSend[shard] = append(toSend[shard], info.debt)
 
-			m.log.Warn("not found debt info, send again. hash:%s", d.debt.Hash.ToHex())
+			m.log.Warn("debt is not packed or confirmed, send again. hash:%s", info.debt.Hash.ToHex())
 		}
 	}
 
