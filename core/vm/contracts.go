@@ -98,8 +98,10 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 		return nil, nil
 	}
 
+	addr := crypto.GetAddress(pubKey)
+
 	// the first byte of pubkey is bitcoin heritage
-	return ethCommon.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
+	return ethCommon.LeftPadBytes(addr.Bytes(), 32), nil
 }
 
 // SHA256 implemented as a native contract.
