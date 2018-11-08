@@ -551,13 +551,8 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
 	}
 
-<<<<<<< HEAD
 	if err := d.Validate(verifier, false, common.LocalShardNumber); err != nil {
-		return err
-=======
-	if err := d.Validate(verifier, false); err != nil {
 		return errors.NewStackedError(err, "failed to validate debt")
->>>>>>> upstream/master
 	}
 
 	if !statedb.Exist(d.Data.Account) {
