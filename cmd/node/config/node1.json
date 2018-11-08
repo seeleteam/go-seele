@@ -33,7 +33,7 @@
     ]
   },
   "ipcserver": {
-    "path": "seele1.ipc"
+    "name": "seele1.ipc"
   },
   "metrics": {
     "address": "0.0.0.0:8087",

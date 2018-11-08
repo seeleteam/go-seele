@@ -42,7 +42,7 @@ type Config struct {
 
 // IpcConfig config for ipc rpc service
 type IpcConfig struct {
-	Path string `json:"path"`
+	PipeName string `json:"name"`
 }
 
 // BasicConfig config for Node
