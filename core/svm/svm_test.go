@@ -55,7 +55,7 @@ func Test_Process_EVM(t *testing.T) {
 func Test_Process_SysContract(t *testing.T) {
 	// CreateDomainName
 	ctx, _ := newTestContext(big.NewInt(0))
-	testBytes := []byte("seele.fan")
+	testBytes := []byte("seele-fan")
 	ctx.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
 	ctx.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 

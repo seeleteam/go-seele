@@ -7,6 +7,8 @@ package system
 
 import (
 	"errors"
+	"regexp"
+	"strings"
 
 	"github.com/seeleteam/go-seele/common"
 )
@@ -28,6 +30,7 @@ const (
 var (
 	errNameEmpty   = errors.New("name is empty")
 	errNameTooLong = errors.New("name too long")
+	errInvalidName = errors.New("invalid name, only numbers, letters, and dash lines are allowed")
 
 	maxDomainNameLength = len(common.EmptyHash)
 
@@ -86,12 +89,21 @@ func ValidateDomainName(domainName []byte) error {
 		return errNameTooLong
 	}
 
+	ok, err := regexp.Match(`^[a-zA-Z0-9\-]+$`, domainName)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errInvalidName
+	}
 	return nil
 }
 
-// domainNameToKey convert domain name to hash
+// domainNameToKey convert domain name to hash and uppercase to lowercase
 func domainNameToKey(domainName []byte) (common.Hash, error) {
-	err := ValidateDomainName(domainName)
+	lowerDomainName := []byte(strings.ToLower(string(domainName)))
+
+	err := ValidateDomainName(lowerDomainName)
 	if err != nil {
 		return common.EmptyHash, err
 	}
