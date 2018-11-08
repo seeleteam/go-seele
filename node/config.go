@@ -33,8 +33,16 @@ type Config struct {
 	// The configuration of websocket rpc service
 	WSServerConfig WSServerConfig
 
+	// The configuration of ipc rpc service
+	IPCServer IPCServer
+
 	// metrics config info
 	MetricsConfig *metrics.Config
+}
+
+// IPCServer config for ipc rpc service
+type IPCServer struct {
+	Path string `json:"path"`
 }
 
 // BasicConfig config for Node

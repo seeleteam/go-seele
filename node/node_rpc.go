@@ -9,7 +9,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/seeleteam/go-seele/common"
 	rpc "github.com/seeleteam/go-seele/rpc"
 )
 
@@ -50,7 +49,7 @@ func (n *Node) startRPC(services []Service) error {
 // startTCP initializes and starts the TCP RPC endpoint.
 func (n *Node) startTCP(apis []rpc.API) error {
 	endpoint := n.config.BasicConfig.RPCAddr
-	// Short circuit if the IPC endpoint isn't being exposed
+	// Short circuit if the TCP endpoint isn't being exposed
 	if endpoint == "" {
 		return nil
 	}
@@ -103,7 +102,12 @@ func (n *Node) startTCP(apis []rpc.API) error {
 
 // startIPC initializes and starts the IPC RPC endpoint.
 func (n *Node) startIPC(apis []rpc.API) error {
-	ipcEndpoint := common.GetDefaultIPCPath()
+	ipcEndpoint := n.config.IPCServer.Path
+	// Short circuit if the IPC endpoint isn't being exposed
+	if ipcEndpoint == "" {
+		return nil
+	}
+
 	listener, handler, err := n.startIPCEndpoint(ipcEndpoint, apis)
 	if err != nil {
 		return err

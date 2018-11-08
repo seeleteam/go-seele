@@ -34,6 +34,9 @@
       "*"
     ]
   },
+  "ipcserver": {
+    "path": "seele3.ipc"
+  },
   "metrics": {
     "address": "0.0.0.0:8087",
     "duration": 10,
