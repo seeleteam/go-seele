@@ -99,7 +99,7 @@ func newTestBlockchain(db database.Database) *core.Blockchain {
 		panic(err)
 	}
 
-	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1))
+	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}

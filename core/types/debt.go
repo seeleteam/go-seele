@@ -6,11 +6,10 @@
 package types
 
 import (
-	"fmt"
 	"math/big"
 
-	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/trie"
 )
@@ -47,6 +46,11 @@ type DebtVerifier interface {
 	// returns bool recoverable error
 	// returns error error info
 	ValidateDebt(debt *Debt) (bool, error)
+
+	// IfDebtPacked
+	// return bool whether it is packed
+	// return error whether get error when checking
+	IfDebtPacked(debt *Debt) (bool, error)
 }
 
 // DebtIndex debt index
@@ -75,12 +79,12 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // Validate validate debt with verifier
 // If verifier is nil, will skip it.
 // If isPool is true, we don't return error when the error is recoverable
-func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
-	if d.Data.FromShard == common.LocalShardNumber {
+func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) error {
+	if d.Data.FromShard == targetShard {
 		return errWrongShardNumber
 	}
 
-	if d.Data.Account.Shard() != common.LocalShardNumber {
+	if d.Data.Account.Shard() != targetShard {
 		return errInvalidAccount
 	}
 
@@ -97,7 +101,7 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool) error {
 		ok, err := verifier.ValidateDebt(d)
 		if err != nil {
 			if (isPool && !ok) || !isPool {
-				return fmt.Errorf("validate debt failed, error: %s", err)
+				return errors.NewStackedError(err, "failed to validate debt via verifier")
 			}
 		}
 	}
@@ -211,4 +215,16 @@ func NewDebtMap(txs []*Transaction) [][]*Debt {
 	}
 
 	return debts
+}
+
+// DebtArrayToMap transfer debt array to debt map
+func DebtArrayToMap(debts []*Debt) [][]*Debt {
+	debtsMap := make([][]*Debt, common.ShardCount+1)
+
+	for _, d := range debts {
+		shard := d.Data.Account.Shard()
+		debtsMap[shard] = append(debtsMap[shard], d)
+	}
+
+	return debtsMap
 }

@@ -9,6 +9,7 @@ import (
 	"bytes"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
@@ -37,13 +38,13 @@ func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 
 	txIndex, err := lp.chain.GetStore().GetTxIndex(odr.TxHash)
 	if err != nil {
-		result.Error = err.Error()
+		result.Error = errors.NewStackedErrorf(err, "failed to get tx index by hash %v", odr.TxHash).Error()
 		return receiptResponseCode, &result
 	}
 
 	receipts, err := lp.chain.GetStore().GetReceiptsByBlockHash(txIndex.BlockHash)
 	if err != nil {
-		result.Error = err.Error()
+		result.Error = errors.NewStackedErrorf(err, "failed to get receipts by block hash %v", txIndex.BlockHash).Error()
 	} else if len(receipts) > 0 {
 		result.Receipt = receipts[txIndex.Index]
 		result.ReceiptIndex = &types.ReceiptIndex{
@@ -54,7 +55,7 @@ func (odr *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 		receiptTrie := types.GetReceiptTrie(receipts)
 		proof, err := receiptTrie.GetProof(crypto.MustHash(result.Receipt).Bytes())
 		if err != nil {
-			result.Error = err.Error()
+			result.Error = errors.NewStackedError(err, "failed to get receipt trie proof").Error()
 			return receiptResponseCode, &result
 		}
 
@@ -80,13 +81,13 @@ func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.Blockc
 	// validate the receipt trie proof if stored in blockchain already.
 	header, err := bcStore.GetBlockHeader(odr.ReceiptIndex.BlockHash)
 	if err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to get block header by hash %v", odr.ReceiptIndex.BlockHash)
 	}
 
 	proof := arrayToMap(odr.Proof)
 	value, err := trie.VerifyProof(header.ReceiptHash, crypto.MustHash(odr.Receipt).Bytes(), proof)
 	if err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to verify receipt trie proof")
 	}
 
 	if buff := common.SerializePanic(odr.Receipt); !bytes.Equal(buff, value) {

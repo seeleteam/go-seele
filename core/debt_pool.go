@@ -28,17 +28,14 @@ type DebtPool struct {
 	verifier types.DebtVerifier
 }
 
-func NewDebtPool(chain blockchain) *DebtPool {
+func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	return &DebtPool{
-		hashMap: make(map[common.Hash]*types.Debt, 0),
-		mutex:   sync.RWMutex{},
-		chain:   chain,
-		log:     log.GetLogger("debtpool"),
+		hashMap:  make(map[common.Hash]*types.Debt, 0),
+		mutex:    sync.RWMutex{},
+		chain:    chain,
+		log:      log.GetLogger("debtpool"),
+		verifier: verifier,
 	}
-}
-
-func (dp *DebtPool) SetVerifier(v types.DebtVerifier) {
-	dp.verifier = v
 }
 
 func (dp *DebtPool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
@@ -159,7 +156,7 @@ func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
 			continue
 		}
 
-		err := d.Validate(dp.verifier, true)
+		err := d.Validate(dp.verifier, true, common.LocalShardNumber)
 		if err != nil {
 			dp.log.Warn("validate debt failed. err %s", err)
 			continue

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/stretchr/testify/assert"
@@ -44,7 +45,7 @@ func Test_TxPool_AddTransaction(t *testing.T) {
 	tx := newTestTx(10, 1, 1, true)
 	tx.Hash = common.EmptyHash
 	err = txPool.AddTransaction(tx)
-	assert.Equal(t, err, types.ErrHashMismatch)
+	assert.True(t, errors.IsOrContains(err, types.ErrHashMismatch))
 }
 
 func Test_TxPool_GetTransactions(t *testing.T) {

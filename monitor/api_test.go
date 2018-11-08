@@ -75,7 +75,7 @@ func createTestAPI(t *testing.T) (api *PublicMonitorAPI, dispose func()) {
 		return
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
+	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil)
 	if err != nil {
 		t.Fatal(err)
 		return
@@ -153,7 +153,7 @@ func createTestAPIErr(errBranch int) (api *PublicMonitorAPI, dispose func()) {
 		return
 	}
 
-	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm))
+	seeleService, err := seele.NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -45,12 +45,15 @@ const (
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
 
-	// increase evm stack limit to 8192
+	// EVMStackLimit increase evm stack limit to 8192
 	EVMStackLimit = 8192
 
 	WindowsPipeDir = `\\.\pipe\`
 
 	DefaultPipeFile = `\seele.ipc`
+
+  // BlockPackInterval it's an estimate time.
+	BlockPackInterval = 15 * time.Second
 )
 
 var (

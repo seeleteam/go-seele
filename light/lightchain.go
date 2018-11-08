@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
@@ -43,17 +44,17 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
 	}
 
 	chain.currentHeader, err = bcStore.GetBlockHeader(currentHeaderHash)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedErrorf(err, "failed to get block header, hash = %v", currentHeaderHash)
 	}
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedErrorf(err, "failed to get block TD, hash = %v", currentHeaderHash)
 	}
 
 	chain.canonicalTD = td
@@ -83,19 +84,19 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 	defer lc.mutex.Unlock()
 
 	if err := core.ValidateBlockHeader(header, lc.engine, lc.bcStore); err != nil {
-		return err
+		return errors.NewStackedError(err, "failed to validate block header")
 	}
 
 	previousTd, err := lc.bcStore.GetBlockTotalDifficulty(header.PreviousBlockHash)
 	if err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to get block TD, hash = %v", header.PreviousBlockHash)
 	}
 
 	currentTd := new(big.Int).Add(previousTd, header.Difficulty)
 	isHead := currentTd.Cmp(lc.canonicalTD) > 0
 
 	if err := lc.bcStore.PutBlockHeader(header.Hash(), header, currentTd, isHead); err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to put block header, header = %+v", header)
 	}
 
 	if !isHead {
@@ -103,11 +104,11 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 	}
 
 	if err := core.DeleteLargerHeightBlocks(lc.bcStore, header.Height+1, nil); err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to delete larger height blocks in canonical chain, height = %v", header.Height+1)
 	}
 
 	if err := core.OverwriteStaleBlocks(lc.bcStore, header.PreviousBlockHash, nil); err != nil {
-		return err
+		return errors.NewStackedErrorf(err, "failed to overwrite stale blocks in old canonical chain, hash = %v", header.PreviousBlockHash)
 	}
 
 	lc.canonicalTD = currentTd
