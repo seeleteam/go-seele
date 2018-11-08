@@ -377,6 +377,12 @@
 			"revisionTime": "2018-02-02T15:35:43Z"
 		},
 		{
+			"checksumSHA1": "NlrzGRpnkW2ceBYow2sZmgJr3tw=",
+			"path": "github.com/stretchr/testify/require",
+			"revision": "04af85275a5c7ac09d16bb3b9b2e751ed45154e5",
+			"revisionTime": "2018-10-09T18:43:15Z"
+		},
+		{
 			"checksumSHA1": "/CaCQCgE6P4QBc+n51peQBOuRP8=",
 			"path": "github.com/syndtr/goleveldb/leveldb",
 			"revision": "211f780988068502fe874c44dae530528ebd840f",
@@ -483,6 +489,12 @@
 			"path": "golang.org/x/net/websocket",
 			"revision": "d41e8174641f662c5a2d1c7a5f9e828788eb8706",
 			"revisionTime": "2018-04-17T17:58:37Z"
+		},
+		{
+			"checksumSHA1": "REkmyB368pIiip76LiqMLspgCRk=",
+			"path": "golang.org/x/sys/cpu",
+			"revision": "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399",
+			"revisionTime": "2018-11-07T12:45:52Z"
 		},
 		{
 			"checksumSHA1": "4f4dhWGIcoFdEfzXvuFCIHk+OtU=",
