@@ -17,7 +17,7 @@ import (
 var (
 	// TrieDbPrefix is the key prefix of trie database in statedb.
 	TrieDbPrefix  = []byte("S")
-	stateBalance0 = big.NewInt(0)
+	stateBalance0 = big.NewInt(-1)
 )
 
 // Trie is used for statedb to store key-value pairs.

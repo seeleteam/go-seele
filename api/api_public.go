@@ -17,6 +17,7 @@ import (
 
 // ErrInvalidAccount the account is invalid
 var ErrInvalidAccount = errors.New("invalid account")
+var ErrAccountNotFound = errors.New("account not found")
 
 const maxSizeLimit = 64
 
@@ -47,7 +48,10 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 		return nil, fmt.Errorf("local shard is: %d, your shard is: %d, you need to change to shard %d to get your balance", common.LocalShardNumber, account.Shard(), account.Shard())
 	}
 
-	info.Balance = state.GetBalance(account)
+	if info.Balance = state.GetBalance(account); info.Balance.Cmp(big.NewInt(0)) < 0 {
+		return nil, ErrAccountNotFound
+	}
+
 	info.Account = account
 
 	return &info, nil
