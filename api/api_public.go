@@ -48,8 +48,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 	}
 
 	balance := state.GetBalance(account)
-	err = state.GetDbErr()
-	if err != nil {
+	if err = state.GetDbErr(); err != nil {
 		return nil, err
 	}
 	info.Balance = balance
@@ -68,8 +67,11 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, erro
 	if err != nil {
 		return 0, err
 	}
-
-	return state.GetNonce(account), nil
+	nonce := state.GetNonce(account)
+	if err = state.GetDbErr(); err != nil {
+		return 0, err
+	}
+	return nonce, nil
 }
 
 // GetBlockHeight get the block height of the chain head
