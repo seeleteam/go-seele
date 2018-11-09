@@ -23,7 +23,7 @@ func newTestDebt(txHash common.Hash) *types.Debt {
 		FromShard: 3,
 		Account:   common.EmptyAddress,
 		Amount:    big.NewInt(38),
-		Fee:       big.NewInt(666),
+		Price:     big.NewInt(666),
 		Code:      make([]byte, 0),
 	}
 

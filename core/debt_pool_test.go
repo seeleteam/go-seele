@@ -68,7 +68,7 @@ func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64
 		}()
 
 		for _, d := range debts {
-			err := ApplyDebt(statedb, d, minerAccount.addr, nil)
+			_, err := ApplyDebt(statedb, d, minerAccount.addr, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -149,4 +149,19 @@ func Test_DebtPool(t *testing.T) {
 	assert.Equal(t, len(pool.hashMap), 2)
 	assert.Equal(t, pool.hashMap[b1.Debts[0].Hash], b1.Debts[0])
 	assert.Equal(t, pool.hashMap[b1.Debts[1].Hash], b1.Debts[1])
+}
+
+func Test_OrderByFee(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	pool := NewDebtPool(bc, nil)
+
+	d1 := newTestDebt(1, 10)
+	d2 := newTestDebt(2, 11)
+	pool.add([]*types.Debt{d1, d2})
+
+	results := pool.GetAllOrderByPrice()
+	assert.Equal(t, results[0].Data.Price.Cmp(results[1].Data.Price), 1)
 }

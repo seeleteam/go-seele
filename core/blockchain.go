@@ -426,7 +426,7 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 
 	// update debts
 	for _, d := range block.Debts {
-		err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
+		_, err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
 		if err != nil {
 			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
@@ -545,14 +545,17 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 }
 
 // ApplyDebt applies a debt and update statedb.
-func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) error {
+func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) (recoverable bool, retErr error) {
 	data := statedb.GetData(d.Data.Account, d.Hash)
 	if bytes.Equal(data, DebtDataFlag) {
-		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
+		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
+		return
 	}
 
-	if err := d.Validate(verifier, false, common.LocalShardNumber); err != nil {
-		return errors.NewStackedError(err, "failed to validate debt")
+	var err error
+	if recoverable, err = d.Validate(verifier, false, common.LocalShardNumber); err != nil {
+		retErr = errors.NewStackedError(err, "failed to validate debt")
+		return
 	}
 
 	if !statedb.Exist(d.Data.Account) {
@@ -562,9 +565,9 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 	// @todo handle contract
 
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
-	statedb.AddBalance(coinbase, d.Data.Fee)
+	statedb.AddBalance(coinbase, d.Fee())
 	statedb.SetData(d.Data.Account, d.Hash, DebtDataFlag)
-	return nil
+	return
 }
 
 // DeleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.

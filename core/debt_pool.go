@@ -7,6 +7,7 @@ package core
 
 import (
 	"bytes"
+	"sort"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -156,7 +157,7 @@ func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
 			continue
 		}
 
-		err := d.Validate(dp.verifier, true, common.LocalShardNumber)
+		_, err := d.Validate(dp.verifier, true, common.LocalShardNumber)
 		if err != nil {
 			dp.log.Warn("validate debt failed. err %s", err)
 			continue
@@ -227,3 +228,17 @@ func (dp *DebtPool) GetAll() []*types.Debt {
 
 	return results
 }
+
+func (dp *DebtPool) GetAllOrderByPrice() []*types.Debt {
+	results := dp.GetAll()
+
+	order := DebtByFee(results)
+	sort.Sort(order)
+	return order
+}
+
+type DebtByFee []*types.Debt
+
+func (a DebtByFee) Len() int           { return len(a) }
+func (a DebtByFee) Less(i, j int) bool { return a[i].Data.Price.Cmp(a[j].Data.Price) == 1 }
+func (a DebtByFee) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }

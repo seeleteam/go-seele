@@ -65,35 +65,43 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 }
 
 // ValidateDebt validate debt
-// returns bool recoverable error
-// returns error error info
-func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (bool, error) {
+// returns packed whether debt is packed
+// returns confirmed whether debt is confirmed
+// returns retErr error info
+func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
 	if debt.Data.FromShard == 0 || debt.Data.FromShard == manager.localShard {
-		return false, errWrongShardDebt
+		retErr = errWrongShardDebt
+		return
 	}
 
 	backend := manager.lightClientsBackend[int(debt.Data.FromShard)]
 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 	if err != nil {
-		return false, fmt.Errorf("got error when get transaction. %s", err)
+		retErr = errors.NewStackedError(err, "got error when get transaction.")
+		return
 	}
 
 	if index == nil {
-		return false, errNotFoundTx
-	}
-
-	header := backend.ChainBackend().CurrentHeader()
-	duration := header.Height - index.BlockHeight
-	if duration < common.ConfirmedBlockNumber {
-		return true, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+		retErr = errNotFoundTx
+		return
 	}
 
 	checkDebt := types.NewDebtWithoutContext(tx)
 	if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
-		return false, errNotMatchedTx
+		retErr = errNotMatchedTx
+		return
 	}
 
-	return true, nil
+	packed = true
+
+	header := backend.ChainBackend().CurrentHeader()
+	duration := header.Height - index.BlockHeight
+	if duration >= common.ConfirmedBlockNumber {
+		confirmed = true
+		retErr = fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+	}
+
+	return
 }
 
 // GetServices get node service
@@ -108,13 +116,11 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 	return services
 }
 
+// IfDebtPacked
+// returns packed whether debt is packed
+// returns confirmed whether debt is confirmed
+// returns retErr this error is return when debt is found invalid. which means we need remove this debt.
 func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
-	packed = false
-	confirmed = false
-
-	// this error is return when debt is found invalid. which means we need remove this debt.
-	retErr = nil
-
 	toShard := debt.Data.Account.Shard()
 	if toShard == 0 || toShard == manager.localShard {
 		retErr = errWrongShardDebt
@@ -132,7 +138,7 @@ func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool,
 		return
 	}
 
-	err = result.Validate(nil, false, toShard)
+	_, err = result.Validate(nil, false, toShard)
 	if err != nil {
 		retErr = errors.NewStackedError(err, "debt validate failed")
 		return
@@ -142,7 +148,7 @@ func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool,
 
 	// only marked as packed when the debt is confirmed
 	header := backend.ChainBackend().CurrentHeader()
-	if header.Height-index.BlockHeight > common.ConfirmedBlockNumber {
+	if header.Height-index.BlockHeight >= common.ConfirmedBlockNumber {
 		confirmed = true
 	}
 
