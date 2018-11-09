@@ -232,6 +232,7 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 
 	// add in cache
 	s.stateObjects[addr] = object
+	
 	return object
 }
 
