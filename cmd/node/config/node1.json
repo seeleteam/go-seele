@@ -32,7 +32,7 @@
       "*"
     ]
   },
-  "ipcserver": {
+  "ipcconfig": {
     "name": "seele1.ipc"
   },
   "metrics": {

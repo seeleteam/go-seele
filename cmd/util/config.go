@@ -31,7 +31,7 @@ type Config struct {
 	WSServerConfig node.WSServerConfig `json:"wsserver"`
 
 	// The configuration of ipc rpc service
-	IPCServer node.IpcConfig `json:"ipcserver"`
+	Ipcconfig node.IpcConfig `json:"ipcconfig"`
 
 	// metrics config info
 	MetricsConfig *metrics.Config `json:"metrics"`

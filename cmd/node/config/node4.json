@@ -34,7 +34,7 @@
       "*"
     ]
   },
-  "ipcserver": {
+  "ipcconfig": {
     "name": "seele4.ipc"
   },
   "metrics": {
