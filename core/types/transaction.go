@@ -129,6 +129,22 @@ func (tx *Transaction) Size() int {
 	return TransactionPreSize + len(tx.Data.Payload)
 }
 
+func (tx *Transaction) Account() common.Address {
+	return tx.Data.From
+}
+
+func (tx *Transaction) Nonce() uint64 {
+	return tx.Data.AccountNonce
+}
+
+func (tx *Transaction) Price() *big.Int {
+	return tx.Data.GasPrice
+}
+
+func (tx *Transaction) GetHash() common.Hash {
+	return tx.Hash
+}
+
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {

@@ -10,40 +10,39 @@ import (
 	"sort"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/types"
 )
 
 // txCollection represents the nonce sorted transactions of an account.
 type txCollection struct {
-	txs       map[uint64]*pooledTx
+	txs       map[uint64]*poolItem
 	nonceHeap *common.Heap
 }
 
 func newTxCollection() *txCollection {
 	return &txCollection{
-		txs: make(map[uint64]*pooledTx),
+		txs: make(map[uint64]*poolItem),
 		nonceHeap: common.NewHeap(func(i, j common.HeapItem) bool {
-			iNonce := i.(*pooledTx).Data.AccountNonce
-			jNonce := j.(*pooledTx).Data.AccountNonce
+			iNonce := i.(*poolItem).Nonce()
+			jNonce := j.(*poolItem).Nonce()
 			return iNonce < jNonce
 		}),
 	}
 }
 
-func (collection *txCollection) add(tx *pooledTx) bool {
-	if existTx := collection.txs[tx.Data.AccountNonce]; existTx != nil {
-		existTx.Transaction = tx.Transaction
+func (collection *txCollection) add(tx *poolItem) bool {
+	if existTx := collection.txs[tx.Nonce()]; existTx != nil {
+		existTx.poolObject = tx.poolObject
 		existTx.timestamp = tx.timestamp
 		return false
 	}
 
 	heap.Push(collection.nonceHeap, tx)
-	collection.txs[tx.Data.AccountNonce] = tx
+	collection.txs[tx.Nonce()] = tx
 
 	return true
 }
 
-func (collection *txCollection) get(nonce uint64) *pooledTx {
+func (collection *txCollection) get(nonce uint64) *poolItem {
 	return collection.txs[nonce]
 }
 
@@ -61,31 +60,31 @@ func (collection *txCollection) len() int {
 	return collection.nonceHeap.Len()
 }
 
-func (collection *txCollection) peek() *pooledTx {
+func (collection *txCollection) peek() *poolItem {
 	if item := collection.nonceHeap.Peek(); item != nil {
-		return item.(*pooledTx)
+		return item.(*poolItem)
 	}
 
 	return nil
 }
 
-func (collection *txCollection) pop() *pooledTx {
-	tx := heap.Pop(collection.nonceHeap).(*pooledTx)
-	delete(collection.txs, tx.Data.AccountNonce)
+func (collection *txCollection) pop() *poolItem {
+	tx := heap.Pop(collection.nonceHeap).(*poolItem)
+	delete(collection.txs, tx.Nonce())
 	return tx
 }
 
-func (collection *txCollection) list() []*types.Transaction {
-	result := make([]*types.Transaction, len(collection.txs))
+func (collection *txCollection) list() []poolObject {
+	result := make([]poolObject, len(collection.txs))
 	i := 0
 
 	for _, tx := range collection.txs {
-		result[i] = tx.Transaction
+		result[i] = tx.poolObject
 		i++
 	}
 
 	sort.Slice(result, func(i, j int) bool {
-		return result[i].Data.AccountNonce < result[j].Data.AccountNonce
+		return result[i].Nonce() < result[j].Nonce()
 	})
 
 	return result
@@ -116,7 +115,7 @@ func (collection *txCollection) cmp(other *txCollection) int {
 		return -1
 	}
 
-	if r := iTx.Data.GasPrice.Cmp(jTx.Data.GasPrice); r != 0 {
+	if r := iTx.Price().Cmp(jTx.Price()); r != 0 {
 		return r
 	}
 

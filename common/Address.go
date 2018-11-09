@@ -108,7 +108,7 @@ func (id Address) Bytes() []byte {
 }
 
 // ToHex converts address to 0x prefixed HEX format.
-func (id *Address) ToHex() string {
+func (id Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
