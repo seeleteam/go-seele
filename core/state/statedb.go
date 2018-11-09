@@ -91,6 +91,11 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	return stateBalance0
 }
 
+// GetDbErr returns with error.
+func (s *Statedb) GetDbErr() error {
+	return s.dbErr
+}
+
 // SetBalance sets the balance of the specified account if exists.
 func (s *Statedb) SetBalance(addr common.Address, balance *big.Int) {
 	if object := s.getStateObject(addr); object != nil {
@@ -242,7 +247,7 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 
 	// add in cache
 	s.stateObjects[addr] = object
-
+	
 	return object
 }
 
