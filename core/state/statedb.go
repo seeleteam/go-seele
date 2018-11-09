@@ -17,7 +17,7 @@ import (
 var (
 	// TrieDbPrefix is the key prefix of trie database in statedb.
 	TrieDbPrefix  = []byte("S")
-	stateBalance0 = big.NewInt(-1)
+	stateBalance0 = big.NewInt(0)
 )
 
 // Trie is used for statedb to store key-value pairs.
@@ -88,6 +88,20 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	}
 
 	return stateBalance0
+}
+
+// GetBalance returns the balance of the specified account if exists, Otherwise, returns zero.
+// If occur error, returns with error.
+func (s *Statedb) GetBalanceWithError(addr common.Address) (*big.Int, error) {
+	object, err := s.getStateObjectWithError(addr)
+	if err != nil {
+		return nil, err
+	}
+	if object != nil {
+		return object.getAmount(), nil
+	}
+
+	return stateBalance0, nil
 }
 
 // SetBalance sets the balance of the specified account if exists.
@@ -204,16 +218,33 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *stateObject {
+	object, _ := s.getStateObjectWithError(addr)
+	return object
+}
+
+func (s *Statedb) getStateObjectWithError(addr common.Address) (*stateObject, error) {
+	if ok, object := s.getStateObjectFromCache(addr); ok {
+		return object, nil
+	}
+
+	object, err := s.createStateObject(addr)
+	return object, err
+}
+
+func (s *Statedb) getStateObjectFromCache(addr common.Address) (bool, *stateObject) {
 	// get from cache
 	if object, ok := s.stateObjects[addr]; ok {
 		if !object.deleted {
-			return object
+			return ok, object
 		}
 
 		// object has already been deleted from trie.
-		return nil
+		return ok, nil
 	}
+	return false, nil
+}
 
+func (s *Statedb) createStateObject(addr common.Address) (*stateObject, error) {
 	// load from trie
 	object := newStateObject(addr)
 	ok, err := object.loadAccount(s.trie)
@@ -222,13 +253,12 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 	}
 
 	if err != nil || !ok {
-		return nil
+		return nil, err
 	}
 
 	// add in cache
 	s.stateObjects[addr] = object
-
-	return object
+	return object, nil
 }
 
 // Prepare resets the logs and journal to process a new tx and return the statedb snapshot.
