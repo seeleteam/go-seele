@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
+	"runtime"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -50,6 +51,8 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	}
 
 	config := CopyConfig(cmdConfig)
+	convertIPCServerPath(cmdConfig, config)
+
 	config.P2PConfig, err = GetP2pConfig(cmdConfig)
 	if err != nil {
 		return config, err
@@ -66,6 +69,17 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	comm.LogConfiguration.DataDir = config.BasicConfig.DataDir
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	return config, nil
+}
+
+// convertIPCServerPath convert the config to the real path
+func convertIPCServerPath(cmdConfig *util.Config, config *node.Config) {
+	if cmdConfig.Ipcconfig.PipeName == "" {
+		config.IpcConfig.PipeName = common.GetDefaultIPCPath()
+	} else if runtime.GOOS == "windows" {
+		config.IpcConfig.PipeName = common.WindowsPipeDir + cmdConfig.Ipcconfig.PipeName
+	} else {
+		config.IpcConfig.PipeName = filepath.Join(common.GetDefaultDataFolder(), cmdConfig.Ipcconfig.PipeName)
+	}
 }
 
 // CopyConfig copy Config from the given config

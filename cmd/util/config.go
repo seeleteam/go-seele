@@ -30,6 +30,9 @@ type Config struct {
 	// The configuration of websocket rpc service
 	WSServerConfig node.WSServerConfig `json:"wsserver"`
 
+	// The configuration of ipc rpc service
+	Ipcconfig node.IpcConfig `json:"ipcconfig"`
+
 	// metrics config info
 	MetricsConfig *metrics.Config `json:"metrics"`
 
