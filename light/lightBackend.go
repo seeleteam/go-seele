@@ -3,9 +3,9 @@ package light
 import (
 	"math/big"
 
-	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
@@ -54,18 +54,19 @@ func (l *LightBackend) ProtocolBackend() api.Protocol { return l.s.seeleProtocol
 // GetBlock gets a specific block through block's hash and height
 func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, error) {
 	request := &odrBlock{Hash: hash}
+	var err error
 
 	if hash.IsEmpty() {
 		if height < 0 {
-			request.Height = l.ChainBackend().CurrentHeader().Height
-		} else {
-			request.Height = uint64(height)
+			request.Hash = l.ChainBackend().CurrentHeader().Hash()
+		} else if request.Hash, err = l.ChainBackend().GetStore().GetBlockHash(uint64(height)); err != nil {
+			return nil, errors.NewStackedErrorf(err, "failed to get block hash by height %v", height)
 		}
 	}
 
 	response, err := l.s.odrBackend.retrieve(request)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to retrieve ODR block")
 	}
 
 	return response.(*odrBlock).Block, nil
