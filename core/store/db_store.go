@@ -170,11 +170,6 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	}
 
 	if isHead {
-		// add txs/debts indices of new HEAD block
-		if body != nil {
-			store.batchAddIndices(batch, hash, body.Txs, body.Debts)
-		}
-
 		// delete old txs/debts indices in old canonical chain if exists
 		oldHash, err := store.GetBlockHash(header.Height)
 		if err != nil && err != errors.ErrNotFound {
@@ -188,6 +183,11 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 			}
 
 			store.batchDeleteIndices(batch, oldHash, oldBlock.Transactions, oldBlock.Debts)
+		}
+
+		// add or update txs/debts indices of new HEAD block
+		if body != nil {
+			store.batchAddIndices(batch, hash, body.Txs, body.Debts)
 		}
 
 		// update height to hash map in canonical chain and HEAD block hash
