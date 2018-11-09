@@ -6,6 +6,7 @@
 package state
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -135,17 +136,26 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 // GetData returns the account data of the specified key if exists.
 // Otherwise, return nil.
 func (s *Statedb) GetData(addr common.Address, key common.Hash) []byte {
+	return s.getData(addr, key, false)
+}
+
+func (s *Statedb) getData(addr common.Address, key common.Hash, committed bool) []byte {
 	object := s.getStateObject(addr)
 	if object == nil {
 		return nil
 	}
 
-	data, err := object.getState(s.trie, key)
+	data, err := object.getState(s.trie, key, committed)
 	if err != nil {
 		s.setError(err)
 	}
 
 	return data
+}
+
+// GetCommittedData returns the account committed data of the specified key if exists.
+func (s *Statedb) GetCommittedData(addr common.Address, key common.Hash) []byte {
+	return s.getData(addr, key, true)
 }
 
 // SetData sets the key value pair for the specified account if exists.
@@ -155,9 +165,14 @@ func (s *Statedb) SetData(addr common.Address, key common.Hash, value []byte) {
 		return
 	}
 
-	prevValue, err := object.getState(s.trie, key)
+	prevValue, err := object.getState(s.trie, key, false)
 	if err != nil {
 		s.setError(err)
+		return
+	}
+
+	// value not changed.
+	if bytes.Equal(prevValue, value) {
 		return
 	}
 
@@ -368,10 +383,20 @@ func (s *Statedb) AddLog(log *types.Log) {
 	s.curLogs = append(s.curLogs, log)
 }
 
-// AddRefund refunds the specified gas value
+// AddRefund adds gas to the refund counter.AddRefund
 func (s *Statedb) AddRefund(gas uint64) {
 	s.curJournal.append(refundChange{s.refund})
 	s.refund += gas
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will panic if the refund counter goes below zero
+func (s *Statedb) SubRefund(gas uint64) {
+	s.curJournal.append(refundChange{prev: s.refund})
+	if gas > s.refund {
+		panic("Refund counter below zero")
+	}
+	s.refund -= gas
 }
 
 // GetRefund returns the current value of the refund counter.

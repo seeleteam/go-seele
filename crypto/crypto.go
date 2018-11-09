@@ -186,5 +186,13 @@ func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
 // address and nonce. Note, the new created contract address and the account
 // address are in the same shard.
 func CreateAddress(addr common.Address, nonce uint64) common.Address {
-	return addr.CreateContractAddress(nonce, MustHash)
+	hash := MustHash([]interface{}{addr, nonce})
+	return addr.CreateContractAddressWithHash(hash)
+}
+
+// CreateAddress2 creates an ethereum address given the address bytes, initial
+// contract code hash and a salt.
+func CreateAddress2(b common.Address, salt common.Hash, inithash []byte) common.Address {
+	hash := Keccak256Hash([]byte{0xff}, b.Bytes(), salt.Bytes(), inithash)
+	return b.CreateContractAddressWithHash(hash)
 }

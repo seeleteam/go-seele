@@ -6,6 +6,7 @@
 package state
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -185,11 +186,16 @@ func (s *stateObject) empty() bool {
 }
 
 func (s *stateObject) setState(key common.Hash, value []byte) {
-	s.cachedStorage[key] = value
 	s.dirtyStorage[key] = value
 }
 
-func (s *stateObject) getState(trie Trie, key common.Hash) ([]byte, error) {
+func (s *stateObject) getState(trie Trie, key common.Hash, committed bool) ([]byte, error) {
+	if !committed {
+		if value, ok := s.dirtyStorage[key]; ok {
+			return value, nil
+		}
+	}
+
 	if value, ok := s.cachedStorage[key]; ok {
 		return value, nil
 	}
@@ -199,6 +205,8 @@ func (s *stateObject) getState(trie Trie, key common.Hash) ([]byte, error) {
 		return nil, err
 	}
 
+	s.cachedStorage[key] = value
+
 	return value, nil
 }
 
@@ -207,6 +215,13 @@ func (s *stateObject) flush(trie Trie) error {
 	// Flush storage change.
 	if len(s.dirtyStorage) > 0 {
 		for k, v := range s.dirtyStorage {
+			// value cached and not changed.
+			if cachedValue, ok := s.cachedStorage[k]; ok && bytes.Equal(cachedValue, v) {
+				continue
+			}
+
+			s.cachedStorage[k] = v
+
 			if err := trie.Put(s.dataKey(dataTypeStorage, crypto.MustHash(k).Bytes()...), v); err != nil {
 				return err
 			}

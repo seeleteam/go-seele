@@ -165,7 +165,7 @@ func BytesToAddress(bs []byte) Address {
 func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 
 // Big converts address to a big int.
-func (id *Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
+func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
 
 // MarshalText marshals the address to HEX string.
 func (id Address) MarshalText() ([]byte, error) {
@@ -202,7 +202,13 @@ func (id *Address) Shard() uint {
 
 // CreateContractAddress returns a contract address that in the same shard of this address.
 func (id *Address) CreateContractAddress(nonce uint64, hashFunc func(interface{}) Hash) Address {
-	hash := hashFunc([]interface{}{id, nonce}).Bytes()
+	hash := hashFunc([]interface{}{id, nonce})
+	return id.CreateContractAddressWithHash(hash)
+}
+
+// CreateContractAddressWithHash returns a contract address that in the same shard of this address.
+func (id *Address) CreateContractAddressWithHash(h Hash) Address {
+	hash := h.Bytes()
 
 	targetShardNum := id.Shard()
 	var sum uint

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"math/big"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
@@ -79,7 +78,7 @@ func (c *ecrecover) RequiredGas(input []byte) uint64 {
 func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	const ecRecoverInputLength = 128
 
-	input = ethCommon.RightPadBytes(input, ecRecoverInputLength)
+	input = common.RightPadBytes(input, ecRecoverInputLength)
 	// "input" is (hash, v, r, s), each 32 bytes
 	// but for ecrecover we want (r, s, v)
 
@@ -101,7 +100,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 	addr := crypto.GetAddress(pubKey)
 
 	// the first byte of pubkey is bitcoin heritage
-	return ethCommon.LeftPadBytes(addr.Bytes(), 32), nil
+	return common.LeftPadBytes(addr.Bytes(), 32), nil
 }
 
 // SHA256 implemented as a native contract.
@@ -132,7 +131,7 @@ func (c *ripemd160hash) RequiredGas(input []byte) uint64 {
 func (c *ripemd160hash) Run(input []byte) ([]byte, error) {
 	ripemd := ripemd160.New()
 	ripemd.Write(input)
-	return ethCommon.LeftPadBytes(ripemd.Sum(nil), 32), nil
+	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
 // data copy implemented as a native contract.
@@ -249,9 +248,9 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	)
 	if mod.BitLen() == 0 {
 		// Modulo 0 is undefined, return zero
-		return ethCommon.LeftPadBytes([]byte{}, int(modLen)), nil
+		return common.LeftPadBytes([]byte{}, int(modLen)), nil
 	}
-	return ethCommon.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
+	return common.LeftPadBytes(base.Exp(base, exp, mod).Bytes(), int(modLen)), nil
 }
 
 // newCurvePoint unmarshals a binary blob into a bn256 elliptic curve point,

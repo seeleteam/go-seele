@@ -17,6 +17,12 @@ func (s *StateDB) GetState(address common.Address, key common.Hash) common.Hash 
 	return common.BytesToHash(value)
 }
 
+// GetCommittedState returns the committed value of the specified key in account storage if exists.
+func (s *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+	value := s.GetCommittedData(addr, hash)
+	return common.BytesToHash(value)
+}
+
 // SetState adds or updates the specified key-value pair in account storage.
 func (s *StateDB) SetState(address common.Address, key common.Hash, value common.Hash) {
 	s.SetData(address, key, value.Bytes())
