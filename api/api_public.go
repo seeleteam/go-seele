@@ -47,7 +47,8 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 		return nil, fmt.Errorf("local shard is: %d, your shard is: %d, you need to change to shard %d to get your balance", common.LocalShardNumber, account.Shard(), account.Shard())
 	}
 
-	balance, err := state.GetBalanceWithError(account)
+	balance := state.GetBalance(account)
+	err = state.GetDbErr()
 	if err != nil {
 		return nil, err
 	}

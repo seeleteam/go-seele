@@ -90,18 +90,9 @@ func (s *Statedb) GetBalance(addr common.Address) *big.Int {
 	return stateBalance0
 }
 
-// GetBalance returns the balance of the specified account if exists, Otherwise, returns zero.
-// If occur error, returns with error.
-func (s *Statedb) GetBalanceWithError(addr common.Address) (*big.Int, error) {
-	object, err := s.getStateObjectWithError(addr)
-	if err != nil {
-		return nil, err
-	}
-	if object != nil {
-		return object.getAmount(), nil
-	}
-
-	return stateBalance0, nil
+// GetDbErr returns with error.
+func (s *Statedb) GetDbErr() error {
+	return s.dbErr
 }
 
 // SetBalance sets the balance of the specified account if exists.
@@ -218,33 +209,16 @@ func (s *Statedb) Commit(batch database.Batch) (common.Hash, error) {
 }
 
 func (s *Statedb) getStateObject(addr common.Address) *stateObject {
-	object, _ := s.getStateObjectWithError(addr)
-	return object
-}
-
-func (s *Statedb) getStateObjectWithError(addr common.Address) (*stateObject, error) {
-	if ok, object := s.getStateObjectFromCache(addr); ok {
-		return object, nil
-	}
-
-	object, err := s.createStateObject(addr)
-	return object, err
-}
-
-func (s *Statedb) getStateObjectFromCache(addr common.Address) (bool, *stateObject) {
 	// get from cache
 	if object, ok := s.stateObjects[addr]; ok {
 		if !object.deleted {
-			return ok, object
+			return object
 		}
 
 		// object has already been deleted from trie.
-		return ok, nil
+		return nil
 	}
-	return false, nil
-}
 
-func (s *Statedb) createStateObject(addr common.Address) (*stateObject, error) {
 	// load from trie
 	object := newStateObject(addr)
 	ok, err := object.loadAccount(s.trie)
@@ -253,12 +227,12 @@ func (s *Statedb) createStateObject(addr common.Address) (*stateObject, error) {
 	}
 
 	if err != nil || !ok {
-		return nil, err
+		return nil
 	}
 
 	// add in cache
 	s.stateObjects[addr] = object
-	return object, nil
+	return object
 }
 
 // Prepare resets the logs and journal to process a new tx and return the statedb snapshot.
