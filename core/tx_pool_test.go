@@ -8,8 +8,8 @@ package core
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
