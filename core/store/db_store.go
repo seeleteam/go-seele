@@ -13,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var (
@@ -169,12 +170,29 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	}
 
 	if isHead {
-		batch.Put(heightToHashKey(header.Height), hashBytes)
-		batch.Put(keyHeadBlockHash, hashBytes)
+		// delete old txs/debts indices in old canonical chain if exists
+		oldHash, err := store.GetBlockHash(header.Height)
+		if err != nil && err != errors.ErrNotFound {
+			return err
+		}
 
+		if err == nil {
+			oldBlock, err := store.GetBlock(oldHash)
+			if err != nil {
+				return err
+			}
+
+			store.batchDeleteIndices(batch, oldHash, oldBlock.Transactions, oldBlock.Debts)
+		}
+
+		// add or update txs/debts indices of new HEAD block
 		if body != nil {
 			store.batchAddIndices(batch, hash, body.Txs, body.Debts)
 		}
+
+		// update height to hash map in canonical chain and HEAD block hash
+		batch.Put(heightToHashKey(header.Height), hashBytes)
+		batch.Put(keyHeadBlockHash, hashBytes)
 	}
 
 	return batch.Commit()
