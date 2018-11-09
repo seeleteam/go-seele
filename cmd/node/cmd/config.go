@@ -73,12 +73,12 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 
 // convertIPCServerPath convert the config to the real path
 func convertIPCServerPath(cmdConfig *util.Config, config *node.Config) {
-	if cmdConfig.IPCServer.PipeName == "" {
+	if cmdConfig.Ipcconfig.PipeName == "" {
 		config.IpcConfig.PipeName = common.GetDefaultIPCPath()
 	} else if runtime.GOOS == "windows" {
-		config.IpcConfig.PipeName = common.WindowsPipeDir + cmdConfig.IPCServer.PipeName
+		config.IpcConfig.PipeName = common.WindowsPipeDir + cmdConfig.Ipcconfig.PipeName
 	} else {
-		config.IpcConfig.PipeName = filepath.Join(common.GetDefaultDataFolder(), cmdConfig.IPCServer.PipeName)
+		config.IpcConfig.PipeName = filepath.Join(common.GetDefaultDataFolder(), cmdConfig.Ipcconfig.PipeName)
 	}
 }
 
