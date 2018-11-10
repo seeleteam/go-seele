@@ -1,6 +1,9 @@
 package bind
 
 import (
+	"fmt"
+	"math"
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -53,4 +56,32 @@ func Test_parseArg(t *testing.T) {
 	value, err = parseArg("[32]byte", "0x000001c42c79f769a00bcdde948d09279f8385b3ca5e8593e3abc13e15635b38")
 	assert.NoError(t, err)
 	assert.Equal(t, reflect.Array, reflect.TypeOf(value).Kind())
+
+	// Over Flow error int/uint
+	number := big.NewInt(0).Add(big.NewInt(0).SetUint64(math.MaxUint64), big.NewInt(1)).String()
+	errmsg := fmt.Sprintf("strconv.ParseInt: parsing \"%s\": value out of range", number)
+	_, err = parseArg("int8", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("int16", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("int32", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("int64", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("uint8", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("uint16", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("uint32", number)
+	assert.Error(t, err, errmsg)
+	_, err = parseArg("uint64", number)
+	assert.Error(t, err, errmsg)
+
+	// Invalid address
+	_, err = parseArg("common.Address", "0x123333333333333333333333333331234")
+	assert.Error(t, err)
+
+	// Overflow bytes
+	_, err = parseArg("[32]byte", "0x000001c42c79f769a00bcdde948d09279f8385b3ca5e8593e3abc13e15635b38000001c42c79f769a00bcdde948d09279f8385b3ca5e8593e3abc13e15635b38")
+	assert.Error(t, err)
 }
