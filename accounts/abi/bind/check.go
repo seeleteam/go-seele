@@ -106,8 +106,6 @@ func parseArg(abiType string, arg string) (interface{}, error) {
 		return uint64(number), nil
 	default:
 		if strings.Contains(abiType, "]byte") {
-			fmt.Println("abiType:", abiType)
-			fmt.Println("arg:", arg)
 			bytes, err := hexutil.HexToBytes(arg)
 			if err != nil {
 				return nil, err
@@ -116,7 +114,6 @@ func parseArg(abiType string, arg string) (interface{}, error) {
 			if length == "" {
 				return bytes, nil
 			}
-			// b := [l]byte{}
 			switch length {
 			case "32":
 				var b [32]byte
