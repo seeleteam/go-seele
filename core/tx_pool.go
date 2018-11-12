@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -25,14 +26,12 @@ type TransactionPool struct {
 
 // NewTransactionPool creates and returns a transaction pool.
 func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
-	pool := NewPool(config.Capacity, chain, func(block *types.Block) []poolObject {
-		var results []poolObject
-		for _, obj := range block.GetExcludeRewardTransactions() {
-			results = append(results, obj)
-		}
+	log := log.GetLogger("txpool")
+	getObjectFromBlock := func(block *types.Block) []poolObject {
+		return txsToObjects(block.GetExcludeRewardTransactions())
+	}
 
-		return results
-	}, func(chain blockchain, state *state.Statedb, log *log.SeeleLog, item *poolItem) bool {
+	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
 		nowTimestamp := time.Now()
 		txIndex, _ := chain.GetStore().GetTxIndex(item.GetHash())
 		nonce := state.GetNonce(item.Account())
@@ -53,7 +52,25 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 		}
 
 		return false
-	})
+	}
+
+	objectValidation := func(state *state.Statedb, obj poolObject) error {
+		tx := obj.(*types.Transaction)
+		if err := tx.Validate(state); err != nil {
+			return errors.NewStackedError(err, "failed to validate tx")
+		}
+
+		return nil
+	}
+
+	afterAdd := func(obj poolObject) {
+		log.Debug("receive transaction and add it. transaction hash: %v, time: %d", obj.GetHash(), time.Now().UnixNano())
+
+		// fire event
+		event.TransactionInsertedEventManager.Fire(obj.(*types.Transaction))
+	}
+
+	pool := NewPool(config.Capacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd)
 
 	return &TransactionPool{pool}
 }
@@ -63,21 +80,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 
-	if pool.Has(tx.GetHash()) {
-		return errObjectHashExists
-	}
-
-	// validate tx against the latest statedb
-	statedb, err := pool.chain.GetCurrentState()
-	if err != nil {
-		return errors.NewStackedError(err, "failed to get current statedb")
-	}
-
-	if err := tx.Validate(statedb); err != nil {
-		return errors.NewStackedError(err, "failed to validate tx")
-	}
-
-	return pool.AddObject(tx)
+	return pool.addObject(tx)
 }
 
 func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transaction {
@@ -86,32 +89,41 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 }
 
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
-	pool.RemoveOject(txHash)
+	pool.removeOject(txHash)
 }
 
 func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Transaction, int) {
-	objects, size := pool.GetProcessableObjects(size)
+	objects, size := pool.getProcessableObjects(size)
 	return poolObjectToTxs(objects), size
 }
 
 func (pool *TransactionPool) GetPendingTxCount() int {
-	return pool.GetPendingObjectCount()
+	return pool.getPendingObjectCount()
 }
 
 func (pool *TransactionPool) GetTxCount() int {
-	return pool.GetObjectCount()
+	return pool.getObjectCount()
 }
 
 func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.Transaction {
-	objects := pool.GetObjects(processing, pending)
+	objects := pool.getObjects(processing, pending)
 	return poolObjectToTxs(objects)
 }
 
 func poolObjectToTxs(objects []poolObject) []*types.Transaction {
-	var txs []*types.Transaction
-	for _, obj := range objects {
-		txs = append(txs, obj.(*types.Transaction))
+	txs := make([]*types.Transaction, len(objects))
+	for index, obj := range objects {
+		txs[index] = obj.(*types.Transaction)
 	}
 
 	return txs
+}
+
+func txsToObjects(txs []*types.Transaction) []poolObject {
+	objects := make([]poolObject, len(txs))
+	for index, tx := range txs {
+		objects[index] = tx
+	}
+
+	return objects
 }

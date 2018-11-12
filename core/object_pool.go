@@ -15,7 +15,6 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -37,6 +36,7 @@ type poolObject interface {
 	Nonce() uint64
 	GetHash() common.Hash
 	Size() int
+	ToAccount() common.Address
 }
 
 // poolItem the item for pool collection
@@ -54,7 +54,9 @@ func newPooledItem(object poolObject) *poolItem {
 }
 
 type getObjectFromBlockFunc func(block *types.Block) []poolObject
-type canRemoveFunc func(chain blockchain, state *state.Statedb, log *log.SeeleLog, item *poolItem) bool
+type canRemoveFunc func(chain blockchain, state *state.Statedb, item *poolItem) bool
+type objectValidationFunc func(state *state.Statedb, obj poolObject) error
+type afterAddFunc func(obj poolObject)
 
 // Pool is a thread-safe container for block object received from the network or submitted locally.
 // An object will be removed from the pool once included in a blockchain or pending time too long (> timeoutDuration).
@@ -68,19 +70,24 @@ type Pool struct {
 	log                *log.SeeleLog
 	getObjectFromBlock getObjectFromBlockFunc
 	canRemove          canRemoveFunc
+	objectValidation   objectValidationFunc
+	afterAdd           afterAddFunc
 }
 
 // NewPool creates and returns a transaction pool.
-func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBlockFunc, canRemove canRemoveFunc) *Pool {
+func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
+	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc) *Pool {
 	pool := &Pool{
 		capacity:           capacity,
 		chain:              chain,
 		hashToTxMap:        make(map[common.Hash]*poolItem),
 		pendingQueue:       newPendingQueue(),
 		processingObjects:  make(map[common.Hash]struct{}),
-		log:                log.GetLogger("objectpool"),
+		log:                log,
 		getObjectFromBlock: getObjectFromBlock,
 		canRemove:          canRemove,
+		objectValidation:   objectValidation,
+		afterAdd:           afterAdd,
 	}
 
 	return pool
@@ -89,9 +96,9 @@ func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBl
 // HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
 func (pool *Pool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
 	reinject := pool.getReinjectObject(newHeader, lastHeader)
-	count := pool.addObjects(reinject)
+	count := pool.addObjectArray(reinject)
 	if count > 0 {
-		pool.log.Info("add %d reinject transactions", count)
+		pool.log.Info("add %d reinject objects", count)
 	}
 
 	pool.removeObjects()
@@ -175,11 +182,11 @@ func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObj
 	return nil
 }
 
-func (pool *Pool) addObjects(txs []poolObject) int {
+func (pool *Pool) addObjectArray(objects []poolObject) int {
 	count := 0
-	for _, tx := range txs {
-		if err := pool.AddObject(tx); err != nil {
-			pool.log.Debug("add transaction failed, %s", err)
+	for _, tx := range objects {
+		if err := pool.addObject(tx); err != nil {
+			pool.log.Debug("add object failed, %s", err)
 		} else {
 			count++
 		}
@@ -196,9 +203,24 @@ func (pool *Pool) Has(hash common.Hash) bool {
 	return pool.hashToTxMap[hash] != nil
 }
 
-// AddObject adds a single transaction into the pool if it is valid and returns nil.
+// addObject adds a single transaction into the pool if it is valid and returns nil.
 // Otherwise, return the concrete error.
-func (pool *Pool) AddObject(obj poolObject) error {
+func (pool *Pool) addObject(obj poolObject) error {
+	if pool.Has(obj.GetHash()) {
+		return errObjectHashExists
+	}
+
+	// validate tx against the latest statedb
+	statedb, err := pool.chain.GetCurrentState()
+	if err != nil {
+		return errors.NewStackedError(err, "failed to get current statedb")
+	}
+
+	err = pool.objectValidation(statedb, obj)
+	if err != nil {
+		return errors.NewStackedError(err, "failed to validate object")
+	}
+
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -210,7 +232,7 @@ func (pool *Pool) AddObject(obj poolObject) error {
 	// update obj with higher price, otherwise return errObjectNonceUsed
 	if existTx := pool.pendingQueue.get(obj.Account(), obj.Nonce()); existTx != nil {
 		if obj.Price().Cmp(existTx.Price()) > 0 {
-			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
+			pool.log.Debug("got a object has higher gas price than before. remove old one. new: %s, old: %s",
 				obj.GetHash().ToHex(), existTx.GetHash().ToHex())
 			pool.doRemoveObject(existTx.GetHash())
 		} else {
@@ -227,24 +249,22 @@ func (pool *Pool) AddObject(obj poolObject) error {
 		}
 
 		discardedAccount := c.peek().Account()
-		pool.log.Info("txpool is full, discarded account = %v, txs = %v", discardedAccount.ToHex(), c.len())
+		pool.log.Info("object pool is full, discarded account = %v, object len = %v", discardedAccount.ToHex(), c.len())
 
 		for c.len() > 0 {
 			delete(pool.hashToTxMap, c.pop().GetHash())
 		}
 	}
 
-	pool.addObject(obj)
-	pool.log.Debug("receive transaction and add it. transaction hash: %v, time: %d", obj.GetHash(), time.Now().UnixNano())
-	// fire event
-	event.TransactionInsertedEventManager.Fire(obj)
+	pool.doaddObject(obj)
+	pool.afterAdd(obj)
 
 	return nil
 }
 
-func (pool *Pool) addObject(tx poolObject) {
-	poolTx := newPooledItem(tx)
-	pool.hashToTxMap[tx.GetHash()] = poolTx
+func (pool *Pool) doaddObject(obj poolObject) {
+	poolTx := newPooledItem(obj)
+	pool.hashToTxMap[obj.GetHash()] = poolTx
 	pool.pendingQueue.add(poolTx)
 }
 
@@ -260,8 +280,8 @@ func (pool *Pool) GetObject(objHash common.Hash) poolObject {
 	return nil
 }
 
-// RemoveOject removes tx of specified tx hash from pool
-func (pool *Pool) RemoveOject(objHash common.Hash) {
+// removeOject removes tx of specified tx hash from pool
+func (pool *Pool) removeOject(objHash common.Hash) {
 	defer pool.mutex.Unlock()
 	pool.mutex.Lock()
 	pool.doRemoveObject(objHash)
@@ -288,14 +308,14 @@ func (pool *Pool) removeObjects() {
 	}
 
 	for objHash, poolTx := range pool.hashToTxMap {
-		if pool.canRemove(pool.chain, state, pool.log, poolTx) {
+		if pool.canRemove(pool.chain, state, poolTx) {
 			pool.doRemoveObject(objHash)
 		}
 	}
 }
 
-// GetProcessableObjects retrieves processable transactions from pool.
-func (pool *Pool) GetProcessableObjects(size int) ([]poolObject, int) {
+// getProcessableObjects retrieves processable transactions from pool.
+func (pool *Pool) getProcessableObjects(size int) ([]poolObject, int) {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
@@ -318,24 +338,24 @@ func (pool *Pool) GetProcessableObjects(size int) ([]poolObject, int) {
 	return txs, totalSize
 }
 
-// GetPendingObjectCount return the total number of pending transactions in the transaction pool.
-func (pool *Pool) GetPendingObjectCount() int {
+// getPendingObjectCount return the total number of pending transactions in the transaction pool.
+func (pool *Pool) getPendingObjectCount() int {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
 	return pool.pendingQueue.count()
 }
 
-// GetObjectCount return the total number of transactions in the transaction pool.
-func (pool *Pool) GetObjectCount() int {
+// getObjectCount return the total number of transactions in the transaction pool.
+func (pool *Pool) getObjectCount() int {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
 	return pool.pendingQueue.count() + len(pool.processingObjects)
 }
 
-// GetObjects return the transactions in the transaction pool.
-func (pool *Pool) GetObjects(processing, pending bool) []poolObject {
+// getObjects return the transactions in the transaction pool.
+func (pool *Pool) getObjects(processing, pending bool) []poolObject {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 

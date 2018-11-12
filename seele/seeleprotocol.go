@@ -269,8 +269,8 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 }
 
 func (p *SeeleProtocol) handleNewDebt(e event.Event) {
-	debts := e.([]*types.Debt)
-	p.propagateDebtMap(types.DebtArrayToMap(debts), true)
+	debt := e.(*types.Debt)
+	p.propagateDebtMap(types.DebtArrayToMap([]*types.Debt{debt}), true)
 }
 
 func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) {
