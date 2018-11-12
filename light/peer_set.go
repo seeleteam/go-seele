@@ -90,7 +90,7 @@ func (p *peerSet) choosePeers(filter peerFilter) (choosePeers []*peer) {
 
 	mapLen := len(p.peerMap)
 	peerL := make([]*peer, mapLen)
-	filteredPeers := make([]*peer, mapLen)
+	var filteredPeers []*peer
 
 	idx := 0
 	for _, v := range p.peerMap {
