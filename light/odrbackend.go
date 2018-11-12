@@ -89,8 +89,8 @@ func (o *odrBackend) handleResponse(msg *p2p.Message) {
 	}
 }
 
-func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
-	peerL := o.peers.choosePeers(o.shard)
+func (o *odrBackend) getReqInfo(filter peerFilter) (uint32, chan odrResponse, []*peer, error) {
+	peerL := o.peers.choosePeers(filter)
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}
@@ -110,7 +110,12 @@ func (o *odrBackend) getReqInfo() (uint32, chan odrResponse, []*peer, error) {
 
 // retrieve retrieves the requested ODR object from remote peer.
 func (o *odrBackend) retrieve(request odrRequest) (odrResponse, error) {
-	reqID, ch, peerL, err := o.getReqInfo()
+	return o.retrieveWithFilter(request, peerFilter{})
+}
+
+// retrieve retrieves the requested ODR object from remote peer with specified peer filter.
+func (o *odrBackend) retrieveWithFilter(request odrRequest, filter peerFilter) (odrResponse, error) {
+	reqID, ch, peerL, err := o.getReqInfo(filter)
 	if err != nil {
 		return nil, err
 	}
