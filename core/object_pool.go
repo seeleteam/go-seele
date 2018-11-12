@@ -20,12 +20,10 @@ import (
 )
 
 var (
-	errTxHashExists = errors.New("transaction hash already exists")
-	errTxPoolFull   = errors.New("transaction pool is full")
-	errTxNonceUsed  = errors.New("transaction nonce already been used")
+	errObjectHashExists = errors.New("object hash already exists")
+	errObjectPoolFull   = errors.New("object pool is full")
+	errObjectNonceUsed  = errors.New("object nonce already been used")
 )
-
-const overTimeInterval = 3 * time.Hour
 
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
@@ -55,28 +53,34 @@ func newPooledItem(object poolObject) *poolItem {
 	}
 }
 
-// Pool is a thread-safe container for transactions received
-// from the network or submitted locally. A transaction will be removed from
-// the pool once included in a blockchain or pending time too long (> overTimeInterval).
+type getObjectFromBlockFunc func(block *types.Block) []poolObject
+type canRemoveFunc func(chain blockchain, state *state.Statedb, log *log.SeeleLog, item *poolItem) bool
+
+// Pool is a thread-safe container for block object received from the network or submitted locally.
+// An object will be removed from the pool once included in a blockchain or pending time too long (> timeoutDuration).
 type Pool struct {
-	mutex             sync.RWMutex
-	capacity          uint
-	chain             blockchain
-	hashToTxMap       map[common.Hash]*poolItem
-	pendingQueue      *pendingQueue
-	processingObjects map[common.Hash]struct{}
-	log               *log.SeeleLog
+	mutex              sync.RWMutex
+	capacity           uint
+	chain              blockchain
+	hashToTxMap        map[common.Hash]*poolItem
+	pendingQueue       *pendingQueue
+	processingObjects  map[common.Hash]struct{}
+	log                *log.SeeleLog
+	getObjectFromBlock getObjectFromBlockFunc
+	canRemove          canRemoveFunc
 }
 
 // NewPool creates and returns a transaction pool.
-func NewPool(capacity uint, chain blockchain) *Pool {
+func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBlockFunc, canRemove canRemoveFunc) *Pool {
 	pool := &Pool{
-		capacity:          capacity,
-		chain:             chain,
-		hashToTxMap:       make(map[common.Hash]*poolItem),
-		pendingQueue:      newPendingQueue(),
-		processingObjects: make(map[common.Hash]struct{}),
-		log:               log.GetLogger("txpool"),
+		capacity:           capacity,
+		chain:              chain,
+		hashToTxMap:        make(map[common.Hash]*poolItem),
+		pendingQueue:       newPendingQueue(),
+		processingObjects:  make(map[common.Hash]struct{}),
+		log:                log.GetLogger("objectpool"),
+		getObjectFromBlock: getObjectFromBlock,
+		canRemove:          canRemove,
 	}
 
 	return pool
@@ -112,11 +116,11 @@ func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObj
 
 		log.Debug("handle chain header forked, last height %d, new height %d", lastBlock.Header.Height, newBlock.Header.Height)
 		// add committed txs back in current branch.
-		toDeleted := make(map[common.Hash]*types.Transaction)
-		toAdded := make(map[common.Hash]*types.Transaction)
+		toDeleted := make(map[common.Hash]poolObject)
+		toAdded := make(map[common.Hash]poolObject)
 		for newBlock.Header.Height > lastBlock.Header.Height {
-			for _, t := range newBlock.GetExcludeRewardTransactions() {
-				toDeleted[t.Hash] = t
+			for _, obj := range pool.getObjectFromBlock(newBlock) {
+				toDeleted[obj.GetHash()] = obj
 			}
 
 			if newBlock, err = chainStore.GetBlock(newBlock.Header.PreviousBlockHash); err != nil {
@@ -126,8 +130,8 @@ func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObj
 		}
 
 		for lastBlock.Header.Height > newBlock.Header.Height {
-			for _, t := range lastBlock.GetExcludeRewardTransactions() {
-				toAdded[t.Hash] = t
+			for _, obj := range pool.getObjectFromBlock(lastBlock) {
+				toAdded[obj.GetHash()] = obj
 			}
 
 			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
@@ -137,12 +141,12 @@ func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObj
 		}
 
 		for lastBlock.HeaderHash != newBlock.HeaderHash {
-			for _, t := range lastBlock.GetExcludeRewardTransactions() {
-				toAdded[t.Hash] = t
+			for _, obj := range pool.getObjectFromBlock(lastBlock) {
+				toAdded[obj.GetHash()] = obj
 			}
 
-			for _, t := range newBlock.GetExcludeRewardTransactions() {
-				toDeleted[t.Hash] = t
+			for _, obj := range pool.getObjectFromBlock(newBlock) {
+				toDeleted[obj.GetHash()] = obj
 			}
 
 			if lastBlock, err = chainStore.GetBlock(lastBlock.Header.PreviousBlockHash); err != nil {
@@ -200,26 +204,26 @@ func (pool *Pool) AddObject(obj poolObject) error {
 
 	// avoid to add duplicated obj
 	if pool.hashToTxMap[obj.GetHash()] != nil {
-		return errTxHashExists
+		return errObjectHashExists
 	}
 
-	// update obj with higher price, otherwise return errTxNonceUsed
+	// update obj with higher price, otherwise return errObjectNonceUsed
 	if existTx := pool.pendingQueue.get(obj.Account(), obj.Nonce()); existTx != nil {
 		if obj.Price().Cmp(existTx.Price()) > 0 {
 			pool.log.Debug("got a transaction have higher gas price than before. remove old one. new: %s, old: %s",
 				obj.GetHash().ToHex(), existTx.GetHash().ToHex())
 			pool.doRemoveObject(existTx.GetHash())
 		} else {
-			return errTxNonceUsed
+			return errObjectNonceUsed
 		}
 	}
 
 	// if txpool capacity reached, then discard lower price txs if any.
-	// Otherwise, return errTxPoolFull.
+	// Otherwise, return errObjectPoolFull.
 	if uint(len(pool.hashToTxMap)) >= pool.capacity {
 		c := pool.pendingQueue.discard(obj.Price())
 		if c == nil || c.len() == 0 {
-			return errTxPoolFull
+			return errObjectPoolFull
 		}
 
 		discardedAccount := c.peek().Account()
@@ -283,22 +287,8 @@ func (pool *Pool) removeObjects() {
 		return
 	}
 
-	nowTimestamp := time.Now()
 	for objHash, poolTx := range pool.hashToTxMap {
-		txIndex, _ := pool.chain.GetStore().GetTxIndex(objHash)
-		nonce := state.GetNonce(poolTx.Account())
-		duration := nowTimestamp.Sub(poolTx.timestamp)
-
-		// Transactions have been processed or are too old need to delete
-		if txIndex != nil || poolTx.Nonce() < nonce || duration > overTimeInterval {
-			if txIndex == nil {
-				if poolTx.Nonce() < nonce {
-					pool.log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", objHash.ToHex(),
-						poolTx.Account().ToHex(), poolTx.Nonce(), nonce)
-				} else if duration > overTimeInterval {
-					pool.log.Debug("remove tx %s because not packed for more than three hours", objHash.ToHex())
-				}
-			}
+		if pool.canRemove(pool.chain, state, pool.log, poolTx) {
 			pool.doRemoveObject(objHash)
 		}
 	}

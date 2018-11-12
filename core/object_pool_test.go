@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
@@ -120,7 +119,7 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 
 	err = pool.AddObject(poolTx.poolObject)
-	assert.Equal(t, err, errTxHashExists)
+	assert.Equal(t, err, errObjectHashExists)
 }
 
 func Test_TransactionPool_Add_PoolFull(t *testing.T) {
@@ -137,7 +136,7 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	// failed to add tx with same price
 	poolTx2 := newTestPoolTxWithNonce(t, 10, 100, 5)
 	chain.addAccount(poolTx2.Account(), 5000000, 100)
-	assert.Equal(t, errTxPoolFull, pool.AddObject(poolTx2.poolObject))
+	assert.Equal(t, errObjectPoolFull, pool.AddObject(poolTx2.poolObject))
 
 	// succeed to add tx with higher price
 	poolTx3 := newTestPoolTxWithNonce(t, 10, 100, 6)
@@ -161,7 +160,7 @@ func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
 
 	poolTx = newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 1)
 	err = pool.AddObject(poolTx.poolObject)
-	assert.Equal(t, err, errTxNonceUsed)
+	assert.Equal(t, err, errObjectNonceUsed)
 }
 
 func Test_TransactionPool_GetTransaction(t *testing.T) {
@@ -209,70 +208,6 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	assert.Equal(t, pool.pendingQueue.count(), 1)
 
 	pool.RemoveOject(poolTx.GetHash())
-	assert.Equal(t, pool.pendingQueue.count(), 0)
-}
-
-func Test_GetReinjectTransaction(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
-	pool := &Pool{
-		capacity:          DefaultTxPoolConfig().Capacity,
-		chain:             bc,
-		hashToTxMap:       make(map[common.Hash]*poolItem),
-		pendingQueue:      newPendingQueue(),
-		processingObjects: make(map[common.Hash]struct{}),
-		log:               log.GetLogger("test"),
-	}
-
-	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)
-	bc.WriteBlock(b1)
-
-	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 3*types.TransactionPreSize)
-	bc.WriteBlock(b2)
-
-	reinject := pool.getReinjectObject(b1.HeaderHash, b2.HeaderHash)
-
-	assert.Equal(t, len(reinject), 2)
-	txs := make(map[common.Hash]poolObject)
-	for _, tx := range reinject {
-		txs[tx.GetHash()] = tx
-	}
-
-	_, ok := txs[b2.Transactions[1].Hash]
-	assert.Equal(t, ok, true, "1")
-
-	_, ok = txs[b2.Transactions[2].Hash]
-	assert.Equal(t, ok, true, "2")
-}
-
-func Test_TransactionPool_RemoveTransactions(t *testing.T) {
-	pool, chain := newTestPool(DefaultTxPoolConfig())
-	defer chain.dispose()
-
-	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 500000, 100)
-
-	err := pool.AddObject(poolTx.poolObject)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, pool.pendingQueue.count(), 1)
-
-	for _, ptx := range pool.hashToTxMap {
-		ptx.timestamp = ptx.timestamp.Add(-10 * time.Second)
-	}
-
-	pool.removeObjects()
-	assert.Equal(t, len(pool.hashToTxMap), 1)
-	assert.Equal(t, pool.pendingQueue.count(), 1)
-
-	for _, ptx := range pool.hashToTxMap {
-		ptx.timestamp = ptx.timestamp.Add(-overTimeInterval)
-	}
-
-	pool.removeObjects()
-	assert.Equal(t, len(pool.hashToTxMap), 0)
 	assert.Equal(t, pool.pendingQueue.count(), 0)
 }
 
