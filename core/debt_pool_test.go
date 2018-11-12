@@ -123,11 +123,11 @@ func Test_DebtPool(t *testing.T) {
 	}
 
 	// Test reinject
-	reinject := pool.getReinjectDebts(b2.HeaderHash, b1.HeaderHash)
+	reinject := pool.getReinjectObject(b2.HeaderHash, b1.HeaderHash)
 	assert.Equal(t, len(reinject), 2)
 	expectedResult := set.New(b1.Debts[0].Hash, b1.Debts[1].Hash)
-	assert.Equal(t, expectedResult.Has(reinject[0].Hash), true)
-	assert.Equal(t, expectedResult.Has(reinject[1].Hash), true)
+	assert.Equal(t, expectedResult.Has(reinject[0].GetHash()), true)
+	assert.Equal(t, expectedResult.Has(reinject[1].GetHash()), true)
 
 	// test remove
 	// make b2 be in the block index
@@ -139,16 +139,16 @@ func Test_DebtPool(t *testing.T) {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
 
-	pool.add(b1.Debts)
-	pool.add(b2.Debts)
+	pool.AddWithValidation(b1.Debts)
+	pool.AddWithValidation(b2.Debts)
 
-	assert.Equal(t, 4, len(pool.hashMap))
+	assert.Equal(t, 4, pool.getObjectCount())
 
-	pool.removeDebts()
+	pool.removeObjects()
 
-	assert.Equal(t, len(pool.hashMap), 2)
-	assert.Equal(t, pool.hashMap[b1.Debts[0].Hash], b1.Debts[0])
-	assert.Equal(t, pool.hashMap[b1.Debts[1].Hash], b1.Debts[1])
+	assert.Equal(t, pool.getObjectCount(), 2)
+	assert.Equal(t, pool.GetDebtByHash(b1.Debts[0].Hash), b1.Debts[0])
+	assert.Equal(t, pool.GetDebtByHash(b1.Debts[1].Hash), b1.Debts[1])
 }
 
 func Test_OrderByFee(t *testing.T) {
@@ -160,8 +160,14 @@ func Test_OrderByFee(t *testing.T) {
 
 	d1 := newTestDebt(1, 10)
 	d2 := newTestDebt(2, 11)
-	pool.add([]*types.Debt{d1, d2})
 
-	results := pool.GetAllOrderByPrice()
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+	pool.AddWithValidation([]*types.Debt{d1, d2})
+
+	results, _ := pool.GetProcessableDebts(10000)
+	assert.Equal(t, 2, len(results))
 	assert.Equal(t, results[0].Data.Price.Cmp(results[1].Data.Price), 1)
 }

@@ -15,7 +15,7 @@ import (
 )
 
 // DebtSize debt serialized size
-const DebtSize = 97
+const DebtSize = 119
 
 var DebtDataFlag = []byte{0x01}
 
@@ -28,8 +28,10 @@ var (
 
 // DebtData debt data
 type DebtData struct {
-	TxHash    common.Hash    // the hash of the executed transaction
-	FromShard uint           // tx shard
+	TxHash    common.Hash // the hash of the executed transaction
+	From      common.Address
+	FromShard uint // tx shard
+	Nonce     uint64
 	Account   common.Address // debt for account
 	Amount    *big.Int       // debt amount
 	Price     *big.Int       // debt price
@@ -134,6 +136,26 @@ func (d *Debt) Size() int {
 	return DebtSize + len(d.Data.Code)
 }
 
+func (d *Debt) Account() common.Address {
+	return d.Data.From
+}
+
+func (d *Debt) ToAccount() common.Address {
+	return d.Data.Account
+}
+
+func (d *Debt) Nonce() uint64 {
+	return d.Data.Nonce
+}
+
+func (d *Debt) Price() *big.Int {
+	return d.Data.Price
+}
+
+func (d *Debt) GetHash() common.Hash {
+	return d.Hash
+}
+
 // GetDebtsSize is the bytes of debts
 func GetDebtsSize(debts []*Debt) int {
 	size := 0
@@ -189,6 +211,8 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 
 	data := DebtData{
 		TxHash:    tx.Hash,
+		From:      tx.Data.From,
+		Nonce:     tx.Data.AccountNonce,
 		FromShard: fromShard,
 		Account:   tx.Data.To,
 		Amount:    big.NewInt(0).Set(tx.Data.Amount),

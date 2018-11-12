@@ -133,6 +133,10 @@ func (tx *Transaction) Account() common.Address {
 	return tx.Data.From
 }
 
+func (tx *Transaction) ToAccount() common.Address {
+	return tx.Data.To
+}
+
 func (tx *Transaction) Nonce() uint64 {
 	return tx.Data.AccountNonce
 }
