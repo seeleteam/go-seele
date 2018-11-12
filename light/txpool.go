@@ -262,12 +262,24 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 
 // getBlock retrieves block of specified block hash via odr backend.
 func (pool *txPool) getBlock(hash common.Hash) (*types.Block, error) {
-	response, err := pool.odrBackend.retrieve(&odrBlock{Hash: hash})
-	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to retrieve ODR block")
-	}
+	request := &odrBlock{Hash: hash}
+	filter := peerFilter{blockHash: hash}
+	var counter int
 
-	return response.(*odrBlock).Block, nil
+	// allow to try 3 times
+	for {
+		response, err := pool.odrBackend.retrieveWithFilter(request, filter)
+		if err == nil {
+			return response.(*odrBlock).Block, nil
+		}
+
+		pool.log.Info(errors.NewStackedErrorf(err, "failed to retrieve ODR block, counter = %v", counter).Error())
+		counter++
+
+		if counter == 3 {
+			return nil, errors.NewStackedError(err, "failed to retrieve ODR block")
+		}
+	}
 }
 
 // clearConfirmedBlocks clears the confirmed txs from tx pool.
