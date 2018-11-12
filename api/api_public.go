@@ -258,3 +258,10 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	api.s.Log().Debug("create transaction and add it. transaction hash: %v, time: %d", tx.Hash, time.Now().UnixNano())
 	return true, nil
 }
+
+func (api *PublicSeeleAPI) IsSyncing() bool {
+	return api.s.IsSyncing()
+}
+
+// Always listening
+func (api *PublicSeeleAPI) IsListening() bool { return true }

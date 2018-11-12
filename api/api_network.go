@@ -41,10 +41,3 @@ func (n *PrivateNetworkAPI) GetNetworkID() (string, error) {
 func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
 	return n.s.ProtocolBackend().GetProtocolVersion()
 }
-
-func (n *PrivateNetworkAPI) IsSyncing() bool {
-	return n.s.IsSyncing()
-}
-
-// Always listening
-func (n *PrivateNetworkAPI) IsListening() bool { return true }
