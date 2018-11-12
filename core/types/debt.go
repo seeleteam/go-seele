@@ -17,6 +17,8 @@ import (
 // DebtSize debt serialized size
 const DebtSize = 97
 
+var DebtDataFlag = []byte{0x01}
+
 var (
 	errWrongShardNumber = errors.New("wrong from shard number")
 	errInvalidAccount   = errors.New("invalid account, unexpected shard number")

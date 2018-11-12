@@ -10,7 +10,6 @@ import (
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/core/types"
 )
 
 type heapedTxList struct {
@@ -46,8 +45,8 @@ func newPendingQueue() *pendingQueue {
 	}
 }
 
-func (q *pendingQueue) add(tx *pooledTx) {
-	if pair := q.txs[tx.Data.From]; pair != nil {
+func (q *pendingQueue) add(tx *poolItem) {
+	if pair := q.txs[tx.Account()]; pair != nil {
 		pair.best.add(tx)
 
 		heap.Fix(q.bestHeap, pair.best.GetHeapIndex())
@@ -61,13 +60,13 @@ func (q *pendingQueue) add(tx *pooledTx) {
 			worst: &heapedTxList{txCollection: collection},
 		}
 
-		q.txs[tx.Data.From] = pair
+		q.txs[tx.Account()] = pair
 		heap.Push(q.bestHeap, pair.best)
 		heap.Push(q.worstHeap, pair.worst)
 	}
 }
 
-func (q *pendingQueue) get(addr common.Address, nonce uint64) *pooledTx {
+func (q *pendingQueue) get(addr common.Address, nonce uint64) *poolItem {
 	pair := q.txs[addr]
 	if pair == nil {
 		return nil
@@ -118,8 +117,8 @@ func (q *pendingQueue) peek() *txCollection {
 	return nil
 }
 
-func (q *pendingQueue) popN(n int) []*types.Transaction {
-	var txs []*types.Transaction
+func (q *pendingQueue) popN(n int) []poolObject {
+	var txs []poolObject
 
 	for i := 0; i < n && q.bestHeap.Len() > 0; i++ {
 		txs = append(txs, q.pop())
@@ -128,12 +127,12 @@ func (q *pendingQueue) popN(n int) []*types.Transaction {
 	return txs
 }
 
-func (q *pendingQueue) pop() *types.Transaction {
-	tx := q.bestHeap.Peek().(*heapedTxList).pop().Transaction
-	pair := q.txs[tx.Data.From]
+func (q *pendingQueue) pop() poolObject {
+	tx := q.bestHeap.Peek().(*heapedTxList).pop().poolObject
+	pair := q.txs[tx.Account()]
 
 	if pair.best.len() == 0 {
-		delete(q.txs, tx.Data.From)
+		delete(q.txs, tx.Account())
 		heap.Remove(q.bestHeap, pair.best.GetHeapIndex())
 		heap.Remove(q.worstHeap, pair.worst.GetHeapIndex())
 	} else {
@@ -154,20 +153,20 @@ func (q *pendingQueue) discard(price *big.Int) *txCollection {
 
 	worstCollection := q.worstHeap.Peek().(*heapedTxList).txCollection
 	worstTx := worstCollection.peek()
-	if worstTx == nil || price.Cmp(worstTx.Data.GasPrice) <= 0 {
+	if worstTx == nil || price.Cmp(worstTx.Price()) <= 0 {
 		return nil
 	}
 
 	heap.Pop(q.worstHeap)
-	account := worstTx.Data.From
+	account := worstTx.Account()
 	heap.Remove(q.bestHeap, q.txs[account].best.GetHeapIndex())
 	delete(q.txs, account)
 
 	return worstCollection
 }
 
-func (q *pendingQueue) list() []*types.Transaction {
-	var result []*types.Transaction
+func (q *pendingQueue) list() []poolObject {
+	var result []poolObject
 
 	for _, pair := range q.txs {
 		result = append(result, pair.best.list()...)

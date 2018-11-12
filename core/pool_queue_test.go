@@ -20,9 +20,9 @@ func uintToAddress(i uint64) common.Address {
 	return common.BigToAddress(new(big.Int).SetUint64(i))
 }
 
-func newMockPooledTx(fromAddr, price, nonce uint64) *pooledTx {
-	return &pooledTx{
-		Transaction: &types.Transaction{
+func newMockPooledTx(fromAddr, price, nonce uint64) *poolItem {
+	return &poolItem{
+		poolObject: &types.Transaction{
 			Data: types.TransactionData{
 				From:         uintToAddress(fromAddr),
 				GasPrice:     new(big.Int).SetUint64(price),
@@ -130,10 +130,10 @@ func Test_PendingQueue_peek(t *testing.T) {
 func Test_PendingQueue_popN(t *testing.T) {
 	q := newPendingQueue()
 
-	accountTxs := map[uint][]*pooledTx{
-		1: []*pooledTx{newMockPooledTx(1, 5, 1), newMockPooledTx(1, 20, 2)},
-		2: []*pooledTx{newMockPooledTx(2, 7, 1), newMockPooledTx(2, 15, 2)},
-		3: []*pooledTx{newMockPooledTx(3, 9, 1), newMockPooledTx(3, 6, 2)},
+	accountTxs := map[uint][]*poolItem{
+		1: []*poolItem{newMockPooledTx(1, 5, 1), newMockPooledTx(1, 20, 2)},
+		2: []*poolItem{newMockPooledTx(2, 7, 1), newMockPooledTx(2, 15, 2)},
+		3: []*poolItem{newMockPooledTx(3, 9, 1), newMockPooledTx(3, 6, 2)},
 	}
 
 	for _, txs := range accountTxs {
@@ -145,13 +145,13 @@ func Test_PendingQueue_popN(t *testing.T) {
 	assert.Equal(t, q.popN(-1) == nil, true)
 	assert.Equal(t, q.popN(0) == nil, true)
 
-	assert.Equal(t, q.popN(100), []*types.Transaction{
-		accountTxs[3][0].Transaction, // pop price 9
-		accountTxs[2][0].Transaction, // pop price 7
-		accountTxs[2][1].Transaction, // pop price 15
-		accountTxs[3][1].Transaction, // pop price 6
-		accountTxs[1][0].Transaction, // pop price 5
-		accountTxs[1][1].Transaction, // pop price 20
+	assert.Equal(t, q.popN(100), []poolObject{
+		accountTxs[3][0].poolObject, // pop price 9
+		accountTxs[2][0].poolObject, // pop price 7
+		accountTxs[2][1].poolObject, // pop price 15
+		accountTxs[3][1].poolObject, // pop price 6
+		accountTxs[1][0].poolObject, // pop price 5
+		accountTxs[1][1].poolObject, // pop price 20
 	})
 
 	assert.Equal(t, q.popN(1) == nil, true)
@@ -172,10 +172,10 @@ func Test_pendingQueue_pop(t *testing.T) {
 	ptx4 := newMockPooledTx(2, 1, 2)
 	q.add(ptx4)
 
-	assert.Equal(t, q.pop(), ptx1.Transaction)
-	assert.Equal(t, q.pop(), ptx2.Transaction)
-	assert.Equal(t, q.pop(), ptx4.Transaction)
-	assert.Equal(t, q.pop(), ptx3.Transaction)
+	assert.Equal(t, q.pop(), ptx1.poolObject)
+	assert.Equal(t, q.pop(), ptx2.poolObject)
+	assert.Equal(t, q.pop(), ptx4.poolObject)
+	assert.Equal(t, q.pop(), ptx3.poolObject)
 }
 
 func Test_pendingQueue_discard_emptyQueue(t *testing.T) {
@@ -276,7 +276,7 @@ func Benchmark_PendingQueue_popN(b *testing.B) {
 	}
 }
 
-func preparePendingQueue(txs map[common.Address][]*pooledTx) *pendingQueue {
+func preparePendingQueue(txs map[common.Address][]*poolItem) *pendingQueue {
 	q := newPendingQueue()
 
 	for _, nonceSortedTxs := range txs {
@@ -288,13 +288,13 @@ func preparePendingQueue(txs map[common.Address][]*pooledTx) *pendingQueue {
 	return q
 }
 
-func prepareTxs(numAccounts, numTxsPerAccount uint) map[common.Address][]*pooledTx {
-	txs := make(map[common.Address][]*pooledTx)
+func prepareTxs(numAccounts, numTxsPerAccount uint) map[common.Address][]*poolItem {
+	txs := make(map[common.Address][]*poolItem)
 
 	for i := uint(1); i <= numAccounts; i++ {
 		from := common.BigToAddress(big.NewInt(int64(i)))
 
-		accountTxs := make([]*pooledTx, 0, numTxsPerAccount)
+		accountTxs := make([]*poolItem, 0, numTxsPerAccount)
 		for j := uint(1); j <= numTxsPerAccount; j++ {
 			tx := &types.Transaction{
 				Data: types.TransactionData{
@@ -303,7 +303,7 @@ func prepareTxs(numAccounts, numTxsPerAccount uint) map[common.Address][]*pooled
 					AccountNonce: uint64(j),
 				},
 			}
-			ptx := newPooledTx(tx)
+			ptx := newPooledItem(tx)
 			tx.Data.Timestamp = uint64(ptx.timestamp.UnixNano())
 			accountTxs = append(accountTxs, ptx)
 		}

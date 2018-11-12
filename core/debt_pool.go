@@ -16,8 +16,6 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
-var DebtDataFlag = []byte{0x01}
-
 // DebtPool debt pool
 type DebtPool struct {
 	hashMap map[common.Hash]*types.Debt
@@ -143,7 +141,7 @@ func (dp *DebtPool) removeDebts() {
 		}
 
 		data := state.GetData(d.Data.Account, d.Hash)
-		if bytes.Equal(data, DebtDataFlag) {
+		if bytes.Equal(data, types.DebtDataFlag) {
 			delete(dp.hashMap, d.Hash)
 		}
 	}

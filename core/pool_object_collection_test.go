@@ -20,17 +20,17 @@ func Test_txCollection_add(t *testing.T) {
 	// add item
 	tx1 := newTestPoolTx(t, 10, 5)
 	collection.add(tx1)
-	assert.Equal(t, collection.list(), []*types.Transaction{tx1.Transaction})
+	assert.Equal(t, collection.list(), []poolObject{tx1.poolObject})
 
 	// add bigger nonce item
 	tx2 := newTestPoolTx(t, 10, 6)
 	collection.add(tx2)
-	assert.Equal(t, collection.list(), []*types.Transaction{tx1.Transaction, tx2.Transaction})
+	assert.Equal(t, collection.list(), []poolObject{tx1.poolObject, tx2.poolObject})
 
 	// add smaller nonce item
 	tx3 := newTestPoolTx(t, 10, 4)
 	collection.add(tx3)
-	assert.Equal(t, collection.list(), []*types.Transaction{tx3.Transaction, tx1.Transaction, tx2.Transaction})
+	assert.Equal(t, collection.list(), []poolObject{tx3.poolObject, tx1.poolObject, tx2.poolObject})
 }
 
 func Test_txCollection_update(t *testing.T) {
@@ -42,7 +42,9 @@ func Test_txCollection_update(t *testing.T) {
 
 	txs := collection.list()
 	assert.Equal(t, len(txs), 1)
-	assert.Equal(t, txs[0].Data.Amount.Int64(), int64(3))
+
+	tx := txs[0].(*types.Transaction)
+	assert.Equal(t, tx.Data.Amount.Int64(), int64(3))
 }
 
 func Test_txCollection_get(t *testing.T) {
@@ -65,10 +67,10 @@ func Test_txCollection_remove(t *testing.T) {
 	collection.add(tx1)
 	collection.add(tx2)
 	collection.add(tx3)
-	assert.Equal(t, collection.list(), []*types.Transaction{tx3.Transaction, tx1.Transaction, tx2.Transaction})
+	assert.Equal(t, collection.list(), []poolObject{tx3.poolObject, tx1.poolObject, tx2.poolObject})
 
 	assert.Equal(t, collection.remove(3), true)
-	assert.Equal(t, collection.list(), []*types.Transaction{tx3.Transaction, tx2.Transaction})
+	assert.Equal(t, collection.list(), []poolObject{tx3.poolObject, tx2.poolObject})
 }
 
 func Test_txCollection_len(t *testing.T) {
@@ -130,26 +132,24 @@ func Test_txCollection_cmp(t *testing.T) {
 	assert.Equal(t, 0, c1.cmp(c2))
 
 	// compare with empty collection
-	tx1 := newTestPoolTx(t, 1, 3)
-	tx1.Data.GasPrice = big.NewInt(2)
+	tx1 := newTestPoolTxWithNonce(t, 1, 3, 2)
 	c1.add(tx1)
 	assert.Equal(t, 1, c1.cmp(c2))
 
 	// compare with lower price collection
-	tx2 := newTestPoolTx(t, 1, 3)
-	tx2.Data.GasPrice = big.NewInt(1)
+	tx2 := newTestPoolTxWithNonce(t, 1, 3, 1)
 	c2.add(tx2)
 	assert.Equal(t, 1, c1.cmp(c2))
 
 	// compare with higher price collection
 	c2.pop()
-	tx2.Data.GasPrice = big.NewInt(3)
+	tx2.poolObject.(*types.Transaction).Data.GasPrice = big.NewInt(3)
 	c2.add(tx2)
 	assert.Equal(t, -1, c1.cmp(c2))
 
 	// compare with same price, but earlier timestamp
 	c2.pop()
-	tx2.Data.GasPrice = big.NewInt(2)
+	tx2.poolObject.(*types.Transaction).Data.GasPrice = big.NewInt(2)
 	tx2.timestamp = tx1.timestamp.Add(-time.Second)
 	c2.add(tx2)
 	assert.Equal(t, -1, c1.cmp(c2))
