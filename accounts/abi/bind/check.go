@@ -8,6 +8,7 @@ package bind
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/seeleteam/go-seele/accounts/abi"
@@ -42,24 +43,92 @@ func parseArg(abiType string, arg string) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		return common.BytesToAddress(bytes), nil
 	case "*big.Int":
 		number, ok := big.NewInt(0).SetString(arg, 10)
 		if !ok {
-			return nil, fmt.Errorf("number[%v] parsed error ", number)
+			return nil, fmt.Errorf("number[%v] parsed error", arg)
 		}
-
 		return number, nil
 	case "bool":
 		if arg == "true" {
 			return true, nil
 		}
-
 		return false, nil
+	case "int8":
+		number, err := strconv.ParseInt(arg, 10, 8)
+		if err != nil {
+			return nil, err
+		}
+		return int8(number), nil
+	case "int16":
+		number, err := strconv.ParseInt(arg, 10, 16)
+		if err != nil {
+			return nil, err
+		}
+		return int16(number), nil
+	case "int32":
+		number, err := strconv.ParseInt(arg, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		return int32(number), nil
+	case "int64":
+		number, err := strconv.ParseInt(arg, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		return int64(number), nil
+	case "uint8":
+		number, err := strconv.ParseUint(arg, 10, 8)
+		if err != nil {
+			return nil, err
+		}
+		return uint8(number), nil
+	case "uint16":
+		number, err := strconv.ParseUint(arg, 10, 16)
+		if err != nil {
+			return nil, err
+		}
+		return uint16(number), nil
+	case "uint32":
+		number, err := strconv.ParseUint(arg, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		return uint32(number), nil
+	case "uint64":
+		number, err := strconv.ParseUint(arg, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		return uint64(number), nil
 	default:
-		if strings.Contains(arg, "]byte") {
-			return []byte(arg), nil
+		if strings.Contains(abiType, "]byte") {
+			bytes, err := hexutil.HexToBytes(arg)
+			if err != nil {
+				return nil, err
+			}
+			length := abiType[1 : len(abiType)-5]
+			if length == "" {
+				return bytes, nil
+			}
+			switch length {
+			case "32":
+				l := len(bytes)
+				if l > 32 {
+					return nil, fmt.Errorf("bytes32[%s, length:%d] transfer overflow", arg, l)
+				}
+				var b [32]byte
+				for index, count := l-1, len(b)-1; index >= 0 && count >= 0; {
+					b[count] = bytes[index]
+					index--
+					count--
+				}
+				return b, nil
+			default:
+				return nil, fmt.Errorf("Now abi only supports bytes32 and bytes, and it will totally support in seele.js, reject: %s", length)
+			}
 		}
 
 		return arg, nil
