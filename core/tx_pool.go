@@ -28,12 +28,7 @@ type TransactionPool struct {
 func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *TransactionPool {
 	log := log.GetLogger("txpool")
 	getObjectFromBlock := func(block *types.Block) []poolObject {
-		var results []poolObject
-		for _, obj := range block.GetExcludeRewardTransactions() {
-			results = append(results, obj)
-		}
-
-		return results
+		return txsToObjects(block.GetExcludeRewardTransactions())
 	}
 
 	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
@@ -116,10 +111,19 @@ func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.
 }
 
 func poolObjectToTxs(objects []poolObject) []*types.Transaction {
-	var txs []*types.Transaction
-	for _, obj := range objects {
-		txs = append(txs, obj.(*types.Transaction))
+	txs := make([]*types.Transaction, len(objects))
+	for index, obj := range objects {
+		txs[index] = obj.(*types.Transaction)
 	}
 
 	return txs
+}
+
+func txsToObjects(txs []*types.Transaction) []poolObject {
+	objects := make([]poolObject, len(txs))
+	for index, tx := range txs {
+		objects[index] = tx
+	}
+
+	return objects
 }

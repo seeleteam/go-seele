@@ -26,12 +26,7 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	log := log.GetLogger("debtpool")
 
 	getObjectFromBlock := func(block *types.Block) []poolObject {
-		var results []poolObject
-		for _, obj := range block.Debts {
-			results = append(results, obj)
-		}
-
-		return results
+		return debtsToObjects(block.Debts)
 	}
 
 	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
@@ -40,11 +35,7 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 		}
 
 		data := state.GetData(item.ToAccount(), item.GetHash())
-		if bytes.Equal(data, types.DebtDataFlag) {
-			return true
-		}
-
-		return false
+		return bytes.Equal(data, types.DebtDataFlag)
 	}
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
@@ -95,8 +86,23 @@ func objectsToDebts(objects []poolObject) []*types.Debt {
 	return results
 }
 
+func debtsToObjects(debts []*types.Debt) []poolObject {
+	objects := make([]poolObject, len(debts))
+
+	for index, d := range debts {
+		objects[index] = d
+	}
+
+	return objects
+}
+
 func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
-	return dp.GetObject(debt).(*types.Debt)
+	obj := dp.GetObject(debt)
+	if obj != nil {
+		return obj.(*types.Debt)
+	}
+
+	return nil
 }
 
 func (dp *DebtPool) RemoveDebtByHash(hash common.Hash) {
