@@ -69,12 +69,13 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 // returns confirmed whether debt is confirmed
 // returns retErr error info
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
-	if debt.Data.FromShard == 0 || debt.Data.FromShard == manager.localShard {
+	fromShard := debt.Data.From.Shard()
+	if fromShard == 0 || fromShard == manager.localShard {
 		retErr = errWrongShardDebt
 		return
 	}
 
-	backend := manager.lightClientsBackend[int(debt.Data.FromShard)]
+	backend := manager.lightClientsBackend[fromShard]
 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 	if err != nil {
 		retErr = errors.NewStackedError(err, "got error when get transaction.")

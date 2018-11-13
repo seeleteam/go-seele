@@ -46,7 +46,7 @@ func newPendingQueue() *pendingQueue {
 }
 
 func (q *pendingQueue) add(tx *poolItem) {
-	if pair := q.txs[tx.Account()]; pair != nil {
+	if pair := q.txs[tx.FromAccount()]; pair != nil {
 		pair.best.add(tx)
 
 		heap.Fix(q.bestHeap, pair.best.GetHeapIndex())
@@ -60,7 +60,7 @@ func (q *pendingQueue) add(tx *poolItem) {
 			worst: &heapedTxList{txCollection: collection},
 		}
 
-		q.txs[tx.Account()] = pair
+		q.txs[tx.FromAccount()] = pair
 		heap.Push(q.bestHeap, pair.best)
 		heap.Push(q.worstHeap, pair.worst)
 	}
@@ -129,10 +129,10 @@ func (q *pendingQueue) popN(n int) []poolObject {
 
 func (q *pendingQueue) pop() poolObject {
 	tx := q.bestHeap.Peek().(*heapedTxList).pop().poolObject
-	pair := q.txs[tx.Account()]
+	pair := q.txs[tx.FromAccount()]
 
 	if pair.best.len() == 0 {
-		delete(q.txs, tx.Account())
+		delete(q.txs, tx.FromAccount())
 		heap.Remove(q.bestHeap, pair.best.GetHeapIndex())
 		heap.Remove(q.worstHeap, pair.worst.GetHeapIndex())
 	} else {
@@ -158,7 +158,7 @@ func (q *pendingQueue) discard(price *big.Int) *txCollection {
 	}
 
 	heap.Pop(q.worstHeap)
-	account := worstTx.Account()
+	account := worstTx.FromAccount()
 	heap.Remove(q.bestHeap, q.txs[account].best.GetHeapIndex())
 	delete(q.txs, account)
 

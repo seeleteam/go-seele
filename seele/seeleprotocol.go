@@ -524,7 +524,7 @@ handler:
 				peer.knownDebts.Add(d.Hash, nil)
 			}
 
-			go p.debtPool.AddWithValidation(debts)
+			go p.debtPool.AddDebtArray(debts)
 
 		case downloader.GetBlockHeadersMsg:
 			var query blockHeadersQuery

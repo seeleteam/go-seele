@@ -61,14 +61,26 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	}
 }
 
-func (dp *DebtPool) AddWithValidation(debts []*types.Debt) {
+func (dp *DebtPool) AddDebtArray(debts []*types.Debt) {
 	for _, d := range debts {
-		if d == nil {
-			continue
-		}
-
-		dp.addObject(d)
+		dp.AddDebt(d)
 	}
+}
+
+func (dp *DebtPool) AddDebt(debt *types.Debt) {
+	if debt == nil {
+		return
+	}
+
+	dp.addObject(debt)
+}
+
+func (dp *DebtPool) AddBackDebts(debts []*types.Debt) {
+	for _, d := range debts {
+		dp.RemoveDebtByHash(d.Hash)
+	}
+
+	dp.AddDebtArray(debts)
 }
 
 func (dp *DebtPool) GetProcessableDebts(size int) ([]*types.Debt, int) {
@@ -112,4 +124,8 @@ func (dp *DebtPool) RemoveDebtByHash(hash common.Hash) {
 func (dp *DebtPool) GetDebts(processing, pending bool) []*types.Debt {
 	objects := dp.getObjects(processing, pending)
 	return objectsToDebts(objects)
+}
+
+func (dp *DebtPool) GetDebtCount(processing, pending bool) int {
+	return len(dp.GetDebts(processing, pending))
 }

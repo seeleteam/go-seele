@@ -34,7 +34,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
 		nowTimestamp := time.Now()
 		txIndex, _ := chain.GetStore().GetTxIndex(item.GetHash())
-		nonce := state.GetNonce(item.Account())
+		nonce := state.GetNonce(item.FromAccount())
 		duration := nowTimestamp.Sub(item.timestamp)
 
 		// Transactions have been processed or are too old need to delete
@@ -42,7 +42,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 			if txIndex == nil {
 				if item.Nonce() < nonce {
 					log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", item.GetHash().ToHex(),
-						item.Account().ToHex(), item.Nonce(), nonce)
+						item.FromAccount().ToHex(), item.Nonce(), nonce)
 				} else if duration > transactionTimeoutDuration {
 					log.Debug("remove tx %s because not packed for more than three hours", item.GetHash().ToHex())
 				}

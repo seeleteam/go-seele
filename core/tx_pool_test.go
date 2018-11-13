@@ -28,7 +28,7 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 30, 100)
-	chain.addAccount(poolTx.Account(), 20, 100)
+	chain.addAccount(poolTx.FromAccount(), 20, 100)
 
 	// Change the amount in tx.
 	err := pool.AddTransaction(poolTx.poolObject.(*types.Transaction))
@@ -47,7 +47,7 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 500000, 100)
+	chain.addAccount(poolTx.FromAccount(), 500000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, nil)
@@ -104,7 +104,7 @@ func Test_TransactionPool_Add_ValidTx(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 50000, 100)
+	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 
@@ -117,7 +117,7 @@ func Test_TransactionPool_Add_DuplicateTx(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 50000, 100)
+	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, error(nil))
@@ -134,17 +134,17 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 
 	// tx with price 5
 	poolTx1 := newTestPoolTxWithNonce(t, 10, 100, 5)
-	chain.addAccount(poolTx1.Account(), 5000000, 100)
+	chain.addAccount(poolTx1.FromAccount(), 5000000, 100)
 	assert.Nil(t, pool.addObject(poolTx1.poolObject))
 
 	// failed to add tx with same price
 	poolTx2 := newTestPoolTxWithNonce(t, 10, 100, 5)
-	chain.addAccount(poolTx2.Account(), 5000000, 100)
+	chain.addAccount(poolTx2.FromAccount(), 5000000, 100)
 	assert.Equal(t, errObjectPoolFull, pool.addObject(poolTx2.poolObject))
 
 	// succeed to add tx with higher price
 	poolTx3 := newTestPoolTxWithNonce(t, 10, 100, 6)
-	chain.addAccount(poolTx3.Account(), 5000000, 100)
+	chain.addAccount(poolTx3.FromAccount(), 5000000, 100)
 	assert.Nil(t, pool.addObject(poolTx3.poolObject))
 	assert.Nil(t, pool.hashToTxMap[poolTx1.GetHash()])
 	assert.Equal(t, poolTx3.poolObject, pool.hashToTxMap[poolTx3.GetHash()].poolObject)
@@ -157,7 +157,7 @@ func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
 	fromPrivKey, fromAddress := randomAccount(t)
 	var nonce uint64 = 100
 	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 10, nonce, 1)
-	chain.addAccount(poolTx.Account(), 50000, 10)
+	chain.addAccount(poolTx.FromAccount(), 50000, 10)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, error(nil))
@@ -172,7 +172,7 @@ func Test_TransactionPool_GetTransaction(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 50000, 100)
+	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	pool.addObject(poolTx.poolObject)
 
@@ -184,7 +184,7 @@ func Test_TransactionPool_Remove(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 50000, 100)
+	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, nil)
@@ -202,7 +202,7 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	assert.Equal(t, pool.getPendingObjectCount(), 0)
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 50000, 100)
+	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, nil)
@@ -220,7 +220,7 @@ func Test_TransactionPool_GetTransactions(t *testing.T) {
 	defer chain.dispose()
 
 	poolTx := newTestPoolTx(t, 10, 100)
-	chain.addAccount(poolTx.Account(), 500000, 100)
+	chain.addAccount(poolTx.FromAccount(), 500000, 100)
 
 	pool.addObject(poolTx.poolObject)
 
