@@ -10,8 +10,6 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/consensus"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
@@ -21,80 +19,11 @@ import (
 
 func newTestDebt(amount int64, price int64) *types.Debt {
 	fromAddress, fromPrivKey := crypto.MustGenerateShardKeyPair(1)
-	toAddress := crypto.MustGenerateShardAddress(2)
+	toAddress := crypto.MustGenerateShardAddress(debtFromShard)
 	tx, _ := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), 1)
 	tx.Sign(fromPrivKey)
 
-	return types.NewDebtWithContext(tx)
-}
-
-func newTestDebtBlock(bc *Blockchain, parentHash common.Hash, blockHeight uint64, num int) *types.Block {
-	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 2)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
-
-	txs := []*types.Transaction{rewardTx}
-	var debts []*types.Debt
-	for i := 0; i < num; i++ {
-		d := newTestDebt(1, 10)
-		debts = append(debts, d)
-	}
-
-	header := &types.BlockHeader{
-		PreviousBlockHash: parentHash,
-		Creator:           minerAccount.addr,
-		StateHash:         common.EmptyHash,
-		TxHash:            types.MerkleRootHash(txs),
-		TxDebtHash:        types.DebtMerkleRootHash(types.NewDebts(txs)),
-		DebtHash:          types.DebtMerkleRootHash(debts),
-		Height:            blockHeight,
-		Difficulty:        big.NewInt(1),
-		CreateTimestamp:   big.NewInt(1),
-		Witness:           make([]byte, 0),
-		ExtraData:         make([]byte, 0),
-	}
-
-	stateRootHash := common.EmptyHash
-	receiptsRootHash := common.EmptyHash
-	parentBlock, err := bc.bcStore.GetBlock(parentHash)
-	if err == nil {
-		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
-		if err != nil {
-			panic(err)
-		}
-
-		common.LocalShardNumber = 2
-		defer func() {
-			common.LocalShardNumber = 0
-		}()
-
-		for _, d := range debts {
-			_, err := ApplyDebt(statedb, d, minerAccount.addr, nil)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		var receipts []*types.Receipt
-		if receipts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
-			panic(err)
-		}
-
-		if stateRootHash, err = statedb.Hash(); err != nil {
-			panic(err)
-		}
-
-		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
-	}
-
-	header.StateHash = stateRootHash
-	header.ReceiptHash = receiptsRootHash
-
-	return &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: txs,
-		Debts:        debts,
-	}
+	return types.NewDebtWithoutContext(tx)
 }
 
 func Test_DebtPool(t *testing.T) {
@@ -104,8 +33,10 @@ func Test_DebtPool(t *testing.T) {
 	bc := newTestBlockchain(db)
 	pool := NewDebtPool(bc, nil)
 
-	b1 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)
-	b2 := newTestDebtBlock(bc, bc.genesisBlock.HeaderHash, 1, 2)
+	b1 := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, 2*types.DebtSize, true)
+	b2 := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, 2*types.DebtSize, true)
+	assert.Equal(t, 2, len(b1.Debts))
+	assert.Equal(t, 2, len(b2.Debts))
 
 	common.LocalShardNumber = 2
 	defer func() {
@@ -131,18 +62,17 @@ func Test_DebtPool(t *testing.T) {
 
 	// test remove
 	// make b2 be in the block index
-	b3 := newTestDebtBlock(bc, b2.HeaderHash, 2, 0)
+	b3 := newTestBlockWithDebt(bc, b2.HeaderHash, 2, 0, true)
 	bc.WriteBlock(b3)
 
 	common.LocalShardNumber = 2
 	defer func() {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
+	pool.AddDebtArray(b1.Debts)
+	pool.AddDebtArray(b2.Debts)
 
-	pool.AddWithValidation(b1.Debts)
-	pool.AddWithValidation(b2.Debts)
-
-	assert.Equal(t, 4, pool.getObjectCount())
+	assert.Equal(t, 4, pool.GetDebtCount(true, true))
 
 	pool.removeObjects()
 
@@ -165,9 +95,82 @@ func Test_OrderByFee(t *testing.T) {
 	defer func() {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
-	pool.AddWithValidation([]*types.Debt{d1, d2})
+	pool.AddDebtArray([]*types.Debt{d1, d2})
 
 	results, _ := pool.GetProcessableDebts(10000)
 	assert.Equal(t, 2, len(results))
 	assert.Equal(t, results[0].Data.Price.Cmp(results[1].Data.Price), 1)
+}
+
+type testVerifier struct {
+	packed    bool
+	confirmed bool
+	err       error
+}
+
+func newTestVerifier(p bool, c bool, err error) *testVerifier {
+	return &testVerifier{
+		packed:    p,
+		confirmed: c,
+		err:       err,
+	}
+}
+
+func (v *testVerifier) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, err error) {
+	return v.packed, v.confirmed, v.err
+}
+
+func (v *testVerifier) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, err error) {
+	return v.packed, v.confirmed, v.err
+}
+
+func Test_AddWithValidation(t *testing.T) {
+	verifier := newTestVerifier(true, false, nil)
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	pool := NewDebtPool(bc, verifier)
+	d1 := newTestDebt(1, 10)
+
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+	pool.AddDebt(d1)
+
+	assert.Equal(t, 1, pool.GetDebtCount(true, true))
+}
+
+func Test_DebtPool_AddBack(t *testing.T) {
+	verifier := newTestVerifier(true, false, nil)
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	bc := newTestBlockchain(db)
+	pool := NewDebtPool(bc, verifier)
+	d1 := newTestDebt(1, 10)
+	d2 := newTestDebt(2, 10)
+	d3 := newTestDebt(3, 10)
+
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+	pool.AddDebt(d1)
+	pool.AddDebt(d2)
+	pool.AddDebt(d3)
+
+	assert.Equal(t, 3, pool.GetDebtCount(true, true))
+
+	debts, size := pool.GetProcessableDebts(types.DebtSize * 2)
+	assert.True(t, size >= types.DebtSize)
+	assert.Equal(t, 2, pool.GetDebtCount(true, false))
+	assert.Equal(t, 1, pool.GetDebtCount(false, true))
+
+	assert.Equal(t, 2, len(debts))
+
+	pool.AddBackDebts(debts[0:1])
+	assert.Equal(t, 2, pool.GetDebtCount(false, true))
+	assert.Equal(t, 1, pool.GetDebtCount(true, false))
 }

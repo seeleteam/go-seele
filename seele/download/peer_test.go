@@ -243,9 +243,9 @@ func newDebt() *types.Debt {
 
 func newDebtData() *types.DebtData {
 	return &types.DebtData{
-		TxHash:    common.EmptyHash,
-		FromShard: 2,
-		Account:   common.EmptyAddress,
-		Amount:    new(big.Int).SetUint64(10),
+		TxHash:  common.EmptyHash,
+		From:    *crypto.MustGenerateShardAddress(2),
+		Account: common.EmptyAddress,
+		Amount:  new(big.Int).SetUint64(10),
 	}
 }

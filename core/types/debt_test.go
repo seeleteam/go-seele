@@ -21,7 +21,7 @@ func Test_NewDebt(t *testing.T) {
 	d1 := NewDebtWithContext(tx1)
 	assert.Equal(t, d1.Data.Amount, big.NewInt(1))
 	assert.Equal(t, d1.Data.Account, tx1.Data.To)
-	assert.Equal(t, d1.Data.FromShard, tx1.Data.From.Shard())
+	assert.Equal(t, d1.Data.From.Shard(), tx1.Data.From.Shard())
 	assert.Equal(t, d1.Data.TxHash, tx1.Hash)
 	assert.Equal(t, d1.Hash, crypto.MustHash(d1.Data))
 }

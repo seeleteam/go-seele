@@ -6,6 +6,7 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -15,27 +16,27 @@ import (
 )
 
 // DebtSize debt serialized size
-const DebtSize = 119
+const DebtSize = 118
 
 var DebtDataFlag = []byte{0x01}
 
 var (
-	errWrongShardNumber = errors.New("wrong from shard number")
-	errInvalidAccount   = errors.New("invalid account, unexpected shard number")
-	errInvalidHash      = errors.New("debt hash is invalid")
-	errInvalidFee       = errors.New("debt fee is invalid")
+	errWrongShardNumber  = errors.New("wrong from shard number")
+	errInvalidAccount    = errors.New("invalid account, unexpected shard number")
+	errInvalidHash       = errors.New("debt hash is invalid")
+	errInvalidFee        = errors.New("debt fee is invalid")
+	ErrMsgVerifierFailed = "failed to validate debt via verifier"
 )
 
 // DebtData debt data
 type DebtData struct {
-	TxHash    common.Hash // the hash of the executed transaction
-	From      common.Address
-	FromShard uint // tx shard
-	Nonce     uint64
-	Account   common.Address // debt for account
-	Amount    *big.Int       // debt amount
-	Price     *big.Int       // debt price
-	Code      common.Bytes   // debt contract code
+	TxHash  common.Hash // the hash of the executed transaction
+	From    common.Address
+	Nonce   uint64
+	Account common.Address // debt for account
+	Amount  *big.Int       // debt amount
+	Price   *big.Int       // debt price
+	Code    common.Bytes   // debt contract code
 }
 
 // Debt debt class
@@ -86,13 +87,14 @@ func DebtMerkleRootHash(debts []*Debt) common.Hash {
 // If verifier is nil, will skip it.
 // If isPool is true, we don't return error when the error is recoverable
 func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (recoverable bool, retErr error) {
-	if d.Data.FromShard == targetShard {
+	if d.Data.From.Shard() == targetShard {
 		retErr = errWrongShardNumber
 		return
 	}
 
-	if d.Data.Account.Shard() != targetShard {
-		retErr = errInvalidAccount
+	toShard := d.Data.Account.Shard()
+	if toShard != targetShard {
+		retErr = fmt.Errorf("invalid account, unexpected shard number, have %d, expected %d", toShard, targetShard)
 		return
 	}
 
@@ -117,9 +119,9 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (r
 			return
 		}
 
-		if err != nil {
+		if err != nil || !confirmed {
 			if (isPool && !packed) || !isPool {
-				retErr = errors.NewStackedError(err, "failed to validate debt via verifier")
+				retErr = errors.NewStackedError(err, ErrMsgVerifierFailed)
 			}
 		}
 	}
@@ -136,7 +138,7 @@ func (d *Debt) Size() int {
 	return DebtSize + len(d.Data.Code)
 }
 
-func (d *Debt) Account() common.Address {
+func (d *Debt) FromAccount() common.Address {
 	return d.Data.From
 }
 
@@ -210,14 +212,13 @@ func newDebt(tx *Transaction, withContext bool) *Debt {
 	}
 
 	data := DebtData{
-		TxHash:    tx.Hash,
-		From:      tx.Data.From,
-		Nonce:     tx.Data.AccountNonce,
-		FromShard: fromShard,
-		Account:   tx.Data.To,
-		Amount:    big.NewInt(0).Set(tx.Data.Amount),
-		Price:     tx.Data.GasPrice,
-		Code:      make([]byte, 0),
+		TxHash:  tx.Hash,
+		From:    tx.Data.From,
+		Nonce:   tx.Data.AccountNonce,
+		Account: tx.Data.To,
+		Amount:  big.NewInt(0).Set(tx.Data.Amount),
+		Price:   tx.Data.GasPrice,
+		Code:    make([]byte, 0), // @todo init when its a contract tx
 	}
 
 	if tx.Data.To.IsEVMContract() {

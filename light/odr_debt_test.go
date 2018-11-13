@@ -19,12 +19,11 @@ import (
 
 func newTestDebt(txHash common.Hash) *types.Debt {
 	data := types.DebtData{
-		TxHash:    txHash,
-		FromShard: 3,
-		Account:   common.EmptyAddress,
-		Amount:    big.NewInt(38),
-		Price:     big.NewInt(666),
-		Code:      make([]byte, 0),
+		TxHash:  txHash,
+		Account: common.EmptyAddress,
+		Amount:  big.NewInt(38),
+		Price:   big.NewInt(666),
+		Code:    make([]byte, 0),
 	}
 
 	return &types.Debt{
@@ -102,7 +101,7 @@ func Test_odrDebtResponse_Validate_HashMismatch(t *testing.T) {
 		DebtHash: response.Debt.Hash,
 	}
 
-	response.Debt.Data.FromShard++ // change the debt data
+	response.Debt.Data.Nonce++ // change the debt data
 
 	assert.Equal(t, types.ErrHashMismatch, response.validate(request, nil))
 }

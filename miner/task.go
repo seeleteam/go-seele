@@ -85,7 +85,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 	}
 
 	// add recoverable debts back to debt pool
-	seele.DebtPool().AddWithValidation(recoverableDebts)
+	seele.DebtPool().AddBackDebts(recoverableDebts)
 
 	return size
 }

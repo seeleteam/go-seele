@@ -129,7 +129,7 @@ func (tx *Transaction) Size() int {
 	return TransactionPreSize + len(tx.Data.Payload)
 }
 
-func (tx *Transaction) Account() common.Address {
+func (tx *Transaction) FromAccount() common.Address {
 	return tx.Data.From
 }
 
@@ -181,7 +181,8 @@ func newTx(from common.Address, to common.Address, amount *big.Int, price *big.I
 		Signature: crypto.Signature{Sig: make([]byte, 0)},
 	}
 
-	if err := tx.ValidateWithoutState(false, true); err != nil {
+	// when create transaction we should not check shard info
+	if err := tx.ValidateWithoutState(false, false); err != nil {
 		return nil, err
 	}
 

@@ -31,7 +31,7 @@ type blockchain interface {
 
 // poolObject object for pool, like transaction and debt
 type poolObject interface {
-	Account() common.Address
+	FromAccount() common.Address
 	Price() *big.Int
 	Nonce() uint64
 	GetHash() common.Hash
@@ -230,7 +230,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 	}
 
 	// update obj with higher price, otherwise return errObjectNonceUsed
-	if existTx := pool.pendingQueue.get(obj.Account(), obj.Nonce()); existTx != nil {
+	if existTx := pool.pendingQueue.get(obj.FromAccount(), obj.Nonce()); existTx != nil {
 		if obj.Price().Cmp(existTx.Price()) > 0 {
 			pool.log.Debug("got a object has higher gas price than before. remove old one. new: %s, old: %s",
 				obj.GetHash().ToHex(), existTx.GetHash().ToHex())
@@ -248,7 +248,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 			return errObjectPoolFull
 		}
 
-		discardedAccount := c.peek().Account()
+		discardedAccount := c.peek().FromAccount()
 		pool.log.Info("object pool is full, discarded account = %v, object len = %v", discardedAccount.ToHex(), c.len())
 
 		for c.len() > 0 {
@@ -290,7 +290,7 @@ func (pool *Pool) removeOject(objHash common.Hash) {
 // doRemoveObject removes a transaction from pool.
 func (pool *Pool) doRemoveObject(objHash common.Hash) {
 	if tx := pool.hashToTxMap[objHash]; tx != nil {
-		pool.pendingQueue.remove(tx.Account(), tx.Nonce())
+		pool.pendingQueue.remove(tx.FromAccount(), tx.Nonce())
 		delete(pool.processingObjects, objHash)
 		delete(pool.hashToTxMap, objHash)
 	}

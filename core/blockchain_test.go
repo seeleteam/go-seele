@@ -8,6 +8,7 @@ package core
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -31,8 +32,11 @@ type testAccount struct {
 	nonce   uint64
 }
 
+const genesisShard = 1
+const debtFromShard = 2
+
 // genesis account with enough balance (100K seele) for benchmark test
-var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0, 1)
+var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0, genesisShard)
 
 func newTestAccount(amount *big.Int, nonce uint64, shard uint) *testAccount {
 	addr, privKey := crypto.MustGenerateShardKeyPair(shard)
@@ -54,6 +58,10 @@ func newTestGenesis() *Genesis {
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
+	return newTestBlockchainWithVerifier(db, nil)
+}
+
+func newTestBlockchainWithVerifier(db database.Database, verifier types.DebtVerifier) *Blockchain {
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(db))
 
 	genesis := newTestGenesis()
@@ -61,7 +69,7 @@ func newTestBlockchain(db database.Database) *Blockchain {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), verifier)
 	if err != nil {
 		panic(err)
 	}
@@ -79,6 +87,10 @@ func newTestBlockTx(amount, price, nonce uint64) *types.Transaction {
 }
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
+	return newTestBlockWithApply(bc, parentHash, blockHeight, startNonce, size, true)
+}
+
+func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int, apply bool) *types.Block {
 	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 1)
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
 
@@ -96,13 +108,41 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 
 	}
 
+	return newBlockWithDebtAndTxs(bc, parentHash, blockHeight, txs, nil, rewardTx, apply)
+}
+
+func newTestBlockWithDebt(bc *Blockchain, parentHash common.Hash, blockHeight uint64, size int, apply bool) *types.Block {
+	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 2)
+	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
+
+	txs := []*types.Transaction{rewardTx}
+
+	var debts []*types.Debt
+	totalSize := 0
+
+	for i := uint64(0); ; i++ {
+		d := newTestDebt(1, 1)
+		tmp := d.Size() + totalSize
+		if tmp > size {
+			break
+		}
+
+		debts = append(debts, d)
+		totalSize = tmp
+	}
+
+	return newBlockWithDebtAndTxs(bc, parentHash, blockHeight, txs, debts, rewardTx, apply)
+}
+
+func newBlockWithDebtAndTxs(bc *Blockchain, parentHash common.Hash, blockHeight uint64, txs []*types.Transaction,
+	debts []*types.Debt, rewardTx *types.Transaction, apply bool) *types.Block {
 	header := &types.BlockHeader{
 		PreviousBlockHash: parentHash,
-		Creator:           minerAccount.addr,
+		Creator:           rewardTx.ToAccount(),
 		StateHash:         common.EmptyHash,
 		TxHash:            types.MerkleRootHash(txs),
 		TxDebtHash:        types.DebtMerkleRootHash(types.NewDebts(txs)),
-		DebtHash:          common.EmptyHash,
+		DebtHash:          types.DebtMerkleRootHash(debts),
 		Height:            blockHeight,
 		Difficulty:        big.NewInt(1),
 		CreateTimestamp:   big.NewInt(1),
@@ -110,35 +150,43 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 		ExtraData:         make([]byte, 0),
 	}
 
-	stateRootHash := common.EmptyHash
-	receiptsRootHash := common.EmptyHash
-	parentBlock, err := bc.bcStore.GetBlock(parentHash)
-	if err == nil {
-		statedb, err := state.NewStatedb(parentBlock.Header.StateHash, bc.accountStateDB)
+	block := &types.Block{
+		Header:       header,
+		Transactions: txs,
+		Debts:        debts,
+	}
+
+	if apply {
+		common.LocalShardNumber = rewardTx.Data.To.Shard()
+		defer func() {
+			common.LocalShardNumber = common.UndefinedShardNumber
+		}()
+
+		var stateRootHash common.Hash
+		var receiptsRootHash common.Hash
+		parentBlock, err := bc.bcStore.GetBlock(parentHash)
 		if err != nil {
 			panic(err)
 		}
 
-		var receipts []*types.Receipt
-		if receipts, err = bc.updateStateDB(statedb, rewardTx, txs[1:], header); err != nil {
+		blockStatedb, receipts, err := bc.applyTxs(block, parentBlock.Header.StateHash)
+		if err != nil {
 			panic(err)
 		}
 
-		if stateRootHash, err = statedb.Hash(); err != nil {
+		if stateRootHash, err = blockStatedb.Hash(); err != nil {
 			panic(err)
 		}
 
 		receiptsRootHash = types.ReceiptMerkleRootHash(receipts)
+
+		header.StateHash = stateRootHash
+		header.ReceiptHash = receiptsRootHash
+
+		block.HeaderHash = header.Hash()
 	}
 
-	header.StateHash = stateRootHash
-	header.ReceiptHash = receiptsRootHash
-
-	return &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: txs,
-	}
+	return block
 }
 
 func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
@@ -277,7 +325,7 @@ func Test_BlockChain_InvalidParent(t *testing.T) {
 
 	bc := newTestBlockchain(db)
 
-	block := newTestBlock(bc, common.EmptyHash, 1, 3, 0)
+	block := newTestBlockWithApply(bc, common.EmptyHash, 1, 3, 0, false)
 	assert.True(t, errors.IsOrContains(bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash))
 }
 
@@ -387,6 +435,67 @@ func Test_Blockchain_Shard(t *testing.T) {
 	shardNum, err := bc.GetShardNumber()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, shardNum, uint(8))
+}
+
+func Test_Blockchain_AppyDebt(t *testing.T) {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	verifier := newTestVerifier(true, true, nil)
+	bc := newTestBlockchainWithVerifier(db, verifier)
+
+	block := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, BlockByteLimit, false)
+
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+
+	parentBlock, err := bc.bcStore.GetBlock(bc.genesisBlock.HeaderHash)
+	if err != nil {
+		panic(err)
+	}
+
+	_, _, err = bc.applyTxs(block, parentBlock.Header.StateHash)
+	assert.Equal(t, err, nil)
+}
+
+func Test_Blockchain_InvalidDebt(t *testing.T) {
+	// not confirmed error
+	err := testApplyDebt(true, false, nil)
+	assert.True(t, strings.Contains(err.Error(), types.ErrMsgVerifierFailed))
+
+	// not packed error
+	err = testApplyDebt(false, false, nil)
+	assert.True(t, strings.Contains(err.Error(), types.ErrMsgVerifierFailed))
+
+	// not packed error
+	msg := "got one error"
+	err = testApplyDebt(true, false, errors.New(msg))
+	assert.True(t, strings.Contains(err.Error(), msg))
+}
+
+func testApplyDebt(packed, confirmed bool, err error) error {
+	db, dispose := leveldb.NewTestDatabase()
+	defer dispose()
+
+	verifier := newTestVerifier(packed, confirmed, err)
+	bc := newTestBlockchainWithVerifier(db, verifier)
+
+	block := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, BlockByteLimit, false)
+
+	common.LocalShardNumber = 2
+	defer func() {
+		common.LocalShardNumber = common.UndefinedShardNumber
+	}()
+
+	parentBlock, err := bc.bcStore.GetBlock(bc.genesisBlock.HeaderHash)
+	if err != nil {
+		panic(err)
+	}
+
+	_, _, err = bc.applyTxs(block, parentBlock.Header.StateHash)
+	return err
 }
 
 func Test_Blockchain_ApplyTransaction(t *testing.T) {

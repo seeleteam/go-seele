@@ -252,18 +252,6 @@ func prepareShardEnv(localShard uint) func() {
 	}
 }
 
-func Test_Transaction_Validate_InvalidFromShard(t *testing.T) {
-	dispose := prepareShardEnv(2)
-	defer dispose()
-
-	from, _ := crypto.MustGenerateShardKeyPair(1) // invalid shard
-	to := crypto.MustGenerateShardAddress(2)
-	_, err := NewTransaction(*from, *to, big.NewInt(20), big.NewInt(10), 5)
-
-	assert.Equal(t, err != nil, true)
-	assert.Equal(t, strings.Contains(err.Error(), "invalid from address"), true)
-}
-
 func Test_Transaction_InvalidPrice(t *testing.T) {
 	dispose := prepareShardEnv(2)
 	defer dispose()
