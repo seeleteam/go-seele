@@ -85,7 +85,12 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 
 func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transaction {
 	obj := pool.GetObject(txHash)
-	return obj.(*types.Transaction)
+	v, ok := obj.(*types.Transaction)
+	if ok {
+		return v
+	}
+
+	return nil
 }
 
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
