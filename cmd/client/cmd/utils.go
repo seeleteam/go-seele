@@ -52,25 +52,16 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	fromAddr := crypto.GetAddress(publicKey)
 	info.From = *fromAddr
 
-	if client != nil {
+	if nonceValue == DefaultNonce && client != nil {
 		nonce, err := util.GetAccountNonce(client, *fromAddr)
 		if err != nil {
 			return info, fmt.Errorf("failed to get the sender account nonce: %s", err)
 		}
-
-		if nonceValue == nonce || nonceValue == DefaultNonce {
-			info.AccountNonce = nonce
-		} else {
-			if nonceValue < nonce {
-				return info, fmt.Errorf("your nonce is: %d,current nonce is: %d,you must set your nonce greater than or equal to current nonce", nonceValue, nonce)
-			}
-			info.AccountNonce = nonceValue
-		}
-
-		fmt.Printf("account %s current nonce: %d, sending nonce: %d\n", fromAddr.ToHex(), nonce, info.AccountNonce)
+		info.AccountNonce = nonce
 	} else {
 		info.AccountNonce = nonceValue
 	}
+	fmt.Printf("account: %s, transaction nonce: %d\n", info.From.ToHex(), info.AccountNonce)
 
 	payload := []byte(nil)
 	if len(payloadValue) > 0 {
