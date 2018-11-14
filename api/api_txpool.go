@@ -220,41 +220,12 @@ func (api *TransactionPoolAPI) GetReceiptsByBlockHash(blockHash string) (map[str
 		return nil, err
 	}
 
-	outMap := make(map[string]interface{})
 	outMaps := make([]map[string]interface{}, 0, len(receipts))
 	for _, re := range receipts {
-		if re == nil {
+		outMap, err := PrintableReceipt(re)
+		if err != nil {
+			api.s.Log().Warn("PrintableReceipt failed, err: %s", err.Error())
 			continue
-		}
-
-		result := ""
-		if re.Failed {
-			result = string(re.Result)
-		} else {
-			result = hexutil.BytesToHex(re.Result)
-		}
-
-		outMap = map[string]interface{}{
-			"result":    result,
-			"poststate": re.PostState.ToHex(),
-			"txhash":    re.TxHash.ToHex(),
-			"contract":  "0x",
-			"failed":    re.Failed,
-			"usedGas":   re.UsedGas,
-			"totalFee":  re.TotalFee,
-		}
-
-		if len(re.Logs) != 0 {
-			outMap["logs"] = re.Logs
-		}
-
-		if len(re.ContractAddress) > 0 {
-			contractAddr, err := common.NewAddress(re.ContractAddress)
-			if err != nil {
-				api.s.Log().Warn("invalid contractAddr '%s', err: %s", string(re.ContractAddress), err.Error())
-				continue
-			}
-			outMap["contract"] = contractAddr.ToHex()
 		}
 		outMaps = append(outMaps, outMap)
 	}
