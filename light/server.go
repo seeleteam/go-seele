@@ -91,8 +91,13 @@ needQuit:
 
 			peers := pm.peerSet.getPeers()
 			for _, p := range peers {
-				err := p.sendAnnounce(magic, uint64(0), uint64(0))
-				pm.log.Warn("blockLoop sendAnnounce err=%s", err)
+				if p != nil {
+					err := p.sendAnnounce(magic, uint64(0), uint64(0))
+					if err != nil {
+						pm.log.Error("blockLoop sendAnnounce err=%s", err)
+					}
+				}
+
 			}
 
 			pm.log.Debug("blockLoop head changed. ")

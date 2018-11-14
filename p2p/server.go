@@ -291,7 +291,9 @@ running:
 	// Disconnect all peers.
 	peers := srv.peerSet.getPeers()
 	for _, peer := range peers {
-		peer.Disconnect(discServerQuit)
+		if peer != nil {
+			peer.Disconnect(discServerQuit)
+		}
 	}
 }
 

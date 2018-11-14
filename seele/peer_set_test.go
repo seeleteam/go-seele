@@ -55,22 +55,6 @@ func Test_PeerSet_Find(t *testing.T) {
 	assert.Equal(t, set.Find(peer2.Node.ID), peer2)
 }
 
-func TestPeerSet_ForEach(t *testing.T) {
-	set := newPeerSet()
-	peer1 := getTestPeer(0)
-	set.Add(peer1)
-	peer2 := getTestPeer(0)
-	set.Add(peer2)
-
-	count := 0
-	peers := set.getPeerByShard(0)
-	for range peers {
-		count++
-	}
-
-	assert.Equal(t, count, 2)
-}
-
 func Test_PeerSet_Remove(t *testing.T) {
 	set := newPeerSet()
 	peer1 := getTestPeer(0)

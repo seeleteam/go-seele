@@ -32,6 +32,18 @@ func NewPeerSet() *peerSet {
 	}
 }
 
+func (set *peerSet) getPeers() map[common.Address]*Peer {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+
+	value := make(map[common.Address]*Peer)
+	for key, v := range set.peerMap {
+		value[key] = v
+	}
+
+	return value
+}
+
 func (set *peerSet) add(p *Peer) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
@@ -60,16 +72,4 @@ func (set *peerSet) delete(p *Peer) {
 
 	delete(set.peerMap, p.Node.ID)
 	delete(set.shardPeerMap[p.getShardNumber()], p.Node.ID)
-}
-
-func (set *peerSet) getPeers() map[common.Address]*Peer {
-	set.lock.RLock()
-	defer set.lock.RUnlock()
-
-	value := make(map[common.Address]*Peer, len(set.peerMap))
-	for key, v := range set.peerMap {
-		value[key] = v
-	}
-
-	return value
 }

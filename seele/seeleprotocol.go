@@ -202,11 +202,13 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 
 	peers := sp.peerSet.getAllPeers()
 	for _, peer := range peers {
-		err := peer.sendHeadStatus(status)
-		if err != nil {
-			sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
-		} else {
-			sp.log.Debug("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
+		if peer != nil {
+			err := peer.sendHeadStatus(status)
+			if err != nil {
+				sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
+			} else {
+				sp.log.Debug("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
+			}
 		}
 	}
 }
