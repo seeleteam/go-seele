@@ -204,9 +204,9 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	for _, peer := range peers {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
-			sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
+			sp.log.Debug("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
 		} else {
-			sp.log.Warn("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
+			sp.log.Debug("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
 		}
 	}
 }
@@ -363,9 +363,8 @@ func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
 func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
 	var peers []*peer
 
-	if p.peerSet.getPeerCountByShard(shard) > 0 {
-		peers = p.peerSet.getPeerByShard(shard)
-	} else {
+	peers = p.peerSet.getPeerByShard(shard)
+	if len(peers) <= 0 {
 		peers = p.peerSet.getAllPeers()
 	}
 
