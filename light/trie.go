@@ -26,7 +26,7 @@ func (db *odrDatabase) Get(key []byte) ([]byte, error) {
 }
 
 type odrRetriever interface {
-	retrieve(request odrRequest) (odrResponse, error)
+	retrieveWithFilter(request odrRequest, filter peerFilter) (odrResponse, error)
 }
 
 type odrTrie struct {
@@ -61,7 +61,8 @@ func (t *odrTrie) Get(key []byte) ([]byte, bool, error) {
 	}
 
 	// send ODR request to get trie proof.
-	response, err := t.odr.retrieve(request)
+	filter := peerFilter{blockHash: t.root}
+	response, err := t.odr.retrieveWithFilter(request, filter)
 	if err != nil {
 		return nil, false, errors.NewStackedError(err, "failed to retrieve ODR trie proof")
 	}
