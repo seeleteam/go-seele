@@ -65,7 +65,7 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	} else {
 		info.AccountNonce = nonceValue
 	}
-	fmt.Printf("account sends nonce: %d\n", info.AccountNonce)
+	fmt.Printf("transaction nonce: %d\n", info.AccountNonce)
 
 	payload := []byte(nil)
 	if len(payloadValue) > 0 {
