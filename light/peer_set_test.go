@@ -60,22 +60,12 @@ func TestPeerSet_ForEach(t *testing.T) {
 	set.Add(peer2)
 
 	count := 0
-	set.ForEach(func(peer *peer) bool {
+	peers := set.getPeers()
+	for range peers {
 		count++
-		return true
-	})
+	}
 
 	assert.Equal(t, count, 2)
-
-	set.ForEach(func(peer *peer) bool {
-		count++
-		if count == 3 {
-			return false
-		}
-
-		return true
-	})
-	assert.Equal(t, count, 3)
 }
 
 func Test_PeerSet_Remove(t *testing.T) {

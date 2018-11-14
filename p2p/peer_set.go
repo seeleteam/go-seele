@@ -62,11 +62,14 @@ func (set *peerSet) delete(p *Peer) {
 	delete(set.shardPeerMap[p.getShardNumber()], p.Node.ID)
 }
 
-func (set *peerSet) foreach(call func(p *Peer)) {
+func (set *peerSet) getPeers() map[common.Address]*Peer {
 	set.lock.RLock()
 	defer set.lock.RUnlock()
 
-	for _, p := range set.peerMap {
-		call(p)
+	value := make(map[common.Address]*Peer, len(set.peerMap))
+	for key, v := range set.peerMap {
+		value[key] = v
 	}
+
+	return value
 }

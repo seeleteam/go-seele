@@ -88,11 +88,15 @@ needQuit:
 		case <-pm.chainHeaderChangeCh:
 			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
-			pm.peerSet.ForEach(func(p *peer) bool {
-				p.sendAnnounce(magic, uint64(0), uint64(0))
-				return true
-			})
+
+			peers := pm.peerSet.getPeers()
+			for _, p := range peers {
+				err := p.sendAnnounce(magic, uint64(0), uint64(0))
+				pm.log.Warn("blockLoop sendAnnounce err=%s", err)
+			}
+
 			pm.log.Debug("blockLoop head changed. ")
+
 		case <-pm.quitCh:
 			break needQuit
 		}
