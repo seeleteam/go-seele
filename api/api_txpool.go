@@ -224,8 +224,7 @@ func (api *TransactionPoolAPI) GetReceiptsByBlockHash(blockHash string) (map[str
 	for _, re := range receipts {
 		outMap, err := PrintableReceipt(re)
 		if err != nil {
-			api.s.Log().Warn("PrintableReceipt failed, err: %s", err.Error())
-			continue
+			return nil, err
 		}
 		outMaps = append(outMaps, outMap)
 	}
