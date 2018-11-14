@@ -208,6 +208,55 @@ func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash, abiJSON string) (map[s
 	return printReceiptByABI(api, receipt, abiJSON)
 }
 
+// GetReceiptsByBlockHash get receipts by block hash
+func (api *TransactionPoolAPI) GetReceiptsByBlockHash(blockHash string) (map[string]interface{}, error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	receipts, err := api.s.ChainBackend().GetStore().GetReceiptsByBlockHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	outMap := make(map[string]interface{})
+	outMaps := make([]map[string]interface{}, 0, len(receipts))
+	for _, re := range receipts {
+		result := ""
+		if re.Failed {
+			result = string(re.Result)
+		} else {
+			result = hexutil.BytesToHex(re.Result)
+		}
+		outMap = map[string]interface{}{
+			"result":    result,
+			"poststate": re.PostState.ToHex(),
+			"txhash":    re.TxHash.ToHex(),
+			"contract":  "0x",
+			"failed":    re.Failed,
+			"usedGas":   re.UsedGas,
+			"totalFee":  re.TotalFee,
+		}
+		if len(re.Logs) != 0 {
+			outMap["logs"] = re.Logs
+		}
+		if len(re.ContractAddress) > 0 {
+			contractAddr, err := common.NewAddress(re.ContractAddress)
+			if err != nil {
+				return nil, err
+			}
+			outMap["contract"] = contractAddr.ToHex()
+		}
+		outMaps = append(outMaps, outMap)
+	}
+
+	return map[string]interface{}{
+		"blockHash": blockHash,
+		"receipts":  outMaps,
+	}, nil
+}
+
 // GetTransactionByHash returns the transaction by the given transaction hash.
 func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]interface{}, error) {
 	hashByte, err := hexutil.HexToBytes(txHash)
