@@ -64,7 +64,8 @@ func (l *LightBackend) GetBlock(hash common.Hash, height int64) (*types.Block, e
 		}
 	}
 
-	response, err := l.s.odrBackend.retrieve(request)
+	filter := peerFilter{blockHash: hash}
+	response, err := l.s.odrBackend.retrieveWithFilter(request, filter)
 	if err != nil {
 		return nil, errors.NewStackedError(err, "failed to retrieve ODR block")
 	}
