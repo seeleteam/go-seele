@@ -17,7 +17,7 @@ type mockOdrRetriever struct {
 	resp odrResponse
 }
 
-func (r *mockOdrRetriever) retrieve(request odrRequest) (odrResponse, error) {
+func (r *mockOdrRetriever) retrieveWithFilter(request odrRequest, filter peerFilter) (odrResponse, error) {
 	return r.resp, nil
 }
 
