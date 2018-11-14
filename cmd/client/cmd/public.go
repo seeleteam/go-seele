@@ -87,6 +87,12 @@ func rpcAction(namespace string, method string) cli.ActionFunc {
 
 func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, resultHandler callResultHandler) cli.ActionFunc {
 	return func(c *cli.Context) error {
+		// Currently, flag is required to specify value.
+		if c.NArg() > 0 {
+			fmt.Printf("flag is not specified for value '%v'\n\n", c.Args().First())
+			return cli.ShowCommandHelp(c, c.Command.Name)
+		}
+
 		client, err := rpc.DialTCP(context.Background(), addressValue)
 		if err != nil {
 			return err
