@@ -200,13 +200,15 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 		CurrentBlock: head,
 	}
 
-	sp.peerSet.ForEachAll(func(peer *peer) bool {
+	peers := sp.peerSet.getAllPeers()
+	for _, peer := range peers {
 		err := peer.sendHeadStatus(status)
 		if err != nil {
-			sp.log.Warn("failed to send chain head info %s", err)
+			sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
+		} else {
+			sp.log.Warn("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
 		}
-		return true
-	})
+	}
 }
 
 // syncTransactions sends pending transactions to remote peer.
@@ -260,12 +262,12 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 	// find shardId by tx from address.
 	shardId := tx.Data.From.Shard()
-	p.peerSet.ForEach(shardId, func(peer *peer) bool {
-		if err := peer.sendTransactionHash(tx.Hash); err != nil {
-			p.log.Warn("failed to send transaction to %s, %s", peer.Node.GetUDPAddr(), err)
+	peers := p.peerSet.getPeerByShard(shardId)
+	for _, peer := range peers {
+		if err := peer.sendTransaction(tx); err != nil {
+			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
 		}
-		return true
-	})
+	}
 }
 
 func (p *SeeleProtocol) handleNewDebt(e event.Event) {
@@ -274,16 +276,16 @@ func (p *SeeleProtocol) handleNewDebt(e event.Event) {
 }
 
 func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) {
-	p.peerSet.ForEachAll(func(peer *peer) bool {
+	peers := p.peerSet.getAllPeers()
+	for _, peer := range peers {
 		if len(debtsMap[peer.Node.Shard]) > 0 {
 			err := peer.sendDebts(debtsMap[peer.Node.Shard], filter)
 			if err != nil {
-				p.log.Warn("failed to send debts to %s %s", peer.Node, err)
+				p.log.Warn("failed to send debts to peer=%s, err=%s", peer.Node, err)
 			}
 		}
+	}
 
-		return true
-	})
 }
 
 func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
@@ -357,25 +359,26 @@ func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
 	s.downloader.UnRegisterPeer(idToStr(peer.Node.ID))
 }
 
+// SendDifferentShardTx send tx to different shards
 func (p *SeeleProtocol) SendDifferentShardTx(tx *types.Transaction, shard uint) {
-	sendTxFun := func(peer *peer) bool {
-		if !peer.knownTxs.Contains(tx.Hash) {
-			err := peer.sendTransaction(tx)
-			if err != nil {
-				p.log.Warn("failed to send transaction to peer %s, tx hash %s err=%s", peer.Node, tx.Hash, err)
-				return true
-			}
-
-			peer.knownTxs.Add(tx.Hash, nil)
-		}
-
-		return true
-	}
+	var peers []*peer
 
 	if p.peerSet.getPeerCountByShard(shard) > 0 {
-		p.peerSet.ForEach(shard, sendTxFun)
+		peers = p.peerSet.getPeerByShard(shard)
 	} else {
-		p.peerSet.ForEachAll(sendTxFun)
+		peers = p.peerSet.getAllPeers()
+	}
+
+	for _, peerinfo := range peers {
+		if !peerinfo.knownTxs.Contains(tx.Hash) {
+			err := peerinfo.sendTransaction(tx)
+			if err != nil {
+				p.log.Warn("failed to send transaction to peer=%s, tx hash=%s, err=%s", peerinfo.Node, tx.Hash, err)
+				continue
+			}
+
+			peerinfo.knownTxs.Add(tx.Hash, nil)
+		}
 	}
 }
 
@@ -639,7 +642,7 @@ handler:
 				break
 			}
 
-			p.log.Debug("Received statusChainHeadMsgCode")
+			p.log.Debug("Received statusChainHeadMsgCode. peer=%s, ip=%s, remoteTD=%d", peer.peerStrID, peer.Peer.RemoteAddr(), status.TD)
 			peer.SetHead(status.CurrentBlock, status.TD)
 			p.syncCh <- struct{}{}
 

@@ -36,9 +36,9 @@ func (api *PrivateMinerAPI) Start() (bool, error) {
 func (api *PrivateMinerAPI) Status() (string, error) {
 	if api.s.miner.IsMining() {
 		return "Running", nil
-	} else {
-		return "Stopped", nil
 	}
+
+	return "Stopped", nil
 }
 
 // Stop API is used to stop the miner.

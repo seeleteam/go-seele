@@ -29,15 +29,15 @@ import (
 
 const (
 	// Maximum number of peers that can be connected
-	defaultMaxPeers = 500
+	defaultMaxPeers = 50
 
 	// Maximum number of inbound connections for concurrent handshaking.
-	maxAcceptConns = 50
+	maxAcceptConns = 40
 
 	defaultDialTimeout = 15 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
-	connWriteTimeout = 10 * time.Second
+	connWriteTimeout = 30 * time.Second
 
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
