@@ -64,7 +64,7 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 
 // GetState get statedb
 func (lc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
-	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix)
+	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix, lc.currentHeader.Hash())
 	return state.NewStatedbWithTrie(trie), nil
 }
 
