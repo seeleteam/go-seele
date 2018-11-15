@@ -95,6 +95,7 @@ type Pool interface {
 type Chain interface {
 	CurrentHeader() *types.BlockHeader
 	GetCurrentState() (*state.Statedb, error)
+	GetState(blockHash common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 }
 

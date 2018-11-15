@@ -10,8 +10,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 )
 
@@ -30,15 +31,15 @@ func NewPublicSeeleAPI(s Backend) *PublicSeeleAPI {
 	return &PublicSeeleAPI{s}
 }
 
-// GetBalance get balance of the account. if the account's address is empty, will get the coinbase balance
-func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceResponse, error) {
+// GetBalance get balance of the account.
+func (api *PublicSeeleAPI) GetBalance(account common.Address, hexHash string, height int64) (*GetBalanceResponse, error) {
 	if account.IsEmpty() {
 		return nil, ErrInvalidAccount
 	}
 
-	state, err := api.s.ChainBackend().GetCurrentState()
+	state, err := api.getStatedb(hexHash, height)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to get statedb")
 	}
 
 	var info GetBalanceResponse
@@ -49,21 +50,44 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address) (*GetBalanceRespon
 
 	balance := state.GetBalance(account)
 	if err = state.GetDbErr(); err != nil {
-		return nil, err
+		return nil, errors.NewStackedError(err, "failed to get balance, db error occurred")
 	}
+
 	info.Balance = balance
 	info.Account = account
 
 	return &info, nil
 }
 
+func (api *PublicSeeleAPI) getStatedb(hexHash string, height int64) (*state.Statedb, error) {
+	var blockHash common.Hash
+	var err error
+
+	if len(hexHash) > 0 {
+		if blockHash, err = common.HexToHash(hexHash); err != nil {
+			return nil, errors.NewStackedError(err, "failed to convert HEX to hash")
+		}
+	} else if height < 0 {
+		return api.s.ChainBackend().GetCurrentState()
+	} else if blockHash, err = api.s.ChainBackend().GetStore().GetBlockHash(uint64(height)); err != nil {
+		return nil, errors.NewStackedErrorf(err, "failed to get block hash by height %v", height)
+	}
+
+	header, err := api.s.ChainBackend().GetStore().GetBlockHeader(blockHash)
+	if err != nil {
+		return nil, errors.NewStackedErrorf(err, "failed to get block header by hash %v", blockHash)
+	}
+
+	return api.s.ChainBackend().GetState(header.StateHash)
+}
+
 // GetAccountNonce get account next used nonce
-func (api *PublicSeeleAPI) GetAccountNonce(account common.Address) (uint64, error) {
+func (api *PublicSeeleAPI) GetAccountNonce(account common.Address, hexHash string, height int64) (uint64, error) {
 	if account.Equal(common.EmptyAddress) {
 		return 0, ErrInvalidAccount
 	}
 
-	state, err := api.s.ChainBackend().GetCurrentState()
+	state, err := api.getStatedb(hexHash, height)
 	if err != nil {
 		return 0, err
 	}
