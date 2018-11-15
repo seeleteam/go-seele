@@ -338,20 +338,21 @@ func (pool *Pool) getProcessableObjects(size int) ([]poolObject, int) {
 	return txs, totalSize
 }
 
-// getPendingObjectCount return the total number of pending transactions in the transaction pool.
-func (pool *Pool) getPendingObjectCount() int {
-	pool.mutex.RLock()
-	defer pool.mutex.RUnlock()
-
-	return pool.pendingQueue.count()
-}
-
 // getObjectCount return the total number of transactions in the transaction pool.
-func (pool *Pool) getObjectCount() int {
+func (pool *Pool) getObjectCount(processing, pending bool) int {
 	pool.mutex.RLock()
 	defer pool.mutex.RUnlock()
 
-	return pool.pendingQueue.count() + len(pool.processingObjects)
+	count := 0
+	if processing {
+		count += len(pool.processingObjects)
+	}
+
+	if pending {
+		count += pool.pendingQueue.count()
+	}
+
+	return count
 }
 
 // getObjects return the transactions in the transaction pool.

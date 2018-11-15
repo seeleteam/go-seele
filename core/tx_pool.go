@@ -107,11 +107,11 @@ func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Tran
 }
 
 func (pool *TransactionPool) GetPendingTxCount() int {
-	return pool.getPendingObjectCount()
+	return pool.getObjectCount(false, true)
 }
 
 func (pool *TransactionPool) GetTxCount() int {
-	return pool.getObjectCount()
+	return pool.getObjectCount(true, true)
 }
 
 func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.Transaction {
