@@ -77,9 +77,31 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 	return l.ChainBackend().GetStore().GetBlockTotalDifficulty(hash)
 }
 
+func (l *LightBackend) getBlockHashFromTxPool(txHash common.Hash) *common.Hash {
+	minedBlocks := l.s.txPool.minedBlocks
+	for blockHash, minedBlock := range minedBlocks{
+		if blockHash != common.EmptyHash && minedBlock != nil {
+			for i := 0; i < len(minedBlock.txs); i++{
+				if minedBlock.txs[i].Hash == txHash {
+					return &blockHash
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // GetReceiptByTxHash gets block's receipt by block hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
-	response, err := l.s.odrBackend.retrieve(&odrReceiptRequest{TxHash: hash})
+	var err error
+	var response odrResponse
+	if blockHash := l.getBlockHashFromTxPool(hash); blockHash != nil {
+		filter := peerFilter{blockHash: *blockHash}
+		response, err = l.s.odrBackend.retrieveWithFilter(&odrTxByHashRequest{TxHash: hash}, filter)
+	}else {
+		response, err = l.s.odrBackend.retrieve(&odrReceiptRequest{TxHash: hash})
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +115,15 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 		return tx, nil, nil
 	}
 
-	response, err := l.s.odrBackend.retrieve(&odrTxByHashRequest{TxHash: txHash})
+	var err error
+	var response odrResponse
+	if blockHash := l.getBlockHashFromTxPool(txHash); blockHash != nil {
+		filter := peerFilter{blockHash: *blockHash}
+		response, err = l.s.odrBackend.retrieveWithFilter(&odrTxByHashRequest{TxHash: txHash}, filter)
+	}else {
+		response, err = l.s.odrBackend.retrieve(&odrTxByHashRequest{TxHash: txHash})
+	}
+
 	if err != nil {
 		return nil, nil, err
 	}
