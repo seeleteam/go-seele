@@ -128,6 +128,11 @@ func (id Address) Bytes() []byte {
 	return id[:]
 }
 
+// String implements the fmt.Stringer interface
+func (id Address) String() string {
+	return id.ToHex()
+}
+
 // ToHex converts address to 0x prefixed HEX format.
 func (id Address) ToHex() string {
 	return hexutil.BytesToHex(id.Bytes())
