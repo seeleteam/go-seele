@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,4 +117,16 @@ func Test_IsSystemAddress(t *testing.T) {
 
 	contractAddr = BytesToAddress([]byte{1})
 	assert.Equal(t, contractAddr.IsReserved(), true)
+}
+
+func Test_Address_InvalidType(t *testing.T) {
+	// miss the last 4 bits - address type, length = 41
+	hexAddrBase := "0x4c10f2cd2159bb432094e3be7e17904c2b4aeb2"
+
+	types := []string{"0", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A", "B", "C", "D", "E", "F"}
+	for _, addrType := range types {
+		addr := hexAddrBase + addrType
+		_, err := HexToAddress(addr)
+		assert.True(t, strings.Contains(err.Error(), "invalid address type"))
+	}
 }

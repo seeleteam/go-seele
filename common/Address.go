@@ -10,6 +10,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common/errors"
@@ -60,6 +61,10 @@ func NewAddress(b []byte) (Address, error) {
 	var id Address
 	copy(id[:], b)
 
+	if err := id.Validate(); err != nil {
+		return EmptyAddress, err
+	}
+
 	return id, nil
 }
 
@@ -76,6 +81,15 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	addr[19] |= byte(AddressTypeExternal)
 
 	return addr
+}
+
+// Validate check whether the address is valid.
+func (id *Address) Validate() error {
+	if addrType := id.Type(); addrType < AddressTypeReserved && (addrType < AddressTypeExternal || addrType > AddressTypeContract) {
+		return fmt.Errorf("invalid address type %v", addrType)
+	}
+
+	return nil
 }
 
 // IsEVMContract indicates whether the address is EVM contract address.
