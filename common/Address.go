@@ -90,7 +90,7 @@ func (id *Address) Validate() error {
 	}
 
 	if addrType := id.Type(); addrType < AddressTypeReserved && (addrType < AddressTypeExternal || addrType > AddressTypeContract) {
-		return fmt.Errorf("invalid address type %v", addrType)
+		return fmt.Errorf("invalid address type %v, address = %v", addrType, id.ToHex())
 	}
 
 	return nil

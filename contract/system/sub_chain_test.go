@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,8 +25,8 @@ func Test_RegisterSubChain(t *testing.T) {
 		TokenAmount:       1000000,
 		GenesisDifficulty: 8000,
 		GenesisAccounts: map[common.Address]*big.Int{
-			common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}): big.NewInt(1000),
-			common.BytesToAddress([]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}): big.NewInt(1000),
+			*crypto.MustGenerateShardAddress(1): big.NewInt(1000),
+			*crypto.MustGenerateShardAddress(1): big.NewInt(1000),
 		},
 	}
 

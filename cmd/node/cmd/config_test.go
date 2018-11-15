@@ -28,7 +28,7 @@ func Test_LoadConfigFromFile(t *testing.T) {
 	assert.Equal(t, config.BasicConfig.Name, "seele node2", "3")
 	assert.Equal(t, config.BasicConfig.Version, "1.0", "4")
 	assert.Equal(t, config.BasicConfig.RPCAddr, "0.0.0.0:55028", "5")
-	assert.Equal(t, config.BasicConfig.Coinbase, "0x954e4e062eb4bb2dcd93becf4f4e9b1d2d69f136", "6")
+	assert.Equal(t, config.BasicConfig.Coinbase, "0x954e4e062eb4bb2dcd93becf4f4e9b1d2d69f131", "6")
 
 	assert.Equal(t, config.HTTPServer.HTTPCors[0], "*", "6")
 	assert.Equal(t, config.HTTPServer.HTTPCors[0], "*", "7")

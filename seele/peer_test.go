@@ -7,10 +7,13 @@ package seele
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	log2 "github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -19,7 +22,7 @@ import (
 
 func Test_peer_Info(t *testing.T) {
 	// prepare some variables
-	myAddr := common.HexMustToAddres("0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84")
+	myAddr := *crypto.MustGenerateShardAddress(1)
 	node1 := discovery.NewNode(myAddr, nil, 0, 0)
 	log := log2.GetLogger("test")
 	p2pPeer := &p2p.Peer{
@@ -28,7 +31,7 @@ func Test_peer_Info(t *testing.T) {
 	var myHash common.Hash
 	copy(myHash[0:20], myAddr[:])
 	bigInt := big.NewInt(100)
-	okStr := "{\"version\":1,\"difficulty\":100,\"head\":\"6b9fd39a9f1273c46fba8951b62de5b95cd3dd84000000000000000000000000\"}"
+	okStr := fmt.Sprintf(`{"version":1,"difficulty":100,"head":"%v000000000000000000000000"}`, strings.TrimPrefix(myAddr.ToHex(), "0x"))
 
 	// Create peer for test
 	peer := newPeer(common.SeeleVersion, p2pPeer, nil, log)

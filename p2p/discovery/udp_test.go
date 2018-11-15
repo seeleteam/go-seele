@@ -8,38 +8,25 @@ import (
 
 	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	selfID = "snode://1201f3c956d0a320b153a097c3d04efa48888888@127.0.0.1:9666[1]"
+	selfNode = MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.0.1:9666", 1)
 )
 
-func newNode(nodeID string) *Node {
-	self, err := NewNodeFromString(nodeID)
-	if err != nil {
-		panic(err)
-	}
-
-	return self
-}
-
 func newTestUDP() *udp {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
-	node1 := newNode(id1)
-
-	id2 := "snode://0101f3c956d0a320b153a097c3d04efa488d6666@127.0.0.1:9888[1]"
-	node2 := newNode(id2)
-
-	self := newNode(selfID)
+	node1 := MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.0.1:9000", 1)
+	node2 := MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.0.1:9888", 1)
 
 	log := log.GetLogger("discovery")
 	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 	return &udp{
 		trustNodes:        []*Node{node1, node2},
-		table:             newTable(self.ID, addr, 1, log),
-		self:              NewNodeWithAddr(self.ID, addr, 1),
+		table:             newTable(selfNode.ID, addr, 1, log),
+		self:              NewNodeWithAddr(selfNode.ID, addr, 1),
 		db:                NewDatabase(log),
 		writer:            make(chan *send, 1),
 		addPending:        make(chan *pending, 1),
@@ -49,8 +36,7 @@ func newTestUDP() *udp {
 }
 
 func Test_UDP_NewUDP(t *testing.T) {
-	a := "0xd0c549b022f5a17a8f50a4a448d20ba579d01781"
-	id := common.HexMustToAddres(a)
+	id := *crypto.MustGenerateShardAddress(1)
 	addr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 
 	udp := newUDP(id, addr, 0)
@@ -67,8 +53,7 @@ func Test_UDP_SendMsg(t *testing.T) {
 	udp := newTestUDP()
 	assert.Equal(t, udp != nil, true)
 
-	a := "0xd0c549b022f5a17a8f50a4a448d20ba579d01781"
-	toID := common.HexMustToAddres(a)
+	toID := *crypto.MustGenerateShardAddress(1)
 	toAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9666")
 	udp.sendMsg(pingMsgType, &testStruct{1}, toID, toAddr)
 
@@ -102,8 +87,7 @@ func Test_UDP_AddNode(t *testing.T) {
 	assert.Equal(t, u.db.size(), 1)
 
 	// add self
-	self := newNode(selfID)
-	u.addNode(self, false)
+	u.addNode(selfNode, false)
 	assert.Equal(t, u.db.size(), 1)
 
 	// add duplicated node
@@ -117,8 +101,7 @@ func Test_UDP_DeleteNode(t *testing.T) {
 
 	// add and then delete, just insert this node into map timeoutNodesCount,
 	// this node will be deleted until the number of deletion operation is equal to timeoutCountForDeleteNode
-	id := "snode://0101f3c956d0a320b153a097c3d04efa488d6661@127.0.0.1:9881[1]"
-	node := newNode(id)
+	node := MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.0.1:9881", 1)
 	u.addNode(node, false)
 	assert.Equal(t, u.db.size(), 1)
 
@@ -130,12 +113,11 @@ func Test_UDP_DeleteNode(t *testing.T) {
 	assert.Equal(t, u.db.size(), 0)
 
 	// delete self node
-	self := newNode(selfID)
-	u.deleteNode(self)
+	u.deleteNode(selfNode)
 	assert.Equal(t, u.db.size(), 0)
 
 	// delete nonexistent node
-	nonexistent := newNode("snode://0101f3c956d0a320b153a097c3d04efa488d6669@127.0.0.1:9889[1]")
+	nonexistent := MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.0.1:9889", 1)
 	u.deleteNode(nonexistent)
 	assert.Equal(t, u.db.size(), 0)
 }

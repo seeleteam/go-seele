@@ -52,6 +52,26 @@ func NewNodeWithAddr(id common.Address, addr *net.UDPAddr, shard uint) *Node {
 	return NewNode(id, addr.IP, addr.Port, shard)
 }
 
+// NewNodeWithAddrString new node with id and network address.
+func NewNodeWithAddrString(id common.Address, addr string, shard uint) (*Node, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewNodeWithAddr(id, udpAddr, shard), nil
+}
+
+// MustNewNodeWithAddr new node with id and network address, and panics on any error.
+func MustNewNodeWithAddr(id common.Address, addr string, shard uint) *Node {
+	node, err := NewNodeWithAddrString(id, addr, shard)
+	if err != nil {
+		panic(err)
+	}
+
+	return node
+}
+
 // NewNodeFromIP new node from ip address
 func NewNodeFromIP(ip string) (*Node, error) {
 	addr, err := net.ResolveUDPAddr("udp", ip)

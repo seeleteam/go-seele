@@ -8,7 +8,9 @@ package p2p
 import (
 	"net"
 	"testing"
+
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p/discovery"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +41,7 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 }
 
 func Test_peer_Info(t *testing.T) {
-	addr := "0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84"
+	addr := crypto.MustGenerateShardAddress(1).ToHex()
 	newPeer, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +54,7 @@ func Test_peer_Info(t *testing.T) {
 }
 
 func Test_peer_RunAndClose(t *testing.T) {
-	p1, err := newTestPeer("0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84", 1)
+	p1, err := newTestPeer(crypto.MustGenerateShardAddress(1).ToHex(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
