@@ -17,7 +17,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		{
 			Name:   "getbalance",
 			Usage:  "get balance info",
-			Flags:  rpcFlags(accountFlag),
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
 			Action: rpcAction("seele", "getBalance"),
 		},
 		{
@@ -29,7 +29,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		{
 			Name:   "getnonce",
 			Usage:  "get account nonce",
-			Flags:  rpcFlags(accountFlag),
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
 			Action: rpcAction("seele", "getAccountNonce"),
 		},
 		{
