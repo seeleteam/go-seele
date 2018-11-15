@@ -24,6 +24,12 @@ const (
 type minedBlock struct {
 	height uint64
 	txs    []*types.Transaction
+	index  int
+}
+
+type blockTxHash struct {
+	blockHash common.Hash
+	txHash    common.Hash
 }
 
 type txPool struct {
@@ -32,6 +38,7 @@ type txPool struct {
 	odrBackend                *odrBackend
 	pendingTxs                map[common.Hash]*types.Transaction // txs that not mined yet.
 	minedBlocks               map[common.Hash]*minedBlock        // blocks that already mined.
+	packTxs                   []*blockTxHash                     // Txs that already packed.
 	headerCh                  chan *types.BlockHeader            // channel to receive new header in canonical chain.
 	currentHeader             *types.BlockHeader                 // current HEAD header in canonical chain.
 	headerChangedEventManager *event.EventManager
@@ -44,6 +51,7 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManag
 		odrBackend:                odrBackend,
 		pendingTxs:                make(map[common.Hash]*types.Transaction),
 		minedBlocks:               make(map[common.Hash]*minedBlock),
+		packTxs:                   make([]*blockTxHash, 0),
 		headerCh:                  make(chan *types.BlockHeader, headerChanBufSize),
 		currentHeader:             chain.CurrentHeader(),
 		headerChangedEventManager: headerChangedEventManager,
@@ -224,6 +232,11 @@ func (pool *txPool) rollbackTxs(blockHash common.Hash) {
 	}
 
 	delete(pool.minedBlocks, blockHash)
+	deletePackTxs(pool, block.index, len(block.txs))
+}
+
+func deletePackTxs(pool *txPool, index, count int) {
+	pool.packTxs = append(pool.packTxs[:index], pool.packTxs[(index+count):]...)
 }
 
 // checkMinedTxs retrieves block of the specified block hash via odr backend,
@@ -250,9 +263,11 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 		pool.minedBlocks[blockHash] = &minedBlock{
 			height: block.Header.Height,
 			txs:    minedTxs,
+			index:  len(pool.packTxs),
 		}
 
 		for _, tx := range minedTxs {
+			pool.packTxs = append(pool.packTxs, &blockTxHash{block.HeaderHash, tx.Hash})
 			delete(pool.pendingTxs, tx.Hash)
 		}
 	}
@@ -299,5 +314,6 @@ func (pool *txPool) clearConfirmedBlocks() {
 
 	for _, hash := range confirmedBlocks {
 		delete(pool.minedBlocks, hash)
+		deletePackTxs(pool, pool.minedBlocks[hash].index, len(pool.minedBlocks[hash].txs))
 	}
 }
