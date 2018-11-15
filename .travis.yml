@@ -1,4 +1,4 @@
 language: go
 script: 
-    - go test -p 1 -covermode=atomic -cover ./...
+    - go test -p 1 -covermode=atomic -cover `go list ./... | grep -v istanbul`
     - make
