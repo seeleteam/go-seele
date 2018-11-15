@@ -58,17 +58,22 @@ type ServiceContext struct {
 	DataDir string
 }
 
+// AccountStateDB return account state db
 func (s *SeeleService) AccountStateDB() database.Database { return s.accountStateDB }
 
 // BlockChain get blockchain
 func (s *SeeleService) BlockChain() *core.Blockchain { return s.chain }
 
+// TxPool tx pool
 func (s *SeeleService) TxPool() *core.TransactionPool { return s.txPool }
 
+// DebtPool debt pool
 func (s *SeeleService) DebtPool() *core.DebtPool { return s.debtPool }
 
+// NetVersion net version
 func (s *SeeleService) NetVersion() string { return s.netVersion }
 
+// NetWorkID net id
 func (s *SeeleService) NetWorkID() string { return s.networkID }
 
 // Miner get miner

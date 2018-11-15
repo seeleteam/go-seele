@@ -16,22 +16,30 @@ type SeeleBackend struct {
 	s *SeeleService
 }
 
+// NewSeeleBackend backend
 func NewSeeleBackend(s *SeeleService) *SeeleBackend {
 	return &SeeleBackend{s}
 }
 
+// TxPoolBackend tx pool
 func (sd *SeeleBackend) TxPoolBackend() api.Pool { return sd.s.txPool }
 
+// GetNetVersion net version
 func (sd *SeeleBackend) GetNetVersion() string { return sd.s.netVersion }
 
+// GetNetWorkID net id
 func (sd *SeeleBackend) GetNetWorkID() string { return sd.s.networkID }
 
+// GetP2pServer p2p server
 func (sd *SeeleBackend) GetP2pServer() *p2p.Server { return sd.s.p2pServer }
 
+// ChainBackend block chain db
 func (sd *SeeleBackend) ChainBackend() api.Chain { return sd.s.chain }
 
+// Log return log pointer
 func (sd *SeeleBackend) Log() *log.SeeleLog { return sd.s.log }
 
+// IsSyncing check status
 func (sd *SeeleBackend) IsSyncing() bool {
 	seeleserviceAPI := sd.s.APIs()[5]
 	d := seeleserviceAPI.Service.(downloader.PrivatedownloaderAPI)
@@ -39,6 +47,7 @@ func (sd *SeeleBackend) IsSyncing() bool {
 	return d.IsSyncing()
 }
 
+// ProtocolBackend return protocol
 func (sd *SeeleBackend) ProtocolBackend() api.Protocol { return sd.s.seeleProtocol }
 
 // GetBlock returns the requested block by hash or height
@@ -66,6 +75,7 @@ func (sd *SeeleBackend) GetBlock(hash common.Hash, height int64) (*types.Block, 
 	return block, nil
 }
 
+// GetBlockTotalDifficulty return total difficulty
 func (sd *SeeleBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	store := sd.s.chain.GetStore()
 	return store.GetBlockTotalDifficulty(hash)
@@ -81,6 +91,7 @@ func (sd *SeeleBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, er
 	return receipt, nil
 }
 
+// GetTransaction return tx
 func (sd *SeeleBackend) GetTransaction(pool api.PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *api.BlockIndex, error) {
 	return api.GetTransaction(pool, bcStore, txHash)
 }

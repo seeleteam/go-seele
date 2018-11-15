@@ -32,18 +32,15 @@ func newPeerSet() *peerSet {
 }
 
 func (p *peerSet) bestPeer(shard uint) *peer {
-	var (
-		bestPeer *peer
-		bestTd   *big.Int
-	)
+	var bestPeer *peer
+	bestTd := big.NewInt(0)
 
-	p.ForEach(shard, func(p *peer) bool {
-		if _, td := p.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = p, td
+	peers := p.getPeerByShard(shard)
+	for _, peer := range peers {
+		if _, td := peer.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+			bestPeer, bestTd = peer, td
 		}
-
-		return true
-	})
+	}
 
 	return bestPeer
 }
@@ -81,26 +78,18 @@ func (p *peerSet) Add(pe *peer) {
 	p.shardPeers[pe.Node.Shard][address] = pe
 }
 
-func (p *peerSet) ForEach(shard uint, handle func(*peer) bool) {
+func (p *peerSet) getAllPeers() []*peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	for _, v := range p.shardPeers[shard] {
-		if !handle(v) {
-			break
-		}
-	}
-}
-
-func (p *peerSet) ForEachAll(handle func(*peer) bool) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
+	value := make([]*peer, len(p.peerMap))
+	index := 0
 	for _, v := range p.peerMap {
-		if !handle(v) {
-			break
-		}
+		value[index] = v
+		index++
 	}
+
+	return value
 }
 
 func (p *peerSet) getPeerByShard(shard uint) []*peer {

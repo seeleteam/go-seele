@@ -31,6 +31,19 @@ func newPeerSet() *peerSet {
 	return ps
 }
 
+func (p *peerSet) getPeers() map[common.Address]*peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	value := make(map[common.Address]*peer)
+
+	for key, v := range p.peerMap {
+		value[key] = v
+	}
+
+	return value
+}
+
 func (p *peerSet) bestPeer() *peer {
 	var (
 		bestPeer *peer
@@ -46,17 +59,6 @@ func (p *peerSet) bestPeer() *peer {
 	}
 
 	return bestPeer
-}
-
-func (p *peerSet) ForEach(handle func(*peer) bool) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	for _, v := range p.peerMap {
-		if !handle(v) {
-			break
-		}
-	}
 }
 
 func (p *peerSet) Remove(peerID common.Address) {

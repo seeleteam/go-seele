@@ -37,7 +37,7 @@ const (
 	defaultDialTimeout = 15 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
-	connWriteTimeout = 10 * time.Second
+	connWriteTimeout = 30 * time.Second
 
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
@@ -289,9 +289,12 @@ running:
 	}
 
 	// Disconnect all peers.
-	srv.peerSet.foreach(func(p *Peer) {
-		p.Disconnect(discServerQuit)
-	})
+	peers := srv.peerSet.getPeers()
+	for _, peer := range peers {
+		if peer != nil {
+			peer.Disconnect(discServerQuit)
+		}
+	}
 }
 
 func (srv *Server) startListening() error {
@@ -628,13 +631,16 @@ func (p PeerInfos) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // PeersInfo returns an array of metadata objects describing connected peers.
 func (srv *Server) PeersInfo() []PeerInfo {
 	infos := make([]PeerInfo, 0, srv.PeerCount())
-	srv.peerSet.foreach(func(peer *Peer) {
-		if peer != nil {
-			peerInfo := peer.Info()
+	peers := srv.peerSet.getPeers()
+
+	for _, p := range peers {
+		if p != nil {
+			peerInfo := p.Info()
 			infos = append(infos, *peerInfo)
 		}
-	})
+	}
 
 	sort.Sort(PeerInfos(infos))
+
 	return infos
 }

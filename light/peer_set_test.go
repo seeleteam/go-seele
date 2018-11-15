@@ -52,32 +52,6 @@ func Test_PeerSet_Find(t *testing.T) {
 	assert.Equal(t, set.Find(peer2.Node.ID), peer2)
 }
 
-func TestPeerSet_ForEach(t *testing.T) {
-	set := newPeerSet()
-	peer1 := getTestPeer(0)
-	set.Add(peer1)
-	peer2 := getTestPeer(0)
-	set.Add(peer2)
-
-	count := 0
-	set.ForEach(func(peer *peer) bool {
-		count++
-		return true
-	})
-
-	assert.Equal(t, count, 2)
-
-	set.ForEach(func(peer *peer) bool {
-		count++
-		if count == 3 {
-			return false
-		}
-
-		return true
-	})
-	assert.Equal(t, count, 3)
-}
-
 func Test_PeerSet_Remove(t *testing.T) {
 	set := newPeerSet()
 	peer1 := getTestPeer(0)
