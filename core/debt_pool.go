@@ -127,5 +127,5 @@ func (dp *DebtPool) GetDebts(processing, pending bool) []*types.Debt {
 }
 
 func (dp *DebtPool) GetDebtCount(processing, pending bool) int {
-	return len(dp.GetDebts(processing, pending))
+	return dp.getObjectCount(processing, pending)
 }
