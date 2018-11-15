@@ -36,7 +36,9 @@ const (
 	AddressTypeContract = AddressType(2)
 
 	// AddressTypeReserved is the reserved address type for system contract.
-	AddressTypeReserved = AddressType(3)
+	// Note, the address type (4 bits) value ranges [0,15], so the system reserved
+	// address type value should greater than 15.
+	AddressTypeReserved = AddressType(16)
 )
 
 // EmptyAddress presents an empty address
@@ -76,6 +78,7 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	return addr
 }
 
+// IsEVMContract indicates whether the address is EVM contract address.
 func (id *Address) IsEVMContract() bool {
 	return id.Type() == AddressTypeContract
 }
