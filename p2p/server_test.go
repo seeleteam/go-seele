@@ -68,11 +68,12 @@ func Test_addNode(t *testing.T) {
 	config := testConfig()
 	server := NewServer(genesis, *config, nil)
 
-	node := generateNode("snode://c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.1.1:9000[0]")
+	id := *crypto.MustGenerateShardAddress(1)
+	node := discovery.MustNewNodeWithAddr(id, "127.0.1.1:9000", 0)
 	server.addNode(node)
 	assert.Equal(t, server.PeerCount(), 0)
 
-	node = generateNode("snode://c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.1.1:9000[1]")
+	node = discovery.MustNewNodeWithAddr(id, "127.0.1.1:9000", 1)
 	server.addNode(node)
 	assert.Equal(t, server.PeerCount(), 0) // failed to connect to this node
 }
@@ -83,7 +84,7 @@ func Test_deleteNode(t *testing.T) {
 	server := NewServer(genesis, *config, nil)
 	assert.Equal(t, server.PeerCount(), 0)
 
-	addr := "0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84"
+	addr := crypto.MustGenerateShardAddress(1).ToHex()
 	peer1, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +92,7 @@ func Test_deleteNode(t *testing.T) {
 	server.addPeer(peer1)
 	assert.Equal(t, server.PeerCount(), 1)
 
-	addr = "0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd85"
+	addr = crypto.MustGenerateShardAddress(1).ToHex()
 	peer2, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +126,7 @@ func Test_peerIsValidate(t *testing.T) {
 
 	handshakeMsg := &ProtoHandShake{Caps: caps}
 	handshakeMsg.NetworkID = server.Config.NetworkID
-	node := generateNode("snode://c3d04efa488d43d7d7e05a44791492c9979ff558@127.0.1.1:9000[0]")
+	node := discovery.MustNewNodeWithAddr(*crypto.MustGenerateShardAddress(1), "127.0.1.1:9000", 0)
 	message, err = server.packWrapHSMsg(handshakeMsg, node.ID[0:], outboundConn)
 	assert.Equal(t, err, nil)
 
@@ -148,7 +149,7 @@ func Test_PeerInfos(t *testing.T) {
 	peerInfoArray := server.PeersInfo()
 	assert.Equal(t, len(peerInfoArray), 0)
 
-	addr := "0x6b9fd39a9f1273c46fba8951b62de5b95cd3dd84"
+	addr := crypto.MustGenerateShardAddress(1).ToHex()
 	peer1, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -207,13 +208,4 @@ func generatePrivKey() *ecdsa.PrivateKey {
 	}
 
 	return keypair
-}
-
-func generateNode(nodeID string) *discovery.Node {
-	node, err := discovery.NewNodeFromString(nodeID)
-	if err != nil {
-		panic(err)
-	}
-
-	return node
 }

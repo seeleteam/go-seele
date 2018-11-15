@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ import (
 func newTestContext(db database.Database, contractAddr common.Address) *Context {
 	tx := &types.Transaction{
 		Data: types.TransactionData{
-			From:         common.BytesToAddress([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+			From:         *crypto.MustGenerateShardAddress(1),
 			To:           contractAddr,
 			Amount:       big.NewInt(1),
 			GasPrice:     big.NewInt(1),

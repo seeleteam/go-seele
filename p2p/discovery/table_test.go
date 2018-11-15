@@ -12,7 +12,7 @@ import (
 )
 
 func newTestTable() *Table {
-	selfID := "snode://0101f3c956d0a320b153a097c3d04efa48888888@127.0.0.1:9666[1]"
+	selfID := "snode://0101f3c956d0a320b153a097c3d04efa48888881@127.0.0.1:9666[1]"
 	self, err := NewNodeFromString(selfID)
 	if err != nil {
 		panic(err)
@@ -24,7 +24,7 @@ func newTestTable() *Table {
 }
 
 func Test_addNode(t *testing.T) {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d1@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	if err != nil {
 		panic(err)
@@ -55,7 +55,7 @@ func Test_addNode(t *testing.T) {
 }
 
 func Test_findNodeWithTarget(t *testing.T) {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d1@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	assert.Equal(t, err, nil)
 
@@ -74,9 +74,7 @@ func Test_findNodeWithTarget(t *testing.T) {
 
 	//The shard of the table is 1; the nodes of shard 1 will return, if the distance is less than target that comparing with the table self node
 	nodes2 := table.findNodeWithTarget(node2.getSha())
-	assert.Equal(t, len(nodes2), 1)
-	assert.Equal(t, nodes2[0] != node2, true)
-	assert.Equal(t, nodes2[0] == node1, true)
+	assert.Equal(t, len(nodes2), 0)
 
 	//The nodes of shard 1 will return, becaus of the distance is less than target that comparing with the table selnode
 	noExistKey := common.HexMustToAddres("0x2a87b6504cd00af95a83b9887112016a2a991cf1")
@@ -94,7 +92,7 @@ func Test_findNodeWithTarget(t *testing.T) {
 }
 
 func Test_deleteNode(t *testing.T) {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d1@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	assert.Equal(t, err, nil)
 
@@ -127,7 +125,7 @@ func Test_deleteNode(t *testing.T) {
 }
 
 func Test_GetRandNodes(t *testing.T) {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d1@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	assert.Equal(t, err, nil)
 

@@ -10,6 +10,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common/errors"
@@ -36,7 +37,9 @@ const (
 	AddressTypeContract = AddressType(2)
 
 	// AddressTypeReserved is the reserved address type for system contract.
-	AddressTypeReserved = AddressType(3)
+	// Note, the address type (4 bits) value ranges [0,15], so the system reserved
+	// address type value should greater than 15.
+	AddressTypeReserved = AddressType(16)
 )
 
 // EmptyAddress presents an empty address
@@ -58,6 +61,10 @@ func NewAddress(b []byte) (Address, error) {
 	var id Address
 	copy(id[:], b)
 
+	if err := id.Validate(); err != nil {
+		return EmptyAddress, err
+	}
+
 	return id, nil
 }
 
@@ -76,6 +83,20 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	return addr
 }
 
+// Validate check whether the address is valid.
+func (id *Address) Validate() error {
+	if id.IsEmpty() {
+		return nil
+	}
+
+	if addrType := id.Type(); addrType < AddressTypeReserved && (addrType < AddressTypeExternal || addrType > AddressTypeContract) {
+		return fmt.Errorf("invalid address type %v, address = %v", addrType, id.ToHex())
+	}
+
+	return nil
+}
+
+// IsEVMContract indicates whether the address is EVM contract address.
 func (id *Address) IsEVMContract() bool {
 	return id.Type() == AddressTypeContract
 }
@@ -105,6 +126,11 @@ func (id *Address) IsReserved() bool {
 // refer link: https://stackoverflow.com/questions/10535743/address-of-a-temporary-in-go
 func (id Address) Bytes() []byte {
 	return id[:]
+}
+
+// String implements the fmt.Stringer interface
+func (id Address) String() string {
+	return id.ToHex()
 }
 
 // ToHex converts address to 0x prefixed HEX format.

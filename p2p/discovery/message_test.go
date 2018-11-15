@@ -11,9 +11,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Message_CodeToStr(t *testing.T) {
@@ -200,7 +200,7 @@ func testFindNode() *findNode {
 
 	f := &findNode{
 		SelfID:  common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781"),
-		QueryID: common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01782"),
+		QueryID: common.HexMustToAddres("0xbc495ea1980db8a2451ece7708c29c12caa9c071"),
 		to:      node,
 	}
 
@@ -221,7 +221,7 @@ func testFindShardNode() *findShardNode {
 }
 
 func testTable() *Table {
-	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d7@127.0.0.1:9000[1]"
+	id1 := "snode://0101f3c956d0a320b153a097c3d04efa488d43d1@127.0.0.1:9000[1]"
 	node1, err := NewNodeFromString(id1)
 	if err != nil {
 		panic(err)
