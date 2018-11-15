@@ -78,11 +78,8 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 }
 
 func (l *LightBackend) getBlockHashFromTxPool(txHash common.Hash) common.Hash {
-	packTxs := l.s.txPool.packTxs
-	for i := 0; i < len(packTxs); i++ {
-		if packTxs[i].txHash == txHash {
-			return packTxs[i].blockHash
-		}
+	if blockHash, ok := l.s.txPool.packTxs[txHash]; ok {
+		return blockHash
 	}
 	return common.EmptyHash
 }
