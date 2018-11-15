@@ -308,3 +308,12 @@ func (pool *txPool) clearConfirmedBlocks() {
 		delete(pool.minedBlocks, hash)
 	}
 }
+
+func (pool *txPool) GetBlockHashFromTxPool(txHash common.Hash) common.Hash {
+	pool.mutex.RUnlock()
+	pool.mutex.RLock()
+	if blockHash, ok := pool.packTxs[txHash]; ok {
+		return blockHash
+	}
+	return common.EmptyHash
+}
