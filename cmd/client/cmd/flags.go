@@ -49,7 +49,7 @@ var (
 	heightFlag  = cli.Int64Flag{
 		Name:        "height",
 		Value:       -1,
-		Usage:       "block height",
+		Usage:       "block height or current block height for negative value",
 		Destination: &heightValue,
 	}
 
