@@ -76,7 +76,7 @@ func Test_DebtPool(t *testing.T) {
 
 	pool.removeObjects()
 
-	assert.Equal(t, pool.getObjectCount(), 2)
+	assert.Equal(t, pool.getObjectCount(true, true), 2)
 	assert.Equal(t, pool.GetDebtByHash(b1.Debts[0].Hash), b1.Debts[0])
 	assert.Equal(t, pool.GetDebtByHash(b1.Debts[1].Hash), b1.Debts[1])
 }

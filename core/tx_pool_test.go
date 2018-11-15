@@ -199,20 +199,20 @@ func Test_TransactionPool_GetPendingTxCount(t *testing.T) {
 	pool, chain := newTestTransactionPool(DefaultTxPoolConfig())
 	defer chain.dispose()
 
-	assert.Equal(t, pool.getPendingObjectCount(), 0)
+	assert.Equal(t, pool.GetPendingTxCount(), 0)
 
 	poolTx := newTestPoolTx(t, 10, 100)
 	chain.addAccount(poolTx.FromAccount(), 50000, 100)
 
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, pool.getPendingObjectCount(), 1)
+	assert.Equal(t, pool.GetPendingTxCount(), 1)
 
 	txs, size := pool.getProcessableObjects(BlockByteLimit)
 	assert.Equal(t, len(txs), 1)
 	assert.Equal(t, size, types.TransactionPreSize)
 
-	assert.Equal(t, pool.getPendingObjectCount(), 0)
+	assert.Equal(t, pool.GetPendingTxCount(), 0)
 }
 
 func Test_TransactionPool_GetTransactions(t *testing.T) {
