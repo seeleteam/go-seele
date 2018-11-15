@@ -79,7 +79,7 @@ func (l *LightBackend) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 
 // GetReceiptByTxHash gets block's receipt by tx hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
-	blockHash := l.s.txPool.GetBlockHashFromTxPool(hash)
+	blockHash := l.s.txPool.GetBlockHash(hash)
 
 	filter := peerFilter{blockHash: blockHash}
 	response, err := l.s.odrBackend.retrieveWithFilter(&odrTxByHashRequest{TxHash: hash}, filter)
@@ -97,7 +97,7 @@ func (l *LightBackend) GetTransaction(pool api.PoolCore, bcStore store.Blockchai
 		return tx, nil, nil
 	}
 
-	blockHash := l.s.txPool.GetBlockHashFromTxPool(txHash)
+	blockHash := l.s.txPool.GetBlockHash(txHash)
 
 	filter := peerFilter{blockHash: blockHash}
 	response, err := l.s.odrBackend.retrieveWithFilter(&odrTxByHashRequest{TxHash: txHash}, filter)
