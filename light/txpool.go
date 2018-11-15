@@ -302,9 +302,9 @@ func (pool *txPool) clearConfirmedBlocks() {
 	}
 
 	for _, hash := range confirmedBlocks {
-		delete(pool.minedBlocks, hash)
 		for i := 0; i < len(pool.minedBlocks[hash].txs); i++ {
 			delete(pool.packTxs, pool.minedBlocks[hash].txs[i].Hash)
 		}
+		delete(pool.minedBlocks, hash)
 	}
 }
