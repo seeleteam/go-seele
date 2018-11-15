@@ -85,6 +85,10 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 
 // Validate check whether the address is valid.
 func (id *Address) Validate() error {
+	if id.IsEmpty() {
+		return nil
+	}
+
 	if addrType := id.Type(); addrType < AddressTypeReserved && (addrType < AddressTypeExternal || addrType > AddressTypeContract) {
 		return fmt.Errorf("invalid address type %v", addrType)
 	}

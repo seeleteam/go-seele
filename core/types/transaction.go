@@ -194,16 +194,12 @@ func newTx(from common.Address, to common.Address, amount *big.Int, price *big.I
 // ValidateWithoutState validates state independent fields in tx.
 func (tx *Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) error {
 	// validate from/to address
-	if !tx.Data.From.IsEmpty() {
-		if err := tx.Data.From.Validate(); err != nil {
-			return err
-		}
+	if err := tx.Data.From.Validate(); err != nil {
+		return err
 	}
 
-	if !tx.Data.To.IsEmpty() {
-		if err := tx.Data.To.Validate(); err != nil {
-			return err
-		}
+	if err := tx.Data.To.Validate(); err != nil {
+		return err
 	}
 
 	// validate amount

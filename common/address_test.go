@@ -129,4 +129,7 @@ func Test_Address_InvalidType(t *testing.T) {
 		_, err := HexToAddress(addr)
 		assert.True(t, strings.Contains(err.Error(), "invalid address type"))
 	}
+
+	// empty address is always valid
+	assert.NoError(t, EmptyAddress.Validate())
 }
