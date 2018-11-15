@@ -32,6 +32,7 @@ type txPool struct {
 	odrBackend                *odrBackend
 	pendingTxs                map[common.Hash]*types.Transaction // txs that not mined yet.
 	minedBlocks               map[common.Hash]*minedBlock        // blocks that already mined.
+	packTxs                   map[common.Hash]common.Hash        // Txs that already packed.
 	headerCh                  chan *types.BlockHeader            // channel to receive new header in canonical chain.
 	currentHeader             *types.BlockHeader                 // current HEAD header in canonical chain.
 	headerChangedEventManager *event.EventManager
@@ -44,6 +45,7 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManag
 		odrBackend:                odrBackend,
 		pendingTxs:                make(map[common.Hash]*types.Transaction),
 		minedBlocks:               make(map[common.Hash]*minedBlock),
+		packTxs:                   make(map[common.Hash]common.Hash),
 		headerCh:                  make(chan *types.BlockHeader, headerChanBufSize),
 		currentHeader:             chain.CurrentHeader(),
 		headerChangedEventManager: headerChangedEventManager,
@@ -221,6 +223,7 @@ func (pool *txPool) rollbackTxs(blockHash common.Hash) {
 
 	for _, tx := range block.txs {
 		pool.pendingTxs[tx.Hash] = tx
+		delete(pool.packTxs, tx.Hash)
 	}
 
 	delete(pool.minedBlocks, blockHash)
@@ -253,6 +256,7 @@ func (pool *txPool) checkMinedTxs(blockHash common.Hash) error {
 		}
 
 		for _, tx := range minedTxs {
+			pool.packTxs[tx.Hash] = block.HeaderHash
 			delete(pool.pendingTxs, tx.Hash)
 		}
 	}
@@ -298,6 +302,18 @@ func (pool *txPool) clearConfirmedBlocks() {
 	}
 
 	for _, hash := range confirmedBlocks {
+		for i := 0; i < len(pool.minedBlocks[hash].txs); i++ {
+			delete(pool.packTxs, pool.minedBlocks[hash].txs[i].Hash)
+		}
 		delete(pool.minedBlocks, hash)
 	}
+}
+
+func (pool *txPool) GetBlockHash(txHash common.Hash) common.Hash {
+	pool.mutex.RUnlock()
+	pool.mutex.RLock()
+	if blockHash, ok := pool.packTxs[txHash]; ok {
+		return blockHash
+	}
+	return common.EmptyHash
 }
