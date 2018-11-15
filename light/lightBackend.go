@@ -87,7 +87,7 @@ func (l *LightBackend) getBlockHashFromTxPool(txHash common.Hash) common.Hash {
 	return common.EmptyHash
 }
 
-// GetReceiptByTxHash gets block's receipt by block hash
+// GetReceiptByTxHash gets block's receipt by tx hash
 func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, error) {
 	blockHash := l.getBlockHashFromTxPool(hash)
 
