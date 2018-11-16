@@ -53,7 +53,8 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 	info.From = *fromAddr
 
 	if nonceValue == DefaultNonce && client != nil {
-		nonce, err := util.GetAccountNonce(client, *fromAddr)
+		// get current nonce
+		nonce, err := util.GetAccountNonce(client, *fromAddr, "", -1)
 		if err != nil {
 			return info, fmt.Errorf("failed to get the sender account nonce: %s", err)
 		}

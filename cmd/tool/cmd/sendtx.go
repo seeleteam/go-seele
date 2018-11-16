@@ -449,7 +449,7 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 			continue
 		}
 
-		amount, ok := getBalance(*addr)
+		amount, ok := getBalance(*addr, "", -1)
 		if !ok {
 			continue
 		}
@@ -471,11 +471,11 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 	}
 }
 
-func getBalance(address common.Address) (int, bool) {
+func getBalance(address common.Address, hexHash string, height int64) (int, bool) {
 	client := getClient(address)
 
 	var result api.GetBalanceResponse
-	if err := client.Call(&result, "seele_getBalance", address); err != nil {
+	if err := client.Call(&result, "seele_getBalance", address, hexHash, height); err != nil {
 		panic(fmt.Sprintf("failed to get the balance: %s\n", err))
 	}
 
@@ -492,10 +492,12 @@ func getClient(address common.Address) *rpc.Client {
 	return client
 }
 
+// getNonce get current nonce
 func getNonce(address common.Address) uint64 {
 	client := getClient(address)
 
-	nonce, err := util.GetAccountNonce(client, address)
+	//get current nonce
+	nonce, err := util.GetAccountNonce(client, address, "", -1)
 	if err != nil {
 		panic(err)
 	}
