@@ -22,12 +22,6 @@ type Proposal interface {
 
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
-
-	EncodeRLP(w io.Writer) error
-
-	DecodeRLP(s *rlp.Stream) error
-
-	String() string
 }
 
 type Request struct {

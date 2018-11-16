@@ -7,10 +7,8 @@ package types
 
 import (
 	"errors"
-	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -185,25 +183,6 @@ func (b *Block) Hash() common.Hash {
 
 func (b *Block) ParentHash() common.Hash {
 	return b.Header.PreviousBlockHash
-}
-
-// EncodeRLP serializes Block into the RLP block format.
-func (b *Block) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, b)
-}
-
-// DecodeRLP decodes the Block
-func (b *Block) DecodeRLP(s *rlp.Stream) error {
-	var eb Block
-	if err := s.Decode(&eb); err != nil {
-		return err
-	}
-	b.HeaderHash, b.Header, b.Transactions, b.Debts = eb.HeaderHash, eb.Header, eb.Transactions, eb.Debts
-	return nil
-}
-
-func (b *Block) String() string {
-	return ""
 }
 
 // Validate validates state independent fields in a block.

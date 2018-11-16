@@ -281,5 +281,5 @@ func Test_GetInfo(t *testing.T) {
 	assert.Equal(t, info.CurrentBlockHeight, uint64(0))
 	assert.Equal(t, info.Shard, uint(0))
 	assert.Equal(t, info.MinerStatus, "Stopped")
-	assert.Equal(t, info.HeaderHash.Hex(), "0xdac29823ca2a5f1683c4751ae725dab175cfdc7ddc60fbce52e196a7d7f3b1df")
+	assert.Equal(t, info.HeaderHash.Hex(), "0x8af6733d304670ff336177e640819fdecc70ded95883d1e5f66b33d8e78b5ef1")
 }

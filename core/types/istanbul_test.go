@@ -22,7 +22,7 @@ func TestHeaderHash(t *testing.T) {
 		panic(err)
 	}
 
-	expectedHash := common.MustHexToHash("0x781548c4137cc140e7927caef082683abd7a304819a0bc7c1d0ce1dec0c7efa1")
+	expectedHash := common.MustHexToHash("0x9e1f014914abc13135c4102917d378f95bce525a1a843a30d8a3ab661a1d7f86")
 
 	// for istanbul consensus
 	header := &BlockHeader{Consensus: IstanbulConsensus, ExtraData: expectedExtra}
