@@ -41,6 +41,7 @@ var (
 type BlockChain interface {
 	GetCurrentState() (*state.Statedb, error)
 	GetState(root common.Hash) (*state.Statedb, error)
+	GetStateByTire(root, blockHash common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
 	CurrentHeader() *types.BlockHeader
 	WriteHeader(*types.BlockHeader) error
