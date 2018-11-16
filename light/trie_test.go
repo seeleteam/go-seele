@@ -8,6 +8,7 @@ package light
 import (
 	"testing"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/trie"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ type mockOdrRetriever struct {
 	resp odrResponse
 }
 
-func (r *mockOdrRetriever) retrieve(request odrRequest) (odrResponse, error) {
+func (r *mockOdrRetriever) retrieveWithFilter(request odrRequest, filter peerFilter) (odrResponse, error) {
 	return r.resp, nil
 }
 
@@ -42,7 +43,7 @@ func Test_Trie_Get(t *testing.T) {
 	}
 
 	// validate on light client
-	lightTrie := newOdrTrie(retriever, trie.Hash(), dbPrefix)
+	lightTrie := newOdrTrie(retriever, trie.Hash(), dbPrefix, common.EmptyHash)
 
 	// key exists
 	v, ok, err := lightTrie.Get([]byte("seele"))

@@ -188,6 +188,10 @@ func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 	return state.NewStatedb(root, bc.accountStateDB)
 }
 
+func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
+	panic("unsupported")
+}
+
 // GetCurrentInfo return the current block and current state info
 func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 	block := bc.CurrentBlock()

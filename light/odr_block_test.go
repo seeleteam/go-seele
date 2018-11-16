@@ -112,6 +112,10 @@ func (chain *TestBlockChain) GetCurrentState() (*state.Statedb, error) { return 
 
 func (chain *TestBlockChain) GetState(root common.Hash) (*state.Statedb, error) { return nil, nil }
 
+func (chain *TestBlockChain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
+	return nil, nil
+}
+
 func (chain *TestBlockChain) GetStore() store.BlockchainStore {
 	db, _ := leveldb.NewTestDatabase()
 	bcStore := newTestBlockchainDatabase(db)

@@ -96,7 +96,7 @@ func Test_LightChain_GetState(t *testing.T) {
 	lc, dispose, _ := newTestLightChain()
 	defer dispose()
 
-	state, err := lc.GetState(common.EmptyHash)
+	state, err := lc.GetStateByRootAndBlockHash(common.EmptyHash, common.EmptyHash)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, state != nil, true)
 
