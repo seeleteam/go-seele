@@ -64,13 +64,11 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 
 // GetState get statedb
 func (lc *LightChain) GetState(root common.Hash) (*state.Statedb, error) {
-	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix)
-	return state.NewStatedbWithTrie(trie), nil
+	panic("unsupported")
 }
 
-func (lc *LightChain) GetStateByTire(root, blockHash common.Hash) (*state.Statedb, error) {
-	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix)
-	trie.SetBlockHash(blockHash)
+func (lc *LightChain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
+	trie := newOdrTrie(lc.odrBackend, root, state.TrieDbPrefix, blockHash)
 	return state.NewStatedbWithTrie(trie), nil
 }
 
@@ -127,5 +125,5 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 
 // GetCurrentState get current state
 func (lc *LightChain) GetCurrentState() (*state.Statedb, error) {
-	return lc.GetStateByTire(lc.currentHeader.StateHash, lc.currentHeader.Hash())
+	return lc.GetStateByRootAndBlockHash(lc.currentHeader.StateHash, lc.currentHeader.Hash())
 }

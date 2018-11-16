@@ -188,7 +188,7 @@ func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 	return state.NewStatedb(root, bc.accountStateDB)
 }
 
-func (bc *Blockchain) GetStateByTire() (*state.Statedb, error) {
+func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
 	panic("unsupported")
 }
 

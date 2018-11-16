@@ -38,17 +38,14 @@ type odrTrie struct {
 	blockHash common.Hash
 }
 
-func newOdrTrie(retriever odrRetriever, root common.Hash, dbPrefix []byte) *odrTrie {
+func newOdrTrie(retriever odrRetriever, root common.Hash, dbPrefix []byte, blockHash common.Hash) *odrTrie {
 	return &odrTrie{
-		odr:      retriever,
-		root:     root,
-		db:       newOdrDatabase(),
-		dbPrefix: dbPrefix,
+		odr:       retriever,
+		root:      root,
+		db:        newOdrDatabase(),
+		dbPrefix:  dbPrefix,
+		blockHash: blockHash,
 	}
-}
-
-func (t *odrTrie) SetBlockHash(blockHash common.Hash) {
-	t.blockHash = blockHash
 }
 
 func (t *odrTrie) Hash() common.Hash {
