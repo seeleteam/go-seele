@@ -42,7 +42,7 @@ func (api *TransactionPoolAPI) GetDebtByHash(debtHash string) (map[string]interf
 		output["status"] = "pool"
 	} else {
 		output["status"] = "block"
-		output["blockHash"] = blockIdx.BlockHash.ToHex()
+		output["blockHash"] = blockIdx.BlockHash.Hex()
 		output["blockHeight"] = blockIdx.BlockHeight
 		output["debtIndex"] = blockIdx.Index
 	}

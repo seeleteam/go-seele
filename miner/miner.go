@@ -213,7 +213,7 @@ out:
 					break
 				}
 
-				miner.log.Info("found a new mined block, block height:%d, hash:%s, time: %d", result.Header.Height, result.HeaderHash.ToHex(), time.Now().UnixNano())
+				miner.log.Info("found a new mined block, block height:%d, hash:%s, time: %d", result.Header.Height, result.HeaderHash.Hex(), time.Now().UnixNano())
 				ret := miner.saveBlock(result)
 				if ret != nil {
 					miner.log.Error("failed to save the block, for %s", ret.Error())
@@ -263,7 +263,7 @@ func (miner *Miner) prepareNewBlock() error {
 		CreateTimestamp:   big.NewInt(timestamp),
 	}
 
-	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.ToHex())
+	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
 	err = miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
 	if err != nil {
 		return fmt.Errorf("failed to prepare header, %s", err)

@@ -90,7 +90,7 @@ func (id *Address) Validate() error {
 	}
 
 	if addrType := id.Type(); addrType < AddressTypeReserved && (addrType < AddressTypeExternal || addrType > AddressTypeContract) {
-		return fmt.Errorf("invalid address type %v, address = %v", addrType, id.ToHex())
+		return fmt.Errorf("invalid address type %v, address = %v", addrType, id.Hex())
 	}
 
 	return nil
@@ -130,11 +130,11 @@ func (id Address) Bytes() []byte {
 
 // String implements the fmt.Stringer interface
 func (id Address) String() string {
-	return id.ToHex()
+	return id.Hex()
 }
 
-// ToHex converts address to 0x prefixed HEX format.
-func (id Address) ToHex() string {
+// Hex converts address to 0x prefixed HEX format.
+func (id Address) Hex() string {
 	return hexutil.BytesToHex(id.Bytes())
 }
 
@@ -195,7 +195,7 @@ func (id Address) Big() *big.Int { return new(big.Int).SetBytes(id[:]) }
 
 // MarshalText marshals the address to HEX string.
 func (id Address) MarshalText() ([]byte, error) {
-	str := id.ToHex()
+	str := id.Hex()
 	return []byte(str), nil
 }
 

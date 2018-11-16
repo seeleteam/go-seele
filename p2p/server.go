@@ -389,7 +389,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			return errors.New("not found nodeID in discovery database")
 		}
 
-		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.ToHex())
+		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.Hex())
 		peer.Node = peerNode
 	}
 

@@ -541,7 +541,7 @@ outLoop:
 func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 	for _, h := range headInfos {
 		// add it for all received block messages
-		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.ToHex(), time.Now().UnixNano())
+		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 
 		if err := d.chain.WriteBlock(h.block); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)

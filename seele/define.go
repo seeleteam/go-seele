@@ -41,7 +41,7 @@ type statusData struct {
 // blockHeadersQuery represents a block header query.
 type blockHeadersQuery struct {
 	Magic   uint32      // Magic number for request
-	Hash    common.Hash // Block hash from which to retrieve headers (excludes Number)
+	Hash    common.Hash // Block hash from which to retrieve headers (excludes Height)
 	Number  uint64      // Block number from which to retrieve headers (excludes Hash)
 	Amount  uint64      // Maximum number of headers to retrieve
 	Reverse bool        // Query direction (false = rising towards latest, true = falling towards genesis)
@@ -49,7 +49,7 @@ type blockHeadersQuery struct {
 
 type blocksQuery struct {
 	Magic  uint32      // Magic number for request
-	Hash   common.Hash // Block hash from which to retrieve (excludes Number)
+	Hash   common.Hash // Block hash from which to retrieve (excludes Height)
 	Number uint64      // Block hash from which to retrieve (excludes Hash)
 	Amount uint64      // Maximum number of headers to retrieve
 }

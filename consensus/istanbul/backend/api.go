@@ -1,26 +1,15 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package backend
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/rpc"
 )
 
 // API is a user facing RPC API to dump Istanbul state
@@ -32,7 +21,7 @@ type API struct {
 // GetSnapshot retrieves the state snapshot at a given block.
 func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
+	var header *types.BlockHeader
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else {
@@ -42,7 +31,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Height, header.Hash(), nil)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -51,13 +40,13 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.istanbul.snapshot(api.chain, header.Height, header.Hash(), nil)
 }
 
 // GetValidators retrieves the list of authorized validators at the specified block.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
 	// Retrieve the requested block number (or current if none requested)
-	var header *types.Header
+	var header *types.BlockHeader
 	if number == nil || *number == rpc.LatestBlockNumber {
 		header = api.chain.CurrentHeader()
 	} else {
@@ -67,7 +56,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.istanbul.snapshot(api.chain, header.Height, header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +69,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.istanbul.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.istanbul.snapshot(api.chain, header.Height, header.Hash(), nil)
 	if err != nil {
 		return nil, err
 	}

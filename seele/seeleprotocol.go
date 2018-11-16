@@ -309,7 +309,7 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 	}
 
 	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
-		block.Header.Height, block.HeaderHash.ToHex(), block.Header.PreviousBlockHash.ToHex())
+		block.Header.Height, block.HeaderHash.Hex(), block.Header.PreviousBlockHash.Hex())
 
 	p.broadcastChainHead()
 }
@@ -429,7 +429,7 @@ handler:
 
 			tx := p.txPool.GetTransaction(txHash)
 			if tx == nil {
-				p.log.Debug("[transactionRequestMsgCode] not found tx in tx pool %s", txHash.ToHex())
+				p.log.Debug("[transactionRequestMsgCode] not found tx in tx pool %s", txHash.Hex())
 				continue
 			}
 
@@ -468,7 +468,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got block hash msg %s", blockHash.ToHex())
+			p.log.Debug("got block hash msg %s", blockHash.Hex())
 
 			if !peer.knownBlocks.Contains(blockHash) {
 				peer.knownBlocks.Add(blockHash, nil)
@@ -488,7 +488,7 @@ handler:
 				continue
 			}
 
-			p.log.Debug("got block request msg %s", blockHash.ToHex())
+			p.log.Debug("got block request msg %s", blockHash.Hex())
 			block, err := p.chain.GetStore().GetBlock(blockHash)
 			if err != nil {
 				p.log.Warn("not found request block %s", err.Error())
@@ -508,7 +508,7 @@ handler:
 				continue
 			}
 
-			p.log.Info("got block message and save it. height:%d, hash:%s, time: %d", block.Header.Height, block.HeaderHash.ToHex(), time.Now().UnixNano())
+			p.log.Info("got block message and save it. height:%d, hash:%s, time: %d", block.Header.Height, block.HeaderHash.Hex(), time.Now().UnixNano())
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork

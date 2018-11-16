@@ -44,10 +44,10 @@ const (
 	epochLength        = 30000   // Blocks per epoch
 	mixBytes           = 128     // Width of mix
 	hashBytes          = 64      // Hash length in bytes
-	hashWords          = 16      // Number of 32 bit ints in a hash
-	datasetParents     = 256     // Number of parents of each dataset element
-	cacheRounds        = 3       // Number of rounds in cache production
-	loopAccesses       = 64      // Number of accesses in hashimoto loop
+	hashWords          = 16      // Height of 32 bit ints in a hash
+	datasetParents     = 256     // Height of parents of each dataset element
+	cacheRounds        = 3       // Height of rounds in cache production
+	loopAccesses       = 64      // Height of accesses in hashimoto loop
 )
 
 // cacheSize returns the size of the ethash verification cache that belongs to a certain

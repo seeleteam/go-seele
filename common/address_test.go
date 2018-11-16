@@ -39,11 +39,11 @@ func Test_BytesToAddress(t *testing.T) {
 }
 
 func Test_ToHexAndEqualAndIsEmpty(t *testing.T) {
-	// ToHex
+	// Hex
 	b1 := make([]byte, AddressLen)
 	b1[AddressLen-1] = 1
 	addr1 := BytesToAddress([]byte{1})
-	assert.Equal(t, addr1.ToHex(), "0x0000000000000000000000000000000000000001")
+	assert.Equal(t, addr1.Hex(), "0x0000000000000000000000000000000000000001")
 
 	// Equal
 	b2 := make([]byte, AddressLen)

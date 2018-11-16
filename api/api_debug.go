@@ -22,7 +22,7 @@ func (api *PrivateDebugAPI) GetTxPoolContent() (map[string][]map[string]interfac
 
 	content := make(map[string][]map[string]interface{})
 	for _, tx := range data {
-		key := tx.Data.From.ToHex()
+		key := tx.Data.From.Hex()
 		content[key] = append(content[key], PrintableOutputTx(tx))
 	}
 

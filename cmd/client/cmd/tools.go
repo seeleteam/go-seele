@@ -120,7 +120,7 @@ func GenerateKeyAction(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("public key:  %s\n", publicKey.ToHex())
+	fmt.Printf("public key:  %s\n", publicKey.Hex())
 	fmt.Printf("private key: %s\n", hexutil.BytesToHex(crypto.FromECDSA(privateKey)))
 	return nil
 }
@@ -137,7 +137,7 @@ func DecryptKeyFileAction(c *cli.Context) error {
 		return fmt.Errorf("invalid key file: %s", err)
 	}
 
-	fmt.Printf("public key:  %s\n", key.Address.ToHex())
+	fmt.Printf("public key:  %s\n", key.Address.Hex())
 	fmt.Printf("private key: %s\n", hexutil.BytesToHex(crypto.FromECDSA(key.PrivateKey)))
 	return nil
 }

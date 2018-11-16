@@ -73,7 +73,7 @@ func (pool *txPool) AddTransaction(tx *types.Transaction) error {
 	defer pool.mutex.Unlock()
 
 	if pool.pendingTxs[tx.Hash] != nil {
-		return fmt.Errorf("Transaction already exists, hash is %v", tx.Hash.ToHex())
+		return fmt.Errorf("Transaction already exists, hash is %v", tx.Hash.Hex())
 	}
 
 	if _, err := pool.odrBackend.retrieve(&odrAddTx{Tx: *tx}); err != nil {

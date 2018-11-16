@@ -59,7 +59,7 @@ func printLogByABI(log *types.Log, parsed abi.ABI) (string, error) {
 	}
 
 	for _, topic := range log.Topics {
-		seelelog.Topics = append(seelelog.Topics, topic.ToHex())
+		seelelog.Topics = append(seelelog.Topics, topic.Hex())
 	}
 
 	for _, event := range parsed.Events {

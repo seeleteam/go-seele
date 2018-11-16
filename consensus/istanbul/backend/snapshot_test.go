@@ -1,18 +1,7 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package backend
 
@@ -23,14 +12,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
+	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/core/vm"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 )
 
 type testerVote struct {
@@ -52,16 +41,16 @@ func newTesterAccountPool() *testerAccountPool {
 	}
 }
 
-func (ap *testerAccountPool) sign(header *types.Header, validator string) {
+func (ap *testerAccountPool) sign(header *types.BlockHeader, validator string) {
 	// Ensure we have a persistent key for the validator
 	if ap.accounts[validator] == nil {
 		ap.accounts[validator], _ = crypto.GenerateKey()
 	}
 	// Sign the header and embed the signature in extra data
 	hashData := crypto.Keccak256([]byte(sigHash(header).Bytes()))
-	sig, _ := crypto.Sign(hashData, ap.accounts[validator])
+	sig, _ := crypto.Sign(ap.accounts[validator], hashData)
 
-	writeSeal(header, sig)
+	writeSeal(header, sig.Sig)
 }
 
 func (ap *testerAccountPool) address(account string) common.Address {
@@ -350,7 +339,7 @@ func TestVoting(t *testing.T) {
 		chain, err := core.NewBlockChain(db, genesis.Config, engine, vm.Config{})
 
 		// Assemble a chain of headers from the cast votes
-		headers := make([]*types.Header, len(tt.votes))
+		headers := make([]*types.BlockHeader, len(tt.votes))
 		for j, vote := range tt.votes {
 			headers[j] = &types.Header{
 				Number:     big.NewInt(int64(j) + 1),
@@ -373,7 +362,7 @@ func TestVoting(t *testing.T) {
 		// Pass all the headers through clique and ensure tallying succeeds
 		head := headers[len(headers)-1]
 
-		snap, err := engine.snapshot(chain, head.Number.Uint64(), head.Hash(), headers)
+		snap, err := engine.snapshot(chain, head.Height, head.Hash(), headers)
 		if err != nil {
 			t.Errorf("test %d: failed to create voting snapshot: %v", i, err)
 			continue
@@ -427,7 +416,7 @@ func TestSaveAndLoad(t *testing.T) {
 			common.StringToAddress("1234567895"),
 		}, istanbul.RoundRobin),
 	}
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := database.NewMemDatabase()
 	err := snap.store(db)
 	if err != nil {
 		t.Errorf("store snapshot failed: %v", err)

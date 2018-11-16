@@ -118,5 +118,5 @@ func (m *solMethod) encodeInput(argType, argValue string) (string, error) {
 }
 
 func (m *solMethod) encodeValue(num *big.Int) string {
-	return common.BigToHash(num).ToHex()[2:]
+	return common.BigToHash(num).Hex()[2:]
 }

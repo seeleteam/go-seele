@@ -700,7 +700,7 @@ func TestHashimoto(t *testing.T) {
 //
 //	// Define a heavy enough block, one from mainnet should do
 //	block := types.NewBlockWithHeader(&types.Header{
-//		Number:      big.NewInt(3311058),
+//		Height:      big.NewInt(3311058),
 //		ParentHash:  common.HexToHash("0xd783efa4d392943503f28438ad5830b2d5964696ffc285f338585e9fe0a37a05"),
 //		UncleHash:   common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"),
 //		Coinbase:    common.HexToAddress("0xc0ea08a2d404d3172d2add29a45be56da40e2949"),

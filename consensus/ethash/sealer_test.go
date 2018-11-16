@@ -65,14 +65,14 @@ func TestRemoteNotify(t *testing.T) {
 	ethash.Seal(nil, block, nil, nil)
 	select {
 	case work := <-sink:
-		if want := sealHash(header).ToHex(); work[0] != want {
+		if want := sealHash(header).Hex(); work[0] != want {
 			t.Errorf("work packet hash mismatch: have %s, want %s", work[0], want)
 		}
-		if want := common.BytesToHash(SeedHash(header.Height)).ToHex(); work[1] != want {
+		if want := common.BytesToHash(SeedHash(header.Height)).Hex(); work[1] != want {
 			t.Errorf("work packet seed mismatch: have %s, want %s", work[1], want)
 		}
 		target := new(big.Int).Div(new(big.Int).Lsh(big.NewInt(1), 256), header.Difficulty)
-		if want := common.BytesToHash(target.Bytes()).ToHex(); work[2] != want {
+		if want := common.BytesToHash(target.Bytes()).Hex(); work[2] != want {
 			t.Errorf("work packet target mismatch: have %s, want %s", work[2], want)
 		}
 	case <-time.After(3 * time.Second):
@@ -147,7 +147,7 @@ func TestRemoteMultiNotify(t *testing.T) {
 //		// Case1: submit solution for the latest mining package
 //		{
 //			[]*types.Header{
-//				{ParentHash: common.BytesToHash([]byte{0xa}), Number: big.NewInt(1), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xa}), Height: big.NewInt(1), Difficulty: big.NewInt(100000000)},
 //			},
 //			0,
 //			true,
@@ -155,8 +155,8 @@ func TestRemoteMultiNotify(t *testing.T) {
 //		// Case2: submit solution for the previous package but have same parent.
 //		{
 //			[]*types.Header{
-//				{ParentHash: common.BytesToHash([]byte{0xb}), Number: big.NewInt(2), Difficulty: big.NewInt(100000000)},
-//				{ParentHash: common.BytesToHash([]byte{0xb}), Number: big.NewInt(2), Difficulty: big.NewInt(100000001)},
+//				{ParentHash: common.BytesToHash([]byte{0xb}), Height: big.NewInt(2), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xb}), Height: big.NewInt(2), Difficulty: big.NewInt(100000001)},
 //			},
 //			0,
 //			true,
@@ -164,8 +164,8 @@ func TestRemoteMultiNotify(t *testing.T) {
 //		// Case3: submit stale but acceptable solution
 //		{
 //			[]*types.Header{
-//				{ParentHash: common.BytesToHash([]byte{0xc}), Number: big.NewInt(3), Difficulty: big.NewInt(100000000)},
-//				{ParentHash: common.BytesToHash([]byte{0xd}), Number: big.NewInt(9), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xc}), Height: big.NewInt(3), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xd}), Height: big.NewInt(9), Difficulty: big.NewInt(100000000)},
 //			},
 //			0,
 //			true,
@@ -173,8 +173,8 @@ func TestRemoteMultiNotify(t *testing.T) {
 //		// Case4: submit very old solution
 //		{
 //			[]*types.Header{
-//				{ParentHash: common.BytesToHash([]byte{0xe}), Number: big.NewInt(10), Difficulty: big.NewInt(100000000)},
-//				{ParentHash: common.BytesToHash([]byte{0xf}), Number: big.NewInt(17), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xe}), Height: big.NewInt(10), Difficulty: big.NewInt(100000000)},
+//				{ParentHash: common.BytesToHash([]byte{0xf}), Height: big.NewInt(17), Difficulty: big.NewInt(100000000)},
 //			},
 //			0,
 //			false,
@@ -203,8 +203,8 @@ func TestRemoteMultiNotify(t *testing.T) {
 //			if res.Header().Difficulty.Uint64() != c.headers[c.submitIndex].Difficulty.Uint64() {
 //				t.Errorf("case %d block difficulty mismatch, want %d, get %d", id+1, c.headers[c.submitIndex].Difficulty, res.Header().Difficulty)
 //			}
-//			if res.Header().Number.Uint64() != c.headers[c.submitIndex].Number.Uint64() {
-//				t.Errorf("case %d block number mismatch, want %d, get %d", id+1, c.headers[c.submitIndex].Number.Uint64(), res.Header().Number.Uint64())
+//			if res.Header().Height.Uint64() != c.headers[c.submitIndex].Height.Uint64() {
+//				t.Errorf("case %d block number mismatch, want %d, get %d", id+1, c.headers[c.submitIndex].Height.Uint64(), res.Header().Height.Uint64())
 //			}
 //			if res.Header().ParentHash != c.headers[c.submitIndex].ParentHash {
 //				t.Errorf("case %d block parent hash mismatch, want %s, get %s", id+1, c.headers[c.submitIndex].ParentHash.Hex(), res.Header().ParentHash.Hex())

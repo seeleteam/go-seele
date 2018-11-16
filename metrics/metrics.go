@@ -72,7 +72,7 @@ func StartMetrics(
 			"nodename":  nodeName,
 			"networkid": networkID,
 			"version":   version,
-			"coinbase":  coinBase.ToHex(),
+			"coinbase":  coinBase.Hex(),
 			"shardid":   fmt.Sprint(common.LocalShardNumber),
 		},
 		log,

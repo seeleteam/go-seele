@@ -11,6 +11,8 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 )
 
 var (
@@ -33,6 +35,12 @@ var (
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
 )
 
+type ConsensusType int
+
+const (
+	IstanbulConsensus ConsensusType = iota
+)
+
 // BlockHeader represents the header of a block in the blockchain.
 type BlockHeader struct {
 	PreviousBlockHash common.Hash    // PreviousBlockHash represents the hash of the parent block
@@ -46,6 +54,7 @@ type BlockHeader struct {
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	Witness           []byte         //Witness is the block pow proof info
+	Consensus			ConsensusType
 	ExtraData         []byte         // ExtraData stores the extra info of block header.
 }
 
@@ -69,6 +78,14 @@ func (header *BlockHeader) Clone() *BlockHeader {
 
 // Hash calculates and returns the hash of the block header.
 func (header *BlockHeader) Hash() common.Hash {
+	if header.Consensus == IstanbulConsensus {
+		h := header.Clone()
+		// Seal is reserved in extra-data. To prove block is signed by the proposer.
+		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
+			return crypto.MustHash(istanbulHeader)
+		}
+	}
+
 	return crypto.MustHash(header)
 }
 
@@ -155,6 +172,37 @@ func (block *Block) GetShardNumber() uint {
 	}
 
 	return block.Header.Creator.Shard()
+}
+
+func (b *Block) Height() uint64 {
+	return b.Header.Height
+}
+
+func (b *Block) Hash() common.Hash {
+	return b.HeaderHash
+}
+
+func (b *Block) ParentHash() common.Hash {
+	return b.Header.PreviousBlockHash
+}
+
+// EncodeRLP serializes Block into the RLP block format.
+func (b *Block) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, b)
+}
+
+// DecodeRLP decodes the Block
+func (b *Block) DecodeRLP(s *rlp.Stream) error {
+	var eb Block
+	if err := s.Decode(&eb); err != nil {
+		return err
+	}
+	b.HeaderHash, b.Header, b.Transactions, b.Debts = eb.HeaderHash, eb.Header, eb.Transactions, eb.Debts
+	return nil
+}
+
+func (b *Block) String() string {
+	return ""
 }
 
 // Validate validates state independent fields in a block.

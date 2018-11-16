@@ -75,7 +75,7 @@ type Context struct {
 	CanTransfer CanTransferFunc
 	// Transfer transfers ether from one account to the other
 	Transfer TransferFunc
-	// GetHash returns the hash corresponding to n
+	// Hash returns the hash corresponding to n
 	GetHash GetHashFunc
 
 	// Message information

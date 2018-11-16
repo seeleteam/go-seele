@@ -84,7 +84,7 @@ func Test_deleteNode(t *testing.T) {
 	server := NewServer(genesis, *config, nil)
 	assert.Equal(t, server.PeerCount(), 0)
 
-	addr := crypto.MustGenerateShardAddress(1).ToHex()
+	addr := crypto.MustGenerateShardAddress(1).Hex()
 	peer1, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func Test_deleteNode(t *testing.T) {
 	server.addPeer(peer1)
 	assert.Equal(t, server.PeerCount(), 1)
 
-	addr = crypto.MustGenerateShardAddress(1).ToHex()
+	addr = crypto.MustGenerateShardAddress(1).Hex()
 	peer2, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -149,7 +149,7 @@ func Test_PeerInfos(t *testing.T) {
 	peerInfoArray := server.PeersInfo()
 	assert.Equal(t, len(peerInfoArray), 0)
 
-	addr := crypto.MustGenerateShardAddress(1).ToHex()
+	addr := crypto.MustGenerateShardAddress(1).Hex()
 	peer1, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)

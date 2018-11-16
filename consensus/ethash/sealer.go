@@ -238,9 +238,9 @@ func (ethash *Ethash) remote(notify []string, noverify bool) {
 	makeWork := func(block *types.Block) {
 		hash := sealHash(block.Header)
 
-		currentWork[0] = hash.ToHex()
-		currentWork[1] = common.BytesToHash(SeedHash(block.Header.Height)).ToHex()
-		currentWork[2] = common.BytesToHash(new(big.Int).Div(two256, block.Header.Difficulty).Bytes()).ToHex()
+		currentWork[0] = hash.Hex()
+		currentWork[1] = common.BytesToHash(SeedHash(block.Header.Height)).Hex()
+		currentWork[2] = common.BytesToHash(new(big.Int).Div(two256, block.Header.Difficulty).Bytes()).Hex()
 
 		// Trace the seal work fetched by remote sealer.
 		currentBlock = block

@@ -1,18 +1,7 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package backend
 
@@ -24,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 )
 
 func TestSign(t *testing.T) {
@@ -52,15 +41,15 @@ func TestCheckSignature(t *testing.T) {
 	key, _ := generatePrivateKey()
 	data := []byte("Here is a string....")
 	hashData := crypto.Keccak256([]byte(data))
-	sig, _ := crypto.Sign(hashData, key)
+	sig, _ := crypto.Sign(key, hashData)
 	b := newBackend()
 	a := getAddress()
-	err := b.CheckSignature(data, a, sig)
+	err := b.CheckSignature(data, a, sig.Sig)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 	a = getInvalidAddress()
-	err = b.CheckSignature(data, a, sig)
+	err = b.CheckSignature(data, a, sig.Sig)
 	if err != errInvalidSignature {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
 	}
@@ -74,12 +63,12 @@ func TestCheckValidatorSignature(t *testing.T) {
 	hashData := crypto.Keccak256([]byte(data))
 	for i, k := range keys {
 		// Sign
-		sig, err := crypto.Sign(hashData, k)
+		sig, err := crypto.Sign(k, hashData)
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
 		// CheckValidatorSignature should succeed
-		addr, err := istanbul.CheckValidatorSignature(vset, data, sig)
+		addr, err := istanbul.CheckValidatorSignature(vset, data, sig.Sig)
 		if err != nil {
 			t.Errorf("error mismatch: have %v, want nil", err)
 		}
@@ -95,13 +84,13 @@ func TestCheckValidatorSignature(t *testing.T) {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 	// Sign
-	sig, err := crypto.Sign(hashData, key)
+	sig, err := crypto.Sign(key, hashData)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	addr, err := istanbul.CheckValidatorSignature(vset, data, sig)
+	addr, err := istanbul.CheckValidatorSignature(vset, data, sig.Sig)
 	if err != istanbul.ErrUnauthorizedAddress {
 		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnauthorizedAddress)
 	}
@@ -128,7 +117,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.Height()-1), block)
 				return expectedBlock
 			},
 		},
@@ -139,7 +128,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.Height()-1), block)
 				return expectedBlock
 			},
 		},
