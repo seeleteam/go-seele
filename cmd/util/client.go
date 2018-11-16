@@ -18,9 +18,10 @@ import (
 )
 
 // GetAccountNonce get account nonce by account
-func GetAccountNonce(client *rpc.Client, account common.Address) (uint64, error) {
+func GetAccountNonce(client *rpc.Client, account common.Address, hexHash string, height int64) (uint64, error) {
 	var nonce uint64
-	err := client.Call(&nonce, "seele_getAccountNonce", account)
+	err := client.Call(&nonce, "seele_getAccountNonce", account, hexHash, height)
+
 	return nonce, err
 }
 
