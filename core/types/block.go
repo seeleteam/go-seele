@@ -33,6 +33,13 @@ var (
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
 )
 
+type ConsensusType uint
+
+const (
+	PowConsensus ConsensusType = iota
+	IstanbulConsensus
+)
+
 // BlockHeader represents the header of a block in the blockchain.
 type BlockHeader struct {
 	PreviousBlockHash common.Hash    // PreviousBlockHash represents the hash of the parent block
@@ -46,7 +53,8 @@ type BlockHeader struct {
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	Witness           []byte         //Witness is the block pow proof info
-	ExtraData         []byte         // ExtraData stores the extra info of block header.
+	Consensus         ConsensusType
+	ExtraData         []byte // ExtraData stores the extra info of block header.
 }
 
 // Clone returns a clone of the block header.
@@ -69,6 +77,14 @@ func (header *BlockHeader) Clone() *BlockHeader {
 
 // Hash calculates and returns the hash of the block header.
 func (header *BlockHeader) Hash() common.Hash {
+	if header.Consensus == IstanbulConsensus {
+		h := header.Clone()
+		// Seal is reserved in extra-data. To prove block is signed by the proposer.
+		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
+			return crypto.MustHash(istanbulHeader)
+		}
+	}
+
 	return crypto.MustHash(header)
 }
 
@@ -155,6 +171,18 @@ func (block *Block) GetShardNumber() uint {
 	}
 
 	return block.Header.Creator.Shard()
+}
+
+func (b *Block) Height() uint64 {
+	return b.Header.Height
+}
+
+func (b *Block) Hash() common.Hash {
+	return b.HeaderHash
+}
+
+func (b *Block) ParentHash() common.Hash {
+	return b.Header.PreviousBlockHash
 }
 
 // Validate validates state independent fields in a block.

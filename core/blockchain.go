@@ -128,7 +128,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 
 	bc.genesisBlock, err = bcStore.GetBlock(genesisHash)
 	if err != nil {
-		bc.log.Error("Failed to get block by genesis block hash, hash = %v, error = %v", genesisHash.ToHex(), err.Error())
+		bc.log.Error("Failed to get block by genesis block hash, hash = %v, error = %v", genesisHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", genesisHash)
 	}
 
@@ -140,13 +140,13 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 
 	if bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash); err != nil {
-		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
+		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", currentHeaderHash)
 	}
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
-		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.ToHex(), err.Error())
+		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
 	}
 
@@ -552,7 +552,7 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) (recoverable bool, retErr error) {
 	data := statedb.GetData(d.Data.Account, d.Hash)
 	if bytes.Equal(data, types.DebtDataFlag) {
-		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.ToHex())
+		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
 		return
 	}
 

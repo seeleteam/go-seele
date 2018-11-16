@@ -164,7 +164,7 @@ func getSubChainFromReceipt(client *rpc.Client) (*system.SubChainInfo, error) {
 		return nil, err
 	}
 	payloadBytes := append([]byte{system.CmdSubChainQuery}, []byte(nameValue)...)
-	mapReceipt, err := util.CallContract(client, system.SubChainContractAddress.ToHex(), hexutil.BytesToHex(payloadBytes), -1)
+	mapReceipt, err := util.CallContract(client, system.SubChainContractAddress.Hex(), hexutil.BytesToHex(payloadBytes), -1)
 	if err != nil {
 		return nil, err
 	}

@@ -110,8 +110,8 @@ func Test_relayTx(t *testing.T) {
 func Test_storeBlockHeader(t *testing.T) {
 	req, _ := newTestRelayRequest(t)
 	req.PreviousBlockHex = req.BlockHeaderHex
-	req.BlockHeaderHex = crypto.MustGenerateRandomAddress().ToHex()
-	req.TxHexs = []string{crypto.MustGenerateRandomAddress().ToHex()}
+	req.BlockHeaderHex = crypto.MustGenerateRandomAddress().Hex()
+	req.TxHexs = []string{crypto.MustGenerateRandomAddress().Hex()}
 	req.Height++
 	reqBytes, err := json.Marshal(req)
 	assert.NoError(t, err)
@@ -190,8 +190,8 @@ func newTestRelayContext(t *testing.T) *Context {
 	storeBlockHeader(reqBytes, ctx)
 	for height := uint64(0); height < 10; height++ {
 		req.PreviousBlockHex = req.BlockHeaderHex
-		req.BlockHeaderHex = crypto.MustGenerateRandomAddress().ToHex()
-		req.TxHexs = []string{crypto.MustGenerateRandomAddress().ToHex()}
+		req.BlockHeaderHex = crypto.MustGenerateRandomAddress().Hex()
+		req.TxHexs = []string{crypto.MustGenerateRandomAddress().Hex()}
 		req.Height = height
 		reqBytes, _ := json.Marshal(req)
 		storeBlockHeader(reqBytes, ctx)

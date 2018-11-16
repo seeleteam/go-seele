@@ -52,12 +52,12 @@ func EncryptKey(key *Key, auth string) ([]byte, error) {
 		CipherText: hex.EncodeToString(cipherText),
 		CipherIV:   hex.EncodeToString(iv),
 		Salt:       hex.EncodeToString(salt),
-		MAC:        mac.ToHex(),
+		MAC:        mac.Hex(),
 	}
 
 	encryptedKey := encryptedKey{
 		Version: Version,
-		Address: key.Address.ToHex(),
+		Address: key.Address.Hex(),
 		Crypto:  info,
 	}
 

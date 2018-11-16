@@ -76,8 +76,8 @@ func Test_GetReceiptByHash(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, outputs["result"], hexutil.BytesToHex(receipts[0].Result))
 	assert.Equal(t, outputs["failed"], false)
-	assert.Equal(t, outputs["poststate"], receipts[0].PostState.ToHex())
-	assert.Equal(t, outputs["txhash"], tx1.Hash.ToHex())
+	assert.Equal(t, outputs["poststate"], receipts[0].PostState.Hex())
+	assert.Equal(t, outputs["txhash"], tx1.Hash.Hex())
 	assert.Equal(t, outputs["usedGas"], receipts[0].UsedGas)
 	assert.Equal(t, outputs["totalFee"], receipts[0].TotalFee)
 }

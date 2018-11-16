@@ -60,7 +60,7 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	// recover the previous HEAD block hash.
 	if !rp.PreviousHeadBlockHash.IsEmpty() {
 		if err := bcStore.PutHeadBlockHash(rp.PreviousHeadBlockHash); err != nil {
-			rpLog.Error("Failed to recover HEAD block hash, hash = %v, error = %v", rp.PreviousCanonicalBlockHash.ToHex(), err.Error())
+			rpLog.Error("Failed to recover HEAD block hash, hash = %v, error = %v", rp.PreviousCanonicalBlockHash.Hex(), err.Error())
 			return errors.NewStackedErrorf(err, "failed to put HEAD block hash %v", rp.PreviousHeadBlockHash)
 		}
 

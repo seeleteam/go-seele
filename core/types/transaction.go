@@ -321,11 +321,11 @@ func (tx *Transaction) ValidateState(statedb stateDB) error {
 	cost := new(big.Int).Add(tx.Data.Amount, fee)
 
 	if balance := statedb.GetBalance(tx.Data.From); cost.Cmp(balance) > 0 {
-		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v, cost:%v", tx.Data.From.ToHex(), balance, tx.Data.Amount, fee, cost)
+		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v, cost:%v", tx.Data.From.Hex(), balance, tx.Data.Amount, fee, cost)
 	}
 
 	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
-		return fmt.Errorf("nonce is too small, acount:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.ToHex(), tx.Data.AccountNonce, accountNonce)
+		return fmt.Errorf("nonce is too small, acount:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.Hex(), tx.Data.AccountNonce, accountNonce)
 	}
 
 	return nil

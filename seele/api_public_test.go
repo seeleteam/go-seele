@@ -92,19 +92,19 @@ func Test_GetLogs(t *testing.T) {
 
 	// Verify the result
 	payload := "0xe84bb31d4e9adbff26e80edeecb6cf8f3a95d1ba519cf60a08a6e6f8d62d8100"
-	result, err := api.GetLogs(-1, contractAddress.ToHex(), payload)
+	result, err := api.GetLogs(-1, contractAddress.Hex(), payload)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 1)
 	assert.Equal(t, result[0].Txhash, receipt.TxHash)
 	addr := result[0].Log.Address
 	assert.Equal(t, addr, contractAddress)
 	name := result[0].Log.Topics
-	assert.Equal(t, name[0].ToHex(), payload)
+	assert.Equal(t, name[0].Hex(), payload)
 
 	// Verify the invalid contractAddress and payload
-	result, err = api.GetLogs(-1, "contractAddress.ToHex()", payload)
+	result, err = api.GetLogs(-1, "contractAddress.Hex()", payload)
 	assert.Equal(t, err == nil, false)
-	result, err = api.GetLogs(-1, contractAddress.ToHex(), "payload")
+	result, err = api.GetLogs(-1, contractAddress.Hex(), "payload")
 	assert.Equal(t, err == nil, false)
 }
 
@@ -175,7 +175,7 @@ func Test_Call(t *testing.T) {
 
 	// Verify the result = 5
 	result := make(map[string]interface{})
-	result, err = api.Call(contractAddress.ToHex(), payload, -1)
+	result, err = api.Call(contractAddress.Hex(), payload, -1)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000005")
 
@@ -190,21 +190,21 @@ func Test_Call(t *testing.T) {
 	_ = sendTx(t, api, statedbCur, callContractTx)
 
 	// Verify the result = 23
-	result, err = api.Call(contractAddress.ToHex(), payload, -1)
+	result, err = api.Call(contractAddress.Hex(), payload, -1)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000017")
 
 	// Verify the history result = 5
 	height, err := api2.NewPublicSeeleAPI(NewSeeleBackend(api.s)).GetBlockHeight()
 	assert.Equal(t, err, nil)
-	result, err = api.Call(contractAddress.ToHex(), payload, int64(height-1))
+	result, err = api.Call(contractAddress.Hex(), payload, int64(height-1))
 	assert.Equal(t, err, nil)
 	assert.Equal(t, result["result"], "0x0000000000000000000000000000000000000000000000000000000000000005")
 
 	// Verify the invalid contractAddress and payload
-	result, err = api.Call("contractAddress.ToHex()", payload, -1)
+	result, err = api.Call("contractAddress.Hex()", payload, -1)
 	assert.Equal(t, err == nil, false)
-	result, err = api.Call(contractAddress.ToHex(), "payload", -1)
+	result, err = api.Call(contractAddress.Hex(), "payload", -1)
 	assert.Equal(t, err == nil, false)
 }
 
@@ -281,5 +281,5 @@ func Test_GetInfo(t *testing.T) {
 	assert.Equal(t, info.CurrentBlockHeight, uint64(0))
 	assert.Equal(t, info.Shard, uint(0))
 	assert.Equal(t, info.MinerStatus, "Stopped")
-	assert.Equal(t, info.HeaderHash.ToHex(), "0xdac29823ca2a5f1683c4751ae725dab175cfdc7ddc60fbce52e196a7d7f3b1df")
+	assert.Equal(t, info.HeaderHash.Hex(), "0x8af6733d304670ff336177e640819fdecc70ded95883d1e5f66b33d8e78b5ef1")
 }

@@ -321,7 +321,7 @@ func (p *Peer) Info() *PeerInfo {
 	}
 
 	info := &PeerInfo{
-		ID:        p.Node.ID.ToHex(),
+		ID:        p.Node.ID.Hex(),
 		Caps:      caps,
 		Protocols: protocols,
 		Shard:     p.getShardNumber(),

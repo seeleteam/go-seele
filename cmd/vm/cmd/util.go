@@ -136,7 +136,7 @@ func preprocessContract() (database.Database, *state.Statedb, store.BlockchainSt
 			return
 		}
 
-		db.PutString(KeyStateRootHash, hash.ToHex())
+		db.PutString(KeyStateRootHash, hash.Hex())
 		db.Close()
 	}, nil
 }

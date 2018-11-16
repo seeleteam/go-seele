@@ -49,6 +49,15 @@ func HexToBytes(input string) ([]byte, error) {
 	return b, err
 }
 
+func MustHexToBytes(input string) []byte {
+	result, err := HexToBytes(input)
+	if err != nil {
+		panic(err)
+	}
+
+	return result
+}
+
 // Has0xPrefix returns true if input start with 0x, otherwise false
 func Has0xPrefix(input string) bool {
 	return len(input) >= 2 && input[0] == '0' && (input[1] == 'x' || input[1] == 'X')

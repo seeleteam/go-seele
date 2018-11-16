@@ -53,7 +53,7 @@ func ToECDSAPub(pub []byte) *ecdsa.PublicKey {
 
 // PubkeyToString returns the string of the given public key, with prefix 0x
 func PubkeyToString(pub *ecdsa.PublicKey) string {
-	return GetAddress(pub).ToHex()
+	return GetAddress(pub).Hex()
 }
 
 // Keccak512 calculates and returns the Keccak512 hash of the input data.
@@ -136,6 +136,11 @@ func GenerateKeyPair() (*common.Address, *ecdsa.PrivateKey, error) {
 func GetAddress(key *ecdsa.PublicKey) *common.Address {
 	addr := common.PubKeyToAddress(key, MustHash)
 	return &addr
+}
+
+// PubkeyToAddress add this method for istanbul BFT integration
+func PubkeyToAddress(key ecdsa.PublicKey) common.Address  {
+	return *GetAddress(&key)
 }
 
 // GenerateRandomAddress generates and returns a random address.

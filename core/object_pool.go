@@ -233,7 +233,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 	if existTx := pool.pendingQueue.get(obj.FromAccount(), obj.Nonce()); existTx != nil {
 		if obj.Price().Cmp(existTx.Price()) > 0 {
 			pool.log.Debug("got a object has higher gas price than before. remove old one. new: %s, old: %s",
-				obj.GetHash().ToHex(), existTx.GetHash().ToHex())
+				obj.GetHash().Hex(), existTx.GetHash().Hex())
 			pool.doRemoveObject(existTx.GetHash())
 		} else {
 			return errObjectNonceUsed
@@ -249,7 +249,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 		}
 
 		discardedAccount := c.peek().FromAccount()
-		pool.log.Info("object pool is full, discarded account = %v, object len = %v", discardedAccount.ToHex(), c.len())
+		pool.log.Info("object pool is full, discarded account = %v, object len = %v", discardedAccount.Hex(), c.len())
 
 		for c.len() > 0 {
 			delete(pool.hashToTxMap, c.pop().GetHash())

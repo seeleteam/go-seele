@@ -99,7 +99,7 @@ type Ethash struct {
 
 	// Mining related fields
 	rand     *rand.Rand    // Properly seeded random source for nonces
-	threads  int           // Number of threads to mine on if mining
+	threads  int           // Height of threads to mine on if mining
 	update   chan struct{} // Notification channel to update mining parameters
 	hashrate metrics.Meter // Meter tracking the average hashrate
 

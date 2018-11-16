@@ -91,7 +91,7 @@ func (c *ecrecover) Run(input []byte) ([]byte, error) {
 		return nil, nil
 	}
 	// v needs to be at the end for libsecp256k1
-	pubKey, err := crypto.Ecrecover(input[:32], append(input[64:128], v))
+	pubKey, err := crypto.SigToPub(input[:32], append(input[64:128], v))
 	// make sure the public key is a valid one
 	if err != nil {
 		return nil, nil

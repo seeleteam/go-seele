@@ -1,24 +1,13 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
 )
 
 // Start implements core.Engine.Start
@@ -193,8 +182,8 @@ func (c *core) handleTimeoutMsg() {
 	}
 
 	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal != nil && lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
-		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
+	if lastProposal != nil && lastProposal.Height() >= c.current.Sequence().Uint64() {
+		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Height())
 		c.startNewRound(common.Big0)
 	} else {
 		c.sendNextRoundChange()

@@ -148,7 +148,7 @@ func changed(config *util.Config, host string, shard uint) error {
 		return err
 	}
 
-	pubkeyStr := publicKey.ToHex()
+	pubkeyStr := publicKey.Hex()
 	prikeyStr := hexutil.BytesToHex(crypto.FromECDSA(privateKey))
 	key := make(map[string]string)
 	key["coinbase"] = pubkeyStr

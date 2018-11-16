@@ -68,7 +68,7 @@ type RelayRequest struct {
 }
 
 func (r *RelayRequest) String() string {
-	return fmt.Sprintf("RelayRequest[BTCBlock=%v, TxHex=%v, RelayAddress=%v]", r.BTCBlock.String(), r.TxHex, r.RelayAddress.ToHex())
+	return fmt.Sprintf("RelayRequest[BTCBlock=%v, TxHex=%v, RelayAddress=%v]", r.BTCBlock.String(), r.TxHex, r.RelayAddress.Hex())
 }
 
 // verify that tx exists based on request, the amount will be transferred
@@ -128,7 +128,7 @@ func relayTx(request []byte, ctx *Context) ([]byte, error) {
 // storage of Bitcoin block headers
 func storeBlockHeader(request []byte, ctx *Context) ([]byte, error) {
 	if !isRelayer(ctx.tx.Data.From) {
-		return failure, fmt.Errorf("Invaild block relayer[%s]", ctx.tx.Data.From.ToHex())
+		return failure, fmt.Errorf("Invaild block relayer[%s]", ctx.tx.Data.From.Hex())
 	}
 
 	var relayRequest RelayRequest

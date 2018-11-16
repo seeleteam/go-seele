@@ -197,7 +197,7 @@ func rpcOutputBlock(b *types.Block, fullTx bool, totalDifficulty *big.Int) (map[
 	head := b.Header
 	fields := map[string]interface{}{
 		"header": head,
-		"hash":   b.HeaderHash.ToHex(),
+		"hash":   b.HeaderHash.Hex(),
 	}
 
 	txs := b.Transactions
@@ -206,7 +206,7 @@ func rpcOutputBlock(b *types.Block, fullTx bool, totalDifficulty *big.Int) (map[
 		if fullTx {
 			transactions[i] = PrintableOutputTx(tx)
 		} else {
-			transactions[i] = tx.Hash.ToHex()
+			transactions[i] = tx.Hash.Hex()
 		}
 	}
 	fields["transactions"] = transactions
@@ -247,12 +247,12 @@ func rpcOutputBlocks(b []*types.Block, fullTx bool, d []*big.Int) ([]map[string]
 func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 	toAddr := ""
 	if !tx.Data.To.IsEmpty() {
-		toAddr = tx.Data.To.ToHex()
+		toAddr = tx.Data.To.Hex()
 	}
 
 	transaction := map[string]interface{}{
-		"hash":         tx.Hash.ToHex(),
-		"from":         tx.Data.From.ToHex(),
+		"hash":         tx.Hash.Hex(),
+		"from":         tx.Data.From.Hex(),
 		"to":           toAddr,
 		"amount":       tx.Data.Amount,
 		"accountNonce": tx.Data.AccountNonce,

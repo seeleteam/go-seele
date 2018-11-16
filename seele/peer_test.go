@@ -31,7 +31,7 @@ func Test_peer_Info(t *testing.T) {
 	var myHash common.Hash
 	copy(myHash[0:20], myAddr[:])
 	bigInt := big.NewInt(100)
-	okStr := fmt.Sprintf(`{"version":1,"difficulty":100,"head":"%v000000000000000000000000"}`, strings.TrimPrefix(myAddr.ToHex(), "0x"))
+	okStr := fmt.Sprintf(`{"version":1,"difficulty":100,"head":"%v000000000000000000000000"}`, strings.TrimPrefix(myAddr.Hex(), "0x"))
 
 	// Create peer for test
 	peer := newPeer(common.SeeleVersion, p2pPeer, nil, log)

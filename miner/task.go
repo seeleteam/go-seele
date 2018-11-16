@@ -123,7 +123,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		for _, tx := range txs {
 			if err := tx.Validate(statedb); err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
-				log.Error("failed to validate tx %s, for %s", tx.Hash.ToHex(), err)
+				log.Error("failed to validate tx %s, for %s", tx.Hash.Hex(), err)
 				txsSize = txsSize - tx.Size()
 				continue
 			}
@@ -131,7 +131,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			receipt, err := seele.BlockChain().ApplyTransaction(tx, txIndex, task.coinbase, statedb, task.header)
 			if err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
-				log.Error("failed to apply tx %s, %s", tx.Hash.ToHex(), err)
+				log.Error("failed to apply tx %s, %s", tx.Hash.Hex(), err)
 				txsSize = txsSize - tx.Size()
 				continue
 			}

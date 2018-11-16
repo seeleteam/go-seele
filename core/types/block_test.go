@@ -24,9 +24,40 @@ func newTestBlockHeader(t *testing.T) *BlockHeader {
 		Difficulty:        big.NewInt(1),
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
+		Consensus:         PowConsensus,
 		Witness:           common.CopyBytes([]byte("witness")),
 		ExtraData:         common.CopyBytes([]byte("ExtraData")),
 	}
+}
+
+func Test_BlockMarshal(t *testing.T) {
+	header := newTestBlockHeader(t)
+
+	txs := []*Transaction{
+		newTestTx(t, 10, 1, 1, true),
+		newTestTx(t, 20, 1, 2, true),
+		newTestTx(t, 30, 1, 3, true),
+	}
+	receipts := []*Receipt{
+		newTestReceipt(),
+		newTestReceipt(),
+		newTestReceipt(),
+	}
+
+	tx1 := newTestTx(t, 1, 1, 1, true)
+	d1 := NewDebtWithContext(tx1)
+	debts := []*Debt{
+		d1,
+	}
+
+	block := NewBlock(header, txs, receipts, debts)
+
+	common.SerializePanic(block)
+}
+
+func Test_BlockHeaderMarshal(t *testing.T) {
+	header := newTestBlockHeader(t)
+	common.SerializePanic(header)
 }
 
 func Test_BlockHeader_Clone(t *testing.T) {

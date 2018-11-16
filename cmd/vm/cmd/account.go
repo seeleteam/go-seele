@@ -54,7 +54,7 @@ var newCmd = &cobra.Command{
 		statedb.SetBalance(addr, new(big.Int).SetUint64(balance))
 		statedb.SetNonce(addr, DefaultNonce)
 
-		fmt.Println("The new account address is ", addr.ToHex())
+		fmt.Println("The new account address is ", addr.Hex())
 	},
 }
 

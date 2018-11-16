@@ -19,7 +19,7 @@ const (
 	// TODO with this number for test
 	responseNodeNumber = 5
 	hashBits           = len(common.Hash{}) * 8
-	// Number of buckets
+	// Height of buckets
 	nBuckets = hashBits + 1
 	// other shard minimal node number for start
 	shardTargeNodeNumber = 1

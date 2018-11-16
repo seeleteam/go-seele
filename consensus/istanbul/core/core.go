@@ -1,18 +1,7 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package core
 
@@ -23,13 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	metrics "github.com/ethereum/go-ethereum/metrics"
-	goMetrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/core/types"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -47,9 +35,9 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequests:    prque.New(),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
-		roundMeter:         metrics.NewMeter("consensus/istanbul/core/round"),
-		sequenceMeter:      metrics.NewMeter("consensus/istanbul/core/sequence"),
-		consensusTimer:     metrics.NewTimer("consensus/istanbul/core/consensus"),
+		roundMeter:         metrics.GetOrRegisterMeter("consensus/istanbul/core/round", nil),
+		sequenceMeter:      metrics.GetOrRegisterMeter("consensus/istanbul/core/sequence", nil),
+		consensusTimer:     metrics.GetOrRegisterTimer("consensus/istanbul/core/consensus", nil),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -87,11 +75,11 @@ type core struct {
 
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
-	roundMeter goMetrics.Meter
+	roundMeter metrics.Meter
 	// the meter to record the sequence update rate
-	sequenceMeter goMetrics.Meter
+	sequenceMeter metrics.Meter
 	// the timer to record consensus duration (from accepting a preprepare to final committed stage)
-	consensusTimer goMetrics.Timer
+	consensusTimer metrics.Timer
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -193,26 +181,26 @@ func (c *core) startNewRound(round *big.Int) {
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
-	} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
-		diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
+	} else if lastProposal.Height() >= c.current.Sequence().Uint64() {
+		diff := new(big.Int).Sub(new(big.Int).SetUint64(lastProposal.Height()), c.current.Sequence())
 		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 
 		if !c.consensusTimestamp.IsZero() {
 			c.consensusTimer.UpdateSince(c.consensusTimestamp)
 			c.consensusTimestamp = time.Time{}
 		}
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
-	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Sequence().Int64()-1)) == 0 {
+		logger.Trace("Catch up latest proposal", "number", lastProposal.Height(), "hash", lastProposal.Hash())
+	} else if lastProposal.Height() == c.current.Sequence().Uint64()-1 {
 		if round.Cmp(common.Big0) == 0 {
 			// same seq and round, don't need to start new round
 			return
 		} else if round.Cmp(c.current.Round()) < 0 {
-			logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
+			logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Height(), "new_round", round, "old_round", c.current.Round())
 			return
 		}
 		roundChange = true
 	} else {
-		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
+		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Height())
 		return
 	}
 
@@ -224,7 +212,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	} else {
 		newView = &istanbul.View{
-			Sequence: new(big.Int).Add(lastProposal.Number(), common.Big1),
+			Sequence: new(big.Int).Add(new(big.Int).SetUint64(lastProposal.Height()), common.Big1),
 			Round:    new(big.Int),
 		}
 		c.valSet = c.backend.Validators(lastProposal)

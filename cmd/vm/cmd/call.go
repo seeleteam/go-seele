@@ -98,9 +98,9 @@ func callContract(contractHexAddr string) {
 
 	for i, log := range receipt.Logs {
 		fmt.Printf("Log[%v]:\n", i)
-		fmt.Println("\taddress:", log.Address.ToHex())
+		fmt.Println("\taddress:", log.Address.Hex())
 		if len(log.Topics) == 1 {
-			fmt.Println("\ttopics:", log.Topics[0].ToHex())
+			fmt.Println("\ttopics:", log.Topics[0].Hex())
 		} else {
 			fmt.Println("\ttopics:", log.Topics)
 		}

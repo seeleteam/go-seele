@@ -125,14 +125,14 @@ func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.Bl
 //func (ethash *Ethash) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
 //	var parent *types.Header
 //	if index == 0 {
-//		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
+//		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Height.Uint64()-1)
 //	} else if headers[index-1].Hash() == headers[index].ParentHash {
 //		parent = headers[index-1]
 //	}
 //	if parent == nil {
 //		return consensus.ErrUnknownAncestor
 //	}
-//	if chain.GetHeader(headers[index].Hash(), headers[index].Number.Uint64()) != nil {
+//	if chain.GetHeader(headers[index].Hash(), headers[index].Height.Uint64()) != nil {
 //		return nil // known block
 //	}
 //	return ethash.verifyHeader(chain, headers[index], parent, false, seals[index])

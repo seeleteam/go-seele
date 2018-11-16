@@ -30,7 +30,7 @@ func GetGenerateKeyPairCmd(name string) (cmds *cobra.Command) {
 				return
 			}
 
-			fmt.Printf("public key:  %s\n", publicKey.ToHex())
+			fmt.Printf("public key:  %s\n", publicKey.Hex())
 			fmt.Printf("private key: %s\n", hexutil.BytesToHex(crypto.FromECDSA(privateKey)))
 		},
 	}

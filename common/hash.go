@@ -56,7 +56,7 @@ func (a Hash) Bytes() []byte {
 
 // String returns the string representation of the hash
 func (a Hash) String() string {
-	return a.ToHex()
+	return a.Hex()
 }
 
 // Equal returns a boolean value indicating whether the hash a is equal to the input hash b.
@@ -64,8 +64,8 @@ func (a *Hash) Equal(b Hash) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
-// ToHex returns the hex form of the hash
-func (a Hash) ToHex() string {
+// Hex returns the hex form of the hash
+func (a Hash) Hex() string {
 	return hexutil.BytesToHex(a[:])
 }
 
@@ -83,6 +83,15 @@ func HexToHash(hex string) (Hash, error) {
 	return hash, nil
 }
 
+func MustHexToHash(hex string) Hash {
+	hash, err := HexToHash(hex)
+	if err != nil {
+		panic(err)
+	}
+
+	return hash
+}
+
 // IsEmpty return true if this hash is empty. Otherwise, false.
 func (a Hash) IsEmpty() bool {
 	return a == EmptyHash
@@ -96,7 +105,7 @@ func (a Hash) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 
 // MarshalText marshals the Hash to HEX string.
 func (a Hash) MarshalText() ([]byte, error) {
-	str := a.ToHex()
+	str := a.Hex()
 	return []byte(str), nil
 }
 

@@ -347,7 +347,7 @@ func (u *udp) discovery() {
 
 		nodes := u.table.findNodeForRequest(crypto.HashBytes(id.Bytes()))
 
-		u.log.Debug("query node with id: %s", id.ToHex())
+		u.log.Debug("query node with id: %s", id.Hex())
 		sendFindNodeRequest(u, nodes, *id)
 
 		concurrentCount := 0
@@ -495,7 +495,7 @@ func (u *udp) deleteNode(n *Node) {
 		return
 	}
 
-	idStr := n.ID.ToHex()
+	idStr := n.ID.Hex()
 	var count = 0
 	value, ok := u.timeoutNodesCount.Get(idStr)
 	if ok {

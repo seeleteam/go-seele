@@ -135,7 +135,7 @@ func SendMode3(current []*balance, next []*balance) {
 	for i, b := range current {
 		newBalance := send(b)
 		if debug {
-			fmt.Printf("send tx %s, account %s, nonce %d\n", newBalance.tx.ToHex(), b.address.ToHex(), b.nonce-1)
+			fmt.Printf("send tx %s, account %s, nonce %d\n", newBalance.tx.Hex(), b.address.Hex(), b.nonce-1)
 		}
 
 		next[i] = newBalance
@@ -278,7 +278,7 @@ func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) 
 			}
 
 			if debug {
-				fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.ToHex(), result["from"],
+				fmt.Printf("got tx success %s from %s nonce %.0f status %s amount %.0f\n", b.tx.Hex(), result["from"],
 					result["accountNonce"], result["status"], result["amount"])
 			}
 		}
@@ -290,9 +290,9 @@ func getIncludedAndPendingBalance(balances []*balance) ([]*balance, []*balance) 
 func getTx(address common.Address, hash common.Hash) map[string]interface{} {
 	client := getClient(address)
 
-	result, err := util.GetTransactionByHash(client, hash.ToHex())
+	result, err := util.GetTransactionByHash(client, hash.Hex())
 	if err != nil {
-		fmt.Println("failed to get tx ", err, " tx hash ", hash.ToHex())
+		fmt.Println("failed to get tx ", err, " tx hash ", hash.Hex())
 		return result
 	}
 
@@ -462,7 +462,7 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 			packed:     false,
 		}
 
-		fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
+		fmt.Printf("%s balance is %d\n", b.address.Hex(), b.amount)
 
 		if b.amount > 0 {
 			b.nonce = getNonce(*b.address, "", -1)

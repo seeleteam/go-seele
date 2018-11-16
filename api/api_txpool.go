@@ -44,8 +44,8 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 	}
 	outMap := map[string]interface{}{
 		"result":    result,
-		"poststate": re.PostState.ToHex(),
-		"txhash":    re.TxHash.ToHex(),
+		"poststate": re.PostState.Hex(),
+		"txhash":    re.TxHash.Hex(),
 		"contract":  "0x",
 		"failed":    re.Failed,
 		"usedGas":   re.UsedGas,
@@ -58,7 +58,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 			return nil, err
 		}
 
-		outMap["contract"] = contractAddr.ToHex()
+		outMap["contract"] = contractAddr.Hex()
 	}
 
 	if len(re.Logs) > 0 {
@@ -85,7 +85,7 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 	}
 
 	outMap := map[string]interface{}{
-		"address": log.Address.ToHex(),
+		"address": log.Address.Hex(),
 	}
 
 	// data
@@ -103,11 +103,11 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 	case 0:
 		// do not print empty topic
 	case 1:
-		outMap["topic"] = log.Topics[0].ToHex()
+		outMap["topic"] = log.Topics[0].Hex()
 	default:
 		var topics []string
 		for _, t := range log.Topics {
-			topics = append(topics, t.ToHex())
+			topics = append(topics, t.Hex())
 		}
 		outMap["topics"] = fmt.Sprintf("[%v]", strings.Join(topics, ", "))
 	}
@@ -267,7 +267,7 @@ func (api *TransactionPoolAPI) GetTransactionByHash(txHash string) (map[string]i
 	} else {
 		output["status"] = "block"
 
-		output["blockHash"] = idx.BlockHash.ToHex()
+		output["blockHash"] = idx.BlockHash.Hex()
 		output["blockHeight"] = idx.BlockHeight
 		output["txIndex"] = idx.Index
 	}

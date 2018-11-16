@@ -1,18 +1,7 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package backend
 
@@ -20,11 +9,11 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
 )
 
 const (
@@ -44,7 +33,7 @@ type Vote struct {
 // go against the proposal aren't counted since it's equivalent to not voting.
 type Tally struct {
 	Authorize bool `json:"authorize"` // Whether the vote it about authorizing or kicking someone
-	Votes     int  `json:"votes"`     // Number of votes until now wanting to pass the proposal
+	Votes     int  `json:"votes"`     // Height of votes until now wanting to pass the proposal
 }
 
 // Snapshot is the state of the authorization voting at a given point in time.
@@ -73,7 +62,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.
 }
 
 // loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot, error) {
+func loadSnapshot(epoch uint64, db database.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -88,7 +77,7 @@ func loadSnapshot(epoch uint64, db ethdb.Database, hash common.Hash) (*Snapshot,
 }
 
 // store inserts the snapshot into the database.
-func (s *Snapshot) store(db ethdb.Database) error {
+func (s *Snapshot) store(db database.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -160,18 +149,18 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
 	}
 	// Sanity check that the headers can be applied
 	for i := 0; i < len(headers)-1; i++ {
-		if headers[i+1].Number.Uint64() != headers[i].Number.Uint64()+1 {
+		if headers[i+1].Height != headers[i].Height+1 {
 			return nil, errInvalidVotingChain
 		}
 	}
-	if headers[0].Number.Uint64() != s.Number+1 {
+	if headers[0].Height != s.Number+1 {
 		return nil, errInvalidVotingChain
 	}
 	// Iterate through the headers and create a new snapshot
@@ -179,7 +168,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
-		number := header.Number.Uint64()
+		number := header.Height
 		if number%s.Epoch == 0 {
 			snap.Votes = nil
 			snap.Tally = make(map[common.Address]Tally)
@@ -195,7 +184,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 
 		// Header authorized, discard any previous votes from the validator
 		for i, vote := range snap.Votes {
-			if vote.Validator == validator && vote.Address == header.Coinbase {
+			if vote.Validator == validator && vote.Address == header.Creator {
 				// Uncast the vote from the cached tally
 				snap.uncast(vote.Address, vote.Authorize)
 
@@ -207,31 +196,31 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 		// Tally up the new vote from the validator
 		var authorize bool
 		switch {
-		case bytes.Compare(header.Nonce[:], nonceAuthVote) == 0:
+		case bytes.Compare(header.Witness[:], nonceAuthVote) == 0:
 			authorize = true
-		case bytes.Compare(header.Nonce[:], nonceDropVote) == 0:
+		case bytes.Compare(header.Witness[:], nonceDropVote) == 0:
 			authorize = false
 		default:
 			return nil, errInvalidVote
 		}
-		if snap.cast(header.Coinbase, authorize) {
+		if snap.cast(header.Creator, authorize) {
 			snap.Votes = append(snap.Votes, &Vote{
 				Validator: validator,
 				Block:     number,
-				Address:   header.Coinbase,
+				Address:   header.Creator,
 				Authorize: authorize,
 			})
 		}
 		// If the vote passed, update the list of validators
-		if tally := snap.Tally[header.Coinbase]; tally.Votes > snap.ValSet.Size()/2 {
+		if tally := snap.Tally[header.Creator]; tally.Votes > snap.ValSet.Size()/2 {
 			if tally.Authorize {
-				snap.ValSet.AddValidator(header.Coinbase)
+				snap.ValSet.AddValidator(header.Creator)
 			} else {
-				snap.ValSet.RemoveValidator(header.Coinbase)
+				snap.ValSet.RemoveValidator(header.Creator)
 
 				// Discard any previous votes the deauthorized validator cast
 				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Validator == header.Coinbase {
+					if snap.Votes[i].Validator == header.Creator {
 						// Uncast the vote from the cached tally
 						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
 
@@ -244,12 +233,12 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			}
 			// Discard any previous votes around the just changed account
 			for i := 0; i < len(snap.Votes); i++ {
-				if snap.Votes[i].Address == header.Coinbase {
+				if snap.Votes[i].Address == header.Creator {
 					snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
 					i--
 				}
 			}
-			delete(snap.Tally, header.Coinbase)
+			delete(snap.Tally, header.Creator)
 		}
 	}
 	snap.Number += uint64(len(headers))

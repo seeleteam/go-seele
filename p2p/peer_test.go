@@ -41,7 +41,7 @@ func newTestPeer(addr string, shard uint) (*Peer, error) {
 }
 
 func Test_peer_Info(t *testing.T) {
-	addr := crypto.MustGenerateShardAddress(1).ToHex()
+	addr := crypto.MustGenerateShardAddress(1).Hex()
 	newPeer, err := newTestPeer(addr, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func Test_peer_Info(t *testing.T) {
 }
 
 func Test_peer_RunAndClose(t *testing.T) {
-	p1, err := newTestPeer(crypto.MustGenerateShardAddress(1).ToHex(), 1)
+	p1, err := newTestPeer(crypto.MustGenerateShardAddress(1).Hex(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}

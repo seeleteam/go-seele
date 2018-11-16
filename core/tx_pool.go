@@ -41,10 +41,10 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 		if txIndex != nil || item.Nonce() < nonce || duration > transactionTimeoutDuration {
 			if txIndex == nil {
 				if item.Nonce() < nonce {
-					log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", item.GetHash().ToHex(),
-						item.FromAccount().ToHex(), item.Nonce(), nonce)
+					log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", item.GetHash().Hex(),
+						item.FromAccount().Hex(), item.Nonce(), nonce)
 				} else if duration > transactionTimeoutDuration {
-					log.Debug("remove tx %s because not packed for more than three hours", item.GetHash().ToHex())
+					log.Debug("remove tx %s because not packed for more than three hours", item.GetHash().Hex())
 				}
 			}
 

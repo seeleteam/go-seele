@@ -270,7 +270,7 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 	} else {
 		idx := p.findIdxByHash(msg.HeaderArr[0])
 		if idx < 0 {
-			p.log.Info("handleSyncHash hash not match. %s", p.blockHashArr[0].ToHex())
+			p.log.Info("handleSyncHash hash not match. %s", p.blockHashArr[0].Hex())
 			p.curSyncMagic = 0
 			return nil
 		}

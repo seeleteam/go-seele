@@ -158,7 +158,7 @@ func (n *Node) checkConfig() error {
 
 	if !n.config.SeeleConfig.Coinbase.Equal(common.Address{}) {
 		coinbaseShard := n.config.SeeleConfig.Coinbase.Shard()
-		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.ToHex())
+		n.log.Info("coinbase is %s", n.config.SeeleConfig.Coinbase.Hex())
 
 		if coinbaseShard != specificShard {
 			return fmt.Errorf("coinbase does not match with specific shard number, "+

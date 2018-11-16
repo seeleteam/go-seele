@@ -1,18 +1,7 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+*  @file
+*  @copyright defined in go-seele/LICENSE
+ */
 
 package backend
 
@@ -22,18 +11,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
-	istanbulCore "github.com/ethereum/go-ethereum/consensus/istanbul/core"
-	"github.com/ethereum/go-ethereum/consensus/istanbul/validator"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	istanbulCore "github.com/seeleteam/go-seele/consensus/istanbul/core"
+	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/database"
 )
 
 const (
@@ -42,7 +30,7 @@ const (
 )
 
 // New creates an Ethereum backend for Istanbul core engine.
-func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.Istanbul {
+func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.Database) consensus.Istanbul {
 	// Allocate the snapshot caches and create the engine
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -74,7 +62,7 @@ type backend struct {
 	address          common.Address
 	core             istanbulCore.Engine
 	logger           log.Logger
-	db               ethdb.Database
+	db               database.Database
 	chain            consensus.ChainReader
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
@@ -107,7 +95,7 @@ func (sb *backend) Address() common.Address {
 
 // Validators implements istanbul.Backend.Validators
 func (sb *backend) Validators(proposal istanbul.Proposal) istanbul.ValidatorSet {
-	return sb.getValidators(proposal.Number().Uint64(), proposal.Hash())
+	return sb.getValidators(proposal.Height(), proposal.Hash())
 }
 
 // Broadcast implements istanbul.Backend.Broadcast
@@ -168,7 +156,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 		return errInvalidProposal
 	}
 
-	h := block.Header()
+	h := block.Header
 	// Append seals into extra-data
 	err := writeCommittedSeals(h, seals)
 	if err != nil {
@@ -177,7 +165,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// update block's header
 	block = block.WithSeal(h)
 
-	sb.logger.Info("Committed", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
+	sb.logger.Info("Committed", "address", sb.Address(), "hash", proposal.Hash(), "number", proposal.Height())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	// - otherwise, we try to insert the block.
@@ -211,28 +199,24 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 		return 0, errInvalidProposal
 	}
 
-	// check bad block
-	if sb.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
-	}
+	//// check bad block
+	//if sb.HasBadProposal(block.Hash()) {
+	//	return 0, core.ErrBlacklistedHash
+	//}
 
 	// check block body
-	txnHash := types.DeriveSha(block.Transactions())
-	uncleHash := types.CalcUncleHash(block.Uncles())
-	if txnHash != block.Header().TxHash {
+	txnHash := types.MerkleRootHash(block.Transactions)
+	if txnHash != block.Header.TxHash {
 		return 0, errMismatchTxhashes
-	}
-	if uncleHash != nilUncleHash {
-		return 0, errInvalidUncleHash
 	}
 
 	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header(), false)
+	err := sb.VerifyHeader(sb.chain, block.Header, false)
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
 	if err == nil || err == errEmptyCommittedSeals {
 		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
-		return time.Unix(block.Header().Time.Int64(), 0).Sub(now()), consensus.ErrFutureBlock
+	} else if err == consensus.ErrBlockCreateTimeOld {
+		return time.Unix(block.Header.CreateTimestamp.Int64(), 0).Sub(now()), consensus.ErrBlockCreateTimeOld
 	}
 	return 0, err
 }
@@ -240,7 +224,8 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 // Sign implements istanbul.Backend.Sign
 func (sb *backend) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256([]byte(data))
-	return crypto.Sign(hashData, sb.privateKey)
+	sign, err := crypto.Sign(sb.privateKey, hashData)
+	return sign.Sig, err
 }
 
 // CheckSignature implements istanbul.Backend.CheckSignature
@@ -274,7 +259,7 @@ func (sb *backend) GetProposer(number uint64) common.Address {
 // ParentValidators implements istanbul.Backend.GetParentValidators
 func (sb *backend) ParentValidators(proposal istanbul.Proposal) istanbul.ValidatorSet {
 	if block, ok := proposal.(*types.Block); ok {
-		return sb.getValidators(block.Number().Uint64()-1, block.ParentHash())
+		return sb.getValidators(block.Height()-1, block.ParentHash())
 	}
 	return validator.NewSet(nil, sb.config.ProposerPolicy)
 }
@@ -291,9 +276,9 @@ func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	block := sb.currentBlock()
 
 	var proposer common.Address
-	if block.Number().Cmp(common.Big0) > 0 {
+	if block.Height() > 0 {
 		var err error
-		proposer, err = sb.Author(block.Header())
+		proposer, err = sb.Author(block.Header)
 		if err != nil {
 			sb.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
