@@ -7,12 +7,12 @@ package types
 
 import (
 	"errors"
+	"io"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
-	"io"
 )
 
 var (
@@ -35,10 +35,11 @@ var (
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
 )
 
-type ConsensusType int
+type ConsensusType uint
 
 const (
-	IstanbulConsensus ConsensusType = iota
+	PowConsensus ConsensusType = iota
+	IstanbulConsensus
 )
 
 // BlockHeader represents the header of a block in the blockchain.
@@ -54,8 +55,8 @@ type BlockHeader struct {
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	Witness           []byte         //Witness is the block pow proof info
-	Consensus			ConsensusType
-	ExtraData         []byte         // ExtraData stores the extra info of block header.
+	Consensus         ConsensusType
+	ExtraData         []byte // ExtraData stores the extra info of block header.
 }
 
 // Clone returns a clone of the block header.

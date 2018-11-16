@@ -1,29 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/**
+* @file
+* @copyright defined in go-seele/LICENSE
+ */
 
 package types
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/crypto"
-	"bytes"
 )
 
 func TestHeaderHash(t *testing.T) {
@@ -33,10 +22,10 @@ func TestHeaderHash(t *testing.T) {
 		panic(err)
 	}
 
-	expectedHash := common.MustHexToHash("0x2742d373468176bd9f2232e923951ee0b05173d830620149aac2920dd076ce25")
+	expectedHash := common.MustHexToHash("0x781548c4137cc140e7927caef082683abd7a304819a0bc7c1d0ce1dec0c7efa1")
 
 	// for istanbul consensus
-	header := &BlockHeader{Consensus:IstanbulConsensus, ExtraData: expectedExtra}
+	header := &BlockHeader{Consensus: IstanbulConsensus, ExtraData: expectedExtra}
 	if !reflect.DeepEqual(header.Hash(), expectedHash) {
 		t.Errorf("expected: %v, but got: %v", expectedHash.Hex(), header.Hash().Hex())
 	}
