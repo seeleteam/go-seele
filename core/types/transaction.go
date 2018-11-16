@@ -220,14 +220,14 @@ func (tx *Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) e
 		return ErrPriceNegative
 	}
 
-	// validate gas limit
-	if tx.Data.GasLimit < tx.IntrinsicGas() {
-		return ErrIntrinsicGas
-	}
-
 	// validate payload
 	if len(tx.Data.Payload) > MaxPayloadSize {
 		return ErrPayloadOversized
+	}
+
+	// validate gas limit
+	if tx.Data.GasLimit < tx.IntrinsicGas() {
+		return ErrIntrinsicGas
 	}
 
 	if (tx.Data.To.IsEmpty() || tx.Data.To.Type() != common.AddressTypeExternal) && len(tx.Data.Payload) == 0 {
