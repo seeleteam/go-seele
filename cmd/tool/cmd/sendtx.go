@@ -465,7 +465,7 @@ func initBalance(balanceList []*balance, keyList []string, start int, end int, w
 		fmt.Printf("%s balance is %d\n", b.address.ToHex(), b.amount)
 
 		if b.amount > 0 {
-			b.nonce = getNonce(*b.address)
+			b.nonce = getNonce(*b.address, "", -1)
 			balanceList[i] = b
 		}
 	}
@@ -493,11 +493,11 @@ func getClient(address common.Address) *rpc.Client {
 }
 
 // getNonce get current nonce
-func getNonce(address common.Address) uint64 {
+func getNonce(address common.Address, hexHash string, height int64) uint64 {
 	client := getClient(address)
 
 	//get current nonce
-	nonce, err := util.GetAccountNonce(client, address, "", -1)
+	nonce, err := util.GetAccountNonce(client, address, hexHash, height)
 	if err != nil {
 		panic(err)
 	}
