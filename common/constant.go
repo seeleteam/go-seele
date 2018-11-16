@@ -7,7 +7,6 @@ package common
 
 import (
 	"math/big"
-	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
@@ -77,12 +76,13 @@ var (
 )
 
 func init() {
-	tempFolder = filepath.Join(os.TempDir(), "seeleTemp")
-
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
 	}
+
+	tempFolder = filepath.Join(usr.HomeDir, "seeleTemp")
+
 	defaultDataFolder = filepath.Join(usr.HomeDir, ".seele")
 
 	if runtime.GOOS == "windows" {
