@@ -76,7 +76,7 @@ func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	}
 
 	if result.Tx != nil && result.BlockIndex != nil && !result.BlockIndex.BlockHash.IsEmpty() {
-		block, err := lp.chain.GetStore().GetBlockByHeight(result.BlockIndex.BlockHeight)
+		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
 		if err != nil {
 			err = errors.NewStackedErrorf(err, "failed to get block by hash %v", result.BlockIndex.BlockHash)
 			return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
@@ -114,6 +114,14 @@ func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.
 		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
 		if err != nil {
 			return errors.NewStackedErrorf(err, "failed to get block header by hash %v", response.BlockIndex.BlockHash)
+		}
+
+		blockHash, err := bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
+		}
+		if blockHash != header.Hash() {
+			return errors.New("get a transaction from a fork chain")
 		}
 
 		proof := arrayToMap(response.Proof)
