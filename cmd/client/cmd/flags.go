@@ -268,6 +268,13 @@ var (
 		Destination: &methodName,
 	}
 
+	eventName     string
+	eventNameFlag = cli.StringFlag{
+		Name:        "event",
+		Usage:       "the event name of contract",
+		Destination: &eventName,
+	}
+
 	// args     []interface{}
 	argsFlag = cli.StringSliceFlag{
 		Name:  "args",
