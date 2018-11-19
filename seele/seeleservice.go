@@ -295,7 +295,7 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 		},
 	}...)
 
-	minerApis := s.miner.GetEngine().APIs()
+	minerApis := s.miner.GetEngine().APIs(s.chain)
 	apis = append(apis, minerApis...)
 
 	return apis

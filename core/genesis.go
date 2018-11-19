@@ -220,10 +220,10 @@ func getShardInfo(genesisBlock *types.Block) (*shardInfo, error) {
 		return nil, fmt.Errorf("invalid genesis block height %v", genesisBlock.Header.Height)
 	}
 
-	data := shardInfo{}
-	if err := common.Deserialize(genesisBlock.Header.Witness, &data); err != nil {
+	data := &shardInfo{}
+	if err := common.Deserialize(genesisBlock.Header.Witness, data); err != nil {
 		return nil, errors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
 	}
 
-	return &data, nil
+	return data, nil
 }

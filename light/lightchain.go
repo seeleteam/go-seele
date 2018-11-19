@@ -82,12 +82,46 @@ func (lc *LightChain) GetStore() store.BlockchainStore {
 	return lc.bcStore
 }
 
+// GetHeader retrieves a block header from the database by hash and number.
+func (lc *LightChain) GetHeaderByHeight(height uint64) *types.BlockHeader {
+	hash, err := lc.bcStore.GetBlockHash(height)
+	if err != nil {
+		lc.log.Warn("get block header by height failed, err %s. height %d", err, height)
+		panic(err)
+		return nil
+	}
+
+	return lc.GetHeaderByHash(hash)
+}
+
+// GetHeaderByNumber retrieves a block header from the database by number.
+func (lc *LightChain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
+	header, err := lc.bcStore.GetBlockHeader(hash)
+	if err != nil {
+		lc.log.Warn("get block header by hash failed, err %s", err)
+		return nil
+	}
+
+	return header
+}
+
+// GetHeaderByHash retrieves a block header from the database by its hash.
+func (lc *LightChain) GetBlockByHash(hash common.Hash) *types.Block {
+	block, err := lc.bcStore.GetBlock(hash)
+	if err != nil {
+		lc.log.Warn("get block by hash failed, err %s", err)
+		return nil
+	}
+
+	return block
+}
+
 // WriteHeader writes the specified block header to the blockchain.
 func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 	lc.mutex.Lock()
 	defer lc.mutex.Unlock()
 
-	if err := core.ValidateBlockHeader(header, lc.engine, lc.bcStore); err != nil {
+	if err := core.ValidateBlockHeader(header, lc.engine, lc.bcStore, lc); err != nil {
 		return errors.NewStackedError(err, "failed to validate block header")
 	}
 

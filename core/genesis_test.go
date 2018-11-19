@@ -48,14 +48,14 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 	var difficult int64
 	genesis4 := GetGenesis(NewGenesisInfo(accounts, difficult, 0, big.NewInt(0), types.PowConsensus, nil))
 	assert.Equal(t, genesis4.header.Difficulty, big.NewInt(1))
-	assert.Equal(t, genesis4.header.ExtraData, common.SerializePanic(shardInfo{ShardNumber: 0}))
+	assert.Equal(t, genesis4.header.Witness, common.SerializePanic(shardInfo{ShardNumber: 0}))
 	assert.Equal(t, genesis4.info, NewGenesisInfo(accounts, 1, 0, big.NewInt(0), types.PowConsensus, nil))
 	validateGenesisDefaultMembers(t, genesis4)
 
 	difficult = 10
 	genesis4 = GetGenesis(NewGenesisInfo(nil, difficult, 0, big.NewInt(0), types.PowConsensus, nil))
 	assert.Equal(t, genesis4.header.Difficulty, big.NewInt(difficult))
-	assert.Equal(t, genesis4.header.ExtraData, common.SerializePanic(shardInfo{ShardNumber: 0}))
+	assert.Equal(t, genesis4.header.Witness, common.SerializePanic(shardInfo{ShardNumber: 0}))
 	assert.Equal(t, genesis4.info, NewGenesisInfo(nil, difficult, 0, big.NewInt(0), types.PowConsensus, nil))
 	validateGenesisDefaultMembers(t, genesis4)
 
@@ -63,7 +63,7 @@ func Test_Genesis_GetGenesis(t *testing.T) {
 	var shardNumber uint = 1
 	genesis5 := GetGenesis(NewGenesisInfo(nil, difficult, shardNumber, big.NewInt(0), types.PowConsensus, nil))
 	assert.Equal(t, genesis5.header.Difficulty, big.NewInt(difficult))
-	assert.Equal(t, genesis5.header.ExtraData, common.SerializePanic(shardInfo{ShardNumber: shardNumber}))
+	assert.Equal(t, genesis5.header.Witness, common.SerializePanic(shardInfo{ShardNumber: shardNumber}))
 	assert.Equal(t, genesis5.info, NewGenesisInfo(nil, difficult, shardNumber, big.NewInt(0), types.PowConsensus, nil))
 	validateGenesisDefaultMembers(t, genesis5)
 }
@@ -109,7 +109,7 @@ func Test_Genesis_Init_GenesisMismatch(t *testing.T) {
 	bcStore := store.NewBlockchainDatabase(db)
 
 	header := GetGenesis(&GenesisInfo{}).header.Clone()
-	header.Witness = []byte{2}
+	header.Difficulty = big.NewInt(10)
 	bcStore.PutBlockHeader(header.Hash(), header, header.Difficulty, true)
 
 	genesis := GetGenesis(&GenesisInfo{})

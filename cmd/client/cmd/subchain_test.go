@@ -63,7 +63,7 @@ func Test_getConfigFromSubChain(t *testing.T) {
 	assert.Equalf(t, 2, reflectWSServer.NumField(), errFormat, "node.WSServerConfig")
 
 	reflectGenesis := reflect.TypeOf(config.GenesisConfig)
-	assert.Equalf(t, 4, reflectGenesis.NumField(), errFormat, "core.GenesisInfo")
+	assert.Equalf(t, 6, reflectGenesis.NumField(), errFormat, "core.GenesisInfo")
 
 	config.MetricsConfig = &metrics.Config{}
 	reflectMetrics := reflect.TypeOf(*config.MetricsConfig)

@@ -399,7 +399,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return types.ErrBlockHeaderNil
 	}
 
-	if err := ValidateBlockHeader(block.Header, bc.engine, bc); err != nil {
+	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore, bc); err != nil {
 		return errors.NewStackedError(err, "failed to validate block header")
 	}
 
@@ -422,7 +422,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 }
 
 // ValidateBlockHeader validates the specified header.
-func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bc *Blockchain) error {
+func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore, chainReader consensus.ChainReader) error {
 	if header == nil {
 		return types.ErrBlockHeaderNil
 	}
@@ -444,7 +444,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bc 
 
 	// Do not write the block if already exists.
 	blockHash := header.Hash()
-	exist, err := bc.bcStore.HasBlock(blockHash)
+	exist, err := bcStore.HasBlock(blockHash)
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to check if block exists by hash %v", blockHash)
 	}
@@ -453,7 +453,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bc 
 		return ErrBlockAlreadyExists
 	}
 
-	if err = engine.VerifyHeader(bc, header); err != nil {
+	if err = engine.VerifyHeader(chainReader, header); err != nil {
 		return errors.NewStackedError(err, "failed to verify header by consensus engine")
 	}
 
