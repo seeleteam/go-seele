@@ -8,6 +8,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -26,12 +28,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var seeleNodeConfigFile string
-var miner string
-var metricsEnableFlag bool
-var accountsConfig string
-var threads int
-var lightNode bool // default is full node
+var (
+	seeleNodeConfigFile string
+	miner               string
+	metricsEnableFlag   bool
+	accountsConfig      string
+	threads             int
+
+	// default is full node
+	lightNode bool
+
+	//pprofPort http server port
+	pprofPort uint64
+)
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -72,6 +81,16 @@ var startCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println(err)
 			return
+		}
+
+		// start pprof http server
+		if pprofPort > 0 {
+			go func() {
+				if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", pprofPort), nil); err != nil {
+					fmt.Println("Failed to start pprof http server,", err)
+					return
+				}
+			}()
 		}
 
 		if lightNode {
@@ -178,4 +197,5 @@ func init() {
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
+	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
 }
