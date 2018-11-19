@@ -87,7 +87,7 @@ var startCmd = &cobra.Command{
 		if pprofPort > 0 {
 			go func() {
 				if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", pprofPort), nil); err != nil {
-					fmt.Println("Failed to start pprof http server err:", err)
+					fmt.Println("Failed to start pprof http server, ", err)
 					return
 				}
 			}()
