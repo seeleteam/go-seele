@@ -193,3 +193,36 @@ func readABIFile(abiFile string) (string, error) {
 
 	return string(bytes), nil
 }
+
+func GenerateTopicAction(c *cli.Context) error {
+	if abiFile == "" || eventName == "" {
+		return fmt.Errorf("required flag(s) \"abi, event\" not set")
+	}
+
+	abiJSON, err := readABIFile(abiFile)
+	if err != nil {
+		return err
+	}
+
+	topic, err := generateTopic(abiJSON, eventName)
+	if err != nil {
+		return fmt.Errorf("failed to parse the abi, err:%s", err)
+	}
+
+	fmt.Printf("event: %s, topic: %s\n", eventName, topic)
+	return nil
+}
+
+func generateTopic(abiStr, eventName string) (string, error) {
+	parsed, err := abi.JSON(strings.NewReader(abiStr))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse the abi, err:%s", err)
+	}
+
+	event, exist := parsed.Events[eventName]
+	if !exist {
+		return "", fmt.Errorf("event '%s' not found", eventName)
+	}
+
+	return event.Id().Hex(), nil
+}

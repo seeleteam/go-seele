@@ -136,6 +136,14 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: GeneratePayloadAction,
 		},
 		{
+			Name:  "topic",
+			Usage: "generate the topic according to the abi file and event name",
+			Flags: []cli.Flag{
+				abiFileFlag, eventNameFlag,
+			},
+			Action: GenerateTopicAction,
+		},
+		{
 			Name:  "deckeyfile",
 			Usage: "Decrypt key file",
 			Flags: []cli.Flag{
