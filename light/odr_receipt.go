@@ -16,6 +16,8 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+var errForkMessage = errors.New("get message from a fork chain")
+
 type odrReceiptRequest struct {
 	OdrItem
 	TxHash common.Hash
@@ -82,6 +84,14 @@ func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.Blockc
 	header, err := bcStore.GetBlockHeader(odr.ReceiptIndex.BlockHash)
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to get block header by hash %v", odr.ReceiptIndex.BlockHash)
+	}
+
+	blockHash, err := bcStore.GetBlockHash(header.Height)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
+	}
+	if !blockHash.Equal(header.Hash()) {
+		return errForkMessage
 	}
 
 	proof := arrayToMap(odr.Proof)
