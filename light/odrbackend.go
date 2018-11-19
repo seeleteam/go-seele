@@ -21,7 +21,6 @@ import (
 var (
 	errNoMorePeers   = errors.New("No peers found")
 	errServiceQuited = errors.New("Service has quited")
-	errForkMessage   = errors.New("get message from a fork chain")
 )
 
 type odrBackend struct {
