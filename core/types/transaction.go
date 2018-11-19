@@ -68,6 +68,9 @@ var (
 
 	// TransferAmountIntrinsicGas is the intrinsic gas to transfer amount.
 	TransferAmountIntrinsicGas = ethIntrinsicGas(nil)
+
+	// verified tx signature cache <txHash, error>
+	sigCache = common.MustNewCache(20 * 1024)
 )
 
 // TransactionData wraps the data in a transaction.
@@ -243,21 +246,10 @@ func (tx *Transaction) ValidateWithoutState(signNeeded bool, shardNeeded bool) e
 	}
 
 	// vaildate signature
-	if !signNeeded {
-		return nil
-	}
-
-	if len(tx.Signature.Sig) == 0 {
-		return ErrSigMissing
-	}
-
-	txDataHash := crypto.MustHash(tx.Data)
-	if !txDataHash.Equal(tx.Hash) {
-		return ErrHashMismatch
-	}
-
-	if !tx.Signature.Verify(tx.Data.From, txDataHash.Bytes()) {
-		return ErrSigInvalid
+	if signNeeded {
+		if err := tx.verifySignature(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -305,6 +297,34 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Hash = crypto.MustHash(tx.Data)
 	tx.Signature = *crypto.MustSign(privKey, tx.Hash.Bytes())
+}
+
+func (tx *Transaction) verifySignature() error {
+	if len(tx.Signature.Sig) == 0 {
+		return ErrSigMissing
+	}
+
+	if txHash := tx.CalculateHash(); !txHash.Equal(tx.Hash) {
+		return ErrHashMismatch
+	}
+
+	if v, ok := sigCache.Get(tx.Hash); ok {
+		if v == nil {
+			return nil
+		}
+
+		return v.(error)
+	}
+
+	var err error
+	if !tx.Signature.Verify(tx.Data.From, tx.Hash.Bytes()) {
+		err = ErrSigInvalid
+	}
+
+	// verify signature is time consuming, so cache the result.
+	sigCache.Add(tx.Hash, err)
+
+	return err
 }
 
 // Validate validates all fields in tx.
