@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/seeleteam/go-seele/pprof"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/light"
@@ -74,10 +76,23 @@ var startCmd = &cobra.Command{
 			return
 		}
 
+		pprofLog := log.GetLogger("seele-pprof")
+		// pprof http service
+		pprofservice, err := pprof.NewService(pprofLog)
+		if err != nil {
+			fmt.Println("Create pprof service error:", err)
+			return
+		}
+
 		if lightNode {
 			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), miningEngine)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
+				return
+			}
+
+			if err := seeleNode.Register(pprofservice); err != nil {
+				fmt.Println(err.Error())
 				return
 			}
 
@@ -122,7 +137,7 @@ var startCmd = &cobra.Command{
 			}
 
 			services := manager.GetServices()
-			services = append(services, seeleService, monitorService, lightServerService)
+			services = append(services, seeleService, monitorService, lightServerService, pprofservice)
 			for _, service := range services {
 				if err := seeleNode.Register(service); err != nil {
 					fmt.Println(err.Error())

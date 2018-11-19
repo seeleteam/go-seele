@@ -250,6 +250,14 @@ var (
 		Value:       "sha256",
 		Destination: &algorithmValue,
 	}
+
+	portValue uint64
+	portFlag  = cli.Uint64Flag{
+		Name:        "port",
+		Usage:       "port to listen or connect",
+		Value:       7777,
+		Destination: &portValue,
+	}
 )
 
 // GeneratePayload

@@ -3,23 +3,52 @@
 *  @copyright defined in go-seele/LICENSE
  */
 
- 
 package pprof
-// ProfService implements some rpc interfaces provided by a monitor server
+
+import (
+	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/rpc"
+)
+
+// ProfService implements some rpc interfaces provided by a ProfService server
 type ProfService struct {
-	// Peer-to-Peer server infos
-	p2pServer *p2p.Server       
-	// seele full node service  
-	seele     *seele.SeeleService 
 	// log
-	log       *log.SeeleLog
-	
+	log *log.SeeleLog
 }
 
-Protocols() []p2p.Protocol
+// NewService returns a NewService instance
+func NewService(slog *log.SeeleLog) (*ProfService, error) {
+	return &ProfService{
+		log: slog,
+	}, nil
+}
 
-	APIs() (apis []rpc.API)
+// Protocols return protocols
+func (p *ProfService) Protocols() []p2p.Protocol {
+	return nil
+}
 
-	Start(server *p2p.Server) error
+// APIs api of pprof http server
+func (p *ProfService) APIs() (apis []rpc.API) {
+	return append(apis, []rpc.API{
+		{
+			Namespace: "pprof",
+			Version:   "1.0",
+			Service:   NewProfServer(),
+			Public:    false,
+		},
+	}...)
+}
 
-	Stop() error
+// Start start service
+func (p *ProfService) Start(server *p2p.Server) error {
+	p.log.Info("ProfService start...")
+
+	return nil
+}
+
+// Stop stop service
+func (p *ProfService) Stop() error {
+	return nil
+}

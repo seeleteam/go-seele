@@ -339,6 +339,38 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		},
 	}
 
+	// pprof commands
+	pprofCommands := cli.Command{
+		Name:  "pprof",
+		Usage: "pprof http server commands",
+		Subcommands: []cli.Command{
+			{
+				Name:   "start",
+				Usage:  "start http server",
+				Flags:  rpcFlags(portFlag),
+				Action: rpcAction("pprof", "start"),
+			},
+			{
+				Name:   "stop",
+				Usage:  "stop http server",
+				Flags:  rpcFlags(),
+				Action: rpcAction("pprof", "stop"),
+			},
+			{
+				Name:   "getport",
+				Usage:  "return http server port",
+				Flags:  rpcFlags(),
+				Action: rpcAction("pprof", "getPort"),
+			},
+			{
+				Name:   "state",
+				Usage:  "return http server status",
+				Flags:  rpcFlags(),
+				Action: rpcAction("pprof", "status"),
+			},
+		},
+	}
+
 	// add full node support api
 	if isFullNode {
 		baseCommands = append(baseCommands, []cli.Command{
@@ -387,7 +419,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			minerCommands)
 	}
 
-	baseCommands = append(baseCommands, p2pCommands)
+	baseCommands = append(baseCommands, p2pCommands, pprofCommands)
 
 	app.Commands = baseCommands
 

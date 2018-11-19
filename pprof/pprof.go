@@ -79,10 +79,10 @@ type ProfServer struct {
 }
 
 // NewProfServer retrun ProfServer pointer
-func NewProfServer(port uint64) *ProfServer {
+func NewProfServer() *ProfServer {
 	return &ProfServer{
 		alive: false,
-		port:  port,
+		port:  7777,
 		srv:   nil,
 	}
 }
@@ -105,7 +105,7 @@ func (p *ProfServer) GetPort() uint64 {
 }
 
 // Start is used to get system information
-func (p *ProfServer) Start() error {
+func (p *ProfServer) Start(port uint64) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -114,16 +114,24 @@ func (p *ProfServer) Start() error {
 		return errors.New("go tool pprof is already alive")
 	}
 
+	if port > 0 {
+		p.port = port
+	}
+
+	mux := http.NewServeMux()
+
 	p.srv = new(http.Server)
+
 	p.srv.Addr = fmt.Sprintf("0.0.0.0:%d", p.port)
-	p.srv.Handler = nil
+	p.srv.Handler = mux
 
 	// initialization of handling functions, unsing
-	initial()
+	p.initial(mux)
 
 	// listen and serve
 	go p.srv.ListenAndServe()
 
+	p.alive = true
 	return nil
 }
 
@@ -143,12 +151,13 @@ func (p *ProfServer) Stop() error {
 	return errors.New("go tool pprof is already died")
 }
 
-func initial() {
-	http.HandleFunc("/debug/pprof/", Index)
-	http.HandleFunc("/debug/pprof/cmdline", Cmdline)
-	http.HandleFunc("/debug/pprof/profile", Profile)
-	http.HandleFunc("/debug/pprof/symbol", Symbol)
-	http.HandleFunc("/debug/pprof/trace", Trace)
+// initial add handler
+func (p *ProfServer) initial(mux *http.ServeMux) {
+	mux.HandleFunc("/debug/pprof/", Index)
+	mux.HandleFunc("/debug/pprof/cmdline", Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", Profile)
+	mux.HandleFunc("/debug/pprof/symbol", Symbol)
+	mux.HandleFunc("/debug/pprof/trace", Trace)
 }
 
 // Cmdline responds with the running program's
