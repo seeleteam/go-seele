@@ -183,6 +183,40 @@ func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 }
 
+// GetHeader retrieves a block header from the database by hash and number.
+func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
+	hash, err := bc.bcStore.GetBlockHash(height)
+	if err != nil {
+		bc.log.Warn("get block header by height failed, err %s. height %d", err, height)
+		panic(err)
+		return nil
+	}
+
+	return bc.GetHeaderByHash(hash)
+}
+
+// GetHeaderByNumber retrieves a block header from the database by number.
+func (bc *Blockchain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
+	header, err := bc.bcStore.GetBlockHeader(hash)
+	if err != nil {
+		bc.log.Warn("get block header by hash failed, err %s", err)
+		return nil
+	}
+
+	return header
+}
+
+// GetHeaderByHash retrieves a block header from the database by its hash.
+func (bc *Blockchain) GetBlockByHash(hash common.Hash) *types.Block {
+	block, err := bc.bcStore.GetBlock(hash)
+	if err != nil {
+		bc.log.Warn("get block by hash failed, err %s", err)
+		return nil
+	}
+
+	return block
+}
+
 // GetState returns the state DB of the specified root hash.
 func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 	return state.NewStatedb(root, bc.accountStateDB)
@@ -190,6 +224,22 @@ func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 
 func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
 	panic("unsupported")
+}
+
+func (bc *Blockchain) Genesis() *types.Block {
+	storedGenesisHash, err := bc.bcStore.GetBlockHash(genesisBlockHeight)
+	if err != nil {
+		bc.log.Warn("get genesis hash failed. err %s", err)
+		return nil
+	}
+
+	storedGenesis, err := bc.bcStore.GetBlock(storedGenesisHash)
+	if err != nil {
+		bc.log.Warn("failed to get genesis block by hash. err %s", err)
+		return nil
+	}
+
+	return storedGenesis
 }
 
 // GetCurrentInfo return the current block and current state info
@@ -349,7 +399,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return types.ErrBlockHeaderNil
 	}
 
-	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore); err != nil {
+	if err := ValidateBlockHeader(block.Header, bc.engine, bc); err != nil {
 		return errors.NewStackedError(err, "failed to validate block header")
 	}
 
@@ -372,7 +422,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 }
 
 // ValidateBlockHeader validates the specified header.
-func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore) error {
+func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bc *Blockchain) error {
 	if header == nil {
 		return types.ErrBlockHeaderNil
 	}
@@ -388,13 +438,13 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 	}
 
 	// Now, the extra data in block header should be empty except the genesis block.
-	if len(header.ExtraData) > 0 {
+	if header.Consensus != types.IstanbulConsensus && len(header.ExtraData) > 0 {
 		return ErrBlockExtraDataNotEmpty
 	}
 
 	// Do not write the block if already exists.
 	blockHash := header.Hash()
-	exist, err := bcStore.HasBlock(blockHash)
+	exist, err := bc.bcStore.HasBlock(blockHash)
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to check if block exists by hash %v", blockHash)
 	}
@@ -403,7 +453,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 		return ErrBlockAlreadyExists
 	}
 
-	if err = engine.VerifyHeader(bcStore, header); err != nil {
+	if err = engine.VerifyHeader(bc, header); err != nil {
 		return errors.NewStackedError(err, "failed to verify header by consensus engine")
 	}
 
@@ -709,7 +759,7 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 
 // GetShardNumber returns the shard number of blockchain.
 func (bc *Blockchain) GetShardNumber() (uint, error) {
-	data, err := getGenesisExtraData(bc.genesisBlock)
+	data, err := getShardInfo(bc.genesisBlock)
 	if err != nil {
 		return 0, errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}

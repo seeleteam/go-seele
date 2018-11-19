@@ -14,34 +14,60 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/database"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
+
+var genesisAccount = crypto.MustGenerateShardAddress(1)
+
+func newTestGenesis(n int) (*core.Genesis, []*ecdsa.PrivateKey) {
+	accounts := map[common.Address]*big.Int{
+		*genesisAccount: new(big.Int).Mul(big.NewInt(4), common.SeeleToFan),
+	}
+
+	// Setup validators
+	var nodeKeys = make([]*ecdsa.PrivateKey, n)
+	var addrs = make([]common.Address, n)
+	for i := 0; i < n; i++ {
+		nodeKeys[i], _ = crypto.GenerateKey()
+		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
+	}
+
+	genesis := core.GetGenesis(core.NewGenesisInfo(accounts, 1, 1, big.NewInt(0), types.IstanbulConsensus, addrs))
+	return genesis, nodeKeys
+}
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
-func newBlockChain(n int) (*core.BlockChain, *backend) {
-	genesis, nodeKeys := getGenesisAndKeys(n)
-	memDB, _ := ethdb.NewMemDatabase()
-	config := istanbul.DefaultConfig
-	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB).(*backend)
-	genesis.MustCommit(memDB)
-	blockchain, err := core.NewBlockChain(memDB, genesis.Config, b, vm.Config{})
+func newBlockChain(n int) (*core.Blockchain, *backend) {
+	db, _ := leveldb.NewTestDatabase()
+	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(db))
+
+	genesis, nodeKeys := newTestGenesis(n)
+	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
+		panic(err)
+	}
+
+	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}
-	b.Start(blockchain, blockchain.CurrentBlock, blockchain.HasBadBlock)
-	snap, err := b.snapshot(blockchain, 0, common.Hash{}, nil)
+
+	config := istanbul.DefaultConfig
+	b, _ := New(config, nodeKeys[0], db).(*backend)
+	b.Start(bc, bc.CurrentBlock, func(hash common.Hash) bool {
+		return false
+	})
+
+	snap, err := b.snapshot(bc, 0, common.Hash{}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -59,76 +85,52 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 		}
 	}
 
-	return blockchain, b
-}
-
-func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey) {
-	// Setup validators
-	var nodeKeys = make([]*ecdsa.PrivateKey, n)
-	var addrs = make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		nodeKeys[i], _ = crypto.GenerateKey()
-		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
-	}
-
-	// generate genesis block
-	genesis := core.DefaultGenesisBlock()
-	genesis.Config = params.TestChainConfig
-	// force enable Istanbul engine
-	genesis.Config.Istanbul = &params.IstanbulConfig{}
-	genesis.Config.Ethash = nil
-	genesis.Difficulty = defaultDifficulty
-	genesis.Nonce = emptyNonce.Uint64()
-	genesis.Mixhash = types.IstanbulDigest
-
-	appendValidators(genesis, addrs)
-	return genesis, nodeKeys
-}
-
-func appendValidators(genesis *core.Genesis, addrs []common.Address) {
-
-	if len(genesis.ExtraData) < types.IstanbulExtraVanity {
-		genesis.ExtraData = append(genesis.ExtraData, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)...)
-	}
-	genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
-
-	ist := &types.IstanbulExtra{
-		Validators:    addrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	istPayload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		panic("failed to encode istanbul extra")
-	}
-	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
+	return bc, b
 }
 
 func makeHeader(parent *types.Block, config *istanbul.Config) *types.BlockHeader {
-	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Number:     parent.Number().Add(parent.Number(), common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
-		GasUsed:    new(big.Int),
-		Extra:      parent.Extra(),
-		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
-		Difficulty: defaultDifficulty,
+	header := &types.BlockHeader{
+		PreviousBlockHash: parent.Hash(),
+		Height:            parent.Height() + 1,
+		CreateTimestamp:   new(big.Int).Add(parent.Header.CreateTimestamp, new(big.Int).SetUint64(config.BlockPeriod)),
+		Difficulty:        defaultDifficulty,
+		ExtraData:         parent.Header.ExtraData,
+		StateHash:         parent.Header.StateHash,
 	}
 	return header
 }
 
-func makeBlock(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
+func makeBlock(chain *core.Blockchain, engine *backend, parent *types.Block) *types.Block {
 	block := makeBlockWithoutSeal(chain, engine, parent)
-	block, _ = engine.Seal(chain, block, nil)
+	block, err := engine.SealWithReturn(chain, block, nil)
+	if err != nil {
+		panic(err)
+	}
+
 	return block
 }
 
-func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
+func makeBlockWithoutSeal(chain *core.Blockchain, engine *backend, parent *types.Block) *types.Block {
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
-	state, _,_ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil, nil)
+	reward := consensus.GetReward(header.Height)
+	rewardTx, err := types.NewRewardTransaction(header.Creator, reward, header.CreateTimestamp.Uint64())
+	if err != nil {
+		panic(err)
+	}
+
+	state, err := chain.GetState(parent.Header.StateHash)
+	if err != nil {
+		panic(err)
+	}
+
+	state.AddBalance(header.Creator, reward)
+	header.StateHash, err = state.Hash()
+	if err != nil {
+		panic(err)
+	}
+
+	block := types.NewBlock(header, []*types.Transaction{rewardTx}, nil, nil)
 	return block
 }
 
@@ -139,7 +141,7 @@ func TestPrepare(t *testing.T) {
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
-	header.ParentHash = common.StringToHash("1234567890")
+	header.PreviousBlockHash = common.StringToHash("1234567890")
 	err = engine.Prepare(chain, header)
 	if err != consensus.ErrBlockInvalidParentHash {
 		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrBlockInvalidParentHash)
@@ -163,7 +165,7 @@ func TestSealStopChannel(t *testing.T) {
 		eventSub.Unsubscribe()
 	}
 	go eventLoop()
-	finalBlock, err := engine.Seal(chain, block, stop)
+	finalBlock, err := engine.SealWithReturn(chain, block, stop)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -190,7 +192,7 @@ func TestSealCommittedOtherHash(t *testing.T) {
 	}
 	go eventLoop()
 	seal := func() {
-		engine.Seal(chain, block, nil)
+		engine.SealWithReturn(chain, block, nil)
 		t.Error("seal should not be completed")
 	}
 	go seal()
@@ -206,9 +208,9 @@ func TestSealCommittedOtherHash(t *testing.T) {
 func TestSealCommitted(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1), block)
+	expectedBlock, _ := engine.updateBlock(engine.chain.GetHeaderByHash(block.ParentHash()), block)
 
-	finalBlock, err := engine.Seal(chain, block, nil)
+	finalBlock, err := engine.SealWithReturn(chain, block, nil)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -222,77 +224,68 @@ func TestVerifyHeader(t *testing.T) {
 
 	// errEmptyCommittedSeals case
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	block, _ = engine.updateBlock(chain.Genesis().Header(), block)
-	err := engine.VerifyHeader(chain, block.Header(), false)
+	block, _ = engine.updateBlock(chain.Genesis().Header, block)
+	err := engine.VerifyHeader(chain, block.Header)
 	if err != errEmptyCommittedSeals {
 		t.Errorf("error mismatch: have %v, want %v", err, errEmptyCommittedSeals)
 	}
 
 	// short extra data
-	header := block.Header()
-	header.Extra = []byte{}
-	err = engine.VerifyHeader(chain, header, false)
+	header := block.Header
+	header.ExtraData = []byte{}
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidExtraDataFormat {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
 	}
 	// incorrect extra format
-	header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
-	err = engine.VerifyHeader(chain, header, false)
+	header.ExtraData = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidExtraDataFormat {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
 	}
 
-	// non zero MixDigest
+	// incorrect consensus type
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.MixDigest = common.StringToHash("123456789")
-	err = engine.VerifyHeader(chain, header, false)
+	header = block.Header
+	header.Consensus = types.PowConsensus
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidMixDigest {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMixDigest)
 	}
 
-	// invalid uncles hash
-	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.UncleHash = common.StringToHash("123456789")
-	err = engine.VerifyHeader(chain, header, false)
-	if err != errInvalidUncleHash {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidUncleHash)
-	}
-
 	// invalid difficulty
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
+	header = block.Header
 	header.Difficulty = big.NewInt(2)
-	err = engine.VerifyHeader(chain, header, false)
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidDifficulty {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidDifficulty)
 	}
 
 	// invalid timestamp
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
-	err = engine.VerifyHeader(chain, header, false)
+	header = block.Header
+	header.CreateTimestamp = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidTimestamp {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidTimestamp)
 	}
 
 	// future block
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.Time = new(big.Int).Add(big.NewInt(now().Unix()), new(big.Int).SetUint64(10))
-	err = engine.VerifyHeader(chain, header, false)
+	header = block.Header
+	header.CreateTimestamp = new(big.Int).Add(big.NewInt(now().Unix()), new(big.Int).SetUint64(10))
+	err = engine.VerifyHeader(chain, header)
 	if err != consensus.ErrBlockCreateTimeOld {
 		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrBlockCreateTimeOld)
 	}
 
 	// invalid nonce
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	copy(header.Nonce[:], hexutil.MustDecode("0x111111111111"))
-	header.Number = big.NewInt(int64(engine.config.Epoch))
-	err = engine.VerifyHeader(chain, header, false)
+	header = block.Header
+	copy(header.Witness[:], hexutil.MustHexToBytes("0x111111111111"))
+	header.Height = engine.config.Epoch
+	err = engine.VerifyHeader(chain, header)
 	if err != errInvalidNonce {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidNonce)
 	}
@@ -302,24 +295,24 @@ func TestVerifySeal(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	genesis := chain.Genesis()
 	// cannot verify genesis
-	err := engine.VerifySeal(chain, genesis.Header())
+	err := engine.VerifySeal(chain, genesis.Header)
 	if err != errUnknownBlock {
 		t.Errorf("error mismatch: have %v, want %v", err, errUnknownBlock)
 	}
 
 	block := makeBlock(chain, engine, genesis)
 	// change block content
-	header := block.Header()
-	header.Number = big.NewInt(4)
+	header := block.Header
+	header.Height = 4
 	block1 := block.WithSeal(header)
-	err = engine.VerifySeal(chain, block1.Header())
+	err = engine.VerifySeal(chain, block1.Header)
 	if err != errUnauthorized {
 		t.Errorf("error mismatch: have %v, want %v", err, errUnauthorized)
 	}
 
 	// unauthorized users but still can get correct signer address
 	engine.privateKey, _ = crypto.GenerateKey()
-	err = engine.VerifySeal(chain, block.Header())
+	err = engine.VerifySeal(chain, block.Header)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -338,16 +331,16 @@ func TestVerifyHeaders(t *testing.T) {
 		var b *types.Block
 		if i == 0 {
 			b = makeBlockWithoutSeal(chain, engine, genesis)
-			b, _ = engine.updateBlock(genesis.Header(), b)
+			b, _ = engine.updateBlock(genesis.Header, b)
 		} else {
 			b = makeBlockWithoutSeal(chain, engine, blocks[i-1])
-			b, _ = engine.updateBlock(blocks[i-1].Header(), b)
+			b, _ = engine.updateBlock(blocks[i-1].Header, b)
 		}
 		blocks = append(blocks, b)
-		headers = append(headers, blocks[i].Header())
+		headers = append(headers, blocks[i].Header)
 	}
 	now = func() time.Time {
-		return time.Unix(headers[size-1].Time.Int64(), 0)
+		return time.Unix(headers[size-1].CreateTimestamp.Int64(), 0)
 	}
 	_, results := engine.VerifyHeaders(chain, headers, nil)
 	const timeoutDura = 2 * time.Second
@@ -398,7 +391,7 @@ OUT2:
 		}
 	}
 	// error header cases
-	headers[2].Number = big.NewInt(100)
+	headers[2].Height = 100
 	abort, results = engine.VerifyHeaders(chain, headers, nil)
 	timeout = time.NewTimer(timeoutDura)
 	index = 0
@@ -428,16 +421,16 @@ OUT3:
 
 func TestPrepareExtra(t *testing.T) {
 	validators := make([]common.Address, 4)
-	validators[0] = common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a"))
-	validators[1] = common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212"))
-	validators[2] = common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6"))
-	validators[3] = common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440"))
+	validators[0] = common.BytesToAddress(hexutil.MustHexToBytes("0x44add0ec310f115a0e603b2d7db9f067778eaf8a"))
+	validators[1] = common.BytesToAddress(hexutil.MustHexToBytes("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212"))
+	validators[2] = common.BytesToAddress(hexutil.MustHexToBytes("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6"))
+	validators[3] = common.BytesToAddress(hexutil.MustHexToBytes("0x8be76812f765c24641ec63dc2852b378aba2b440"))
 
 	vanity := make([]byte, types.IstanbulExtraVanity)
-	expectedResult := append(vanity, hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")...)
+	expectedResult := append(vanity, hexutil.MustHexToBytes("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")...)
 
-	h := &types.Header{
-		Extra: vanity,
+	h := &types.BlockHeader{
+		ExtraData: vanity,
 	}
 
 	payload, err := prepareExtra(h, validators)
@@ -449,7 +442,7 @@ func TestPrepareExtra(t *testing.T) {
 	}
 
 	// append useless information to extra-data
-	h.Extra = append(vanity, make([]byte, 15)...)
+	h.ExtraData = append(vanity, make([]byte, 15)...)
 
 	payload, err = prepareExtra(h, validators)
 	if !reflect.DeepEqual(payload, expectedResult) {
@@ -459,22 +452,22 @@ func TestPrepareExtra(t *testing.T) {
 
 func TestWriteSeal(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
+	istRawData := hexutil.MustHexToBytes("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
 	expectedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-3)...)
 	expectedIstExtra := &types.IstanbulExtra{
 		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x8be76812f765c24641ec63dc2852b378aba2b440")),
 		},
 		Seal:          expectedSeal,
 		CommittedSeal: [][]byte{},
 	}
 	var expectedErr error
 
-	h := &types.Header{
-		Extra: append(vanity, istRawData...),
+	h := &types.BlockHeader{
+		ExtraData: append(vanity, istRawData...),
 	}
 
 	// normal case
@@ -502,22 +495,22 @@ func TestWriteSeal(t *testing.T) {
 
 func TestWriteCommittedSeals(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
+	istRawData := hexutil.MustHexToBytes("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
 	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-3)...)
 	expectedIstExtra := &types.IstanbulExtra{
 		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
+			common.BytesToAddress(hexutil.MustHexToBytes("0x8be76812f765c24641ec63dc2852b378aba2b440")),
 		},
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{expectedCommittedSeal},
 	}
 	var expectedErr error
 
-	h := &types.Header{
-		Extra: append(vanity, istRawData...),
+	h := &types.BlockHeader{
+		ExtraData: append(vanity, istRawData...),
 	}
 
 	// normal case

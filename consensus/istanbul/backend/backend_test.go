@@ -29,16 +29,15 @@ func TestSign(t *testing.T) {
 	}
 	//Check signature recover
 	hashData := crypto.Keccak256([]byte(data))
-	pubkey, _ := crypto.Ecrecover(hashData, sig)
-	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	pubkey, _ := crypto.SigToPub(hashData, sig)
+	signer := *crypto.GetAddress(pubkey)
 	if signer != getAddress() {
 		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
 	}
 }
 
 func TestCheckSignature(t *testing.T) {
-	key, _ := generatePrivateKey()
+	key := generatePrivateKey()
 	data := []byte("Here is a string....")
 	hashData := crypto.Keccak256([]byte(data))
 	sig, _ := crypto.Sign(key, hashData)
@@ -117,7 +116,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.Height()-1), block)
+				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeaderByHash(block.ParentHash()), block)
 				return expectedBlock
 			},
 		},
@@ -128,7 +127,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeader(block.ParentHash(), block.Height()-1), block)
+				expectedBlock, _ := engine.updateBlock(engine.chain.GetHeaderByHash(block.ParentHash()), block)
 				return expectedBlock
 			},
 		},
@@ -168,7 +167,11 @@ func TestCommit(t *testing.T) {
 func TestGetProposer(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	block := makeBlock(chain, engine, chain.Genesis())
-	chain.InsertChain(types.Blocks{block})
+	err := chain.WriteBlock(block)
+	if err != nil {
+		panic(err)
+	}
+
 	expected := engine.GetProposer(1)
 	actual := engine.Address()
 	if actual != expected {
@@ -178,21 +181,26 @@ func TestGetProposer(t *testing.T) {
 
 /**
  * SimpleBackend
- * Private key: bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1
- * Public key: 04a2bfb0f7da9e1b9c0c64e14f87e8fb82eb0144e97c25fe3a977a921041a50976984d18257d2495e7bfd3d4b280220217f429287d25ecdf2b0d7c0f7aae9aa624
- * Address: 0x70524d664ffe731100208a0154e556f9bb679ae6
+ * Private key: 0x6396d917f75c3f50bd845bd7fc32e9c1c73f7542b4dde25b6616adf41159a540
+ * Public key: 0x04d85058c8d0b689f7b5ecc92728c4ed5dbdd60c01d3277dc6fe453761ce74dc78566c8088d22f8b05855fc26046f6b1e8cad03aa9f533953836ffa2e386567b98
+ * Address: 0xb15bf0941562ee58256d1da3f6a6beffaa1b1791
  */
 func getAddress() common.Address {
-	return common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
+	return common.HexMustToAddres("0xb15bf0941562ee58256d1da3f6a6beffaa1b1791")
 }
 
 func getInvalidAddress() common.Address {
-	return common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
+	return common.HexMustToAddres("0x99ea94bba74858c2ca43fec0050d3da8bc944141")
 }
 
-func generatePrivateKey() (*ecdsa.PrivateKey, error) {
-	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
-	return crypto.HexToECDSA(key)
+func generatePrivateKey() *ecdsa.PrivateKey {
+	key := "0x6396d917f75c3f50bd845bd7fc32e9c1c73f7542b4dde25b6616adf41159a540"
+	privateKey, err := crypto.LoadECDSAFromString(key)
+	if err != nil {
+		panic(err)
+	}
+
+	return privateKey
 }
 
 func newTestValidatorSet(n int) (istanbul.ValidatorSet, []*ecdsa.PrivateKey) {
@@ -225,7 +233,7 @@ func (slice Keys) Swap(i, j int) {
 
 func newBackend() (b *backend) {
 	_, b = newBlockChain(4)
-	key, _ := generatePrivateKey()
+	key := generatePrivateKey()
 	b.privateKey = key
 	return
 }

@@ -78,9 +78,8 @@ func (header *BlockHeader) Clone() *BlockHeader {
 // Hash calculates and returns the hash of the block header.
 func (header *BlockHeader) Hash() common.Hash {
 	if header.Consensus == IstanbulConsensus {
-		h := header.Clone()
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
+		if istanbulHeader := IstanbulFilteredHeader(header, true); istanbulHeader != nil {
 			return crypto.MustHash(istanbulHeader)
 		}
 	}
@@ -183,6 +182,10 @@ func (b *Block) Hash() common.Hash {
 
 func (b *Block) ParentHash() common.Hash {
 	return b.Header.PreviousBlockHash
+}
+
+func (b *Block) Time() *big.Int {
+	return b.Header.CreateTimestamp
 }
 
 // Validate validates state independent fields in a block.

@@ -8,11 +8,12 @@ package backend
 import (
 	"errors"
 
-	"github.com/ethereum/go-ethereum/p2p"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/p2p"
 )
 
 const (
@@ -34,7 +35,7 @@ func (sb *backend) Protocol() consensus.Protocol {
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
-func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+func (sb *backend) HandleMsg(addr common.Address, msg p2p.Message) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 
@@ -44,11 +45,11 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 
 		var data []byte
-		if err := msg.Decode(&data); err != nil {
+		if err := common.Deserialize(msg.Payload, &data); err != nil {
 			return true, errDecodeFailed
 		}
 
-		hash := istanbul.RLPHash(data)
+		hash := crypto.HashBytes(data)
 
 		// Mark peer's message
 		ms, ok := sb.recentMessages.Get(addr)

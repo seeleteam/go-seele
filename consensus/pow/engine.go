@@ -16,7 +16,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/utils"
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/rpc"
@@ -50,7 +49,7 @@ func (engine *Engine) SetThreads(threads int) {
 	}
 }
 
-func (engine *Engine) APIs() []rpc.API {
+func (engine *Engine) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "miner",
@@ -62,9 +61,9 @@ func (engine *Engine) APIs() []rpc.API {
 }
 
 // ValidateHeader validates the specified header and returns error if validation failed.
-func (engine *Engine) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error {
-	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil {
+func (engine *Engine) VerifyHeader(reader consensus.ChainReader, header *types.BlockHeader) error {
+	parent := reader.GetHeaderByHash(header.PreviousBlockHash)
+	if parent == nil {
 		return consensus.ErrBlockInvalidParentHash
 	}
 
@@ -72,17 +71,17 @@ func (engine *Engine) VerifyHeader(store store.BlockchainStore, header *types.Bl
 		return err
 	}
 
-	if err = verifyTarget(header); err != nil {
+	if err := verifyTarget(header); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (engine *Engine) Prepare(store store.BlockchainStore, header *types.BlockHeader) error {
-	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil {
-		return err
+func (engine *Engine) Prepare(reader consensus.ChainReader, header *types.BlockHeader) error {
+	parent := reader.GetHeaderByHash(header.PreviousBlockHash)
+	if parent == nil {
+		return consensus.ErrBlockInvalidParentHash
 	}
 
 	header.Difficulty = utils.GetDifficult(header.CreateTimestamp.Uint64(), parent)
@@ -90,7 +89,7 @@ func (engine *Engine) Prepare(store store.BlockchainStore, header *types.BlockHe
 	return nil
 }
 
-func (engine *Engine) Seal(store store.BlockchainStore, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+func (engine *Engine) Seal(reader consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
 	threads := engine.threads
 
 	var step uint64

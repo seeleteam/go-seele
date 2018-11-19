@@ -6,10 +6,12 @@
 package core
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
@@ -33,7 +35,7 @@ const genesisBlockHeight = uint64(0)
 // Genesis represents the genesis block in the blockchain.
 type Genesis struct {
 	header *types.BlockHeader
-	info   GenesisInfo
+	info   *GenesisInfo
 }
 
 // GenesisInfo genesis info for generating genesis block, it could be used for initializing account balance
@@ -50,6 +52,24 @@ type GenesisInfo struct {
 
 	// CreateTimestamp is the initial time of genesis
 	CreateTimestamp *big.Int `json:"timestamp"`
+
+	// Consensus consensus type
+	Consensus types.ConsensusType `json:"consensus"`
+
+	// Validators istanbul consensus validators
+	Validators []common.Address `json:"validators"`
+}
+
+func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
+	consensus types.ConsensusType, validator []common.Address) *GenesisInfo {
+	return &GenesisInfo{
+		Accounts:        accounts,
+		Difficult:       difficult,
+		ShardNumber:     shard,
+		CreateTimestamp: timestamp,
+		Consensus:       consensus,
+		Validators:      validator,
+	}
 }
 
 // Hash returns GenesisInfo hash
@@ -62,25 +82,31 @@ func (info *GenesisInfo) Hash() common.Hash {
 	return crypto.HashBytes(data)
 }
 
-// genesisExtraData represents the extra data that saved in the genesis block in the blockchain.
-type genesisExtraData struct {
+// shardInfo represents the extra data that saved in the genesis block in the blockchain.
+type shardInfo struct {
 	ShardNumber uint
 }
 
 // GetGenesis gets the genesis block according to accounts' balance
-func GetGenesis(info GenesisInfo) *Genesis {
+func GetGenesis(info *GenesisInfo) *Genesis {
 	if info.Difficult <= 0 {
 		info.Difficult = 1
 	}
 
 	statedb := getStateDB(info)
-
 	stateRootHash, err := statedb.Hash()
 	if err != nil {
 		panic(err)
 	}
 
-	extraData := genesisExtraData{info.ShardNumber}
+	extraData := []byte{}
+	if info.Consensus == types.IstanbulConsensus {
+		extraData = generateConsensusInfo(info.Validators)
+	}
+
+	shard := common.SerializePanic(shardInfo{
+		ShardNumber: info.ShardNumber,
+	})
 
 	return &Genesis{
 		header: &types.BlockHeader{
@@ -91,11 +117,31 @@ func GetGenesis(info GenesisInfo) *Genesis {
 			Difficulty:        big.NewInt(info.Difficult),
 			Height:            genesisBlockHeight,
 			CreateTimestamp:   info.CreateTimestamp,
-			Witness:           make([]byte, 0),
-			ExtraData:         common.SerializePanic(extraData),
+			Consensus:         info.Consensus,
+			Witness:           shard,
+			ExtraData:         extraData,
 		},
 		info: info,
 	}
+}
+
+func generateConsensusInfo(addrs []common.Address) []byte {
+	var consensusInfo []byte
+	consensusInfo = append(consensusInfo, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity)...)
+
+	ist := &types.IstanbulExtra{
+		Validators:    addrs,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+	}
+
+	istPayload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		panic("failed to encode istanbul extra")
+	}
+
+	consensusInfo = append(consensusInfo, istPayload...)
+	return consensusInfo
 }
 
 // GetShardNumber gets the shard number of genesis
@@ -122,7 +168,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 		return errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", storedGenesisHash)
 	}
 
-	data, err := getGenesisExtraData(storedGenesis)
+	data, err := getShardInfo(storedGenesis)
 	if err != nil {
 		return errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
@@ -155,7 +201,7 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return nil
 }
 
-func getStateDB(info GenesisInfo) *state.Statedb {
+func getStateDB(info *GenesisInfo) *state.Statedb {
 	statedb := state.NewEmptyStatedb(nil)
 
 	for addr, amount := range info.Accounts {
@@ -168,14 +214,14 @@ func getStateDB(info GenesisInfo) *state.Statedb {
 	return statedb
 }
 
-// getGenesisExtraData returns the extra data of specified genesis block.
-func getGenesisExtraData(genesisBlock *types.Block) (*genesisExtraData, error) {
+// getShardInfo returns the extra data of specified genesis block.
+func getShardInfo(genesisBlock *types.Block) (*shardInfo, error) {
 	if genesisBlock.Header.Height != genesisBlockHeight {
 		return nil, fmt.Errorf("invalid genesis block height %v", genesisBlock.Header.Height)
 	}
 
-	data := genesisExtraData{}
-	if err := common.Deserialize(genesisBlock.Header.ExtraData, &data); err != nil {
+	data := shardInfo{}
+	if err := common.Deserialize(genesisBlock.Header.Witness, &data); err != nil {
 		return nil, errors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
 	}
 

@@ -9,18 +9,18 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestHeaderChain(db database.Database) *HeaderChain {
 	bcStore := store.NewBlockchainDatabase(db)
 
-	genesis := GetGenesis(GenesisInfo{})
+	genesis := GetGenesis(&GenesisInfo{})
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func Test_HeaderChain_NewHeaderChain(t *testing.T) {
 	_, err := NewHeaderChain(bcStore)
 	assert.Equal(t, err != nil, true)
 
-	genesis := GetGenesis(GenesisInfo{})
+	genesis := GetGenesis(&GenesisInfo{})
 	genesis.InitializeAndValidate(bcStore, db)
 	hc, err := NewHeaderChain(bcStore)
 	assert.Equal(t, err == nil, true)

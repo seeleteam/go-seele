@@ -8,8 +8,6 @@ package core
 import (
 	"time"
 
-	"math/big"
-
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 )
@@ -57,7 +55,7 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
 			// 2. The given block must exist
-			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(preprepare.Proposal.Hash(), new(big.Int).SetUint64(preprepare.Proposal.Height())) {
+			if valSet.IsProposer(src.Address()) && c.backend.HasPropsal(preprepare.Proposal.Hash()) {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash())
 				return nil
 			}

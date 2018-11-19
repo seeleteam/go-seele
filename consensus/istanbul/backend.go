@@ -6,7 +6,6 @@
 package istanbul
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
@@ -49,10 +48,10 @@ type Backend interface {
 	LastProposal() (Proposal, common.Address)
 
 	// HasPropsal checks if the combination of the given hash and height matches any existing blocks
-	HasPropsal(hash common.Hash, number *big.Int) bool
+	HasPropsal(hash common.Hash) bool
 
 	// GetProposer returns the proposer of the given block height
-	GetProposer(number uint64) common.Address
+	GetProposer(height uint64) common.Address
 
 	// ParentValidators returns the validator set of the given proposal's parent block
 	ParentValidators(proposal Proposal) ValidatorSet
