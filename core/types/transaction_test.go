@@ -361,3 +361,13 @@ func Test_Transaction_IntrinsicGasOverflow(t *testing.T) {
 	overflowPayloadSize := (math.MaxUint64 - params.TxGas) / params.TxDataNonZeroGas
 	assert.Equal(t, overflowPayloadSize > defaultMaxPayloadSize, true)
 }
+
+func Test_Transaction_BatchValidateTxs_NoSig(t *testing.T) {
+	var txs []*Transaction
+
+	for i := 0; i < 100; i++ {
+		txs = append(txs, newTestTx(t, 1, 1, uint64(i), false))
+	}
+
+	assert.Equal(t, ErrSigMissing, BatchValidateTxs(txs))
+}

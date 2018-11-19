@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
@@ -386,6 +387,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 
 	// parallel validates txs
 	var err error
+	var hasErr uint32
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < threads; i++ {
@@ -393,9 +395,9 @@ func BatchValidateTxs(txs []*Transaction) error {
 		go func(offset int) {
 			defer wg.Done()
 
-			for j := offset; j < len && err == nil; j += threads {
+			for j := offset; j < len && atomic.LoadUint32(&hasErr) == 0; j += threads {
 				if e := txs[j].ValidateWithoutState(true, true); e != nil {
-					if err != nil {
+					if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
 						err = e
 					}
 
