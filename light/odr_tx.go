@@ -118,7 +118,7 @@ func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.
 			return errors.NewStackedErrorf(err, "failed to get block header by hash %v", response.BlockIndex.BlockHash)
 		}
 
-		blockHash, err := bcStore.GetBlockHash(header.Height)
+		blockHash, err := bcStore.GetBlockHash(response.BlockIndex.BlockHeight)
 		if err != nil {
 			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
 		}
