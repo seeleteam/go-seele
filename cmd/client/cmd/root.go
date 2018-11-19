@@ -137,7 +137,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		},
 		{
 			Name:  "topic",
-			Usage: "generate the topic according to the abi file and method name",
+			Usage: "generate the topic according to the abi file and event name",
 			Flags: []cli.Flag{
 				abiFileFlag, eventNameFlag,
 			},
