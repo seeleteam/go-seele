@@ -38,9 +38,6 @@ var (
 	// default is full node
 	lightNode bool
 
-	// dufault is not open pprof http server
-	pprofTag bool
-
 	//pprofPort http server port
 	pprofPort uint64
 )
@@ -86,8 +83,8 @@ var startCmd = &cobra.Command{
 			return
 		}
 
-		// open pprof http server
-		if pprofTag {
+		// start pprof http server
+		if pprofPort > 0 {
 			go func() {
 				if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", pprofPort), nil); err != nil {
 					fmt.Println("Failed to start pprof http server err:", err)
@@ -200,6 +197,5 @@ func init() {
 	startCmd.Flags().StringVarP(&accountsConfig, "accounts", "", "", "init accounts info")
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
-	startCmd.Flags().BoolVarP(&pprofTag, "pprof", "", false, "whether start with pprof http server or not")
-	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 7777, "which port pprof http server listen to")
+	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
 }
