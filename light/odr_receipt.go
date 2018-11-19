@@ -88,8 +88,8 @@ func (odr *odrReceiptResponse) validate(request odrRequest, bcStore store.Blockc
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
 	}
-	if blockHash != header.Hash() {
-		return errors.New("get a receipt from a fork chain")
+	if blockHash.Equal(header.Hash()) {
+		return errForkMessage
 	}
 
 	proof := arrayToMap(odr.Proof)
