@@ -310,7 +310,7 @@ func (pool *txPool) clearConfirmedBlocks() {
 }
 
 func (pool *txPool) GetBlockHash(txHash common.Hash) common.Hash {
-	pool.mutex.RUnlock()
+	defer pool.mutex.RUnlock()
 	pool.mutex.RLock()
 	if blockHash, ok := pool.packTxs[txHash]; ok {
 		return blockHash
