@@ -104,6 +104,14 @@ func Benchmark_Transaction_ValidateWithoutState(b *testing.B) {
 	}
 }
 
+func Benchmark_Transaction_ValidateWithoutSig(b *testing.B) {
+	tx := newTestTx(nil, 100, 2, 38, true)
+
+	for i := 0; i < b.N; i++ {
+		tx.ValidateWithoutState(false, true)
+	}
+}
+
 func Benchmark_Transaction_ParallelValidate(b *testing.B) {
 	tx := newTestTx(nil, 100, 2, 38, true)
 
