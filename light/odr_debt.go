@@ -17,7 +17,10 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
-var errDebtVerifyFailed = errors.New("failed to verify the debt")
+var (
+	errDebtVerifyFailed = errors.New("failed to verify the debt")
+	errForkDebt         = errors.New("get a debt from a fork chain")
+)
 
 type odrDebtRequest struct {
 	OdrItem
@@ -102,6 +105,14 @@ func (response *odrDebtResponse) validate(request odrRequest, bcStore store.Bloc
 		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
 		if err != nil {
 			return errors.NewStackedErrorf(err, "failed to get block header by hash %v", response.BlockIndex.BlockHash)
+		}
+
+		blockHash, err := bcStore.GetBlockHash(header.Height)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
+		}
+		if blockHash.Equal(header.Hash()) {
+			return errForkDebt
 		}
 
 		proof := arrayToMap(response.Proof)
