@@ -153,7 +153,12 @@ func (tx *Transaction) GetHash() common.Hash {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {
-	return newTx(from, to, amount, price, TransferAmountIntrinsicGas, nonce, nil)
+	gasLimit := TransferAmountIntrinsicGas
+	if !from.IsEmpty() && !to.IsEmpty() && from.Shard() != to.Shard() {
+		gasLimit = 2 * gasLimit
+	}
+
+	return newTx(from, to, amount, price, gasLimit, nonce, nil)
 }
 
 func newTx(from common.Address, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*Transaction, error) {
