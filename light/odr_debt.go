@@ -19,7 +19,7 @@ import (
 
 var (
 	errDebtVerifyFailed = errors.New("failed to verify the debt")
-	errForkDebt         = errors.New("get a transaction from a fork chain")
+	errForkDebt         = errors.New("get a debt from a fork chain")
 )
 
 type odrDebtRequest struct {
