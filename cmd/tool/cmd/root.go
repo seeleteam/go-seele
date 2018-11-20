@@ -15,9 +15,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var serveList string
-var clientList map[uint]*rpc.Client // shard -> client
-var threads int
+var (
+	// serveList is the servers that provide rpc service
+	serveList string
+
+	// shard -> client
+	clientList map[uint]*rpc.Client
+
+	// threads the thread to send tx
+	threads int
+)
 
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{

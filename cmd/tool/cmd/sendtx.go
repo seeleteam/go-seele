@@ -23,16 +23,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var tps int
-var debug bool
+var (
+	// tps number of sended tx every second
+	tps int
 
-// send tx mode
-// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
-// mode 2: send tx with amount 1 and don't care about new balances
-// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
-var mode int
+	// debug print more info
+	debug bool
 
-var wg = sync.WaitGroup{}
+	// send tx mode
+	// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
+	// mode 2: send tx with amount 1 and don't care about new balances
+	// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
+	mode int
+
+	// wg sync signal
+	wg = sync.WaitGroup{}
+
+	// receivers address
+	receiversAddress map[uint][]userInfo
+
+	// isRandom default false
+	isRandom bool
+)
+
+type userInfo struct {
+	address    *common.Address
+	privateKey *ecdsa.PrivateKey
+}
 
 type balance struct {
 	address    *common.Address
@@ -52,9 +69,18 @@ var sendTxCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
 		balanceList := initAccount(threads)
+		// receiversAddress init
+		receiversAddress = make(map[uint][]userInfo)
+		if receivers == "" {
+			isRandom = true
+		} else {
+			isRandom = false
+			initToAccount()
+		}
 
 		fmt.Println("use mode ", mode)
 		fmt.Println("threads", threads)
+		fmt.Println("is send to random address", isRandom)
 		fmt.Println("total balance ", len(balanceList))
 		balances := newBalancesList(balanceList, threads, true)
 
@@ -65,6 +91,33 @@ var sendTxCmd = &cobra.Command{
 
 		wg.Wait()
 	},
+}
+
+// initToAccount init to accounts which are used to send tx
+func initToAccount() {
+	keys, err := ioutil.ReadFile(receivers)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read receivers file %s", err))
+	}
+
+	keyList := strings.Split(string(keys), "\r\n")
+	var info userInfo
+	for _, hex := range keyList {
+		if hex == "" {
+			continue
+		}
+
+		key, err := crypto.LoadECDSAFromString(hex)
+		if err != nil {
+			panic(fmt.Sprintf("failed to load key %s", err))
+		}
+
+		addr := crypto.GetAddress(&key.PublicKey)
+		info.address = addr
+		info.privateKey = key
+		receiversAddress[addr.Shard()] = append(receiversAddress[addr.Shard()], info)
+	}
+
 }
 
 // StartSend start send tx by specific thread and mode
@@ -344,12 +397,23 @@ func sendDifferentShard(b *balance) *balance {
 }
 
 func sendtx(b *balance, amount int, shard uint) *balance {
-	addr, privateKey := crypto.MustGenerateShardKeyPair(shard)
+	var addr *common.Address
+	var privateKey *ecdsa.PrivateKey
+	if isRandom {
+		addr, privateKey = crypto.MustGenerateShardKeyPair(shard)
+
+	} else {
+		data := receiversAddress[shard]
+		index := rand.Intn(len(data))
+		addr = data[index].address
+		privateKey = data[index].privateKey
+	}
+
 	newBalance := &balance{
 		address:    addr,
 		privateKey: privateKey,
 		amount:     amount,
-		shard:      addr.Shard(),
+		shard:      shard,
 		nonce:      0,
 		packed:     false,
 	}
@@ -518,6 +582,7 @@ func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
+	sendTxCmd.Flags().StringVarP(&receivers, "receiver", "r", "", "receiver address file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
 	sendTxCmd.Flags().IntVarP(&mode, "mode", "m", 1, "send tx mode")

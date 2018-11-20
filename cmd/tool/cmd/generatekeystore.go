@@ -21,11 +21,14 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
-var num int
-var value uint64
-var keyFile string
-var output string
-var shard int
+var (
+	num       int
+	value     uint64
+	keyFile   string
+	receivers string
+	output    string
+	shard     int
+)
 
 // KeyInfo information of account key
 type KeyInfo struct {
@@ -111,6 +114,6 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
-	generateKeystoreCmd.Flags().IntVarP(&shard, "shard", "", 1, "shard number, it will generate key in [a:shard]")
+	generateKeystoreCmd.Flags().IntVarP(&shard, "shard", "", 1, "shard number, it will generate key in [1:shard]")
 	generateKeystoreCmd.Flags().IntVarP(&threads, "threads", "t", 1, "threads to generate keys")
 }
