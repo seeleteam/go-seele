@@ -12,19 +12,18 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	istanbulCore "github.com/seeleteam/go-seele/consensus/istanbul/core"
 	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
-	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto/sha3"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/rpc"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -93,7 +92,7 @@ func (sb *backend) Author(header *types.BlockHeader) (common.Address, error) {
 // VerifyHeader checks whether a header conforms to the consensus rules of a
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
-func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.BlockHeader, seal bool) error {
+func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.BlockHeader) error {
 	return sb.verifyHeader(chain, header, nil)
 }
 
@@ -135,7 +134,7 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
-		parent = chain.GetHeader(header.PreviousBlockHash, number-1)
+		parent = chain.GetHeaderByHash(header.PreviousBlockHash)
 	}
 	if parent == nil || parent.Height != number-1 || parent.Hash() != header.PreviousBlockHash {
 		return consensus.ErrBlockInvalidParentHash
@@ -285,7 +284,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeade
 
 	// copy the parent extra data as the header extra data
 	number := header.Height
-	parent := chain.GetHeader(header.PreviousBlockHash, number-1)
+	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
 	if parent == nil {
 		return consensus.ErrBlockInvalidParentHash
 	}
@@ -337,28 +336,17 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeade
 	return nil
 }
 
-// Finalize runs any post-transaction state modifications (e.g. block rewards)
-// and assembles the final block.
-//
-// Note, the block header and state database might be updated to reflect any
-// consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) Finalize(chain consensus.ChainReader, header *types.BlockHeader, state *state.Statedb, txs []*types.Transaction,
-	uncles []*types.BlockHeader, receipts []*types.Receipt) (*types.Block, error) {
-	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
-	hash, err := state.Hash()
-	if err != nil {
-		return nil, err
-	}
+func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+	block, err := sb.SealWithReturn(chain, block, stop)
 
-	header.StateHash = hash
-
-	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts, nil), nil
+	// don't care whether block is nil
+	results <- block
+	return err
 }
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (sb *backend) SealWithReturn(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header
 	number := header.Height
@@ -372,7 +360,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 		return nil, errUnauthorized
 	}
 
-	parent := chain.GetHeader(header.PreviousBlockHash, number-1)
+	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
 	if parent == nil {
 		return nil, consensus.ErrBlockInvalidParentHash
 	}
@@ -444,6 +432,10 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	}}
 }
 
+func (sb *backend) SetThreads(thread int) {
+	// do nothing
+}
+
 // Start implements consensus.Istanbul.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()
@@ -508,8 +500,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		}
 		// If we're at block zero, make a snapshot
 		if number == 0 {
-			genesis := chain.GetHeaderByNumber(0)
-			if err := sb.VerifyHeader(chain, genesis, false); err != nil {
+			genesis := chain.GetHeaderByHeight(0)
+			if err := sb.VerifyHeader(chain, genesis); err != nil {
 				return nil, err
 			}
 			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
@@ -534,7 +526,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			parents = parents[:len(parents)-1]
 		} else {
 			// No explicit parents (or no more left), reach out to the database
-			header = chain.GetHeader(hash, number)
+			header = chain.GetHeaderByHash(hash)
 			if header == nil {
 				return nil, consensus.ErrBlockInvalidParentHash
 			}
@@ -571,12 +563,8 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
 func sigHash(header *types.BlockHeader) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
+	h := types.IstanbulFilteredHeader(header, false)
+	return crypto.MustHash(h)
 }
 
 // ecrecover extracts the Ethereum account address from a signed header.

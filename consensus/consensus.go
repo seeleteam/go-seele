@@ -6,7 +6,6 @@
 package consensus
 
 import (
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/common"
@@ -14,38 +13,19 @@ import (
 
 type Engine interface {
 	// Prepare header before generate block
-	Prepare(store store.BlockchainStore, header *types.BlockHeader) error
+	Prepare(chain ChainReader, header *types.BlockHeader) error
 
 	// VerifyHeader verify block header
-	VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error
+	VerifyHeader(chain ChainReader, header *types.BlockHeader) error
 
 	// Seal generate block
-	Seal(store store.BlockchainStore, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error
+	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error
 
 	// APIs returns the RPC APIs this consensus engine provides.
-	APIs() []rpc.API
+	APIs(chain ChainReader) []rpc.API
 
 	// SetThreads set miner threads
 	SetThreads(thread int)
-}
-
-// ChainReader defines a small collection of methods needed to access the local
-// blockchain during header and/or uncle verification.
-type ChainReader interface {
-	// CurrentHeader retrieves the current header from the local chain.
-	CurrentHeader() *types.BlockHeader
-
-	// GetHeader retrieves a block header from the database by hash and number.
-	GetHeader(hash common.Hash, number uint64) *types.BlockHeader
-
-	// GetHeaderByNumber retrieves a block header from the database by number.
-	GetHeaderByNumber(number uint64) *types.BlockHeader
-
-	// GetHeaderByHash retrieves a block header from the database by its hash.
-	GetHeaderByHash(hash common.Hash) *types.BlockHeader
-
-	// GetBlock retrieves a block from the database by hash and number.
-	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
 // Istanbul is a consensus engine to avoid byzantine failure
@@ -81,5 +61,21 @@ type Protocol struct {
 	Versions []uint
 	// Number of implemented message corresponding to different protocol versions.
 	Lengths []uint64
+}
+
+// ChainReader defines a small collection of methods needed to access the local
+// blockchain during header and/or uncle verification.
+type ChainReader interface {
+	// CurrentHeader retrieves the current header from the local chain.
+	CurrentHeader() *types.BlockHeader
+
+	// GetHeaderByNumber retrieves a block header from the database by number.
+	GetHeaderByHeight(height uint64) *types.BlockHeader
+
+	// GetHeaderByHash retrieves a block header from the database by its hash.
+	GetHeaderByHash(hash common.Hash) *types.BlockHeader
+
+	// GetBlock retrieves a block from the database by hash and number.
+	GetBlockByHash(hash common.Hash) *types.Block
 }
 

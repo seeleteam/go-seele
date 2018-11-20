@@ -183,6 +183,39 @@ func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 }
 
+// GetHeader retrieves a block header from the database by hash and number.
+func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
+	hash, err := bc.bcStore.GetBlockHash(height)
+	if err != nil {
+		bc.log.Warn("get block header by height failed, err %s. height %d", err, height)
+		return nil
+	}
+
+	return bc.GetHeaderByHash(hash)
+}
+
+// GetHeaderByNumber retrieves a block header from the database by number.
+func (bc *Blockchain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
+	header, err := bc.bcStore.GetBlockHeader(hash)
+	if err != nil {
+		bc.log.Warn("get block header by hash failed, err %s", err)
+		return nil
+	}
+
+	return header
+}
+
+// GetHeaderByHash retrieves a block header from the database by its hash.
+func (bc *Blockchain) GetBlockByHash(hash common.Hash) *types.Block {
+	block, err := bc.bcStore.GetBlock(hash)
+	if err != nil {
+		bc.log.Warn("get block by hash failed, err %s", err)
+		return nil
+	}
+
+	return block
+}
+
 // GetState returns the state DB of the specified root hash.
 func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 	return state.NewStatedb(root, bc.accountStateDB)
@@ -190,6 +223,10 @@ func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 
 func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
 	panic("unsupported")
+}
+
+func (bc *Blockchain) Genesis() *types.Block {
+	return bc.genesisBlock
 }
 
 // GetCurrentInfo return the current block and current state info
@@ -349,7 +386,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return types.ErrBlockHeaderNil
 	}
 
-	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore); err != nil {
+	if err := ValidateBlockHeader(block.Header, bc.engine, bc.bcStore, bc); err != nil {
 		return errors.NewStackedError(err, "failed to validate block header")
 	}
 
@@ -372,7 +409,7 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 }
 
 // ValidateBlockHeader validates the specified header.
-func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore) error {
+func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcStore store.BlockchainStore, chainReader consensus.ChainReader) error {
 	if header == nil {
 		return types.ErrBlockHeaderNil
 	}
@@ -388,7 +425,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 	}
 
 	// Now, the extra data in block header should be empty except the genesis block.
-	if len(header.ExtraData) > 0 {
+	if header.Consensus != types.IstanbulConsensus && len(header.ExtraData) > 0 {
 		return ErrBlockExtraDataNotEmpty
 	}
 
@@ -403,7 +440,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 		return ErrBlockAlreadyExists
 	}
 
-	if err = engine.VerifyHeader(bcStore, header); err != nil {
+	if err = engine.VerifyHeader(chainReader, header); err != nil {
 		return errors.NewStackedError(err, "failed to verify header by consensus engine")
 	}
 
@@ -709,7 +746,7 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 
 // GetShardNumber returns the shard number of blockchain.
 func (bc *Blockchain) GetShardNumber() (uint, error) {
-	data, err := getGenesisExtraData(bc.genesisBlock)
+	data, err := getShardInfo(bc.genesisBlock)
 	if err != nil {
 		return 0, errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}

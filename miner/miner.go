@@ -264,7 +264,7 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
-	err = miner.engine.Prepare(miner.seele.BlockChain().GetStore(), header)
+	err = miner.engine.Prepare(miner.seele.BlockChain(), header)
 	if err != nil {
 		return fmt.Errorf("failed to prepare header, %s", err)
 	}
@@ -300,5 +300,5 @@ func (miner *Miner) commitTask(task *Task) {
 	}
 
 	block := task.generateBlock()
-	miner.engine.Seal(miner.seele.BlockChain().GetStore(), block, miner.stopChan, miner.recv)
+	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, miner.recv)
 }
