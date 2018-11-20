@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -44,6 +45,9 @@ var (
 
 	// isRandom default false
 	isRandom bool
+
+	// cross is number of the crossing shard txs
+	cross uint
 )
 
 type userInfo struct {
@@ -95,27 +99,36 @@ var sendTxCmd = &cobra.Command{
 
 // initToAccount init to accounts which are used to send tx
 func initToAccount() {
-	keys, err := ioutil.ReadFile(receivers)
+	users := make(map[uint][]AccountInfo)
+	data, err := ioutil.ReadFile(receivers)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read receivers file %s", err))
 	}
 
-	keyList := strings.Split(string(keys), "\r\n")
+	if err = json.Unmarshal(data, &users); err != nil {
+		panic(fmt.Sprintf("Failed to unmarshal %s", err))
+	}
+
+	fmt.Println("users:", users)
+
 	var info userInfo
-	for _, hex := range keyList {
-		if hex == "" {
-			continue
+	for shardnum, shardUsers := range users {
+		for _, v := range shardUsers {
+			addr, err := common.HexToAddress(v.Account)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to convert hex string to address %s", err))
+			}
+
+			privateKey, err := crypto.LoadECDSAFromString(v.PrivateKey)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to load key %s", err))
+			}
+
+			info.address = &addr
+			info.privateKey = privateKey
+			receiversAddress[shardnum] = append(receiversAddress[shardnum], info)
 		}
 
-		key, err := crypto.LoadECDSAFromString(hex)
-		if err != nil {
-			panic(fmt.Sprintf("failed to load key %s", err))
-		}
-
-		addr := crypto.GetAddress(&key.PublicKey)
-		info.address = addr
-		info.privateKey = key
-		receiversAddress[addr.Shard()] = append(receiversAddress[addr.Shard()], info)
 	}
 
 }
@@ -133,11 +146,11 @@ func StartSend(balanceList []*balance, threadNum int) {
 	case 3:
 		go loopSendMode3(balanceList)
 
-	case 2, 4, 5:
+	case 2, 4, 5, 6:
 		go loopSendMode(balanceList, lock, threadNum)
 
 	default:
-		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5", mode)
+		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5, 6", mode)
 		break
 	}
 }
@@ -248,6 +261,14 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 				// 5 is used to send tx in same shards or different shards
 			case 5:
 				sendDifferentOrSameShard(b)
+
+				// case is used to send tx in same shards or different shards, different shard tx number is limited by cross parameter
+			case 6:
+				if count < int(cross) {
+					sendDifferentShard(b)
+				} else {
+					send(b)
+				}
 
 			default:
 				send(b)
@@ -587,4 +608,5 @@ func init() {
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
 	sendTxCmd.Flags().IntVarP(&mode, "mode", "m", 1, "send tx mode")
 	sendTxCmd.Flags().IntVarP(&threads, "threads", "t", 1, "send tx threads")
+	sendTxCmd.Flags().UintVarP(&cross, "cross", "c", 0, "cross shard txs number")
 }

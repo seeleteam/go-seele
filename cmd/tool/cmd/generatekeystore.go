@@ -22,18 +22,25 @@ import (
 )
 
 var (
-	num       int
-	value     uint64
-	keyFile   string
-	receivers string
-	output    string
-	shard     int
+	num         int
+	value       uint64
+	keyFile     string
+	receivers   string
+	output      string
+	shard       int
+	accountFile string
 )
 
 // KeyInfo information of account key
 type KeyInfo struct {
 	addr       *common.Address
 	privateKey string
+}
+
+// AccountInfo users info
+type AccountInfo struct {
+	Account    string `json:"Account"`
+	PrivateKey string `json:"PrivateKey"`
 }
 
 var generateKeystoreCmd = &cobra.Command{
@@ -82,6 +89,17 @@ var generateKeystoreCmd = &cobra.Command{
 		bigValue := big.NewInt(0).SetUint64(value)
 
 		var keyList bytes.Buffer
+		users := make(map[uint][]AccountInfo)
+		for _, info := range infos {
+			users[info.addr.Shard()] = append(users[info.addr.Shard()], AccountInfo{Account: info.addr.String(), PrivateKey: info.privateKey})
+		}
+
+		data, err := json.MarshalIndent(users, "", "\t")
+		if err != nil {
+			panic(fmt.Sprintf("Failed to marshal infos %s", err))
+		}
+
+		err = ioutil.WriteFile(accountFile, data, os.ModePerm)
 
 		for i := 0; i < num; i++ {
 			results[*infos[i].addr] = bigValue
@@ -90,7 +108,7 @@ var generateKeystoreCmd = &cobra.Command{
 			keyList.WriteString("\r\n")
 		}
 
-		err := ioutil.WriteFile(keyFile, keyList.Bytes(), os.ModePerm)
+		err = ioutil.WriteFile(keyFile, keyList.Bytes(), os.ModePerm)
 		if err != nil {
 			panic(fmt.Sprintf("failed to write key file %s", err))
 		}
@@ -114,6 +132,7 @@ func init() {
 	generateKeystoreCmd.Flags().Uint64VarP(&value, "value", "v", 1000000000000, "init account value of these keys")
 	generateKeystoreCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key file path")
 	generateKeystoreCmd.Flags().StringVarP(&output, "output", "o", "accounts.json", "output address map file path")
+	generateKeystoreCmd.Flags().StringVarP(&accountFile, "userFile", "u", "userFile.json", "file of private key and account")
 	generateKeystoreCmd.Flags().IntVarP(&shard, "shard", "", 1, "shard number, it will generate key in [1:shard]")
 	generateKeystoreCmd.Flags().IntVarP(&threads, "threads", "t", 1, "threads to generate keys")
 }
