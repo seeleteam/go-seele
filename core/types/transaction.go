@@ -414,7 +414,13 @@ func BatchValidateTxs(txs []*Transaction) error {
 
 // IntrinsicGas computes the 'intrinsic gas' for a tx.
 func (tx *Transaction) IntrinsicGas() uint64 {
-	return ethIntrinsicGas(tx.Data.Payload)
+	gas := ethIntrinsicGas(tx.Data.Payload)
+
+	if tx.IsCrossShardTx() {
+		return gas * 2
+	}
+
+	return gas
 }
 
 // ethIntrinsicGas computes the 'intrinsic gas' for a message with the given data.
