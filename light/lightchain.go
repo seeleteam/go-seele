@@ -87,7 +87,6 @@ func (lc *LightChain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 	hash, err := lc.bcStore.GetBlockHash(height)
 	if err != nil {
 		lc.log.Warn("get block header by height failed, err %s. height %d", err, height)
-		panic(err)
 		return nil
 	}
 
@@ -105,15 +104,10 @@ func (lc *LightChain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
 	return header
 }
 
-// GetHeaderByHash retrieves a block header from the database by its hash.
+// GetHeaderByHash
 func (lc *LightChain) GetBlockByHash(hash common.Hash) *types.Block {
-	block, err := lc.bcStore.GetBlock(hash)
-	if err != nil {
-		lc.log.Warn("get block by hash failed, err %s", err)
-		return nil
-	}
-
-	return block
+	// this is only provide for miner interface. for light chain, there is no mining, so just return nil.
+	return nil
 }
 
 // WriteHeader writes the specified block header to the blockchain.

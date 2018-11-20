@@ -188,7 +188,6 @@ func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 	hash, err := bc.bcStore.GetBlockHash(height)
 	if err != nil {
 		bc.log.Warn("get block header by height failed, err %s. height %d", err, height)
-		panic(err)
 		return nil
 	}
 
@@ -227,19 +226,7 @@ func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*
 }
 
 func (bc *Blockchain) Genesis() *types.Block {
-	storedGenesisHash, err := bc.bcStore.GetBlockHash(genesisBlockHeight)
-	if err != nil {
-		bc.log.Warn("get genesis hash failed. err %s", err)
-		return nil
-	}
-
-	storedGenesis, err := bc.bcStore.GetBlock(storedGenesisHash)
-	if err != nil {
-		bc.log.Warn("failed to get genesis block by hash. err %s", err)
-		return nil
-	}
-
-	return storedGenesis
+	return bc.genesisBlock
 }
 
 // GetCurrentInfo return the current block and current state info
