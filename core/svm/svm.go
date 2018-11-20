@@ -49,7 +49,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 
 	// create or execute contract
 	if contract := system.GetContractByAddress(ctx.Tx.Data.To); contract != nil { // system contract
-		receipt, err = processSystemContract(ctx, contract, snapshot)
+		receipt, err = processSystemContract(ctx, contract, snapshot, leftOverGas)
 	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() { // cross shard tx
 		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
@@ -111,7 +111,7 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 	return receipt, nil
 }
 
-func processSystemContract(ctx *Context, contract system.Contract, snapshot int) (*types.Receipt, error) {
+func processSystemContract(ctx *Context, contract system.Contract, snapshot int, leftOverGas uint64) (*types.Receipt, error) {
 	// must execute to make sure that system contract address is available
 	if !ctx.Statedb.Exist(ctx.Tx.Data.To) {
 		ctx.Statedb.CreateAccount(ctx.Tx.Data.To)
@@ -134,8 +134,12 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int)
 	ctx.Statedb.SubBalance(sender, amount)
 	ctx.Statedb.AddBalance(recipient, amount)
 
-	// Run
+	// Check used gas is over flow
 	receipt.UsedGas = contract.RequiredGas(ctx.Tx.Data.Payload)
+	if receipt.UsedGas > leftOverGas {
+		return receipt, vm.ErrOutOfGas
+	}
+	// Run
 	receipt.Result, err = contract.Run(ctx.Tx.Data.Payload, system.NewContext(ctx.Tx, ctx.Statedb, ctx.BlockHeader))
 
 	return receipt, err

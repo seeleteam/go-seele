@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/core/vm"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
@@ -137,6 +138,59 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	assert.Equal(t, balanceC2, big.NewInt(0))
 	balanceF2Now := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
 	assert.Equal(t, balanceF2Now, balanceF2)
+}
+
+func Test_Process_ErrOutOfGas(t *testing.T) {
+	// Non-system contract
+	// intrinsic gas too low
+	ctx, _ := newTestContext(big.NewInt(0))
+	balanceOri := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
+	ctx.Tx.Data.GasLimit = 0
+	receipt, err := Process(ctx)
+	assert.EqualError(t, err, types.ErrIntrinsicGas.Error())
+	assert.Nil(t, receipt)
+	balanceCur := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
+	assert.Equal(t, balanceOri, balanceCur)
+
+	// out of gas
+	ctx1, _ := newTestContext(big.NewInt(0))
+	balanceOri1 := ctx1.Statedb.GetBalance(ctx1.Tx.Data.From)
+	ctx1.Tx.Data.GasLimit = ctx1.Tx.IntrinsicGas()
+	receipt1, err1 := Process(ctx1)
+	assert.NoError(t, err1)
+	assert.NotNil(t, receipt1)
+	assert.Equal(t, receipt1.Failed, true)
+	assert.Equal(t, string(receipt1.Result), vm.ErrOutOfGas.Error())
+	balanceCur1 := ctx1.Statedb.GetBalance(ctx1.Tx.Data.From)
+	assert.Equal(t, balanceOri1.Uint64(), balanceCur1.Uint64()+receipt1.TotalFee)
+
+	// System contract
+	// intrinsic gas too low
+	ctx3, _ := newTestContext(big.NewInt(0))
+	balanceOri3 := ctx3.Statedb.GetBalance(ctx3.Tx.Data.From)
+	testBytes := []byte("seele-fan")
+	ctx3.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
+	ctx3.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
+	ctx3.Tx.Data.GasLimit = 0
+	receipt3, err3 := Process(ctx3)
+	assert.EqualError(t, err3, types.ErrIntrinsicGas.Error())
+	assert.Nil(t, receipt3)
+	balanceCur3 := ctx3.Statedb.GetBalance(ctx3.Tx.Data.From)
+	assert.Equal(t, balanceOri3, balanceCur3)
+
+	// out of gas
+	ctx4, _ := newTestContext(big.NewInt(0))
+	balanceOri4 := ctx4.Statedb.GetBalance(ctx4.Tx.Data.From)
+	ctx4.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
+	ctx4.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
+	ctx4.Tx.Data.GasLimit = ctx4.Tx.IntrinsicGas()
+	receipt4, err4 := Process(ctx4)
+	assert.NoError(t, err4)
+	assert.NotNil(t, receipt4)
+	assert.Equal(t, receipt4.Failed, true)
+	assert.Equal(t, string(receipt4.Result), vm.ErrOutOfGas.Error())
+	balanceCur4 := ctx4.Statedb.GetBalance(ctx4.Tx.Data.From)
+	assert.Equal(t, balanceOri4.Uint64(), balanceCur4.Uint64()+receipt4.TotalFee)
 }
 
 func mustHexToBytes(hex string) []byte {
