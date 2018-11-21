@@ -156,7 +156,12 @@ func (tx *Transaction) GetHash() common.Hash {
 // NewTransaction creates a new transaction to transfer asset.
 // The transaction data hash is also calculated.
 func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {
-	return newTx(from, to, amount, price, TransferAmountIntrinsicGas, nonce, nil)
+	gasLimit := TransferAmountIntrinsicGas
+	if !from.IsEmpty() && !to.IsEmpty() && from.Shard() != to.Shard() {
+		gasLimit = 2 * gasLimit
+	}
+
+	return newTx(from, to, amount, price, gasLimit, nonce, nil)
 }
 
 func newTx(from common.Address, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*Transaction, error) {
@@ -434,7 +439,13 @@ func BatchValidateTxs(txs []*Transaction) error {
 
 // IntrinsicGas computes the 'intrinsic gas' for a tx.
 func (tx *Transaction) IntrinsicGas() uint64 {
-	return ethIntrinsicGas(tx.Data.Payload)
+	gas := ethIntrinsicGas(tx.Data.Payload)
+
+	if tx.IsCrossShardTx() {
+		return gas * 2
+	}
+
+	return gas
 }
 
 // ethIntrinsicGas computes the 'intrinsic gas' for a message with the given data.

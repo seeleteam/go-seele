@@ -154,7 +154,7 @@ func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) (err e
 
 func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config) (err error) {
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
-	genesis := core.GetGenesis(conf.SeeleConfig.GenesisConfig)
+	genesis := core.GetGenesis(&conf.SeeleConfig.GenesisConfig)
 
 	if err = genesis.InitializeAndValidate(bcStore, s.accountStateDB); err != nil {
 		s.Stop()
@@ -295,7 +295,7 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 		},
 	}...)
 
-	minerApis := s.miner.GetEngine().APIs()
+	minerApis := s.miner.GetEngine().APIs(s.chain)
 	apis = append(apis, minerApis...)
 
 	return apis

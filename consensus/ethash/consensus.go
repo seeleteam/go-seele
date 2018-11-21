@@ -27,7 +27,6 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/utils"
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto/sha3"
 )
@@ -43,9 +42,9 @@ var (
 
 // VerifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum ethash engine.
-func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.BlockHeader) error {
-	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil || parent == nil {
+func (ethash *Ethash) VerifyHeader(reader consensus.ChainReader, header *types.BlockHeader) error {
+	parent := reader.GetHeaderByHash(header.PreviousBlockHash)
+	if parent == nil {
 		return consensus.ErrBlockInvalidParentHash
 	}
 
@@ -53,7 +52,7 @@ func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.Bl
 		return err
 	}
 
-	return ethash.VerifySeal(store, header)
+	return ethash.VerifySeal(reader, header)
 }
 
 //
@@ -141,14 +140,14 @@ func (ethash *Ethash) VerifyHeader(store store.BlockchainStore, header *types.Bl
 
 // VerifySeal implements consensus.Engine, checking whether the given block satisfies
 // the PoW difficulty requirements.
-func (ethash *Ethash) VerifySeal(store store.BlockchainStore, header *types.BlockHeader) error {
-	return ethash.verifySeal(store, header, false)
+func (ethash *Ethash) VerifySeal(reader consensus.ChainReader, header *types.BlockHeader) error {
+	return ethash.verifySeal(reader, header, false)
 }
 
 // verifySeal checks whether a block satisfies the PoW difficulty requirements,
 // either using the usual ethash cache for it, or alternatively using a full DAG
 // to make remote mining fast.
-func (ethash *Ethash) verifySeal(store store.BlockchainStore, header *types.BlockHeader, fulldag bool) error {
+func (ethash *Ethash) verifySeal(reader consensus.ChainReader, header *types.BlockHeader, fulldag bool) error {
 	// Recompute the digest and PoW values
 	number := header.Height
 
@@ -204,9 +203,9 @@ func (ethash *Ethash) verifySeal(store store.BlockchainStore, header *types.Bloc
 
 // Prepare implements consensus.Engine, initializing the difficulty field of a
 // header to conform to the ethash protocol. The changes are done inline.
-func (ethash *Ethash) Prepare(store store.BlockchainStore, header *types.BlockHeader) error {
-	parent, err := store.GetBlockHeader(header.PreviousBlockHash)
-	if err != nil || parent == nil {
+func (ethash *Ethash) Prepare(reader consensus.ChainReader, header *types.BlockHeader) error {
+	parent := reader.GetHeaderByHash(header.PreviousBlockHash)
+	if parent == nil {
 		return consensus.ErrBlockInvalidParentHash
 	}
 

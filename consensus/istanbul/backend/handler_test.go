@@ -8,11 +8,11 @@ package backend
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/rlp"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/crypto"
+	"github.com/seeleteam/go-seele/p2p"
 )
 
 func TestIstanbulMessage(t *testing.T) {
@@ -22,7 +22,7 @@ func TestIstanbulMessage(t *testing.T) {
 	data := []byte("data1")
 	hash := istanbul.RLPHash(data)
 	msg := makeMsg(istanbulMsg, data)
-	addr := common.StringToAddress("address")
+	addr := *crypto.MustGenerateRandomAddress()
 
 	// 1. this message should not be in cache
 	// for peers
@@ -55,7 +55,7 @@ func TestIstanbulMessage(t *testing.T) {
 	}
 }
 
-func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
-	size, r, _ := rlp.EncodeToReader(data)
-	return p2p.Msg{Code: msgcode, Size: uint32(size), Payload: r}
+func makeMsg(msgcode uint16, data interface{}) p2p.Message {
+	payload := common.SerializePanic(data)
+	return p2p.Message{Code: msgcode, Payload: payload}
 }

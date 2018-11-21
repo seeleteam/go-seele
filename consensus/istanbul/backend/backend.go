@@ -7,13 +7,12 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"math/big"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
@@ -211,7 +210,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	}
 
 	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header, false)
+	err := sb.VerifyHeader(sb.chain, block.Header)
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
 	if err == nil || err == errEmptyCommittedSeals {
 		return 0, nil
@@ -243,13 +242,13 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 }
 
 // HasPropsal implements istanbul.Backend.HashBlock
-func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return sb.chain.GetHeader(hash, number.Uint64()) != nil
+func (sb *backend) HasPropsal(hash common.Hash) bool {
+	return sb.chain.GetHeaderByHash(hash) != nil
 }
 
 // GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
+func (sb *backend) GetProposer(height uint64) common.Address {
+	if h := sb.chain.GetHeaderByHeight(height); h != nil {
 		a, _ := sb.Author(h)
 		return a
 	}

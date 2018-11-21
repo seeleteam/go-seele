@@ -54,7 +54,7 @@ func newTestGenesis() *Genesis {
 		genesisAccount.addr: genesisAccount.amount,
 	}
 
-	return GetGenesis(GenesisInfo{accounts, 1, 0, big.NewInt(0)})
+	return GetGenesis(NewGenesisInfo(accounts, 1, 0, big.NewInt(0), types.PowConsensus, nil))
 }
 
 func newTestBlockchain(db database.Database) *Blockchain {
@@ -422,7 +422,7 @@ func Test_Blockchain_Shard(t *testing.T) {
 	defer dispose()
 
 	bcStore := store.NewBlockchainDatabase(db)
-	genesis := GetGenesis(GenesisInfo{nil, 1, 8, big.NewInt(0)})
+	genesis := GetGenesis(NewGenesisInfo(nil, 1, 8, big.NewInt(0), types.PowConsensus, nil))
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
 	}
