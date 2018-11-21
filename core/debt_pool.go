@@ -65,6 +65,8 @@ func (dp *DebtPool) AddDebtArray(debts []*types.Debt) {
 	for _, d := range debts {
 		dp.AddDebt(d)
 	}
+
+	dp.log.Debug("add %d debts, cap %d", len(debts), dp.getObjectCount(true, true))
 }
 
 func (dp *DebtPool) AddDebt(debt *types.Debt) {
@@ -72,7 +74,10 @@ func (dp *DebtPool) AddDebt(debt *types.Debt) {
 		return
 	}
 
-	dp.addObject(debt)
+	err := dp.addObject(debt)
+	if err != nil {
+		dp.log.Warn("add debts failed debt hash:%s, err: %s.", debt.Hash, err)
+	}
 }
 
 func (dp *DebtPool) AddBackDebts(debts []*types.Debt) {
