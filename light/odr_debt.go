@@ -111,7 +111,7 @@ func (response *odrDebtResponse) validate(request odrRequest, bcStore store.Bloc
 		if err != nil {
 			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
 		}
-		if blockHash.Equal(header.Hash()) {
+		if !blockHash.Equal(header.Hash()) {
 			return errForkDebt
 		}
 
