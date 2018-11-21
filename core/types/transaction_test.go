@@ -381,6 +381,8 @@ func Test_Transaction_BatchValidateTxs_NoSig(t *testing.T) {
 }
 
 func Test_Transaction_SigCache(t *testing.T) {
+	sigCache.Purge()
+
 	// succeed to verify signature of valid tx
 	tx := newTestTx(t, 1, 1, 1, true)
 	assert.NoError(t, tx.verifySignature())
