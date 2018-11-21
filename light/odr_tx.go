@@ -122,7 +122,7 @@ func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.
 		if err != nil {
 			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
 		}
-		if blockHash.Equal(header.Hash()) {
+		if !blockHash.Equal(header.Hash()) {
 			return errForkTx
 		}
 
