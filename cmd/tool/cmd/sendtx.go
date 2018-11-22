@@ -35,13 +35,16 @@ var (
 	// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
 	// mode 2: send tx with amount 1 and don't care about new balances
 	// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
+	// mode 4: send tx to different shard
+	// mode 5: send tx to different shards and same shard randomly
+	// mode 6: send tx to different shards by cross number
 	mode int
 
 	// wg sync signal
 	wg = sync.WaitGroup{}
 
 	// receivers address
-	receiversAddress map[uint][]userInfo
+	receiversAddress map[uint][]KeyInfo
 
 	// isRandom default false
 	isRandom bool
@@ -49,11 +52,6 @@ var (
 	// cross is number of the crossing shard txs
 	cross uint
 )
-
-type userInfo struct {
-	address    *common.Address
-	privateKey *ecdsa.PrivateKey
-}
 
 type balance struct {
 	address    *common.Address
@@ -74,7 +72,7 @@ var sendTxCmd = &cobra.Command{
 		initClient()
 		balanceList := initAccount(threads)
 		// receiversAddress init
-		receiversAddress = make(map[uint][]userInfo)
+		receiversAddress = make(map[uint][]KeyInfo)
 		if receivers == "" {
 			isRandom = true
 		} else {
@@ -99,36 +97,13 @@ var sendTxCmd = &cobra.Command{
 
 // initToAccount init to accounts which are used to send tx
 func initToAccount() {
-	users := make(map[uint][]AccountInfo)
 	data, err := ioutil.ReadFile(receivers)
 	if err != nil {
 		panic(fmt.Sprintf("failed to read receivers file %s", err))
 	}
 
-	if err = json.Unmarshal(data, &users); err != nil {
+	if err = json.Unmarshal(data, &receiversAddress); err != nil {
 		panic(fmt.Sprintf("Failed to unmarshal %s", err))
-	}
-
-	fmt.Println("users:", users)
-
-	var info userInfo
-	for shardnum, shardUsers := range users {
-		for _, v := range shardUsers {
-			addr, err := common.HexToAddress(v.Account)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to convert hex string to address %s", err))
-			}
-
-			privateKey, err := crypto.LoadECDSAFromString(v.PrivateKey)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to load key %s", err))
-			}
-
-			info.address = &addr
-			info.privateKey = privateKey
-			receiversAddress[shardnum] = append(receiversAddress[shardnum], info)
-		}
-
 	}
 
 }
@@ -258,11 +233,11 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 					panic(fmt.Sprintf("Failed to send tx in different shards, common shardcount is: %d", common.ShardCount))
 				}
 
-				// 5 is used to send tx in same shards or different shards
+				// 5 is used to send tx in same shards or different shards randomly
 			case 5:
 				sendDifferentOrSameShard(b)
 
-				// case is used to send tx in same shards or different shards, different shard tx number is limited by cross parameter
+				// 6 is used to send tx in same shards or different shards, different shard tx number is limited by cross parameter
 			case 6:
 				if count < int(cross) {
 					sendDifferentShard(b)
@@ -420,14 +395,20 @@ func sendDifferentShard(b *balance) *balance {
 func sendtx(b *balance, amount int, shard uint) *balance {
 	var addr *common.Address
 	var privateKey *ecdsa.PrivateKey
+
 	if isRandom {
 		addr, privateKey = crypto.MustGenerateShardKeyPair(shard)
 
 	} else {
 		data := receiversAddress[shard]
 		index := rand.Intn(len(data))
-		addr = data[index].address
-		privateKey = data[index].privateKey
+		addr = data[index].Addr
+		key, err := crypto.LoadECDSAFromString(data[index].PrivateKey)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load private key from string %s", err))
+		}
+
+		privateKey = key
 	}
 
 	newBalance := &balance{

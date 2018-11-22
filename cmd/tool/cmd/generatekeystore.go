@@ -33,14 +33,8 @@ var (
 
 // KeyInfo information of account key
 type KeyInfo struct {
-	addr       *common.Address
-	privateKey string
-}
-
-// AccountInfo users info
-type AccountInfo struct {
-	Account    string `json:"Account"`
-	PrivateKey string `json:"PrivateKey"`
+	Addr       *common.Address `json:"account"`
+	PrivateKey string          `json:"privateKey"`
 }
 
 var generateKeystoreCmd = &cobra.Command{
@@ -72,8 +66,8 @@ var generateKeystoreCmd = &cobra.Command{
 					}
 
 					infos[j] = &KeyInfo{
-						addr:       addr,
-						privateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
+						Addr:       addr,
+						PrivateKey: hexutil.BytesToHex(crypto.FromECDSA(privateKey)),
 					}
 
 					j += threads
@@ -84,14 +78,33 @@ var generateKeystoreCmd = &cobra.Command{
 		wg.Wait()
 
 		fmt.Println("key generate success")
-		var results map[common.Address]*big.Int
-		results = make(map[common.Address]*big.Int)
+
+		results := make(map[common.Address]*big.Int)
 		bigValue := big.NewInt(0).SetUint64(value)
 
 		var keyList bytes.Buffer
-		users := make(map[uint][]AccountInfo)
+		users := make(map[uint][]KeyInfo)
 		for _, info := range infos {
-			users[info.addr.Shard()] = append(users[info.addr.Shard()], AccountInfo{Account: info.addr.String(), PrivateKey: info.privateKey})
+			users[info.Addr.Shard()] = append(users[info.Addr.Shard()], KeyInfo{Addr: info.Addr, PrivateKey: info.PrivateKey})
+			results[*info.Addr] = bigValue
+
+			keyList.WriteString(info.PrivateKey)
+			keyList.WriteString("\r\n")
+		}
+
+		err := ioutil.WriteFile(keyFile, keyList.Bytes(), os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write key file %s", err))
+		}
+
+		str, err := json.MarshalIndent(results, "", "\t")
+		if err != nil {
+			panic(fmt.Sprintf("Failed to marshal %s", err))
+		}
+
+		err = ioutil.WriteFile(output, str, os.ModePerm)
+		if err != nil {
+			fmt.Println("failed to write file ", err)
 		}
 
 		data, err := json.MarshalIndent(users, "", "\t")
@@ -100,28 +113,6 @@ var generateKeystoreCmd = &cobra.Command{
 		}
 
 		err = ioutil.WriteFile(accountFile, data, os.ModePerm)
-
-		for i := 0; i < num; i++ {
-			results[*infos[i].addr] = bigValue
-
-			keyList.WriteString(infos[i].privateKey)
-			keyList.WriteString("\r\n")
-		}
-
-		err = ioutil.WriteFile(keyFile, keyList.Bytes(), os.ModePerm)
-		if err != nil {
-			panic(fmt.Sprintf("failed to write key file %s", err))
-		}
-
-		str, err := json.MarshalIndent(results, "", "\t")
-		if err != nil {
-			panic(err)
-		}
-
-		err = ioutil.WriteFile(output, str, os.ModePerm)
-		if err != nil {
-			fmt.Println("failed to write file ", err)
-		}
 	},
 }
 
