@@ -83,7 +83,7 @@ func (l *LightBackend) GetReceiptByTxHash(hash common.Hash) (*types.Receipt, err
 	blockHash := l.s.txPool.GetBlockHash(hash)
 
 	filter := peerFilter{blockHash: blockHash}
-	response, err := l.s.odrBackend.retrieveWithFilter(&odrTxByHashRequest{TxHash: hash}, filter)
+	response, err := l.s.odrBackend.retrieveWithFilter(&odrReceiptRequest{TxHash: hash}, filter)
 
 	if err != nil {
 		return nil, err
