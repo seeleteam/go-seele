@@ -104,7 +104,7 @@ var generateKeystoreCmd = &cobra.Command{
 
 		err = ioutil.WriteFile(output, str, os.ModePerm)
 		if err != nil {
-			fmt.Println("failed to write file ", err)
+			panic(fmt.Sprintf("Failed to write file %s", err))
 		}
 
 		data, err := json.MarshalIndent(users, "", "\t")
@@ -112,7 +112,10 @@ var generateKeystoreCmd = &cobra.Command{
 			panic(fmt.Sprintf("Failed to marshal infos %s", err))
 		}
 
-		err = ioutil.WriteFile(accountFile, data, os.ModePerm)
+		if err = ioutil.WriteFile(accountFile, data, os.ModePerm); err != nil {
+			panic(fmt.Sprintf("Failed to write %s", err))
+		}
+
 	},
 }
 
