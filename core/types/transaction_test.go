@@ -379,3 +379,21 @@ func Test_Transaction_BatchValidateTxs_NoSig(t *testing.T) {
 
 	assert.Equal(t, ErrSigMissing, BatchValidateTxs(txs))
 }
+
+func Test_Transaction_SigCache(t *testing.T) {
+	sigCache.Purge()
+
+	// succeed to verify signature of valid tx
+	tx := newTestTx(t, 1, 1, 1, true)
+	assert.NoError(t, tx.verifySignature())
+	assert.Equal(t, 1, sigCache.Len())
+
+	// verify again, and cache is used.
+	assert.NoError(t, tx.verifySignature())
+	assert.Equal(t, 1, sigCache.Len())
+
+	// change the tx signature, and tx hash not changed yet.
+	tx.Signature.Sig = []byte{1, 2, 3}
+	assert.Equal(t, ErrSigInvalid, tx.verifySignature())
+	assert.Equal(t, 2, sigCache.Len())
+}

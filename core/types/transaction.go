@@ -313,7 +313,10 @@ func (tx *Transaction) verifySignature() error {
 		return ErrHashMismatch
 	}
 
-	if v, ok := sigCache.Get(tx.Hash); ok {
+	// cache key is made up of tx hash and signature
+	key := string(append(tx.Hash.Bytes(), tx.Signature.Sig...))
+
+	if v, ok := sigCache.Get(key); ok {
 		if v == nil {
 			return nil
 		}
@@ -327,7 +330,7 @@ func (tx *Transaction) verifySignature() error {
 	}
 
 	// verify signature is time consuming, so cache the result.
-	sigCache.Add(tx.Hash, err)
+	sigCache.Add(key, err)
 
 	return err
 }
