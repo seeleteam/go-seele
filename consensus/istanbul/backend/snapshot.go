@@ -40,7 +40,7 @@ type Tally struct {
 type Snapshot struct {
 	Epoch uint64 // The number of blocks after which to checkpoint and reset the pending votes
 
-	Number uint64                   // Block number where the snapshot was created
+	Height uint64                   // Block height where the snapshot was created
 	Hash   common.Hash              // Block hash where the snapshot was created
 	Votes  []*Vote                  // List of votes cast in chronological order
 	Tally  map[common.Address]Tally // Current vote tally to avoid recalculating
@@ -53,7 +53,7 @@ type Snapshot struct {
 func newSnapshot(epoch uint64, number uint64, hash common.Hash, valSet istanbul.ValidatorSet) *Snapshot {
 	snap := &Snapshot{
 		Epoch:  epoch,
-		Number: number,
+		Height: number,
 		Hash:   hash,
 		ValSet: valSet,
 		Tally:  make(map[common.Address]Tally),
@@ -89,7 +89,7 @@ func (s *Snapshot) store(db database.Database) error {
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
 		Epoch:  s.Epoch,
-		Number: s.Number,
+		Height: s.Height,
 		Hash:   s.Hash,
 		ValSet: s.ValSet.Copy(),
 		Votes:  make([]*Vote, len(s.Votes)),
@@ -160,7 +160,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			return nil, errInvalidVotingChain
 		}
 	}
-	if headers[0].Height != s.Number+1 {
+	if headers[0].Height != s.Height+1 {
 		return nil, errInvalidVotingChain
 	}
 	// Iterate through the headers and create a new snapshot
@@ -241,7 +241,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			delete(snap.Tally, header.Creator)
 		}
 	}
-	snap.Number += uint64(len(headers))
+	snap.Height += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
 	return snap, nil
@@ -278,7 +278,7 @@ type snapshotJSON struct {
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	return &snapshotJSON{
 		Epoch:      s.Epoch,
-		Number:     s.Number,
+		Number:     s.Height,
 		Hash:       s.Hash,
 		Votes:      s.Votes,
 		Tally:      s.Tally,
@@ -295,7 +295,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	}
 
 	s.Epoch = j.Epoch
-	s.Number = j.Number
+	s.Height = j.Number
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally

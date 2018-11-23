@@ -13,8 +13,6 @@ import (
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
-	logger := c.logger.New("state", c.state)
-
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Uint64() == request.Proposal.Height() && c.isProposer() {
 		curView := c.currentView()
@@ -23,7 +21,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			Proposal: request.Proposal,
 		})
 		if err != nil {
-			logger.Error("Failed to encode", "view", curView)
+			c.logger.Error("Failed to encode. state %d. view %v", c.state, curView)
 			return
 		}
 
@@ -35,8 +33,6 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 }
 
 func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
-
 	// Decode PRE-PREPARE
 	var preprepare *istanbul.Preprepare
 	err := msg.Decode(&preprepare)
@@ -65,13 +61,13 @@ func (c *core) handlePreprepare(msg *message, src istanbul.Validator) error {
 
 	// Check if the message comes from current proposer
 	if !c.valSet.IsProposer(src.Address()) {
-		logger.Warn("Ignore preprepare messages from non-proposer")
+		c.logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
 
 	// Verify the proposal we received
 	if duration, err := c.backend.Verify(preprepare.Proposal); err != nil {
-		logger.Warn("Failed to verify proposal", "err", err, "duration", duration)
+		c.logger.Warn("Failed to verify proposal. err %s. duration %d", err, duration)
 		// if it's a future block, we will handle it again after the duration
 		if err == consensus.ErrBlockCreateTimeOld {
 			c.stopFuturePreprepareTimer()

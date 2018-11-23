@@ -122,19 +122,18 @@ func (c *core) sendEvent(ev interface{}) {
 }
 
 func (c *core) handleMsg(payload []byte) error {
-	logger := c.logger.New()
 
 	// Decode message and check its signature
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
-		logger.Error("Failed to decode message from payload", "err", err)
+		c.logger.Error("Failed to decode message from payload. err %s", err)
 		return err
 	}
 
 	// Only accept message if the address is valid
 	_, src := c.valSet.GetByAddress(msg.Address)
 	if src == nil {
-		logger.Error("Invalid address in message", "msg", msg)
+		c.logger.Error("Invalid address in message. msg %v", msg)
 		return istanbul.ErrUnauthorizedAddress
 	}
 
@@ -142,8 +141,6 @@ func (c *core) handleMsg(payload []byte) error {
 }
 
 func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("address", c.address, "from", src)
-
 	// Store the message if it's a future message
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
@@ -163,7 +160,7 @@ func (c *core) handleCheckedMsg(msg *message, src istanbul.Validator) error {
 	case msgRoundChange:
 		return testBacklog(c.handleRoundChange(msg, src))
 	default:
-		logger.Error("Invalid message", "msg", msg)
+		c.logger.Error("Invalid message. msg %v. address %s. from %v", msg, c.address, src)
 	}
 
 	return errInvalidMessage
@@ -183,7 +180,7 @@ func (c *core) handleTimeoutMsg() {
 
 	lastProposal, _ := c.backend.LastProposal()
 	if lastProposal != nil && lastProposal.Height() >= c.current.Sequence().Uint64() {
-		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Height())
+		c.logger.Debug("round change timeout, catch up latest sequence. height %d", lastProposal.Height())
 		c.startNewRound(common.Big0)
 	} else {
 		c.sendNextRoundChange()

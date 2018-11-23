@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -155,7 +155,7 @@ func TestCheckMessage(t *testing.T) {
 
 func TestStoreBacklog(t *testing.T) {
 	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
+		logger:     log.GetLogger("backend_test"),
 		valSet:     newTestValidatorSet(1),
 		backlogs:   make(map[common.Address]*prque.Prque),
 		backlogsMu: new(sync.Mutex),
@@ -226,7 +226,7 @@ func TestProcessFutureBacklog(t *testing.T) {
 		events: new(event.TypeMux),
 	}
 	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
+		logger:     log.GetLogger("backend_test"),
 		valSet:     newTestValidatorSet(1),
 		backlogs:   make(map[common.Address]*prque.Prque),
 		backlogsMu: new(sync.Mutex),
@@ -318,7 +318,7 @@ func testProcessBacklog(t *testing.T, msg *message) {
 		peers:  vset,
 	}
 	c := &core{
-		logger:     log.New("backend", "test", "id", 0),
+		logger:     log.GetLogger("backend_test"),
 		backlogs:   make(map[common.Address]*prque.Prque),
 		backlogsMu: new(sync.Mutex),
 		valSet:     vset,

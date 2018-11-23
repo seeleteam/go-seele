@@ -6,7 +6,6 @@
 package istanbul
 
 import (
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
@@ -36,7 +35,6 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (comm
 	// 1. Get signature address
 	signer, err := GetSignatureAddress(data, sig)
 	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
 		return common.Address{}, err
 	}
 

@@ -10,16 +10,18 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/seeleteam/go-seele/database/leveldb"
+
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
-	"github.com/ethereum/go-ethereum/event"
-	elog "github.com/ethereum/go-ethereum/log"
+	"github.com/seeleteam/go-seele/log"
 )
 
-var testLogger = elog.New()
+var testLogger = log.GetLogger("test")
 
 type testSystemBackend struct {
 	id  uint64
@@ -133,8 +135,9 @@ func (self *testSystemBackend) LastProposal() (istanbul.Proposal, common.Address
 }
 
 // Only block height 5 will return true
-func (self *testSystemBackend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return number.Cmp(big.NewInt(5)) == 0
+func (self *testSystemBackend) HasPropsal(hash common.Hash) bool {
+	//return number.Cmp(big.NewInt(5)) == 0
+	return true
 }
 
 func (self *testSystemBackend) GetProposer(number uint64) common.Address {
@@ -157,7 +160,6 @@ type testSystem struct {
 }
 
 func newTestSystem(n uint64) *testSystem {
-	testLogger.SetHandler(elog.StdoutHandler)
 	return &testSystem{
 		backends: make([]*testSystemBackend, n),
 
@@ -181,8 +183,6 @@ func newTestValidatorSet(n int) istanbul.ValidatorSet {
 
 // FIXME: int64 is needed for N and F
 func NewTestSystemWithBackend(n, f uint64) *testSystem {
-	testLogger.SetHandler(elog.StdoutHandler)
-
 	addrs := generateValidators(int(n))
 	sys := newTestSystem(n)
 	config := istanbul.DefaultConfig
@@ -254,7 +254,7 @@ func (t *testSystem) stop(core bool) {
 
 func (t *testSystem) NewBackend(id uint64) *testSystemBackend {
 	// assume always success
-	ethDB, _ := ethdb.NewMemDatabase()
+	ethDB, _ := leveldb.NewTestDatabase()
 	backend := &testSystemBackend{
 		id:     id,
 		sys:    t,

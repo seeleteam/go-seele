@@ -334,7 +334,7 @@ func (ap *testerAccountPool) address(account string) common.Address {
 //		headers := make([]*types.BlockHeader, len(tt.votes))
 //		for j, vote := range tt.votes {
 //			headers[j] = &types.Header{
-//				Number:     big.NewInt(int64(j) + 1),
+//				Height:     big.NewInt(int64(j) + 1),
 //				Time:       big.NewInt(int64(j) * int64(config.BlockPeriod)),
 //				Coinbase:   accounts.address(vote.voted),
 //				Difficulty: defaultDifficulty,
@@ -387,7 +387,7 @@ func (ap *testerAccountPool) address(account string) common.Address {
 //func TestSaveAndLoad(t *testing.T) {
 //	snap := &Snapshot{
 //		Epoch:  5,
-//		Number: 10,
+//		Height: 10,
 //		Hash:   common.HexToHash("1234567890"),
 //		Votes: []*Vote{
 //			{
@@ -422,7 +422,7 @@ func (ap *testerAccountPool) address(account string) common.Address {
 //		t.Errorf("epoch mismatch: have %v, want %v", snap1.Epoch, snap.Epoch)
 //	}
 //	if snap.Hash != snap1.Hash {
-//		t.Errorf("hash mismatch: have %v, want %v", snap1.Number, snap.Number)
+//		t.Errorf("hash mismatch: have %v, want %v", snap1.Height, snap.Height)
 //	}
 //	if !reflect.DeepEqual(snap.Votes, snap.Votes) {
 //		t.Errorf("votes mismatch: have %v, want %v", snap1.Votes, snap.Votes)
