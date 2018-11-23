@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,22 +39,10 @@ var testRefMp = map[string]string{
 	TestEvent2: TestABI2,
 }
 
-func TestListener_GetABIParser_Empty_Config(t *testing.T) {
-	l := NewListener(nil)
-	l.cfg = nil
-	err := l.GetABIParser()
-	assert.Equal(t, err, ErrEventCfgEmpty)
-}
-
-func TestListener_GetABIParser_Event_API_Empty(t *testing.T) {
-	l := NewListener(testRefMp)
-	l.cfg.events[0].abi = ""
-	err := l.GetABIParser()
-	assert.Equal(t, err, ErrEventABIEmpty)
-}
+var testLog = log.GetLogger("test-listener")
 
 func TestListener_GetABIParser_Event_ABI_Load_Failed(t *testing.T) {
-	l := NewListener(testRefMp)
+	l := NewListener(testRefMp, testLog)
 	l.cfg.events[0].abi = l.cfg.events[0].abi[2:]
 	err := l.GetABIParser()
 	assert.Equal(t, err, ErrEventABILoadFailed)
@@ -114,7 +103,7 @@ var rs = `[{
 }]`
 
 func Test_No_Failed_Receipts(t *testing.T) {
-	l := NewListener(testRefMp)
+	l := NewListener(testRefMp, testLog)
 	var receipts []*Receipt
 	err := json.Unmarshal([]byte(rs), &receipts)
 	assert.Equal(t, err, nil)
@@ -148,7 +137,7 @@ func Test_No_Failed_Receipts(t *testing.T) {
 }
 
 func Test_Empty_Receipts(t *testing.T) {
-	l := NewListener(testRefMp)
+	l := NewListener(testRefMp, testLog)
 	err := l.GetABIParser()
 	assert.Equal(t, err, nil)
 
@@ -213,7 +202,7 @@ var rs1 = `[{
 }]`
 
 func Test_Failed_Receipts(t *testing.T) {
-	l := NewListener(testRefMp)
+	l := NewListener(testRefMp, testLog)
 	var receipts []*Receipt
 	err := json.Unmarshal([]byte(rs1), &receipts)
 	assert.Equal(t, err, nil)
@@ -283,7 +272,7 @@ var rs2 = `[{
 }]`
 
 func Test_Empty_Data_Receipts_Log(t *testing.T) {
-	l := NewListener(testRefMp)
+	l := NewListener(testRefMp, testLog)
 	var receipts []*Receipt
 	err := json.Unmarshal([]byte(rs2), &receipts)
 	assert.Equal(t, err, nil)

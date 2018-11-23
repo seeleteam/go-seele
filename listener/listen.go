@@ -15,12 +15,6 @@ import (
 )
 
 var (
-	// ErrEventCfgEmpty is returned when abi config is empty
-	ErrEventCfgEmpty      = errors.New("abi config must not be empty")
-
-	// ErrEventABIEmpty is returned when abi string is empty
-	ErrEventABIEmpty      = errors.New("abi must not be empty")
-	
 	// ErrEventABILoadFailed is returned when abi string can't be loaded
 	ErrEventABILoadFailed = errors.New("abi load failed")
 )
@@ -38,30 +32,23 @@ type abiParser struct {
 }
 
 // NewListener returns an initialized Listener.
-func NewListener(ref map[string]string) *Listener {
+func NewListener(ref map[string]string, log *log.SeeleLog) *Listener {
 	return &Listener{
 		cfg:       newConfig(ref),
 		abiParser: make(map[string]abiParser),
-		log:       log.GetLogger("sub-event"),
+		log:       log,
 	}
 }
 
 // GetABIParser parse the event config to abiParser.
 func (l *Listener) GetABIParser() error {
 	cfg := l.cfg
-	if cfg == nil {
-		return ErrEventCfgEmpty
-	}
 
 	abiParserMp := make(map[string]abiParser)
 	for _, event := range cfg.events {
-		if event.abi == "" {
-			return ErrEventABIEmpty
-		}
-
 		parser, err := abi.JSON(strings.NewReader(event.abi))
 		if err != nil {
-			l.log.Error("read abi error, %s", err.Error())
+			l.log.Error("read abi error, %s, %s", event.methodName, err.Error())
 			return ErrEventABILoadFailed
 		}
 

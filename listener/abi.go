@@ -48,6 +48,9 @@ func newConfig(ref map[string]string) *config {
 		cfg    config
 	)
 	for method, abi := range ref {
+		if abi == "" {
+			continue
+		}
 		var event eventCfg
 		event.methodName = method
 		event.abi = abi
