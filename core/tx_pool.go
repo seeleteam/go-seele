@@ -76,7 +76,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 }
 
 // AddTransaction adds a single transaction into the pool if it is valid and returns nil.
-// Otherwise, return the concrete error.
+// Otherwise, return the error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	if tx == nil {
 		return nil
@@ -100,7 +100,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
-// RemoveTransaction removes tx of specified tx hash from pool
+// RemoveTransaction removes transaction of specified transaction hash from pool
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.removeOject(txHash)
 }
@@ -111,7 +111,7 @@ func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Tran
 	return poolObjectToTxs(objects), size
 }
 
-// GetPendingTxCount returns the total number of transactions in the transaction pool.
+// GetPendingTxCount returns the total number of pending transactions in the transaction pool.
 func (pool *TransactionPool) GetPendingTxCount() int {
 	return pool.getObjectCount(false, true)
 }
