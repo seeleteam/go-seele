@@ -75,6 +75,8 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	return &TransactionPool{pool}
 }
 
+// AddTransaction adds a single transaction into the pool if it is valid and returns nil.
+// Otherwise, return the concrete error.
 func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	if tx == nil {
 		return nil
@@ -83,6 +85,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	return pool.addObject(tx)
 }
 
+// GetTransaction returns a transaction if it is contained in the pool and nil otherwise.
 func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transaction {
 	obj := pool.GetObject(txHash)
 	if obj == nil {
@@ -97,23 +100,28 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 	return nil
 }
 
+// RemoveTransaction removes tx of specified tx hash from pool
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.removeOject(txHash)
 }
 
+// GetProcessableTransactions retrieves processable transactions from pool.
 func (pool *TransactionPool) GetProcessableTransactions(size int) ([]*types.Transaction, int) {
 	objects, size := pool.getProcessableObjects(size)
 	return poolObjectToTxs(objects), size
 }
 
+// GetPendingTxCount returns the total number of transactions in the transaction pool.
 func (pool *TransactionPool) GetPendingTxCount() int {
 	return pool.getObjectCount(false, true)
 }
 
+// GetTxCount returns the total number of transactions in the transaction pool.
 func (pool *TransactionPool) GetTxCount() int {
 	return pool.getObjectCount(true, true)
 }
 
+// GetTransactions returns the transactions in the transaction pool.
 func (pool *TransactionPool) GetTransactions(processing, pending bool) []*types.Transaction {
 	objects := pool.getObjects(processing, pending)
 	return poolObjectToTxs(objects)
