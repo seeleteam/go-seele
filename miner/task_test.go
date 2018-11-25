@@ -12,9 +12,13 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/pow"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,4 +59,57 @@ func Test_handleMinerRewardTx(t *testing.T) {
 
 	assert.Equal(t, err, nil)
 	assert.Equal(t, reward, consensus.GetReward(task.header.Height))
+}
+
+func Test_ChooseTransactionAndDebts(t *testing.T) {
+	verifier := types.NewTestVerifier(true, false, nil)
+	task, debtPool := testWithBackend(verifier, t)
+
+	assert.Equal(t, 6, len(task.txs))
+	assert.Equal(t, 6, len(task.receipts))
+	assert.Equal(t, 0, len(task.debts))
+	assert.Equal(t, 3, debtPool.GetDebtCount(false, true))
+
+	verifier2 := types.NewTestVerifier(true, true, nil)
+	task, debtPool = testWithBackend(verifier2, t)
+
+	assert.Equal(t, 6, len(task.txs))
+	assert.Equal(t, 6, len(task.receipts))
+	assert.Equal(t, 3, len(task.debts))
+	assert.Equal(t, 0, debtPool.GetDebtCount(false, true))
+	assert.Equal(t, 3, debtPool.GetDebtCount(true, false))
+}
+
+func testWithBackend(verifier types.DebtVerifier, t *testing.T) (*Task, *core.DebtPool) {
+	backend := NewTestSeeleBackendWithVerifier(verifier)
+
+	bc := backend.BlockChain()
+	parent := bc.Genesis()
+	coinbase := *crypto.MustGenerateShardAddress(types.TestGenesisShard)
+	header := newHeaderByParent(parent, coinbase, time.Now().Unix())
+	task := NewTask(header, coinbase, verifier)
+
+	engine := pow.NewEngine(1)
+	engine.Prepare(bc, header)
+
+	txPool := backend.TxPool()
+	txPool.AddTransaction(types.NewTestTransactionWithNonce(0))
+	txPool.AddTransaction(types.NewTestTransactionWithNonce(1))
+	txPool.AddTransaction(types.NewTestTransactionWithNonce(2))
+	txPool.AddTransaction(types.NewTestCrossShardTransactionWithNonce(3))
+	txPool.AddTransaction(types.NewTestCrossShardTransactionWithNonce(4))
+
+	debtPool := backend.DebtPool()
+	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
+	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
+	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
+
+	state, err := state.NewStatedb(parent.Header.StateHash, bc.AccountDB())
+	assert.Equal(t, err, nil)
+
+	log := log.GetLogger("test_task")
+	err = task.applyTransactionsAndDebts(backend, state, log)
+	assert.Equal(t, err, nil)
+
+	return task, debtPool
 }

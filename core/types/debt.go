@@ -45,21 +45,6 @@ type Debt struct {
 	Data DebtData
 }
 
-// DebtVerifier interface
-type DebtVerifier interface {
-	// ValidateDebt validate debt
-	// returns packed whether debt is packed
-	// returns confirmed whether debt is confirmed
-	// returns retErr error info
-	ValidateDebt(debt *Debt) (packed bool, confirmed bool, err error)
-
-	// IfDebtPacked
-	// returns packed whether debt is packed
-	// returns confirmed whether debt is confirmed
-	// returns retErr error info
-	IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error)
-}
-
 // DebtIndex debt index
 type DebtIndex indexInBlock
 
@@ -93,7 +78,7 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (r
 	}
 
 	toShard := d.Data.Account.Shard()
-	if toShard != targetShard {
+	if targetShard != common.UndefinedShardNumber && toShard != targetShard {
 		retErr = fmt.Errorf("invalid account, unexpected shard number, have %d, expected %d", toShard, targetShard)
 		return
 	}

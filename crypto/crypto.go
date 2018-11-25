@@ -186,6 +186,28 @@ func MustGenerateShardKeyPair(shard uint) (*common.Address, *ecdsa.PrivateKey) {
 	}
 }
 
+// MustGenerateKeyPairNotShard generates and returns a random address and key.
+// Panic on any error.
+func MustGenerateKeyPairNotShard(shard uint) (*common.Address, *ecdsa.PrivateKey) {
+	if shard == 0 || shard > common.ShardCount {
+		panic(fmt.Errorf("invalid shard number, should be between 1 and %v", common.ShardCount))
+	}
+
+	for i := 1; i < 100; i++ {
+		addr, privateKey, err := GenerateKeyPair()
+		if err != nil {
+			panic(err)
+		}
+
+		if addr.Shard() != shard {
+			return addr, privateKey
+		}
+	}
+
+	// panic if not generate shard after 100 times
+	panic("didn't generate key pair after 100 times trying")
+}
+
 // CreateAddress creates a new address with the specified address and nonce.
 // Generally, it's used to create a new contract address based on the account
 // address and nonce. Note, the new created contract address and the account

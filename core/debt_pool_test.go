@@ -6,31 +6,16 @@
 package core
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/fatih/set.v0"
 )
 
-func newTestDebt(amount int64, price int64) *types.Debt {
-	fromAddress, fromPrivKey := crypto.MustGenerateShardKeyPair(1)
-	toAddress := crypto.MustGenerateShardAddress(debtFromShard)
-	tx, _ := types.NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), 1)
-	tx.Sign(fromPrivKey)
-
-	return types.NewDebtWithoutContext(tx)
-}
-
 func Test_DebtPool(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, nil)
 
 	b1 := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, 2*types.DebtSize, true)
@@ -82,14 +67,11 @@ func Test_DebtPool(t *testing.T) {
 }
 
 func Test_OrderByFee(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, nil)
 
-	d1 := newTestDebt(1, 10)
-	d2 := newTestDebt(2, 11)
+	d1 := types.NewTestDebtDetail(1, 10)
+	d2 := types.NewTestDebtDetail(2, 11)
 
 	common.LocalShardNumber = 2
 	defer func() {
@@ -102,36 +84,11 @@ func Test_OrderByFee(t *testing.T) {
 	assert.Equal(t, results[0].Data.Price.Cmp(results[1].Data.Price), 1)
 }
 
-type testVerifier struct {
-	packed    bool
-	confirmed bool
-	err       error
-}
-
-func newTestVerifier(p bool, c bool, err error) *testVerifier {
-	return &testVerifier{
-		packed:    p,
-		confirmed: c,
-		err:       err,
-	}
-}
-
-func (v *testVerifier) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, err error) {
-	return v.packed, v.confirmed, v.err
-}
-
-func (v *testVerifier) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, err error) {
-	return v.packed, v.confirmed, v.err
-}
-
 func Test_AddWithValidation(t *testing.T) {
-	verifier := newTestVerifier(true, false, nil)
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	verifier := types.NewTestVerifier(true, false, nil)
+	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, verifier)
-	d1 := newTestDebt(1, 10)
+	d1 := types.NewTestDebtDetail(1, 10)
 
 	common.LocalShardNumber = 2
 	defer func() {
@@ -143,15 +100,12 @@ func Test_AddWithValidation(t *testing.T) {
 }
 
 func Test_DebtPool_AddBack(t *testing.T) {
-	verifier := newTestVerifier(true, false, nil)
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	verifier := types.NewTestVerifier(true, false, nil)
+	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, verifier)
-	d1 := newTestDebt(1, 10)
-	d2 := newTestDebt(2, 10)
-	d3 := newTestDebt(3, 10)
+	d1 := types.NewTestDebtDetail(1, 10)
+	d2 := types.NewTestDebtDetail(2, 10)
+	d3 := types.NewTestDebtDetail(3, 10)
 
 	common.LocalShardNumber = 2
 	defer func() {

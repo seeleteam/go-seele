@@ -16,7 +16,7 @@ import (
 )
 
 func Test_NewDebt(t *testing.T) {
-	tx1 := newTestTx(t, 1, 1, 1, true)
+	tx1 := newTestTxWithSign(1, 1, 1, true)
 
 	d1 := NewDebtWithContext(tx1)
 	assert.Equal(t, d1.Data.Amount, big.NewInt(1))
@@ -30,7 +30,7 @@ func Test_MerkleRoot(t *testing.T) {
 	debts := make([]*Debt, 0)
 
 	for i := 0; i < 100; i++ {
-		tx := newTestTx(t, 1, 1, 1, true)
+		tx := newTestTxWithSign(1, 1, 1, true)
 		d := NewDebtWithContext(tx)
 
 		debts = append(debts, d)
@@ -48,7 +48,7 @@ func Test_MerkleRoot(t *testing.T) {
 }
 
 func Test_DebtSize(t *testing.T) {
-	tx := newTestTx(t, 1, 1, 1, true)
+	tx := newTestTxWithSign(1, 1, 1, true)
 
 	d := NewDebtWithContext(tx)
 

@@ -12,7 +12,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +29,7 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	poolTx := newTestPoolTx(t, 30, 100)
 	chain.addAccount(poolTx.FromAccount(), 20, 100)
 
-	// Change the amount in tx.
+	// Change the Amount in tx.
 	err := pool.AddTransaction(poolTx.poolObject.(*types.Transaction))
 
 	if err == nil {
@@ -72,10 +71,7 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 }
 
 func Test_GetReinjectTransaction(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), bc)
 
 	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)

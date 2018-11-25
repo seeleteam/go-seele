@@ -30,27 +30,6 @@ func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 	return privKey, common.HexMustToAddres(hexAddress)
 }
 
-func randomAddress(t *testing.T) common.Address {
-	_, address := randomAccount(t)
-	return address
-}
-
-func newTestTx(t *testing.T, amount, price, nonce uint64, sign bool) *Transaction {
-	fromPrivKey, fromAddress := randomAccount(t)
-	toAddress := randomAddress(t)
-
-	tx, err := NewTransaction(fromAddress, toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if sign {
-		tx.Sign(fromPrivKey)
-	}
-
-	return tx
-}
-
 type mockStateDB struct {
 	balances map[common.Address]*big.Int
 	nonces   map[common.Address]uint64
@@ -81,14 +60,14 @@ func newTestStateDB(address common.Address, nonce, balance uint64) *mockStateDB 
 
 // Validate successfully if no data changed.
 func Test_Transaction_Validate_NoDataChange(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 200000)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, error(nil))
 }
 
 func Benchmark_Transaction_ValidateWithState(b *testing.B) {
-	tx := newTestTx(nil, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 
 	for i := 0; i < b.N; i++ {
@@ -97,7 +76,7 @@ func Benchmark_Transaction_ValidateWithState(b *testing.B) {
 }
 
 func Benchmark_Transaction_ValidateWithoutState(b *testing.B) {
-	tx := newTestTx(nil, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 
 	for i := 0; i < b.N; i++ {
 		tx.ValidateWithoutState(true, true)
@@ -105,7 +84,7 @@ func Benchmark_Transaction_ValidateWithoutState(b *testing.B) {
 }
 
 func Benchmark_Transaction_ValidateWithoutSig(b *testing.B) {
-	tx := newTestTx(nil, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 
 	for i := 0; i < b.N; i++ {
 		tx.ValidateWithoutState(false, true)
@@ -113,7 +92,7 @@ func Benchmark_Transaction_ValidateWithoutSig(b *testing.B) {
 }
 
 func Benchmark_Transaction_ParallelValidate(b *testing.B) {
-	tx := newTestTx(nil, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -124,7 +103,7 @@ func Benchmark_Transaction_ParallelValidate(b *testing.B) {
 
 func Benchmark_Transaction_Sign(b *testing.B) {
 	fromPrivKey, fromAddress := randomAccount(nil)
-	toAddress := randomAddress(nil)
+	toAddress := *crypto.MustGenerateRandomAddress()
 	tx, _ := NewTransaction(fromAddress, toAddress, big.NewInt(1), big.NewInt(2), 1)
 
 	for i := 0; i < b.N; i++ {
@@ -134,9 +113,9 @@ func Benchmark_Transaction_Sign(b *testing.B) {
 
 func Benchmark_Transaction_MerkleRootHash(b *testing.B) {
 	txs := []*Transaction{
-		newTestTx(nil, 1, 2, 3, true),
-		newTestTx(nil, 4, 5, 6, true),
-		newTestTx(nil, 7, 8, 9, true),
+		newTestTxWithSign(1, 2, 3, true),
+		newTestTxWithSign(4, 5, 6, true),
+		newTestTxWithSign(7, 8, 9, true),
 	}
 
 	for i := 0; i < b.N; i++ {
@@ -146,7 +125,7 @@ func Benchmark_Transaction_MerkleRootHash(b *testing.B) {
 
 // Validate failed if transaction not signed.
 func Test_Transaction_Validate_NotSigned(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, false)
+	tx := newTestTxWithSign(100, 2, 38, false)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err, ErrSigMissing)
@@ -154,7 +133,7 @@ func Test_Transaction_Validate_NotSigned(t *testing.T) {
 
 // Validate failed if transaction Hash value changed.
 func Test_Transaction_Validate_HashChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	tx.Hash = crypto.HashBytes([]byte("test"))
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
@@ -163,7 +142,7 @@ func Test_Transaction_Validate_HashChanged(t *testing.T) {
 
 // Validate failed if transaction data changed.
 func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	tx.Data.Amount.SetInt64(200)
 	statedb := newTestStateDB(tx.Data.From, 38, 200)
 	err := tx.Validate(statedb)
@@ -172,7 +151,7 @@ func Test_Transaction_Validate_TxDataChanged(t *testing.T) {
 
 // Validate failed if transaction data changed along with Hash updated.
 func Test_Transaction_Validate_SignInvalid(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 
 	// Change amount and update Hash in transaction.
 	tx.Data.Amount.SetInt64(200)
@@ -190,14 +169,14 @@ func Test_MerkleRootHash_Empty(t *testing.T) {
 }
 
 func Test_Transaction_Validate_BalanceNotEnough(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 38, 101)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err != nil, true)
 }
 
 func Test_Transaction_Validate_NonceTooLow(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	statedb := newTestStateDB(tx.Data.From, 40, 200)
 	err := tx.Validate(statedb)
 	assert.Equal(t, err != nil, true)
@@ -223,7 +202,7 @@ func Test_Transaction_Validate_PayloadOversized(t *testing.T) {
 }
 
 func Test_Transaction_Validate_PayLoadJSON(t *testing.T) {
-	tx := newTestTx(t, 100, 2, 38, true)
+	tx := newTestTxWithSign(100, 2, 38, true)
 	assert.Equal(t, len(tx.Data.Payload), 0)
 
 	arrayByte, err := json.Marshal(tx)
@@ -347,7 +326,7 @@ func Test_Transaction_RlpRewardTx(t *testing.T) {
 
 func Test_Transaction_InvalidAmount(t *testing.T) {
 	_, fromAddress := randomAccount(t)
-	toAddress := randomAddress(t)
+	toAddress := *crypto.MustGenerateRandomAddress()
 
 	_, err := NewTransaction(fromAddress, toAddress, nil, new(big.Int).SetInt64(1), 0)
 	assert.Equal(t, err, ErrAmountNil)
@@ -374,7 +353,7 @@ func Test_Transaction_BatchValidateTxs_NoSig(t *testing.T) {
 	var txs []*Transaction
 
 	for i := 0; i < 100; i++ {
-		txs = append(txs, newTestTx(t, 1, 1, uint64(i), false))
+		txs = append(txs, newTestTxWithSign(1, 1, uint64(i), false))
 	}
 
 	assert.Equal(t, ErrSigMissing, BatchValidateTxs(txs))
@@ -384,7 +363,7 @@ func Test_Transaction_SigCache(t *testing.T) {
 	sigCache.Purge()
 
 	// succeed to verify signature of valid tx
-	tx := newTestTx(t, 1, 1, 1, true)
+	tx := newTestTxWithSign(1, 1, 1, true)
 	assert.NoError(t, tx.verifySignature())
 	assert.Equal(t, 1, sigCache.Len())
 
