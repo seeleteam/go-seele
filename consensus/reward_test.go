@@ -6,8 +6,11 @@
 package consensus
 
 import (
+	"math/big"
+	"sync"
 	"testing"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,4 +24,71 @@ func Test_Reward(t *testing.T) {
 	assert.Equal(t, GetReward(blockNumberPerEra*uint64(len(rewardTableCoin))-1), rewardTableCoin[len(rewardTableCoin)-1], "4")
 
 	assert.Equal(t, GetReward(blockNumberPerEra*uint64(len(rewardTableCoin))), tailRewardCoin, "5")
+}
+
+type reward struct {
+	wg      sync.WaitGroup
+	lock    sync.Mutex
+	rewards *big.Int
+}
+
+// all rewards of 3 hundred million
+func Test_Rewards_10_Years(t *testing.T) {
+	// three hundred million
+	RewardNum := big.NewFloat(300000000)
+	blockNum := blockNumberPerEra * 10
+	var info reward
+	info.rewards = big.NewInt(0)
+	threads := uint64(100)
+	per := blockNum / threads
+
+	var start uint64
+	var end uint64
+
+	for i := uint64(0); i < threads; i++ {
+		info.wg.Add(1)
+
+		if i == 0 {
+			start = uint64(1)
+		} else {
+			start = i * per
+		}
+
+		if i == threads-1 {
+			end = blockNum + 1
+		} else {
+			end = (i + 1) * per
+		}
+
+		go add(start, end, &info)
+	}
+
+	info.wg.Wait()
+
+	info.rewards.Div(info.rewards, common.SeeleToFan)
+	allRewards := info.rewards.Mul(info.rewards, big.NewInt(int64(common.ShardCount))).Int64()
+	FRewards := big.NewFloat(float64(allRewards))
+
+	high := big.NewFloat(1)
+	low := big.NewFloat(1)
+	high.Mul(RewardNum, big.NewFloat(1.1))
+	low.Mul(RewardNum, big.NewFloat(0.9))
+
+	assert.Equal(t, 1, high.Cmp(FRewards))
+
+	assert.Equal(t, -1, low.Cmp(FRewards))
+}
+
+func add(start, end uint64, info *reward) {
+	defer info.wg.Done()
+
+	count := big.NewInt(0)
+	for i := start; i < end; i++ {
+		reward := GetReward(i)
+		count.Add(count, reward)
+	}
+
+	info.lock.Lock()
+	info.rewards.Add(info.rewards, count)
+	info.lock.Unlock()
 }
