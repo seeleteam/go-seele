@@ -6,7 +6,6 @@
 package consensus
 
 import (
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -74,11 +73,6 @@ func Test_Rewards_10_Years(t *testing.T) {
 	low := big.NewFloat(1)
 	high.Mul(RewardNum, big.NewFloat(1.1))
 	low.Mul(RewardNum, big.NewFloat(0.9))
-
-	fmt.Println("all     :", RewardNum.String())
-	fmt.Println("high    :", high.String())
-	fmt.Println("low     :", low.String())
-	fmt.Println("FRewards:", FRewards.String())
 
 	assert.Equal(t, 1, high.Cmp(FRewards))
 
