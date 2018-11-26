@@ -19,11 +19,18 @@ var (
 	ErrEventABILoadFailed = errors.New("abi load failed")
 )
 
+var listenLog = log.GetLogger("listener")
+
 // Listener represents subchain event listener.
 type Listener struct {
 	cfg       *config
-	abiParser map[string]abiParser
+	abiParser map[AbiTopic]abiParser
 	log       *log.SeeleLog
+}
+
+type AbiTopic struct {
+	Topic string
+	Abi   string
 }
 
 type abiParser struct {
@@ -32,11 +39,11 @@ type abiParser struct {
 }
 
 // NewListener returns an initialized Listener.
-func NewListener(ref map[string]string, log *log.SeeleLog) *Listener {
+func NewListener(ref map[string]string) *Listener {
 	return &Listener{
 		cfg:       newConfig(ref),
-		abiParser: make(map[string]abiParser),
-		log:       log,
+		abiParser: make(map[AbiTopic]abiParser),
+		log:       listenLog,
 	}
 }
 
@@ -44,7 +51,7 @@ func NewListener(ref map[string]string, log *log.SeeleLog) *Listener {
 func (l *Listener) GetABIParser() error {
 	cfg := l.cfg
 
-	abiParserMp := make(map[string]abiParser)
+	abiParserMp := make(map[AbiTopic]abiParser)
 	for _, event := range cfg.events {
 		parser, err := abi.JSON(strings.NewReader(event.abi))
 		if err != nil {
@@ -58,7 +65,8 @@ func (l *Listener) GetABIParser() error {
 
 		topic := parser.Events[event.methodName].Id().Hex()
 		// todo: If there is a method of the same name. the key of map should be topic := event.Topic + event.AbiPath
-		abiParserMp[topic] = abiParser
+		key := AbiTopic{Topic: topic, Abi: event.abi}
+		abiParserMp[key] = abiParser
 	}
 
 	l.abiParser = abiParserMp
@@ -81,7 +89,7 @@ type Log struct {
 
 // Event represents a subchain contract event instance from Log.
 type Event struct {
-	Topic      string
+	At         AbiTopic
 	MethodName string
 	Arguments  []interface{}
 }
@@ -96,11 +104,7 @@ func GroupByTopic(receipts []*Receipt) logGroup {
 
 	logGroup := make(logGroup)
 	for _, receipt := range receipts {
-		if receipt.Failed == true {
-			continue
-		}
-
-		if len(receipt.Logs) == 0 {
+		if receipt.Failed == true || len(receipt.Logs) == 0 {
 			continue
 		}
 
@@ -114,14 +118,13 @@ func GroupByTopic(receipts []*Receipt) logGroup {
 
 // Filter converts Log to Event.
 func (l *Listener) Filter(lg logGroup) []Event {
-	var events []Event
-	for topic, parser := range l.abiParser {
-		logs, ok := lg[topic]
-		if !ok {
-			continue
-		}
-
-		if logs == nil {
+	var (
+		events []Event
+		err    error
+	)
+	for at, parser := range l.abiParser {
+		logs, ok := lg[at.Topic]
+		if !ok || logs == nil {
 			continue
 		}
 
@@ -134,11 +137,7 @@ func (l *Listener) Filter(lg logGroup) []Event {
 					args[i] = data[2:]
 				}
 
-				b, err := hex.DecodeString(strings.Join(args, ""))
-				if err != nil {
-					l.log.Warn("abi decode string failed, %s", err.Error())
-					continue
-				}
+				b, _ := hex.DecodeString(strings.Join(args, ""))
 
 				event.Arguments, err = parser.Parser.Events[parser.MethodName].Inputs.UnpackValues(b)
 				if err != nil {
@@ -147,7 +146,7 @@ func (l *Listener) Filter(lg logGroup) []Event {
 				}
 			}
 
-			event.Topic = topic
+			event.At = at
 			event.MethodName = parser.MethodName
 			events = append(events, event)
 		}

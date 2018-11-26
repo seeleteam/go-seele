@@ -8,8 +8,8 @@ package listener
 // The const strings below are system contracts.
 // They will be taken place by product system contracts in future.
 // Here are some example.
-const subchainEvent1 = "getX"
-const subchainABI1 = `
+const SubchainEvent1 = "getX"
+const SubchainABI1 = `
 [
 	{ "constant" : false, "inputs": [ { "name": "x", "type": "uint256" } ], "name": "set", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" },
 	{ "constant" : false, "inputs": [], "name": "get", "outputs": [ { "name": "", "type": "uint256" } ], "payable": false, "stateMutability": "nonpayable", "type": "function" },
@@ -18,8 +18,8 @@ const subchainABI1 = `
 	{ "anonymous": false, "inputs": [ { "indexed": false, "name": "", "type": "uint256" }, { "indexed": false, "name": "", "type": "uint256" } ], "name": "getY", "type": "event" }
 ]`
 
-const subchainEvent2 = "getY"
-const subchainABI2 = `
+const SubchainEvent2 = "getY"
+const SubchainABI2 = `
 [
 	{ "constant" : false, "inputs": [ { "name": "x", "type": "uint256" } ], "name": "set", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" },
 	{ "constant" : false, "inputs": [], "name": "get", "outputs": [ { "name": "", "type": "uint256" } ], "payable": false, "stateMutability": "nonpayable", "type": "function" },
@@ -29,8 +29,8 @@ const subchainABI2 = `
 ]`
 
 var refMp = map[string]string{
-	subchainEvent1: subchainABI1,
-	subchainEvent2: subchainABI2,
+	SubchainEvent1: SubchainABI1,
+	SubchainEvent2: SubchainABI2,
 }
 
 type config struct {
@@ -58,5 +58,6 @@ func newConfig(ref map[string]string) *config {
 	}
 
 	cfg.events = events
+	
 	return &cfg
 }
