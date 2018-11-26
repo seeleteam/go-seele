@@ -438,7 +438,7 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 			panic(err)
 		}
 
-		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, state.GetNonce(genesisAccount.addr), BlockByteLimit)
+		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, state.GetNonce(types.TestGenesisAccount.Addr), BlockByteLimit)
 		b.StartTimer()
 		if err := bc.WriteBlock(block); err != nil {
 			b.Fatalf("failed to write block, %v", err.Error())
