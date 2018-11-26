@@ -31,7 +31,7 @@ func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, 
 	rewardTx, _ := types.NewRewardTransaction(minerAccount.Addr, minerAccount.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
-	totalSize := rewardTx.Size()
+	totalSize := 0
 	for i := uint64(0); ; i++ {
 		tx := types.NewTestTxDetail(1, 1, startNonce+i)
 		tmp := tx.Size() + totalSize
@@ -433,7 +433,12 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, 0, BlockByteLimit)
+		state, err := bc.GetCurrentState()
+		if err != nil {
+			panic(err)
+		}
+
+		block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, state.GetNonce(genesisAccount.addr), BlockByteLimit)
 		b.StartTimer()
 		if err := bc.WriteBlock(block); err != nil {
 			b.Fatalf("failed to write block, %v", err.Error())

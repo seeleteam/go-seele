@@ -74,15 +74,25 @@ func Test_GetReinjectTransaction(t *testing.T) {
 	bc := NewTestBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), bc)
 
-	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)
+	state, err := bc.GetCurrentState()
+	if err != nil {
+		panic(err)
+	}
+
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(genesisAccount.addr), 4*types.TransactionPreSize)
 	bc.WriteBlock(b1)
 
-	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 3*types.TransactionPreSize)
+	state, err = bc.GetCurrentState()
+	if err != nil {
+		panic(err)
+	}
+
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(genesisAccount.addr), 3*types.TransactionPreSize)
 	bc.WriteBlock(b2)
 
 	reinject := pool.getReinjectObject(b1.HeaderHash, b2.HeaderHash)
 
-	assert.Equal(t, len(reinject), 2)
+	assert.Equal(t, len(reinject), 3)
 	txs := make(map[common.Hash]poolObject)
 	for _, tx := range reinject {
 		txs[tx.GetHash()] = tx
