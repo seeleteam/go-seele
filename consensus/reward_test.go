@@ -6,8 +6,10 @@
 package consensus
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
@@ -28,8 +30,7 @@ func Test_Reward(t *testing.T) {
 
 type reward struct {
 	wg      sync.WaitGroup
-	lock    sync.Mutex
-	rewards *big.Int
+	rewards int64
 }
 
 // all rewards of 3 hundred million
@@ -38,7 +39,6 @@ func Test_Rewards_10_Years(t *testing.T) {
 	RewardNum := big.NewFloat(300000000)
 	blockNum := blockNumberPerEra * 10
 	var info reward
-	info.rewards = big.NewInt(0)
 	threads := uint64(100)
 	per := blockNum / threads
 
@@ -65,14 +65,20 @@ func Test_Rewards_10_Years(t *testing.T) {
 
 	info.wg.Wait()
 
-	info.rewards.Div(info.rewards, common.SeeleToFan)
-	allRewards := info.rewards.Mul(info.rewards, big.NewInt(int64(common.ShardCount))).Int64()
+	shardRewards := big.NewInt(info.rewards)
+	shardRewards.Div(shardRewards, common.SeeleToFan)
+	allRewards := shardRewards.Mul(shardRewards, big.NewInt(int64(common.ShardCount))).Int64()
 	FRewards := big.NewFloat(float64(allRewards))
 
 	high := big.NewFloat(1)
 	low := big.NewFloat(1)
 	high.Mul(RewardNum, big.NewFloat(1.1))
 	low.Mul(RewardNum, big.NewFloat(0.9))
+
+	fmt.Println("all     :", RewardNum.String())
+	fmt.Println("high    :", high.String())
+	fmt.Println("low     :", low.String())
+	fmt.Println("FRewards:", FRewards.String())
 
 	assert.Equal(t, 1, high.Cmp(FRewards))
 
@@ -82,13 +88,11 @@ func Test_Rewards_10_Years(t *testing.T) {
 func add(start, end uint64, info *reward) {
 	defer info.wg.Done()
 
-	count := big.NewInt(0)
+	count := int64(0)
 	for i := start; i < end; i++ {
-		reward := GetReward(i)
-		count.Add(count, reward)
+		reward := GetReward(i).Int64()
+		count += reward
 	}
 
-	info.lock.Lock()
-	info.rewards.Add(info.rewards, count)
-	info.lock.Unlock()
+	atomic.AddInt64(&info.rewards, count)
 }

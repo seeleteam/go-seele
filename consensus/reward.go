@@ -19,7 +19,7 @@ var (
 	tailRewardCoin *big.Int
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
-	blockNumberPerEra uint64 = 63000000
+	blockNumberPerEra uint64 = 63000000 / common.ShardCount
 )
 
 func init() {
