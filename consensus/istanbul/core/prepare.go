@@ -12,12 +12,10 @@ import (
 )
 
 func (c *core) sendPrepare() {
-	logger := c.logger.New("state", c.state)
-
 	sub := c.current.Subject()
 	encodedSubject, err := Encode(sub)
 	if err != nil {
-		logger.Error("Failed to encode", "subject", sub)
+		c.logger.Error("Failed to encode. subject %v. state %v", sub, c.state)
 		return
 	}
 	c.broadcast(&message{
@@ -60,11 +58,10 @@ func (c *core) handlePrepare(msg *message, src istanbul.Validator) error {
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
 func (c *core) verifyPrepare(prepare *istanbul.Subject, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
-
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(prepare, sub) {
-		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", sub, "got", prepare)
+		c.logger.Warn("Inconsistent subjects between PREPARE and proposal. from %s. state %d. expected %v. got %v",
+			src, c.state, sub, prepare)
 		return errInconsistentSubject
 	}
 
@@ -72,11 +69,10 @@ func (c *core) verifyPrepare(prepare *istanbul.Subject, src istanbul.Validator) 
 }
 
 func (c *core) acceptPrepare(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
-
 	// Add the PREPARE message to current round state
 	if err := c.current.Prepares.Add(msg); err != nil {
-		logger.Error("Failed to add PREPARE message to round state", "msg", msg, "err", err)
+		c.logger.Error("Failed to add PREPARE message to round state. from %s. state %d. msg %v. err %s",
+			src, c.state, msg, err)
 		return err
 	}
 

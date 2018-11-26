@@ -26,11 +26,9 @@ func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash) {
 }
 
 func (c *core) broadcastCommit(sub *istanbul.Subject) {
-	logger := c.logger.New("state", c.state)
-
 	encodedSubject, err := Encode(sub)
 	if err != nil {
-		logger.Error("Failed to encode", "subject", sub)
+		c.logger.Error("Failed to encode. subject %v。 state %d", sub, c.state)
 		return
 	}
 	c.broadcast(&message{
@@ -72,11 +70,9 @@ func (c *core) handleCommit(msg *message, src istanbul.Validator) error {
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
 func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
-
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
-		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
+		c.logger.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
 		return errInconsistentSubject
 	}
 
@@ -84,11 +80,9 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src istanbul.Validator) er
 }
 
 func (c *core) acceptCommit(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("from", src, "state", c.state)
-
 	// Add the COMMIT message to current round state
 	if err := c.current.Commits.Add(msg); err != nil {
-		logger.Error("Failed to record commit message", "msg", msg, "err", err)
+		c.logger.Error("Failed to record commit message. msg %v. err %s", msg, err)
 		return err
 	}
 

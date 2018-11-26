@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
@@ -21,6 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/log"
 )
 
 const (
@@ -39,7 +39,7 @@ func New(config *istanbul.Config, privateKey *ecdsa.PrivateKey, db database.Data
 		istanbulEventMux: new(event.TypeMux),
 		privateKey:       privateKey,
 		address:          crypto.PubkeyToAddress(privateKey.PublicKey),
-		logger:           log.New(),
+		logger:           log.GetLogger("ibft"),
 		db:               db,
 		commitCh:         make(chan *types.Block, 1),
 		recents:          recents,
@@ -60,7 +60,7 @@ type backend struct {
 	privateKey       *ecdsa.PrivateKey
 	address          common.Address
 	core             istanbulCore.Engine
-	logger           log.Logger
+	logger           *log.SeeleLog
 	db               database.Database
 	chain            consensus.ChainReader
 	currentBlock     func() *types.Block
@@ -231,7 +231,7 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
 	signer, err := istanbul.GetSignatureAddress(data, sig)
 	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
+		sb.logger.Error("Failed to get signer address err %s", err)
 		return err
 	}
 	// Compare derived addresses

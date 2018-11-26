@@ -24,7 +24,7 @@ func TestHandleCommit(t *testing.T) {
 	expectedSubject := &istanbul.Subject{
 		View: &istanbul.View{
 			Round:    big.NewInt(0),
-			Sequence: proposal.Height(),
+			Sequence: new(big.Int).SetUint64(proposal.Height()),
 		},
 		Digest: proposal.Hash(),
 	}
@@ -127,7 +127,7 @@ func TestHandleCommit(t *testing.T) {
 					c.current = newTestRoundState(
 						&istanbul.View{
 							Round:    big.NewInt(0),
-							Sequence: proposal.Height(),
+							Sequence: new(big.Int).SetUint64(proposal.Height()),
 						},
 						c.valSet,
 					)
@@ -199,7 +199,7 @@ OUTER:
 		committedSeals := v0.committedMsgs[0].committedSeals
 		for _, validator := range r0.valSet.List() {
 			for _, seal := range committedSeals {
-				if bytes.Compare(validator.Address().Bytes(), seal[:common.AddressLength]) == 0 {
+				if bytes.Compare(validator.Address().Bytes(), seal[:common.AddressLen]) == 0 {
 					signedCount++
 					break
 				}
