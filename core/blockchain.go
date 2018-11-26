@@ -157,6 +157,10 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	return bc, nil
 }
 
+func (bc *Blockchain) AccountDB() database.Database {
+	return bc.accountStateDB
+}
+
 // CurrentBlock returns the HEAD block of the blockchain.
 func (bc *Blockchain) CurrentBlock() *types.Block {
 	bc.lock.RLock()
@@ -505,7 +509,7 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 	reward := consensus.GetReward(block.Header.Height)
 	if reward == nil || reward.Cmp(minerRewardTx.Data.Amount) != 0 {
-		return nil, fmt.Errorf("invalid reward amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
+		return nil, fmt.Errorf("invalid reward Amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
 	}
 
 	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {

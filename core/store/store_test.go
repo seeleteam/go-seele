@@ -122,27 +122,6 @@ func Test_blockchainDatabase_Header(t *testing.T) {
 	assert.Equal(t, err, nil)
 }
 
-func newTestTx() *types.Transaction {
-	tx := &types.Transaction{
-		Data: types.TransactionData{
-			From:     *crypto.MustGenerateRandomAddress(),
-			To:       *crypto.MustGenerateRandomAddress(),
-			Amount:   big.NewInt(3),
-			GasPrice: big.NewInt(0),
-			Payload:  make([]byte, 0),
-		},
-		Signature: crypto.Signature{Sig: []byte("test sig")},
-	}
-
-	tx.Hash = crypto.MustHash(tx.Data)
-
-	return tx
-}
-
-func newTestDebt() *types.Debt {
-	return types.NewDebtWithContext(newTestTx())
-}
-
 func Test_blockchainDatabase_Block(t *testing.T) {
 	block := newTestFullBlock(3, 3)
 
@@ -218,7 +197,7 @@ func Test_blockchainDatabase_GetTxIndex(t *testing.T) {
 	}
 
 	// tx that doesn't exist
-	txNoExist := newTestTx()
+	txNoExist := types.NewTestTransaction()
 	_, err = bcStore.GetTxIndex(txNoExist.Hash)
 	assert.Equal(t, err != nil, true)
 }
@@ -244,7 +223,7 @@ func GetDebtIndexTest(t *testing.T, bcStore BlockchainStore) {
 	}
 
 	// tx that doesn't exist
-	debtNoExist := newTestDebt()
+	debtNoExist := types.NewTestTransaction()
 	_, err = bcStore.GetTxIndex(debtNoExist.Hash)
 	assert.Equal(t, err != nil, true)
 }
@@ -292,8 +271,8 @@ func Test_blockchainDatabase_DeleteIndices_BlockHashMismatch(t *testing.T) {
 	bcStore, dispose := newTestBlockchainDatabase()
 	defer dispose()
 
-	txs := []*types.Transaction{newTestTx(), newTestTx(), newTestTx()}
-	debts := []*types.Debt{newTestDebt(), newTestDebt(), newTestDebt()}
+	txs := []*types.Transaction{types.NewTestTransaction(), types.NewTestTransaction(), types.NewTestTransaction()}
+	debts := []*types.Debt{types.NewTestDebt(), types.NewTestDebt(), types.NewTestDebt()}
 
 	// old canonical chain
 	block1 := &types.Block{

@@ -6,7 +6,6 @@
 package core
 
 import (
-	"crypto/ecdsa"
 	"math/big"
 	"strings"
 	"testing"
@@ -18,86 +17,23 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
-	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
-
-type testAccount struct {
-	addr    common.Address
-	privKey *ecdsa.PrivateKey
-	amount  *big.Int
-	nonce   uint64
-}
-
-const genesisShard = 1
-const debtFromShard = 2
-
-// genesis account with enough balance (100K seele) for benchmark test
-var genesisAccount = newTestAccount(new(big.Int).Mul(big.NewInt(100000), common.SeeleToFan), 0, genesisShard)
-
-func newTestAccount(amount *big.Int, nonce uint64, shard uint) *testAccount {
-	addr, privKey := crypto.MustGenerateShardKeyPair(shard)
-
-	return &testAccount{
-		addr:    *addr,
-		privKey: privKey,
-		amount:  new(big.Int).Set(amount),
-		nonce:   nonce,
-	}
-}
-
-func newTestGenesis() *Genesis {
-	accounts := map[common.Address]*big.Int{
-		genesisAccount.addr: genesisAccount.amount,
-	}
-
-	return GetGenesis(NewGenesisInfo(accounts, 1, 0, big.NewInt(0), types.PowConsensus, nil))
-}
-
-func newTestBlockchain(db database.Database) *Blockchain {
-	return newTestBlockchainWithVerifier(db, nil)
-}
-
-func newTestBlockchainWithVerifier(db database.Database, verifier types.DebtVerifier) *Blockchain {
-	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(db))
-
-	genesis := newTestGenesis()
-	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
-		panic(err)
-	}
-
-	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), verifier)
-	if err != nil {
-		panic(err)
-	}
-
-	return bc
-}
-
-func newTestBlockTx(amount, price, nonce uint64) *types.Transaction {
-	toAddress := crypto.MustGenerateShardAddress(genesisAccount.addr.Shard())
-
-	tx, _ := types.NewTransaction(genesisAccount.addr, *toAddress, new(big.Int).SetUint64(amount), new(big.Int).SetUint64(price), nonce)
-	tx.Sign(genesisAccount.privKey)
-
-	return tx
-}
 
 func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int) *types.Block {
 	return newTestBlockWithApply(bc, parentHash, blockHeight, startNonce, size, true)
 }
 
 func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int, apply bool) *types.Block {
-	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 1)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
+	minerAccount := types.NewTestAccount(consensus.GetReward(blockHeight), 0, 1)
+	rewardTx, _ := types.NewRewardTransaction(minerAccount.Addr, minerAccount.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 	totalSize := rewardTx.Size()
 	for i := uint64(0); ; i++ {
-		tx := newTestBlockTx(1, 1, startNonce+i)
+		tx := types.NewTestTxDetail(1, 1, startNonce+i)
 		tmp := tx.Size() + totalSize
 		if tmp > size {
 			break
@@ -112,8 +48,8 @@ func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, 
 }
 
 func newTestBlockWithDebt(bc *Blockchain, parentHash common.Hash, blockHeight uint64, size int, apply bool) *types.Block {
-	minerAccount := newTestAccount(consensus.GetReward(blockHeight), 0, 2)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.addr, minerAccount.amount, uint64(1))
+	minerAccount := types.NewTestAccount(consensus.GetReward(blockHeight), 0, 2)
+	rewardTx, _ := types.NewRewardTransaction(minerAccount.Addr, minerAccount.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 
@@ -121,7 +57,7 @@ func newTestBlockWithDebt(bc *Blockchain, parentHash common.Hash, blockHeight ui
 	totalSize := 0
 
 	for i := uint64(0); ; i++ {
-		d := newTestDebt(1, 1)
+		d := types.NewTestDebtDetail(1, 1)
 		tmp := d.Size() + totalSize
 		if tmp > size {
 			break
@@ -190,10 +126,7 @@ func newBlockWithDebtAndTxs(bc *Blockchain, parentHash common.Hash, blockHeight 
 }
 
 func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.HeaderHash = common.EmptyHash
@@ -201,10 +134,7 @@ func Test_Blockchain_WriteBlock_HeaderHashChanged(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.Header.TxHash = common.EmptyHash
@@ -214,10 +144,7 @@ func Test_Blockchain_WriteBlock_TxRootHashChanged(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.Header.Height = 10
@@ -227,10 +154,7 @@ func Test_Blockchain_WriteBlock_InvalidHeight(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	newBlock.Header.ExtraData = []byte("test extra data")
@@ -240,10 +164,7 @@ func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	assert.Equal(t, bc.WriteBlock(newBlock), error(nil))
@@ -255,15 +176,12 @@ func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	assert.Equal(t, err, error(nil))
 	assert.Equal(t, storedBlock, newBlock)
 
-	_, err = state.NewStatedb(newBlock.Header.StateHash, db)
+	_, err = state.NewStatedb(newBlock.Header.StateHash, bc.accountStateDB)
 	assert.Equal(t, err, error(nil))
 }
 
 func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 
@@ -278,10 +196,7 @@ func Test_Blockchain_WriteBlock_DupBlocks(t *testing.T) {
 }
 
 func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	block1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err := bc.WriteBlock(block1)
@@ -299,10 +214,7 @@ func Test_Blockchain_WriteBlock_InsertTwoBlocks(t *testing.T) {
 }
 
 func Test_Blockchain_BlockFork(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	block1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
 	err := bc.WriteBlock(block1)
@@ -320,30 +232,21 @@ func Test_Blockchain_BlockFork(t *testing.T) {
 }
 
 func Test_BlockChain_InvalidParent(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	block := newTestBlockWithApply(bc, common.EmptyHash, 1, 3, 0, false)
 	assert.True(t, errors.IsOrContains(bc.WriteBlock(block), consensus.ErrBlockInvalidParentHash))
 }
 
 func Test_Blockchain_InvalidHeight(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 0, 3, 0)
 	assert.True(t, errors.IsOrContains(bc.WriteBlock(block), consensus.ErrBlockInvalidHeight))
 }
 
 func Test_Blockchain_UpdateCanocialHash(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	assertCanonicalHash(t, bc, 0, bc.genesisBlock.HeaderHash)
 
 	// genesis <- block11
@@ -438,11 +341,8 @@ func Test_Blockchain_Shard(t *testing.T) {
 }
 
 func Test_Blockchain_AppyDebt(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	verifier := newTestVerifier(true, true, nil)
-	bc := newTestBlockchainWithVerifier(db, verifier)
+	verifier := types.NewTestVerifier(true, true, nil)
+	bc := NewTestBlockchainWithVerifier(verifier)
 
 	block := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, BlockByteLimit, false)
 
@@ -476,11 +376,8 @@ func Test_Blockchain_InvalidDebt(t *testing.T) {
 }
 
 func testApplyDebt(packed, confirmed bool, err error) error {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	verifier := newTestVerifier(packed, confirmed, err)
-	bc := newTestBlockchainWithVerifier(db, verifier)
+	verifier := types.NewTestVerifier(packed, confirmed, err)
+	bc := NewTestBlockchainWithVerifier(verifier)
 
 	block := newTestBlockWithDebt(bc, bc.genesisBlock.HeaderHash, 1, BlockByteLimit, false)
 
@@ -499,15 +396,12 @@ func testApplyDebt(packed, confirmed bool, err error) error {
 }
 
 func Test_Blockchain_ApplyTransaction(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 
 	// prepare tx to apply
 	amount := uint64(3456)
 	price := uint64(2)
-	tx := newTestBlockTx(amount, price, 0)
+	tx := types.NewTestTxDetail(amount, price, 0)
 	block := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 1, 0)
 	coinbase := block.Header.Creator
 	statedb, err := bc.GetCurrentState()
@@ -516,7 +410,7 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 	statedb.SetBalance(coinbase, big.NewInt(50))
 
 	// check before applying tx
-	assert.Equal(t, statedb.GetBalance(tx.Data.From), genesisAccount.amount)
+	assert.Equal(t, statedb.GetBalance(tx.Data.From), types.TestGenesisAccount.Amount)
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), big.NewInt(0))
 	assert.Equal(t, statedb.GetBalance(coinbase), big.NewInt(50))
 
@@ -526,17 +420,14 @@ func Test_Blockchain_ApplyTransaction(t *testing.T) {
 
 	// check after applying tx
 	used := new(big.Int).SetUint64(amount + price*types.TransferAmountIntrinsicGas)
-	newBalance := new(big.Int).Sub(genesisAccount.amount, used)
+	newBalance := new(big.Int).Sub(types.TestGenesisAccount.Amount, used)
 	assert.Equal(t, statedb.GetBalance(tx.Data.From), newBalance)
 	assert.Equal(t, statedb.GetBalance(tx.Data.To), new(big.Int).SetUint64(amount))
 	assert.Equal(t, statedb.GetBalance(coinbase), new(big.Int).SetUint64(50+price*types.TransferAmountIntrinsicGas))
 }
 
 func Benchmark_Blockchain_WriteBlock(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	preBlock := bc.genesisBlock
 
 	b.ResetTimer()
@@ -552,10 +443,7 @@ func Benchmark_Blockchain_WriteBlock(b *testing.B) {
 }
 
 func Benchmark_Blockchain_ValidateTxs(b *testing.B) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	preBlock := bc.genesisBlock
 	block := newTestBlock(bc, preBlock.HeaderHash, preBlock.Header.Height+1, 0, BlockByteLimit)
 

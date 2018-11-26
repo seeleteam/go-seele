@@ -7,7 +7,6 @@ package miner
 
 import (
 	"math/big"
-	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
@@ -24,9 +23,16 @@ type Task struct {
 	receipts []*types.Receipt
 	debts    []*types.Debt
 
-	createdAt    time.Time
 	coinbase     common.Address
 	debtVerifier types.DebtVerifier
+}
+
+func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.DebtVerifier) *Task {
+	return &Task{
+		header:       header,
+		coinbase:     coinbase,
+		debtVerifier: verifier,
+	}
 }
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit

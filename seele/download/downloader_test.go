@@ -13,10 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core"
-	"github.com/seeleteam/go-seele/core/state"
-	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database"
@@ -46,68 +43,8 @@ func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
 	return tx
 }
 
-func newTestBlock(t *testing.T, parentHash common.Hash, height uint64, db database.Database, nonce uint64, difficulty int64) *types.Block {
-	txs := []*types.Transaction{
-		newTestTx(t, 1, 1),
-		newTestTx(t, 2, 2),
-		newTestTx(t, 3, 3),
-	}
-
-	statedb, err := state.NewStatedb(common.EmptyHash, db)
-	if err != nil {
-		t.Fatal()
-	}
-
-	for _, tx := range txs {
-		statedb.CreateAccount(tx.Data.From)
-		statedb.SetBalance(tx.Data.From, big.NewInt(10))
-		statedb.SetNonce(tx.Data.From, nonce)
-	}
-
-	batch := db.NewBatch()
-	stateHash, err := statedb.Commit(batch)
-	if err != nil {
-		t.Fatal()
-	}
-
-	if err = batch.Commit(); err != nil {
-		t.Fatal()
-	}
-
-	header := &types.BlockHeader{
-		PreviousBlockHash: parentHash,
-		Creator:           *crypto.MustGenerateRandomAddress(),
-		StateHash:         stateHash,
-		TxHash:            types.MerkleRootHash(txs),
-		Height:            height,
-		Difficulty:        big.NewInt(difficulty),
-		CreateTimestamp:   big.NewInt(1),
-	}
-
-	return &types.Block{
-		HeaderHash:   header.Hash(),
-		Header:       header,
-		Transactions: txs,
-	}
-}
-
-func newTestBlockchain(db database.Database) *core.Blockchain {
-	bcStore := store.NewBlockchainDatabase(db)
-
-	genesis := core.GetGenesis(&core.GenesisInfo{})
-	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
-		panic(err)
-	}
-
-	bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
-	if err != nil {
-		panic(err)
-	}
-	return bc
-}
-
 func newTestDownloader(db database.Database) *Downloader {
-	bc := newTestBlockchain(db)
+	bc := core.NewTestBlockchain()
 	d := NewDownloader(bc)
 	d.tm = newTaskMgr(d, d.masterPeer, 1, 2)
 
@@ -310,7 +247,7 @@ func Test_Downloader_FindCommonAncestorHeight(t *testing.T) {
 	assert.Equal(t, aHeight, uint64(0))
 
 	// case 2: empty block
-	dl.chain = newTestBlockchain(db)
+	dl.chain = core.NewTestBlockchain()
 	height = 0
 	aHeight, err = dl.findCommonAncestorHeight(pc, height)
 	assert.Equal(t, err, nil)
@@ -602,7 +539,6 @@ func Test_Downloader_ProcessBlocks(t *testing.T) {
 	db, dispose := leveldb.NewTestDatabase()
 	defer dispose()
 	dl := newTestDownloader(db)
-	dl.chain = newTestBlockchain(db)
 
 	headInfos := []*downloadInfo{newDownloadInfo(1, taskStatusWaitProcessing)}
 	dl.processBlocks(headInfos)
