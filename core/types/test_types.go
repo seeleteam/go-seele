@@ -54,24 +54,28 @@ func NewTestCrossShardTransactionWithNonce(nonce uint64) *Transaction {
 }
 
 func NewTestDebtWithTargetShard(targeShard uint) *Debt {
-	return NewTestDebtDetail(1, 1, targeShard)
+	return newTestDebt(1, 1, targeShard)
 }
 
 func NewTestDebt() *Debt {
-	return NewTestDebtDetail(1, 1, TestDebtTargetShard)
+	return NewTestDebtDetail(1, 1)
 }
 
-func NewTestDebtDetail(amount int64, price int64, targetShard uint) *Debt {
+func NewTestDebtDetail(amount int64, price int64) *Debt {
+	return newTestDebt(amount, price, TestDebtTargetShard)
+}
+
+func NewTestTxDetail(amount, price, nonce uint64) *Transaction {
+	return newTestTxWithShard(amount, price, nonce, TestGenesisShard, true)
+}
+
+func newTestDebt(amount int64, price int64, targetShard uint) *Debt {
 	fromAddress, fromPrivKey := crypto.MustGenerateKeyPairNotShard(targetShard)
 	toAddress := crypto.MustGenerateShardAddress(targetShard)
 	tx, _ := NewTransaction(*fromAddress, *toAddress, big.NewInt(amount), big.NewInt(price), 1)
 	tx.Sign(fromPrivKey)
 
 	return NewDebtWithoutContext(tx)
-}
-
-func NewTestTxDetail(amount, price, nonce uint64) *Transaction {
-	return newTestTxWithShard(amount, price, nonce, TestGenesisShard, true)
 }
 
 func newTestTxWithShard(amount, price, nonce uint64, shard uint, sign bool) *Transaction {

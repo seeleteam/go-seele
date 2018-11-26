@@ -7,6 +7,7 @@ package miner
 
 import (
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -65,22 +66,20 @@ func Test_ChooseTransactionAndDebts(t *testing.T) {
 	verifier := types.NewTestVerifier(true, false, nil)
 	task, debtPool := testWithBackend(verifier, t)
 
-	assert.Equal(t, 6, len(task.txs))
-	assert.Equal(t, 6, len(task.receipts))
-	assert.Equal(t, 0, len(task.debts))
+	assert.Equal(t, 6, len(task.Transactions))
+	assert.Equal(t, 0, len(task.Debts))
 	assert.Equal(t, 3, debtPool.GetDebtCount(false, true))
 
 	verifier2 := types.NewTestVerifier(true, true, nil)
 	task, debtPool = testWithBackend(verifier2, t)
 
-	assert.Equal(t, 6, len(task.txs))
-	assert.Equal(t, 6, len(task.receipts))
-	assert.Equal(t, 3, len(task.debts))
+	assert.Equal(t, 6, len(task.Transactions))
+	assert.Equal(t, 3, len(task.Debts))
 	assert.Equal(t, 0, debtPool.GetDebtCount(false, true))
 	assert.Equal(t, 3, debtPool.GetDebtCount(true, false))
 }
 
-func testWithBackend(verifier types.DebtVerifier, t *testing.T) (*Task, *core.DebtPool) {
+func testWithBackend(verifier types.DebtVerifier, t *testing.T) (*types.Block, *core.DebtPool) {
 	backend := NewTestSeeleBackendWithVerifier(verifier)
 
 	bc := backend.BlockChain()
@@ -111,5 +110,23 @@ func testWithBackend(verifier types.DebtVerifier, t *testing.T) (*Task, *core.De
 	err = task.applyTransactionsAndDebts(backend, state, log)
 	assert.Equal(t, err, nil)
 
-	return task, debtPool
+	block := task.generateBlock()
+	result := make(chan *types.Block)
+	var resultBlock *types.Block
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		resultBlock = <-result
+	}()
+
+	err = engine.Seal(bc, block, make(chan struct{}), result)
+	assert.Equal(t, nil, err)
+
+	wg.Wait()
+
+	err = bc.WriteBlock(resultBlock)
+	assert.Equal(t, nil, err)
+
+	return resultBlock, debtPool
 }

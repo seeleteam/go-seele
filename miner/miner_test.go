@@ -13,12 +13,12 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/core"
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/stretchr/testify/assert"
 )
 
 var defaultMinerAddr = common.BytesToAddress([]byte{1})
-var seele SeeleBackend = TestSeeleBackend{}
+var seele = NewTestSeeleBackend()
 
 func Test_NewMiner(t *testing.T) {
 	miner := createMiner()
@@ -46,7 +46,6 @@ func Test_Start(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	miner := createMiner()
-	miner.seele = NewTestSeeleBackend()
 	miner.mining = 1
 
 	err := miner.Start()
