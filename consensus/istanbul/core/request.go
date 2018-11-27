@@ -8,18 +8,16 @@ package core
 import "github.com/seeleteam/go-seele/consensus/istanbul"
 
 func (c *core) handleRequest(request *istanbul.Request) error {
-	logger := c.logger.New("state", c.state, "seq", c.current.sequence)
-
 	if err := c.checkRequestMsg(request); err != nil {
 		if err == errInvalidMessage {
-			logger.Warn("invalid request")
+			c.logger.Warn("invalid request")
 			return err
 		}
-		logger.Warn("unexpected request", "err", err, "number", request.Proposal.Height(), "hash", request.Proposal.Hash())
+		c.logger.Warn("unexpected request. err %s. height %d. hash %s", err, request.Proposal.Height(), request.Proposal.Hash())
 		return err
 	}
 
-	logger.Trace("handleRequest", "number", request.Proposal.Height(), "hash", request.Proposal.Hash())
+	c.logger.Debug("handleRequest. height %d. hash %s", request.Proposal.Height(), request.Proposal.Hash())
 
 	c.current.pendingRequest = request
 	if c.state == StateAcceptRequest {
@@ -47,9 +45,7 @@ func (c *core) checkRequestMsg(request *istanbul.Request) error {
 }
 
 func (c *core) storeRequestMsg(request *istanbul.Request) {
-	logger := c.logger.New("state", c.state)
-
-	logger.Trace("Store future request", "number", request.Proposal.Height(), "hash", request.Proposal.Hash())
+	c.logger.Debug("Store future request. height %d. hash %s. state %d", request.Proposal.Height(), request.Proposal.Hash(), c.state)
 
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
@@ -65,21 +61,21 @@ func (c *core) processPendingRequests() {
 		m, prio := c.pendingRequests.Pop()
 		r, ok := m.(*istanbul.Request)
 		if !ok {
-			c.logger.Warn("Malformed request, skip", "msg", m)
+			c.logger.Warn("Malformed request, skip. msg %v", m)
 			continue
 		}
 		// Push back if it's a future message
 		err := c.checkRequestMsg(r)
 		if err != nil {
 			if err == errFutureMessage {
-				c.logger.Trace("Stop processing request", "number", r.Proposal.Height(), "hash", r.Proposal.Hash())
+				c.logger.Debug("Stop processing request height %d. hash %s", r.Proposal.Height(), r.Proposal.Hash())
 				c.pendingRequests.Push(m, prio)
 				break
 			}
-			c.logger.Trace("Skip the pending request", "number", r.Proposal.Height(), "hash", r.Proposal.Hash(), "err", err)
+			c.logger.Debug("Skip the pending request err %s. height %d. hash %s", err, r.Proposal.Height(), r.Proposal.Hash())
 			continue
 		}
-		c.logger.Trace("Post pending request", "number", r.Proposal.Height(), "hash", r.Proposal.Hash())
+		c.logger.Debug("Post pending request height %d. hash %s", r.Proposal.Height(), r.Proposal.Hash())
 
 		go c.sendEvent(istanbul.RequestEvent{
 			Proposal: r.Proposal,

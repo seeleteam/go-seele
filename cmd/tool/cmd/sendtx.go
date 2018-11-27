@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -23,16 +24,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var tps int
-var debug bool
+var (
+	// tps number of sended tx every second
+	tps int
 
-// send tx mode
-// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
-// mode 2: send tx with amount 1 and don't care about new balances
-// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
-var mode int
+	// debug print more info
+	debug bool
 
-var wg = sync.WaitGroup{}
+	// send tx mode
+	// mode 1: send tx and check the txs periodically. add them back to balances after confirmed
+	// mode 2: send tx with amount 1 and don't care about new balances
+	// mode 3: split tx to 3 parts. send tx with full amount and replace old balances with new balances
+	// mode 4: send tx to different shard
+	// mode 5: send tx to different shards and same shard randomly
+	// mode 6: send tx to different shards by cross number
+	mode int
+
+	// wg sync signal
+	wg = sync.WaitGroup{}
+
+	// receivers address
+	receiversAddress map[uint][]KeyInfo
+
+	// isRandom default false
+	isRandom bool
+
+	// cross is number of the crossing shard txs
+	cross uint
+)
 
 type balance struct {
 	address    *common.Address
@@ -52,9 +71,18 @@ var sendTxCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
 		balanceList := initAccount(threads)
+		// receiversAddress init
+		receiversAddress = make(map[uint][]KeyInfo)
+		if receivers == "" {
+			isRandom = true
+		} else {
+			isRandom = false
+			initToAccount()
+		}
 
 		fmt.Println("use mode ", mode)
 		fmt.Println("threads", threads)
+		fmt.Println("is send to random address", isRandom)
 		fmt.Println("total balance ", len(balanceList))
 		balances := newBalancesList(balanceList, threads, true)
 
@@ -65,6 +93,19 @@ var sendTxCmd = &cobra.Command{
 
 		wg.Wait()
 	},
+}
+
+// initToAccount init to accounts which are used to send tx
+func initToAccount() {
+	data, err := ioutil.ReadFile(receivers)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read receivers file %s", err))
+	}
+
+	if err = json.Unmarshal(data, &receiversAddress); err != nil {
+		panic(fmt.Sprintf("Failed to unmarshal %s", err))
+	}
+
 }
 
 // StartSend start send tx by specific thread and mode
@@ -80,11 +121,11 @@ func StartSend(balanceList []*balance, threadNum int) {
 	case 3:
 		go loopSendMode3(balanceList)
 
-	case 2, 4, 5:
+	case 2, 4, 5, 6:
 		go loopSendMode(balanceList, lock, threadNum)
 
 	default:
-		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5", mode)
+		fmt.Printf("Invalid mode %d, supporting 1, 2, 3, 4, 5, 6", mode)
 		break
 	}
 }
@@ -192,9 +233,17 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 					panic(fmt.Sprintf("Failed to send tx in different shards, common shardcount is: %d", common.ShardCount))
 				}
 
-				// 5 is used to send tx in same shards or different shards
+				// 5 is used to send tx in same shards or different shards randomly
 			case 5:
 				sendDifferentOrSameShard(b)
+
+				// 6 is used to send tx in same shards or different shards, different shard tx number is limited by cross parameter
+			case 6:
+				if count < int(cross) {
+					sendDifferentShard(b)
+				} else {
+					send(b)
+				}
 
 			default:
 				send(b)
@@ -344,12 +393,29 @@ func sendDifferentShard(b *balance) *balance {
 }
 
 func sendtx(b *balance, amount int, shard uint) *balance {
-	addr, privateKey := crypto.MustGenerateShardKeyPair(shard)
+	var addr *common.Address
+	var privateKey *ecdsa.PrivateKey
+
+	if isRandom {
+		addr, privateKey = crypto.MustGenerateShardKeyPair(shard)
+
+	} else {
+		data := receiversAddress[shard]
+		index := rand.Intn(len(data))
+		addr = data[index].Addr
+		key, err := crypto.LoadECDSAFromString(data[index].PrivateKey)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to load private key from string %s", err))
+		}
+
+		privateKey = key
+	}
+
 	newBalance := &balance{
 		address:    addr,
 		privateKey: privateKey,
 		amount:     amount,
-		shard:      addr.Shard(),
+		shard:      shard,
 		nonce:      0,
 		packed:     false,
 	}
@@ -518,8 +584,10 @@ func init() {
 	rootCmd.AddCommand(sendTxCmd)
 
 	sendTxCmd.Flags().StringVarP(&keyFile, "keyfile", "f", "keystore.txt", "key store file")
+	sendTxCmd.Flags().StringVarP(&receivers, "receiver", "r", "", "receiver address file")
 	sendTxCmd.Flags().IntVarP(&tps, "tps", "", 3, "target tps to send transaction")
 	sendTxCmd.Flags().BoolVarP(&debug, "debug", "d", false, "whether print more debug info")
 	sendTxCmd.Flags().IntVarP(&mode, "mode", "m", 1, "send tx mode")
 	sendTxCmd.Flags().IntVarP(&threads, "threads", "t", 1, "send tx threads")
+	sendTxCmd.Flags().UintVarP(&cross, "cross", "c", 0, "cross shard txs number")
 }

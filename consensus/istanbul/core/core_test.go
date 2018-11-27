@@ -13,11 +13,10 @@ import (
 
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/core/types"
-	elog "github.com/ethereum/go-ethereum/log"
 )
 
 func makeBlock(number int64) *types.Block {
-	header := &types.Header{
+	header := &types.BlockHeader{
 		Difficulty: big.NewInt(0),
 		Number:     big.NewInt(number),
 		GasLimit:   big.NewInt(0),
@@ -33,8 +32,6 @@ func newTestProposal() istanbul.Proposal {
 }
 
 func TestNewRequest(t *testing.T) {
-	testLogger.SetHandler(elog.StdoutHandler)
-
 	N := uint64(4)
 	F := uint64(1)
 

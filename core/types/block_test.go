@@ -18,7 +18,7 @@ import (
 func newTestBlockHeader(t *testing.T) *BlockHeader {
 	return &BlockHeader{
 		PreviousBlockHash: common.StringToHash("PreviousBlockHash"),
-		Creator:           randomAddress(t),
+		Creator:           *crypto.MustGenerateRandomAddress(),
 		StateHash:         common.StringToHash("StateHash"),
 		TxHash:            common.StringToHash("TxHash"),
 		Difficulty:        big.NewInt(1),
@@ -34,9 +34,9 @@ func Test_BlockMarshal(t *testing.T) {
 	header := newTestBlockHeader(t)
 
 	txs := []*Transaction{
-		newTestTx(t, 10, 1, 1, true),
-		newTestTx(t, 20, 1, 2, true),
-		newTestTx(t, 30, 1, 3, true),
+		newTestTxWithSign(10, 1, 1, true),
+		newTestTxWithSign(20, 1, 2, true),
+		newTestTxWithSign(30, 1, 3, true),
 	}
 	receipts := []*Receipt{
 		newTestReceipt(),
@@ -44,7 +44,7 @@ func Test_BlockMarshal(t *testing.T) {
 		newTestReceipt(),
 	}
 
-	tx1 := newTestTx(t, 1, 1, 1, true)
+	tx1 := newTestTxWithSign(1, 1, 1, true)
 	d1 := NewDebtWithContext(tx1)
 	debts := []*Debt{
 		d1,
@@ -69,7 +69,7 @@ func Test_BlockHeader_Clone(t *testing.T) {
 
 	// Change all values of original header.
 	header.PreviousBlockHash = common.StringToHash("PreviousBlockHash2")
-	header.Creator = randomAddress(t)
+	header.Creator = *crypto.MustGenerateRandomAddress()
 	header.StateHash = crypto.HashBytes([]byte("StateHash2"))
 	header.TxHash = crypto.HashBytes([]byte("TxHash2"))
 	header.Difficulty.SetInt64(2)
@@ -103,9 +103,9 @@ func Test_BlockHeader_Hash(t *testing.T) {
 func Test_Block_NewBlock(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
-		newTestTx(t, 10, 1, 1, true),
-		newTestTx(t, 20, 1, 2, true),
-		newTestTx(t, 30, 1, 3, true),
+		newTestTxWithSign(10, 1, 1, true),
+		newTestTxWithSign(20, 1, 2, true),
+		newTestTxWithSign(30, 1, 3, true),
 	}
 	receipts := []*Receipt{
 		newTestReceipt(),
@@ -131,9 +131,9 @@ func Test_Block_NewBlock(t *testing.T) {
 func Test_Block_GetExcludeRewardTransactions(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
-		newTestTx(t, 10, 1, 1, true),
-		newTestTx(t, 20, 1, 2, true),
-		newTestTx(t, 30, 1, 3, true),
+		newTestTxWithSign(10, 1, 1, true),
+		newTestTxWithSign(20, 1, 2, true),
+		newTestTxWithSign(30, 1, 3, true),
 	}
 
 	block := NewBlock(header, txs, nil, nil)
@@ -141,7 +141,7 @@ func Test_Block_GetExcludeRewardTransactions(t *testing.T) {
 	assert.Equal(t, len(excludeTxs) == 2, true)
 
 	// only reward transaction
-	rewardTxs := []*Transaction{newTestTx(t, 10, 1, 1, true)}
+	rewardTxs := []*Transaction{newTestTxWithSign(10, 1, 1, true)}
 	block = NewBlock(header, rewardTxs, nil, nil)
 	excludeTxs = block.GetExcludeRewardTransactions()
 	assert.Equal(t, len(excludeTxs) == 0, true)
@@ -155,9 +155,9 @@ func Test_Block_GetExcludeRewardTransactions(t *testing.T) {
 func Test_Block_FindTransaction(t *testing.T) {
 	header := newTestBlockHeader(t)
 	txs := []*Transaction{
-		newTestTx(t, 10, 1, 1, true),
-		newTestTx(t, 20, 1, 2, true),
-		newTestTx(t, 30, 1, 3, true),
+		newTestTxWithSign(10, 1, 1, true),
+		newTestTxWithSign(20, 1, 2, true),
+		newTestTxWithSign(30, 1, 3, true),
 	}
 
 	block := NewBlock(header, txs, nil, nil)

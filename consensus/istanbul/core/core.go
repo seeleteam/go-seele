@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -28,7 +28,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		address:            backend.Address(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
-		logger:             log.New("address", backend.Address()),
+		logger:             log.GetLogger("ibft_core"),
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
@@ -49,7 +49,7 @@ type core struct {
 	config  *istanbul.Config
 	address common.Address
 	state   State
-	logger  log.Logger
+	logger  *log.SeeleLog
 
 	backend               istanbul.Backend
 	events                *event.TypeMuxSubscription
@@ -118,17 +118,15 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 }
 
 func (c *core) broadcast(msg *message) {
-	logger := c.logger.New("state", c.state)
-
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
-		logger.Error("Failed to finalize message", "msg", msg, "err", err)
+		c.logger.Error("Failed to finalize message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
 
 	// Broadcast payload
 	if err = c.backend.Broadcast(c.valSet, payload); err != nil {
-		logger.Error("Failed to broadcast message", "msg", msg, "err", err)
+		c.logger.Error("Failed to broadcast message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
 }
@@ -169,18 +167,11 @@ func (c *core) commit() {
 
 // startNewRound starts a new round. if round equals to 0, it means to starts a new sequence
 func (c *core) startNewRound(round *big.Int) {
-	var logger log.Logger
-	if c.current == nil {
-		logger = c.logger.New("old_round", -1, "old_seq", 0)
-	} else {
-		logger = c.logger.New("old_round", c.current.Round(), "old_seq", c.current.Sequence())
-	}
-
 	roundChange := false
 	// Try to get last proposal
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
-		logger.Trace("Start to the initial round")
+		c.logger.Debug("Start to the initial round")
 	} else if lastProposal.Height() >= c.current.Sequence().Uint64() {
 		diff := new(big.Int).Sub(new(big.Int).SetUint64(lastProposal.Height()), c.current.Sequence())
 		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
@@ -189,18 +180,18 @@ func (c *core) startNewRound(round *big.Int) {
 			c.consensusTimer.UpdateSince(c.consensusTimestamp)
 			c.consensusTimestamp = time.Time{}
 		}
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Height(), "hash", lastProposal.Hash())
+		c.logger.Debug("Catch up latest proposal. height %d. hash %s", lastProposal.Height(), lastProposal.Hash())
 	} else if lastProposal.Height() == c.current.Sequence().Uint64()-1 {
 		if round.Cmp(common.Big0) == 0 {
 			// same seq and round, don't need to start new round
 			return
 		} else if round.Cmp(c.current.Round()) < 0 {
-			logger.Warn("New round should not be smaller than current round", "seq", lastProposal.Height(), "new_round", round, "old_round", c.current.Round())
+			c.logger.Warn("New round should not be smaller than current round. seq %d. new_round %d. old_round %d", lastProposal.Height(), round, c.current.Round())
 			return
 		}
 		roundChange = true
 	} else {
-		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Height())
+		c.logger.Warn("New sequence should be larger than current sequence. new_seq %d", lastProposal.Height())
 		return
 	}
 
@@ -218,8 +209,6 @@ func (c *core) startNewRound(round *big.Int) {
 		c.valSet = c.backend.Validators(lastProposal)
 	}
 
-	// Update logger
-	logger = logger.New("old_proposer", c.valSet.GetProposer())
 	// Clear invalid ROUND CHANGE messages
 	c.roundChangeSet = newRoundChangeSet(c.valSet)
 	// New snapshot for new round
@@ -242,12 +231,10 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "isProposer", c.isProposer())
+	c.logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "isProposer", c.isProposer())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
-	logger := c.logger.New("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.valSet.GetProposer())
-
 	if view.Round.Cmp(c.current.Round()) > 0 {
 		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
 	}
@@ -258,7 +245,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.roundChangeSet.Clear(view.Round)
 	c.newRoundChangeTimer()
 
-	logger.Trace("Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", c.valSet)
+	c.logger.Debug("Catch up round. new_round %d. new_seq %d. new_proposer %s", view.Round, view.Sequence, c.valSet)
 }
 
 // updateRoundState updates round state by checking if locking block is necessary

@@ -6,9 +6,9 @@
 package consensus
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/common"
 )
 
 type Engine interface {
@@ -59,7 +59,7 @@ type Protocol struct {
 	Name string
 	// Supported versions of the eth protocol (first is primary).
 	Versions []uint
-	// Number of implemented message corresponding to different protocol versions.
+	// Height of implemented message corresponding to different protocol versions.
 	Lengths []uint64
 }
 
@@ -78,4 +78,3 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlockByHash(hash common.Hash) *types.Block
 }
-

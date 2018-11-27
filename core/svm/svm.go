@@ -102,12 +102,19 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 	if ctx.Statedb.GetBalance(sender).Cmp(txFee) < 0 {
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
+	receipt.TotalFee = txFee.Uint64()
 
 	// handle fee
 	ctx.Statedb.SubBalance(sender, txFee)
 	minerFee := types.GetTxFeeShare(txFee)
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, minerFee)
 
+	// Record statedb hash
+	var err error
+	if receipt.PostState, err = ctx.Statedb.Hash(); err != nil {
+		err = errors.NewStackedError(err, "failed to get statedb root hash")
+		return nil, revertStatedb(ctx.Statedb, snapshot, err)
+	}
 	return receipt, nil
 }
 
