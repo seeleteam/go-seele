@@ -45,7 +45,7 @@ func newOdrBackend(bcStore store.BlockchainStore, shard uint) *odrBackend {
 		log:        log.GetLogger("odrBackend"),
 		shard:      shard,
 	}
-
+	rand2.Seed(time.Now().UnixNano())
 	return o
 }
 
@@ -94,7 +94,7 @@ func (o *odrBackend) getReqInfo(filter peerFilter) (uint32, chan odrResponse, []
 	if len(peerL) == 0 {
 		return 0, nil, nil, errNoMorePeers
 	}
-	rand2.Seed(time.Now().UnixNano())
+
 	reqID := rand2.Uint32()
 	ch := make(chan odrResponse)
 
@@ -119,7 +119,12 @@ func (o *odrBackend) retrieveWithFilter(request odrRequest, filter peerFilter) (
 	if err != nil {
 		return nil, err
 	}
-	defer close(ch)
+	defer func() {
+		o.lock.Lock()
+		delete(o.requestMap, reqID)
+		close(ch)
+		o.lock.Unlock()
+	}()
 
 	request.setRequestID(reqID)
 	code, payload := request.code(), common.SerializePanic(request)
@@ -148,9 +153,7 @@ func (o *odrBackend) retrieveWithFilter(request odrRequest, filter peerFilter) (
 	case <-o.quitCh:
 		return nil, errServiceQuited
 	case <-timeout.C:
-		o.lock.Lock()
-		delete(o.requestMap, reqID)
-		o.lock.Unlock()
+
 		return nil, fmt.Errorf("wait for msg reqid=%d timeout", reqID)
 	}
 }
