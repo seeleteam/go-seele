@@ -38,6 +38,7 @@ func NewServiceServer(service *seele.SeeleService, conf *node.Config, log *log.S
 		seeleProtocol: seeleProtocol,
 	}
 
+	rand2.Seed(time.Now().UnixNano())
 	s.log.Info("Light server started")
 	return s, nil
 }
@@ -86,9 +87,7 @@ needQuit:
 	for {
 		select {
 		case <-pm.chainHeaderChangeCh:
-			rand2.Seed(time.Now().UnixNano())
 			magic := rand2.Uint32()
-
 			peers := pm.peerSet.getPeers()
 			for _, p := range peers {
 				if p != nil {
