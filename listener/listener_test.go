@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/seeleteam/go-seele/accounts/abi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,13 +44,7 @@ const abi2 = `[
 	{ "anonymous": false, "inputs": [], "name": "getB", "type": "event" }
 ]`
 
-const abierr = `
-	{ "constant": false, "inputs": [ { "name": "x", "type": "uint256" } ], "name": "set", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" },
-	{ "constant": false, "inputs": [], "name": "get", "outputs": [ { "name": "", "type": "uint256" } ], "payable": false, "stateMutability": "nonpayable", "type": "function" },
-	{ "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" },
-	{ "anonymous": false, "inputs": [ { "indexed": false, "name": "", "type": "string" } ], "name": "getA", "type": "event" },
-	{ "anonymous": false, "inputs": [], "name": "getB", "type": "event" }
-]`
+const argString = "abcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyz"
 
 func newListener() (*Listener, error) {
 	currentProjectPath, err := os.Getwd()
@@ -76,63 +69,15 @@ func Test_NewListener(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(l.ABIParsers), 4)
 
-	var abis []ABIInfo
+	var topics []string
 	for key := range l.ABIParsers {
-		abis = append(abis, key)
+		topics = append(topics, key)
 	}
 
-	assert.Contains(
-		t,
-		abis,
-		ABIInfo{
-			ABI:       abi1,
-			EventName: getX,
-			Topic:     getXTopic,
-		},
-	)
-	assert.Contains(
-		t,
-		abis,
-		ABIInfo{
-			ABI:       abi1,
-			EventName: getY,
-			Topic:     getYTopic,
-		},
-	)
-	assert.Contains(
-		t,
-		abis,
-		ABIInfo{
-			ABI:       abi2,
-			EventName: getA,
-			Topic:     getATopic,
-		},
-	)
-	assert.Contains(
-		t,
-		abis,
-		ABIInfo{
-			ABI:       abi2,
-			EventName: getB,
-			Topic:     getBTopic,
-		},
-	)
-}
-
-func Test_Listener_GetABIParsers_Event_ABI_Load_Failed(t *testing.T) {
-	l := &Listener{
-		ABIParsers: make(map[ABIInfo]abi.ABI),
-	}
-	cfg := &config{
-		events: []abiEvent{
-			abiEvent{
-				abi:       abierr,
-				eventName: getA,
-			},
-		},
-	}
-	err := l.getABIParsers(cfg)
-	assert.Equal(t, err, ErrEventABILoadFailed)
+	assert.Contains(t, topics, getXTopic)
+	assert.Contains(t, topics, getYTopic)
+	assert.Contains(t, topics, getATopic)
+	assert.Contains(t, topics, getBTopic)
 }
 
 var rs = `[{
@@ -229,10 +174,8 @@ func Test_Valid_Receipts_To_Events(t *testing.T) {
 		t,
 		events,
 		Event{
-			At: ABIInfo{
-				ABI:       abi1,
-				EventName: getX,
-				Topic:     getXTopic},
+			Topic:     getXTopic,
+			EventName: getX,
 			Arguments: []interface{}{big.NewInt(3), big.NewInt(4)},
 		},
 	)
@@ -240,10 +183,8 @@ func Test_Valid_Receipts_To_Events(t *testing.T) {
 		t,
 		events,
 		Event{
-			At: ABIInfo{
-				ABI:       abi1,
-				EventName: getY,
-				Topic:     getYTopic},
+			Topic:     getYTopic,
+			EventName: getY,
 			Arguments: []interface{}{big.NewInt(1), big.NewInt(2)},
 		},
 	)
@@ -251,21 +192,17 @@ func Test_Valid_Receipts_To_Events(t *testing.T) {
 		t,
 		events,
 		Event{
-			At: ABIInfo{
-				ABI:       abi2,
-				EventName: getA,
-				Topic:     getATopic},
-			Arguments: []interface{}{"abcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyz"},
+			EventName: getA,
+			Topic:     getATopic,
+			Arguments: []interface{}{argString},
 		},
 	)
 	assert.Contains(
 		t,
 		events,
 		Event{
-			At: ABIInfo{
-				ABI:       abi2,
-				EventName: getB,
-				Topic:     getBTopic},
+			EventName: getB,
+			Topic:     getBTopic,
 		},
 	)
 }
@@ -282,51 +219,22 @@ func Test_Empty_Receipts(t *testing.T) {
 func Test_Valid_Receipts_To_Events_By_ABIInfo(t *testing.T) {
 	l, err := newListener()
 	assert.NoError(t, err)
-	abiInfo := ABIInfo{
-		ABI:       abi1,
-		EventName: getX,
-		Topic:     getXTopic,
-	}
 
 	var receipts []*Receipt
 	err = json.Unmarshal([]byte(rs), &receipts)
 	assert.NoError(t, err)
 
 	logs := GetLogsByTopic(getXTopic, receipts)
-	events, err := l.ParseLogsToEventsByABIInfo(abiInfo, logs)
+	events, err := l.ParseLogsToEventsByTopic(getXTopic, logs)
 	assert.NoError(t, err)
 	assert.Equal(t, len(events), 1)
 	assert.Contains(
 		t,
 		events,
 		Event{
-			At: ABIInfo{ABI: abi1,
-				EventName: getX,
-				Topic:     getXTopic},
+			EventName: getX,
+			Topic:     getXTopic,
 			Arguments: []interface{}{big.NewInt(3), big.NewInt(4)},
 		},
 	)
-}
-
-func Test_Listener_GetABIInfoByABIAndEventName(t *testing.T) {
-	l, err := newListener()
-	assert.NoError(t, err)
-	var receipts []*Receipt
-	err = json.Unmarshal([]byte(rs), &receipts)
-	assert.NoError(t, err)
-
-	lg := GetGroupLogs(receipts)
-	events, err := l.ParseLogGroupToEvents(lg)
-	assert.NoError(t, err)
-	assert.Equal(t, len(events), 4)
-	abi := abi1
-	info, err := l.GetABIInfoByABIAndEventName(&abi, getX)
-	assert.NoError(t, err)
-	assert.Equal(
-		t, ABIInfo{
-			ABI:       abi1,
-			EventName: getX,
-			Topic:     getXTopic,
-		},
-		info)
 }
