@@ -79,7 +79,7 @@ func Test_GetReinjectTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(genesisAccount.addr), 4*types.TransactionPreSize)
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(types.TestGenesisAccount.Addr), 4*types.TransactionPreSize)
 	bc.WriteBlock(b1)
 
 	state, err = bc.GetCurrentState()
@@ -87,7 +87,7 @@ func Test_GetReinjectTransaction(t *testing.T) {
 		panic(err)
 	}
 
-	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(genesisAccount.addr), 3*types.TransactionPreSize)
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(types.TestGenesisAccount.Addr), 3*types.TransactionPreSize)
 	bc.WriteBlock(b2)
 
 	reinject := pool.getReinjectObject(b1.HeaderHash, b2.HeaderHash)
