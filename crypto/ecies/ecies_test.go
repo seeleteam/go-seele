@@ -302,6 +302,7 @@ func BenchmarkGenSharedKeyP256(b *testing.B) {
 		b.FailNow()
 	}
 
+	skLen = MaxSharedKeyLength(&prv.PublicKey) / 2
 	for i := 0; i < b.N; i++ {
 		_, err := prv.GenerateShared(&prv.PublicKey, skLen, skLen)
 		if err != nil {
