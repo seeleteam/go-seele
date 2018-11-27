@@ -118,8 +118,9 @@ func NewDownloader(chain *core.Blockchain) *Downloader {
 		chain:      chain,
 		syncStatus: statusNone,
 	}
-	d.log = log.GetLogger("download")
 
+	d.log = log.GetLogger("download")
+	rand2.Seed(time.Now().UnixNano())
 	return d
 }
 
@@ -202,7 +203,6 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		}
 	}()
 
-	rand2.Seed(time.Now().UnixNano())
 	latest, err := d.fetchHeight(conn)
 	if err != nil {
 		return err
