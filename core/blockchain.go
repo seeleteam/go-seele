@@ -398,6 +398,10 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 		return errors.NewStackedError(err, "failed to validate block")
 	}
 
+	if len(block.Transactions) == 0 {
+		return ErrBlockEmptyTxs
+	}
+
 	if (types.GetTransactionsSize(block.Transactions[1:]) + types.GetDebtsSize(block.Debts)) > BlockByteLimit {
 		return ErrBlockTooManyTxs
 	}

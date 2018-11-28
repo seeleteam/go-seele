@@ -163,6 +163,17 @@ func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
 	assert.True(t, errors.IsOrContains(bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty))
 }
 
+func Test_Blockchain_WriteBlock_EmptyTxs(t *testing.T) {
+	bc := NewTestBlockchain()
+
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock.Transactions = nil
+	newBlock.Header.TxHash = types.MerkleRootHash(nil)
+	newBlock.HeaderHash = newBlock.Header.Hash()
+
+	assert.True(t, errors.IsOrContains(bc.WriteBlock(newBlock), ErrBlockEmptyTxs))
+}
+
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {
 	bc := NewTestBlockchain()
 
