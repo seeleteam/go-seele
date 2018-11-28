@@ -294,6 +294,11 @@ func (t *taskMgr) deliverBlockMsg(peerID string, blocks []*types.Block) {
 	defer t.lock.Unlock()
 
 	if len(blocks) == 0 {
+		if peerID == t.masterPeer {
+			t.downloader.Cancel()
+			return
+		}
+
 		for _, headInfo := range t.downloadInfoList {
 			if headInfo.peerID != peerID {
 				continue
