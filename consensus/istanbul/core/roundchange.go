@@ -21,11 +21,9 @@ func (c *core) sendNextRoundChange() {
 
 // sendRoundChange sends the ROUND CHANGE message with the given round
 func (c *core) sendRoundChange(round *big.Int) {
-	logger := c.logger.New("state", c.state)
-
 	cv := c.currentView()
 	if cv.Round.Cmp(round) >= 0 {
-		logger.Error("Cannot send out the round change", "current round", cv.Round, "target round", round)
+		c.logger.Error("Cannot send out the round change. current round %s. target round %s", cv.Round, round)
 		return
 	}
 
@@ -44,7 +42,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	payload, err := Encode(rc)
 	if err != nil {
-		logger.Error("Failed to encode ROUND CHANGE", "rc", rc, "err", err)
+		c.logger.Error("Failed to encode ROUND CHANGE. rc %v. err %s", rc, err)
 		return
 	}
 
@@ -55,12 +53,10 @@ func (c *core) sendRoundChange(round *big.Int) {
 }
 
 func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
-	logger := c.logger.New("state", c.state, "from", src.Address().Hex())
-
 	// Decode ROUND CHANGE message
 	var rc *istanbul.Subject
 	if err := msg.Decode(&rc); err != nil {
-		logger.Error("Failed to decode ROUND CHANGE", "err", err)
+		c.logger.Error("Failed to decode ROUND CHANGE. err %s", err)
 		return errInvalidMessage
 	}
 
@@ -75,7 +71,7 @@ func (c *core) handleRoundChange(msg *message, src istanbul.Validator) error {
 	// messages we've got with the same round number and sequence number.
 	num, err := c.roundChangeSet.Add(roundView.Round, msg)
 	if err != nil {
-		logger.Warn("Failed to add round change message", "from", src, "msg", msg, "err", err)
+		c.logger.Warn("Failed to add round change message. from %v. msg %v. err %s", src, msg, err)
 		return err
 	}
 

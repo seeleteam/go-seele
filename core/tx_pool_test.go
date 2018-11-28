@@ -12,7 +12,6 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +29,7 @@ func Test_TransactionPool_Add_InvalidTx(t *testing.T) {
 	poolTx := newTestPoolTx(t, 30, 100)
 	chain.addAccount(poolTx.FromAccount(), 20, 100)
 
-	// Change the amount in tx.
+	// Change the Amount in tx.
 	err := pool.AddTransaction(poolTx.poolObject.(*types.Transaction))
 
 	if err == nil {
@@ -72,21 +71,28 @@ func Test_TransactionPool_RemoveTransactions(t *testing.T) {
 }
 
 func Test_GetReinjectTransaction(t *testing.T) {
-	db, dispose := leveldb.NewTestDatabase()
-	defer dispose()
-
-	bc := newTestBlockchain(db)
+	bc := NewTestBlockchain()
 	pool := NewTransactionPool(*DefaultTxPoolConfig(), bc)
 
-	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 4*types.TransactionPreSize)
+	state, err := bc.GetCurrentState()
+	if err != nil {
+		panic(err)
+	}
+
+	b1 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(types.TestGenesisAccount.Addr), 4*types.TransactionPreSize)
 	bc.WriteBlock(b1)
 
-	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 0, 3*types.TransactionPreSize)
+	state, err = bc.GetCurrentState()
+	if err != nil {
+		panic(err)
+	}
+
+	b2 := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, state.GetNonce(types.TestGenesisAccount.Addr), 3*types.TransactionPreSize)
 	bc.WriteBlock(b2)
 
 	reinject := pool.getReinjectObject(b1.HeaderHash, b2.HeaderHash)
 
-	assert.Equal(t, len(reinject), 2)
+	assert.Equal(t, len(reinject), 3)
 	txs := make(map[common.Hash]poolObject)
 	for _, tx := range reinject {
 		txs[tx.GetHash()] = tx

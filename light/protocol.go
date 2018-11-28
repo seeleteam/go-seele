@@ -146,6 +146,7 @@ func NewLightProtocol(networkID string, txPool TransactionPool, debtPool *core.D
 	s.Protocol.AddPeer = s.handleAddPeer
 	s.Protocol.DeletePeer = s.handleDelPeer
 	s.Protocol.GetPeer = s.handleGetPeer
+	rand2.Seed(time.Now().UnixNano())
 	return s, nil
 }
 
@@ -257,7 +258,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	}
 
 	if lp.bServerMode {
-		rand2.Seed(time.Now().UnixNano())
+
 		magic := rand2.Uint32()
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			lp.log.Error("sendAnnounce err. %s", err)

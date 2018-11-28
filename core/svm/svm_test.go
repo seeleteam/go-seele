@@ -98,6 +98,40 @@ func Test_Process_SysContract(t *testing.T) {
 	assert.Equal(t, toOriginalBalance, toCurrentBalance)
 }
 
+func Test_Process_CrossTransfer(t *testing.T) {
+	ctx, err := newTestContext(big.NewInt(1000))
+	assert.NoError(t, err)
+
+	shardNum := uint(1)
+	if ctx.Tx.Data.From.Shard() == 1 {
+		shardNum = 2
+	}
+	ctx.Tx.Data.To = *crypto.MustGenerateShardAddress(shardNum)
+	ctx.Tx.Data.Payload = nil
+	ctx.Tx.Hash = ctx.Tx.CalculateHash()
+	receipt, err := Process(ctx)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, receipt.Failed, false)
+	assert.Equal(t, receipt.TxHash, ctx.Tx.CalculateHash())
+	assert.Equal(t, receipt.UsedGas, ctx.Tx.IntrinsicGas())
+	assert.Equal(t, receipt.TotalFee, receipt.UsedGas*ctx.Tx.Data.GasPrice.Uint64())
+	// nonce + 1
+	nonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
+	assert.Equal(t, nonce, ctx.Tx.Data.AccountNonce+1)
+
+	// add fee to coinbase and sub fee from tx.from
+	balanceC := ctx.Statedb.GetBalance(ctx.BlockHeader.Creator)
+	assert.Equal(t, big.NewInt(0).SetUint64(receipt.TotalFee/2), balanceC)
+
+	balanceF := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
+	assert.Equal(t, big.NewInt(0).Sub(big.NewInt(0).SetUint64(fromBalance-receipt.TotalFee), ctx.Tx.Data.Amount), balanceF)
+
+	// postState
+	postState, err1 := ctx.Statedb.Hash()
+	assert.Equal(t, err1, nil)
+	assert.Equal(t, postState, receipt.PostState)
+}
+
 func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	// get the tx total fee
 	ctx, _ := newTestContext(big.NewInt(1))

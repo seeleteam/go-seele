@@ -234,6 +234,15 @@ out:
 	}
 }
 
+func newHeaderByParent(parent *types.Block, coinbase common.Address, timestamp int64) *types.BlockHeader {
+	return &types.BlockHeader{
+		PreviousBlockHash: parent.HeaderHash,
+		Creator:           coinbase,
+		Height:            parent.Header.Height + 1,
+		CreateTimestamp:   big.NewInt(timestamp),
+	}
+}
+
 // prepareNewBlock prepares a new block to be mined
 func (miner *Miner) prepareNewBlock() error {
 	miner.log.Debug("starting mining the new block")
@@ -255,27 +264,15 @@ func (miner *Miner) prepareNewBlock() error {
 		time.Sleep(wait)
 	}
 
-	height := parent.Header.Height
-	header := &types.BlockHeader{
-		PreviousBlockHash: parent.HeaderHash,
-		Creator:           miner.coinbase,
-		Height:            height + 1,
-		CreateTimestamp:   big.NewInt(timestamp),
-	}
-
+	header := newHeaderByParent(parent, miner.coinbase, timestamp)
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
+
 	err = miner.engine.Prepare(miner.seele.BlockChain(), header)
 	if err != nil {
 		return fmt.Errorf("failed to prepare header, %s", err)
 	}
 
-	miner.current = &Task{
-		header:       header,
-		createdAt:    time.Now(),
-		coinbase:     miner.coinbase,
-		debtVerifier: miner.debtVerifier,
-	}
-
+	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
 	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)

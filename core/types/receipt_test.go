@@ -36,7 +36,7 @@ func Test_Receipt_ReceiptMerkleRootHash(t *testing.T) {
 }
 
 func Test_Receipt_MakeRewardReceipt(t *testing.T) {
-	tx := newTestTx(t, 1, 2, 3, true)
+	tx := newTestTxWithSign(1, 2, 3, true)
 	txHash := tx.Hash
 	receipt := MakeRewardReceipt(tx)
 

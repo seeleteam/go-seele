@@ -6,7 +6,6 @@
 package core
 
 import (
-	"bytes"
 	"math"
 	"math/big"
 	"sync"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/seeleteam/go-seele/log"
+	"bytes"
 )
 
 // New creates an Istanbul consensus core
@@ -28,7 +28,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		address:            backend.Address(),
 		state:              StateAcceptRequest,
 		handlerWg:          new(sync.WaitGroup),
-		logger:             log.GetLogger("ibft"),
+		logger:             log.GetLogger("ibft_core"),
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
@@ -121,13 +121,13 @@ func (c *core) broadcast(msg *message) {
 
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
-		c.logger.Error("Failed to finalize message.msg %v.err %s", msg, err)
+		c.logger.Error("Failed to finalize message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
 
 	// Broadcast payload
 	if err = c.backend.Broadcast(c.valSet, payload); err != nil {
-		c.logger.Error("Failed to broadcast message.msg %v.err %s", msg, err)
+		c.logger.Error("Failed to broadcast message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
 }
@@ -168,7 +168,6 @@ func (c *core) commit() {
 
 // startNewRound starts a new round. if round equals to 0, it means to starts a new sequence
 func (c *core) startNewRound(round *big.Int) {
-
 	roundChange := false
 	// Try to get last proposal
 	lastProposal, lastProposer := c.backend.LastProposal()
@@ -182,18 +181,18 @@ func (c *core) startNewRound(round *big.Int) {
 			c.consensusTimer.UpdateSince(c.consensusTimestamp)
 			c.consensusTimestamp = time.Time{}
 		}
-		c.logger.Debug("Catch up latest proposal.number %d.hash %s", lastProposal.Height(), lastProposal.Hash())
+		c.logger.Debug("Catch up latest proposal. height %d. hash %s", lastProposal.Height(), lastProposal.Hash())
 	} else if lastProposal.Height() == c.current.Sequence().Uint64()-1 {
 		if round.Cmp(common.Big0) == 0 {
 			// same seq and round, don't need to start new round
 			return
 		} else if round.Cmp(c.current.Round()) < 0 {
-			c.logger.Warn("New round should not be smaller than current round.seq %d.new_round %d.old_round %d", lastProposal.Height(), round, c.current.Round())
+			c.logger.Warn("New round should not be smaller than current round. seq %d. new_round %d. old_round %d", lastProposal.Height(), round, c.current.Round())
 			return
 		}
 		roundChange = true
 	} else {
-		c.logger.Warn("New sequence should be larger than current sequence.new_seq %d", lastProposal.Height())
+		c.logger.Warn("New sequence should be larger than current sequence. new_seq %d", lastProposal.Height())
 		return
 	}
 
@@ -211,7 +210,6 @@ func (c *core) startNewRound(round *big.Int) {
 		c.valSet = c.backend.Validators(lastProposal)
 	}
 
-	// Update logger
 	// Clear invalid ROUND CHANGE messages
 	c.roundChangeSet = newRoundChangeSet(c.valSet)
 	// New snapshot for new round
@@ -234,11 +232,10 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 	c.newRoundChangeTimer()
 
-	c.logger.Debug("New round.new_round %v.new_seq %v.new_proposer %v.valSet %v.size %d.isProposer %v", newView.Round, newView.Sequence, c.valSet.GetProposer(), c.valSet.List(), c.valSet.Size(), c.isProposer())
+	c.logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "isProposer", c.isProposer())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
-
 	if view.Round.Cmp(c.current.Round()) > 0 {
 		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
 	}
@@ -249,7 +246,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.roundChangeSet.Clear(view.Round)
 	c.newRoundChangeTimer()
 
-	c.logger.Debug("Catch up round.new_round %v.new_seq %v.new_proposer %v", view.Round, view.Sequence, c.valSet)
+	c.logger.Debug("Catch up round. new_round %d. new_seq %d. new_proposer %s", view.Round, view.Sequence, c.valSet)
 }
 
 // updateRoundState updates round state by checking if locking block is necessary

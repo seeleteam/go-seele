@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
@@ -74,7 +74,7 @@ func TestStoreRequestMsg(t *testing.T) {
 		events: new(event.TypeMux),
 	}
 	c := &core{
-		logger:  log.New("backend", "test", "id", 0),
+		logger:  log.GetLogger("backend_test"),
 		backend: backend,
 		state:   StateAcceptRequest,
 		current: newRoundState(&istanbul.View{
@@ -118,7 +118,7 @@ func TestStoreRequestMsg(t *testing.T) {
 		if !ok {
 			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 		}
-		if e.Proposal.Height()== requests[2].Proposal.Height() {
+		if e.Proposal.Height() != requests[2].Proposal.Height() {
 			t.Errorf("the number of proposal mismatch: have %v, want %v", e.Proposal.Height(), requests[2].Proposal.Height())
 		}
 	case <-timeout.C:

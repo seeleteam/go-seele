@@ -12,7 +12,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
@@ -478,7 +477,7 @@ func (sb *backend) Stop() error {
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
+func (sb *backend) snapshot(chain consensus.ChainReader, height uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.BlockHeader
@@ -491,15 +490,15 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
-		if number%checkpointInterval == 0 {
+		if height%checkpointInterval == 0 {
 			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
-				log.Trace("Loaded voting snapshot form disk", "number", number, "hash", hash)
+				sb.logger.Debug("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
 				snap = s
 				break
 			}
 		}
 		// If we're at block zero, make a snapshot
-		if number == 0 {
+		if height == 0 {
 			genesis := chain.GetHeaderByHeight(0)
 			if err := sb.VerifyHeader(chain, genesis); err != nil {
 				return nil, err
@@ -512,7 +511,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			if err := snap.store(sb.db); err != nil {
 				return nil, err
 			}
-			log.Trace("Stored genesis voting snapshot to disk")
+			sb.logger.Debug("Stored genesis voting snapshot to disk")
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
@@ -520,7 +519,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 		if len(parents) > 0 {
 			// If we have explicit parents, pick from there (enforced)
 			header = parents[len(parents)-1]
-			if header.Hash() != hash || header.Height != number {
+			if header.Hash() != hash || header.Height != height {
 				return nil, consensus.ErrBlockInvalidParentHash
 			}
 			parents = parents[:len(parents)-1]
@@ -532,7 +531,7 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 			}
 		}
 		headers = append(headers, header)
-		number, hash = number-1, header.PreviousBlockHash
+		height, hash = height-1, header.PreviousBlockHash
 	}
 	// Previous snapshot found, apply any pending headers on top of it
 	for i := 0; i < len(headers)/2; i++ {
@@ -545,11 +544,11 @@ func (sb *backend) snapshot(chain consensus.ChainReader, number uint64, hash com
 	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
+	if snap.Height%checkpointInterval == 0 && len(headers) > 0 {
 		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
-		log.Trace("Stored voting snapshot to disk", "number", snap.Number, "hash", snap.Hash)
+		sb.logger.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
 	return snap, err
 }
