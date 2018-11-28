@@ -6,6 +6,7 @@
 package core
 
 import (
+	"bytes"
 	"math"
 	"math/big"
 	"sync"
@@ -16,9 +17,8 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/core/types"
-	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 	"github.com/seeleteam/go-seele/log"
-	"bytes"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
 
 // New creates an Istanbul consensus core

@@ -17,9 +17,9 @@ import (
 
 func makeBlock(number int64) *types.Block {
 	header := &types.BlockHeader{
-		Difficulty: big.NewInt(0),
-		Height:     uint64(number),
-		CreateTimestamp:       big.NewInt(0),
+		Difficulty:      big.NewInt(0),
+		Height:          uint64(number),
+		CreateTimestamp: big.NewInt(0),
 	}
 	block := &types.Block{}
 	return block.WithSeal(header)
