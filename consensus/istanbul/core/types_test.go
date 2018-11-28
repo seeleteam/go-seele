@@ -27,7 +27,7 @@ func testPreprepare(t *testing.T) {
 	m := &message{
 		Code:    msgPreprepare,
 		Msg:     prepreparePayload,
-		Address: common.HexToAddress("0x1234567890"),
+		Address: common.HexMustToAddres("0x1234567890"),
 	}
 
 	msgPayload, err := m.Payload()
@@ -76,7 +76,7 @@ func testSubject(t *testing.T) {
 	m := &message{
 		Code:    msgPreprepare,
 		Msg:     subjectPayload,
-		Address: common.HexToAddress("0x1234567890"),
+		Address: common.HexMustToAddres("0x1234567890"),
 	}
 
 	msgPayload, err := m.Payload()
@@ -116,7 +116,7 @@ func testSubjectWithSignature(t *testing.T) {
 	m := &message{
 		Code:          msgPreprepare,
 		Msg:           subjectPayload,
-		Address:       common.HexToAddress("0x1234567890"),
+		Address:       common.HexMustToAddres("0x1234567890"),
 		Signature:     expectedSig,
 		CommittedSeal: []byte{},
 	}

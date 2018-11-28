@@ -65,19 +65,18 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 }
 
 func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
-	logger := c.logger.New("from", src, "state", c.state)
 
 	if src.Address() == c.Address() {
-		logger.Warn("Backlog from self")
+		c.logger.Warn("Backlog from self")
 		return
 	}
 
-	logger.Trace("Store future message")
+	c.logger.Debug("Store future message")
 
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	logger.Debug("Retrieving backlog queue", "for", src.Address(), "backlogs_size", len(c.backlogs))
+	c.logger.Debug("Retrieving backlog queue.for %v.backlogs_size %d", src.Address(), len(c.backlogs))
 	backlog := c.backlogs[src.Address()]
 	if backlog == nil {
 		backlog = prque.New()
@@ -114,7 +113,6 @@ func (c *core) processBacklog() {
 			delete(c.backlogs, srcAddress)
 			continue
 		}
-		logger := c.logger.New("from", src, "state", c.state)
 		isFuture := false
 
 		// We stop processing if
@@ -140,22 +138,22 @@ func (c *core) processBacklog() {
 				}
 			}
 			if view == nil {
-				logger.Debug("Nil view", "msg", msg)
+				c.logger.Debug("Nil view.msg", msg)
 				continue
 			}
 			// Push back if it's a future message
 			err := c.checkMessage(msg.Code, view)
 			if err != nil {
 				if err == errFutureMessage {
-					logger.Trace("Stop processing backlog", "msg", msg)
+					c.logger.Debug("Stop processing backlog.msg", msg)
 					backlog.Push(msg, prio)
 					isFuture = true
 					break
 				}
-				logger.Trace("Skip the backlog event", "msg", msg, "err", err)
+				c.logger.Debug("Skip the backlog event.msg %s.err %s.err %s", msg, err)
 				continue
 			}
-			logger.Trace("Post backlog event", "msg", msg)
+			c.logger.Debug("Post backlog event.msg %s", msg)
 
 			go c.sendEvent(backlogEvent{
 				src: src,

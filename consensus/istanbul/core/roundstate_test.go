@@ -37,7 +37,7 @@ func TestLockHash(t *testing.T) {
 		},
 		sys.backends[0].peers,
 	)
-	if !common.EmptyHash(rs.GetLockedHash()) {
+	if !common.EmptyHash.Equal(rs.GetLockedHash()) {
 		t.Errorf("error mismatch: have %v, want empty", rs.GetLockedHash())
 	}
 	if rs.IsHashLocked() {
@@ -56,7 +56,7 @@ func TestLockHash(t *testing.T) {
 
 	// Unlock
 	rs.UnlockHash()
-	if !common.EmptyHash(rs.GetLockedHash()) {
+	if !common.EmptyHash.Equal(rs.GetLockedHash()) {
 		t.Errorf("error mismatch: have %v, want empty", rs.GetLockedHash())
 	}
 	if rs.IsHashLocked() {

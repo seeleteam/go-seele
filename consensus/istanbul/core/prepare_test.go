@@ -24,7 +24,7 @@ func TestHandlePrepare(t *testing.T) {
 	expectedSubject := &istanbul.Subject{
 		View: &istanbul.View{
 			Round:    big.NewInt(0),
-			Sequence: proposal.Height(),
+			Sequence: new(big.Int).SetUint64(proposal.Height()),
 		},
 		Digest: proposal.Hash(),
 	}

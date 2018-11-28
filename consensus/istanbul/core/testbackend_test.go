@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/ethereum/go-ethereum/event"
 	elog "github.com/ethereum/go-ethereum/log"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 var testLogger = elog.New()
@@ -132,9 +133,10 @@ func (self *testSystemBackend) LastProposal() (istanbul.Proposal, common.Address
 	return makeBlock(0), common.Address{}
 }
 
-// Only block height 5 will return true
-func (self *testSystemBackend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return number.Cmp(big.NewInt(5)) == 0
+// TODO Only block height 5 will return true
+func (self *testSystemBackend) HasPropsal(hash common.Hash) bool {
+	//return number.Cmp(big.NewInt(5)) == 0
+	return false
 }
 
 func (self *testSystemBackend) GetProposer(number uint64) common.Address {
@@ -254,7 +256,7 @@ func (t *testSystem) stop(core bool) {
 
 func (t *testSystem) NewBackend(id uint64) *testSystemBackend {
 	// assume always success
-	ethDB, _ := ethdb.NewMemDatabase()
+	ethDB := leveldb.NewMemDatabase()
 	backend := &testSystemBackend{
 		id:     id,
 		sys:    t,

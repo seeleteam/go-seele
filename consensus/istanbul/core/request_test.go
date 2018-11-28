@@ -118,7 +118,7 @@ func TestStoreRequestMsg(t *testing.T) {
 		if !ok {
 			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 		}
-		if e.Proposal.Height().Cmp(requests[2].Proposal.Height()) != 0 {
+		if e.Proposal.Height()== requests[2].Proposal.Height() {
 			t.Errorf("the number of proposal mismatch: have %v, want %v", e.Proposal.Height(), requests[2].Proposal.Height())
 		}
 	case <-timeout.C:
