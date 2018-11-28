@@ -17,11 +17,9 @@ import (
 
 func makeBlock(number int64) *types.Block {
 	header := &types.BlockHeader{
-		Difficulty: big.NewInt(0),
-		Number:     big.NewInt(number),
-		GasLimit:   big.NewInt(0),
-		GasUsed:    big.NewInt(0),
-		Time:       big.NewInt(0),
+		Difficulty:      big.NewInt(0),
+		Height:          uint64(number),
+		CreateTimestamp: big.NewInt(0),
 	}
 	block := &types.Block{}
 	return block.WithSeal(header)
@@ -58,11 +56,11 @@ func TestNewRequest(t *testing.T) {
 		if len(backend.committedMsgs) != 2 {
 			t.Errorf("the number of executed requests mismatch: have %v, want 2", len(backend.committedMsgs))
 		}
-		if !reflect.DeepEqual(request1.Number(), backend.committedMsgs[0].commitProposal.Height()) {
-			t.Errorf("the number of requests mismatch: have %v, want %v", request1.Number(), backend.committedMsgs[0].commitProposal.Height())
+		if !reflect.DeepEqual(request1.Height(), backend.committedMsgs[0].commitProposal.Height()) {
+			t.Errorf("the number of requests mismatch: have %v, want %v", request1.Height(), backend.committedMsgs[0].commitProposal.Height())
 		}
-		if !reflect.DeepEqual(request2.Number(), backend.committedMsgs[1].commitProposal.Height()) {
-			t.Errorf("the number of requests mismatch: have %v, want %v", request2.Number(), backend.committedMsgs[1].commitProposal.Height())
+		if !reflect.DeepEqual(request2.Height(), backend.committedMsgs[1].commitProposal.Height()) {
+			t.Errorf("the number of requests mismatch: have %v, want %v", request2.Height(), backend.committedMsgs[1].commitProposal.Height())
 		}
 	}
 }
