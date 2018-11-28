@@ -65,7 +65,6 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 }
 
 func (c *core) storeBacklog(msg *message, src istanbul.Validator) {
-
 	if src.Address() == c.Address() {
 		c.logger.Warn("Backlog from self. from %s. state %d", src, c.state)
 		return
