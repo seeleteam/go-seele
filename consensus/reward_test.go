@@ -29,15 +29,14 @@ func Test_RewardTotal(t *testing.T) {
 	targetReward := new(big.Int).Mul(new(big.Int).SetInt64(300000000), common.SeeleToFan)
 
 	sum := big.NewInt(0)
-	for i := 0; i < 10; i++ {
-		reward := GetReward(uint64(i)*blockNumberPerEra + 1)
-		rewardYear := new(big.Int).Mul(reward, new(big.Int).SetUint64(blockNumberPerEra))
-		sum = new(big.Int).Add(sum, rewardYear)
+	for i := uint64(0); i < 10*blockNumberPerEra; i++ {
+		reward := GetReward(i)
+		sum = new(big.Int).Add(sum, reward)
 	}
 
 	sum = new(big.Int).Mul(sum, big.NewInt(common.ShardCount))
 
-	duration := new(big.Int).Div(targetReward, big.NewInt(10))
+	duration := new(big.Int).Div(targetReward, big.NewInt(100))
 	assert.True(t, sum.Cmp(new(big.Int).Add(targetReward, duration)) < 0)
 	assert.True(t, sum.Cmp(new(big.Int).Sub(targetReward, duration)) > 0)
 }
