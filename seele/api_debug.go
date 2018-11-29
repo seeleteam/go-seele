@@ -48,7 +48,7 @@ type TpsInfo struct {
 func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 	chain := api.s.BlockChain()
 	block := chain.CurrentBlock()
-	timeInterval := uint64(300)
+	timeInterval := uint64(150)
 	if block.Header.Height == 0 {
 		return nil, nil
 	}
@@ -64,7 +64,7 @@ func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 		}
 
 		for _, tx := range current.Transactions {
-			if !tx.IsDebt() {
+			if !tx.IsCrossShardTx() {
 				count = count + 1
 			}
 		}

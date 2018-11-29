@@ -365,15 +365,6 @@ func (tx *Transaction) CalculateHash() common.Hash {
 	return crypto.MustHash(tx.Data)
 }
 
-// IsDebt checking tx is debt or not
-func (tx *Transaction) IsDebt() bool {
-	if tx.Data.From.IsEmpty() {
-		return false
-	}
-
-	return !(tx.Data.From.Shard() == tx.Data.To.Shard())
-}
-
 // MerkleRootHash calculates and returns the merkle root hash of the specified transactions.
 // If the given transactions are empty, return empty hash.
 func MerkleRootHash(txs []*Transaction) common.Hash {
