@@ -135,16 +135,20 @@ func (p *peer) sendDebts(debts []*types.Debt, filter bool) error {
 		filterDebts = debts
 	}
 
-	buff := common.SerializePanic(filterDebts)
-	p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(filterDebts))
-	err := p2p.SendMessage(p.rw, debtMsgCode, buff)
-	if err == nil {
-		for _, d := range filterDebts {
-			p.knownDebts.Add(d.Hash, nil)
+	if len(filterDebts) > 0 {
+		buff := common.SerializePanic(filterDebts)
+		p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(filterDebts))
+		err := p2p.SendMessage(p.rw, debtMsgCode, buff)
+		if err == nil {
+			for _, d := range filterDebts {
+				p.knownDebts.Add(d.Hash, nil)
+			}
 		}
+
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (p *peer) sendTransactionRequest(txHash common.Hash) error {
