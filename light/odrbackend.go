@@ -131,7 +131,7 @@ func (o *odrBackend) retrieveWithFilter(request odrRequest, filter peerFilter) (
 	for _, p := range peerL {
 		o.log.Debug("peer send request, code = %s, payloadSizeBytes = %v", codeToStr(code), len(payload))
 		if err = p2p.SendMessage(p.rw, code, payload); err != nil {
-			o.log.Info("Failed to send message with peer %v", p)
+			o.log.Info("Failed to send message with peer %s", p.peerStrID)
 			return nil, errors.NewStackedErrorf(err, "failed to send P2P message")
 		}
 	}
