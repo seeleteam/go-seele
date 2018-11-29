@@ -254,6 +254,10 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 			lp.log.Error("handleAddPeer err. %s", err)
 		}
 
+		if common.IsLightMode && !lp.bServerMode {
+			// just quit connection.
+			newPeer.Disconnect(DiscHandShakeErr)
+		}
 		return false
 	}
 

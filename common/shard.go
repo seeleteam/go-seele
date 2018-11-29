@@ -12,6 +12,9 @@ const UndefinedShardNumber = uint(0)
 // Generally, it must be initialized during program startup.
 var LocalShardNumber uint
 
+// IsLightMode reprsents whethre node is light node or full node.
+var IsLightMode bool
+
 // IsShardEnabled returns true if the LocalShardNumber is set. Otherwise, false.
 func IsShardEnabled() bool {
 	return LocalShardNumber > UndefinedShardNumber && LocalShardNumber <= ShardCount

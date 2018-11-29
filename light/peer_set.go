@@ -49,7 +49,8 @@ func (p *peerSet) bestPeer() *peer {
 		bestPeer *peer
 		bestTd   *big.Int
 	)
-
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	for _, pe := range p.peerMap {
 		if _, td := pe.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
 			if !pe.isSyncing() {
