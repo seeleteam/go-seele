@@ -74,7 +74,7 @@ func SaveKeyAction(c *cli.Context) error {
 		return fmt.Errorf("failed to store the key file %s, %s", fileNameValue, err.Error())
 	}
 
-	fmt.Printf("store key successful, the key file path is %s\n", fileNameValue)
+	fmt.Printf("store key successfully, the key file path is %s\n", fileNameValue)
 	return nil
 }
 
