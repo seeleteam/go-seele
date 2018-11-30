@@ -15,7 +15,7 @@ contract PBFTRootchain {
     using PriorityQueue for uint256[];
 
     uint8 constant public SIGNATURE_LENGTH = 65;
-    uint8 constant public MIN_LENGTH_OPERATOR = 4; // 4
+    uint8 constant public MIN_LENGTH_OPERATOR = 4;
     uint8 constant public MAX_LENGTH_OPERATOR = 21;
 
     /** @dev Operator related */
@@ -35,7 +35,7 @@ contract PBFTRootchain {
     uint256 public userDepositBond = 1234567890;
     uint256 public userExitBond = 1234567890;
     uint256 public exitNonce = 0;
-    uint256 public exitTimeLimit = 1 weeks; // 1 weeks
+    uint256 public exitTimeLimit = 1 weeks;
     uint256[] public userExitQueue;
     mapping(uint256 => Exit) public userExits;
     struct Exit{
