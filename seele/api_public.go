@@ -141,7 +141,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address,
 
 	event, ok := parsed.Events[eventName]
 	if !ok {
-		return nil, fmt.Errorf("The event name does not exist: %s", eventName)
+		return nil, fmt.Errorf("event name %v not found in ABI file %v", eventName, abiJSON)
 	}
 
 	topic := event.Id()
@@ -174,12 +174,12 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address,
 
 			data, err := event.Inputs.UnpackValues(log.Data)
 			if err != nil {
-				return nil, errors.NewStackedError(err, "abi decode event arguments failed")
+				return nil, errors.NewStackedError(err, "failed to decode event arguments")
 			}
 
 			encoded, err := json.Marshal(data)
 			if err != nil {
-				return nil, err
+				return nil, errors.NewStackedError(err, "failed to marshal event arguments")
 			}
 
 			outLogMap := map[string]interface{}{
