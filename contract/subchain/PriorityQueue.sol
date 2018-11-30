@@ -3,6 +3,8 @@ pragma solidity ^0.4.24;
 // external modules
 import "./SafeMath.sol";
 
+/// @title Minimum heap priority queue
+/// @dev The contract is based on the fact that the operator is trustworthy.
 library PriorityQueue {
     using SafeMath for uint256;
 
