@@ -28,14 +28,17 @@ func Test_NewContractEventABI(t *testing.T) {
 	// empty abi path
 	_, err = NewContractEventABI("")
 	assert.Equal(t, err, ErrInvalidArguments)
+
 	// empty events
 	_, err = NewContractEventABI(configFilePath1)
 	assert.Equal(t, err, ErrInvalidArguments)
+
 	// valid arguments
 	c, err := NewContractEventABI(configFilePath1, getX, getY)
 	assert.NoError(t, err)
-	topicEventNames := make(map[string]string)
-	topicEventNames[getXTopic] = getX
-	topicEventNames[getYTopic] = getY
+	topicEventNames := map[string]string{
+		getXTopic: getX,
+		getYTopic: getY,
+	}
 	assert.Equal(t, c.topicEventNames, topicEventNames)
 }

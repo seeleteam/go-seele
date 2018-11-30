@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"fmt"
 	"github.com/seeleteam/go-seele/accounts/abi"
 	"github.com/seeleteam/go-seele/common/errors"
 	seelelog "github.com/seeleteam/go-seele/log"
@@ -16,10 +17,10 @@ import (
 
 var (
 	// ErrInvalidArguments is returned when NewContractEventABI arguments are invalid.
-	ErrInvalidArguments = errors.New("the abiPath and eventName should be not empty")
+	ErrInvalidArguments = errors.New("the abiPath and eventName should not be empty")
 
 	// ErrNoEvent is returned when the event is not in the specified abi.
-	ErrNoEvent = errors.New("This contract has no such event")
+	ErrNoEvent = errors.New("this contract has no such event")
 )
 
 var log = seelelog.GetLogger("eventListener")
@@ -36,7 +37,7 @@ type ContractEventABI struct {
 
 // NewContractEventABI returns a ContractEventABI instance.
 func NewContractEventABI(abiPath string, eventNames ...string) (*ContractEventABI, error) {
-	if abiPath == "" || len(eventNames) == 0 {
+	if len(abiPath) == 0 || len(eventNames) == 0 {
 		return nil, ErrInvalidArguments
 	}
 
@@ -60,8 +61,7 @@ func NewContractEventABI(abiPath string, eventNames ...string) (*ContractEventAB
 	for _, eventName := range eventNames {
 		event, ok := parser.Events[eventName]
 		if !ok {
-			log.Error("This contract: %s, has no such event: %s", abiPath, eventName)
-			return nil, ErrNoEvent
+			return nil, fmt.Errorf("This contract: %s, has no such event: %s", abiPath, eventName)
 		}
 		topic = event.Id().Hex()
 		c.topicEventNames[topic] = eventName
