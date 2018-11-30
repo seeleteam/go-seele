@@ -103,6 +103,7 @@ func TestHandlePreprepare(t *testing.T) {
 			// errOldMessage
 			func() *testSystem {
 				sys := NewTestSystemWithBackend(N, F)
+				sys.backends = sys.backends[1:]
 
 				for i, backend := range sys.backends {
 					c := backend.engine.(*core)
@@ -161,8 +162,10 @@ OUTER:
 				t.Errorf("state mismatch: have %v, want %v", c.state, StatePreprepared)
 			}
 
-			if !test.existingBlock && !reflect.DeepEqual(c.current.Subject().View, curView) {
-				t.Errorf("view mismatch: have %v, want %v", c.current.Subject().View, curView)
+			if !test.existingBlock {
+				if !reflect.DeepEqual(c.current.Subject().View, curView) {
+					t.Errorf("view mismatch: have %v, want %v", c.current.Subject().View, curView)
+				}
 			}
 
 			// verify prepare messages
