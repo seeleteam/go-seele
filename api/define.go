@@ -78,7 +78,7 @@ type GetBalanceResponse struct {
 type GetLogsResponse struct {
 	Txhash   common.Hash
 	LogIndex uint
-	Log      *types.Log
+	Log      map[string]interface{}
 }
 
 type PoolCore interface {

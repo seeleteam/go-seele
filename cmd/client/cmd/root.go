@@ -136,14 +136,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: GeneratePayloadAction,
 		},
 		{
-			Name:  "topic",
-			Usage: "generate the topic according to the abi file and event name",
-			Flags: []cli.Flag{
-				abiFileFlag, eventNameFlag,
-			},
-			Action: GenerateTopicAction,
-		},
-		{
 			Name:  "deckeyfile",
 			Usage: "Decrypt key file",
 			Flags: []cli.Flag{
@@ -377,8 +369,8 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "getlogs",
 				Usage:  "get logs",
-				Flags:  rpcFlags(heightFlag, contractFlag, topicFlag),
-				Action: rpcAction("seele", "getLogs"),
+				Flags:  rpcFlags(heightFlag, contractFlag, abiFileFlag, eventNameFlag),
+				Action: rpcActionEx("seele", "getLogs", getLogsArgs, handleCallResult),
 			},
 			{
 				Name:   "getdebtbyhash",

@@ -129,10 +129,12 @@ var (
 	}
 
 	contractValue string
-	contractFlag  = cli.StringFlag{
-		Name:        "contract",
-		Usage:       "contract code in hex",
-		Destination: &contractValue,
+	contractFlag  = seeleAddressFlag{
+		StringFlag: cli.StringFlag{
+			Name:        "contract",
+			Usage:       "contract code in hex",
+			Destination: &contractValue,
+		},
 	}
 
 	topicValue string

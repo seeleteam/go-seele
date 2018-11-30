@@ -6,11 +6,15 @@
 package seele
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
+	"github.com/seeleteam/go-seele/accounts/abi"
 	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
@@ -129,17 +133,18 @@ func (api *PublicSeeleAPI) Call(contract, payload string, height int64) (map[str
 }
 
 // GetLogs Get the logs that satisfies the condition in the block by height and filter
-func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string) ([]api2.GetLogsResponse, error) {
-	// Check input parameters
-	contractAddress, err := common.HexToAddress(contract)
+func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address, abiJSON, eventName string) ([]api2.GetLogsResponse, error) {
+	parsed, err := abi.JSON(strings.NewReader(abiJSON))
 	if err != nil {
-		return nil, fmt.Errorf("Invalid contract address, %s", err)
+		return nil, errors.NewStackedError(err, "get abi parser failed")
 	}
 
-	hash, err := common.HexToHash(topics)
-	if err != nil {
-		return nil, fmt.Errorf("Invalid topic, %s", err)
+	event, ok := parsed.Events[eventName]
+	if !ok {
+		return nil, fmt.Errorf("The event name does not exist: %s", eventName)
 	}
+
+	topic := event.Id()
 
 	// Do filter
 	block, err := getBlock(api.s.chain, height)
@@ -163,14 +168,32 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contract string, topics string)
 
 			// Matches topics
 			// Because of the topics is always only one
-			if len(log.Topics) < 1 || !hash.Equal(log.Topics[0]) {
+			if len(log.Topics) < 1 || !topic.Equal(log.Topics[0]) {
 				continue
+			}
+
+			data, err := event.Inputs.UnpackValues(log.Data)
+			if err != nil {
+				return nil, errors.NewStackedError(err, "abi decode event arguments failed")
+			}
+
+			encoded, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+
+			outLogMap := map[string]interface{}{
+				"address":          log.Address.Hex(),
+				"blockNumber":      log.BlockNumber,
+				"data":             string(encoded),
+				"topics":           log.Topics,
+				"transactionIndex": log.TxIndex,
 			}
 
 			logs = append(logs, api2.GetLogsResponse{
 				Txhash:   receipt.TxHash,
 				LogIndex: uint(logIndex),
-				Log:      log,
+				Log:      outLogMap,
 			})
 		}
 	}
