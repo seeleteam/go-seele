@@ -56,7 +56,7 @@ func SaveKeyAction(c *cli.Context) error {
 	}
 
 	if fileNameValue == "" {
-		return fmt.Errorf("invalid key file path")
+		return fmt.Errorf("please specify the key file path")
 	}
 
 	pass, err := common.SetPassword()
@@ -74,7 +74,7 @@ func SaveKeyAction(c *cli.Context) error {
 		return fmt.Errorf("failed to store the key file %s, %s", fileNameValue, err.Error())
 	}
 
-	fmt.Println("store key successful")
+	fmt.Printf("store key successfully, the key file path is %s\n", fileNameValue)
 	return nil
 }
 
@@ -194,6 +194,7 @@ func readABIFile(abiFile string) (string, error) {
 	return string(bytes), nil
 }
 
+// GenerateTopicAction is an action to generate the topic according to the abi string and event name and args
 func GenerateTopicAction(c *cli.Context) error {
 	if abiFile == "" || eventName == "" {
 		return fmt.Errorf("required flag(s) \"abi, event\" not set")
