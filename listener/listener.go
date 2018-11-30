@@ -55,7 +55,7 @@ func NewContractEventABI(abiPath string, eventNames ...string) (*ContractEventAB
 	for _, eventName := range eventNames {
 		event, ok := parser.Events[eventName]
 		if !ok {
-			return nil, fmt.Errorf("event name %v not found in ABI file %v", eventName, string(file))
+			return nil, fmt.Errorf("event name %v not found in ABI file %v", eventName, abiPath)
 		}
 		topic = event.Id().Hex()
 		c.topicEventNames[topic] = eventName
