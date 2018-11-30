@@ -79,7 +79,7 @@ type GetLogsResponse struct {
 	*types.Log
 	Txhash   common.Hash
 	LogIndex uint
-	Args []interface{} `json:"data"`
+	Args interface{} `json:"data"`
 }
 
 type PoolCore interface {
