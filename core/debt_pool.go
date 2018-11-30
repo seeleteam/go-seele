@@ -76,7 +76,7 @@ func (dp *DebtPool) loopCheckingDebt() {
 }
 
 func (dp *DebtPool) DoCheckingDebt() {
-	tmp := dp.toConfirmedDebts.getAll()
+	tmp := dp.toConfirmedDebts.items()
 	for h, d := range tmp {
 		recoverable, err := d.Validate(dp.verifier, false, common.LocalShardNumber)
 		if err != nil {
@@ -185,7 +185,7 @@ func (dp *DebtPool) GetDebts(processing, pending bool) []*types.Debt {
 	debts := objectsToDebts(objects)
 
 	if pending {
-		debts = append(debts, dp.toConfirmedDebts.getAllArray()...)
+		debts = append(debts, dp.toConfirmedDebts.getList()...)
 	}
 
 	return debts

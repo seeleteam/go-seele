@@ -13,6 +13,8 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 )
 
+var errDebtFull = errors.New("too many debts in to confirmed debt")
+
 type ConcurrentDebtMap struct {
 	capacity int
 	lock     sync.RWMutex
@@ -46,7 +48,7 @@ func (m *ConcurrentDebtMap) add(debt *types.Debt) error {
 	defer m.lock.Unlock()
 
 	if len(m.value) >= m.capacity {
-		return errors.New("too many debts in to confirmed debt")
+		return errDebtFull
 	}
 
 	m.value[debt.Hash] = debt
@@ -67,7 +69,7 @@ func (m *ConcurrentDebtMap) has(hash common.Hash) bool {
 	return m.value[hash] != nil
 }
 
-func (m *ConcurrentDebtMap) getAll() map[common.Hash]*types.Debt {
+func (m *ConcurrentDebtMap) items() map[common.Hash]*types.Debt {
 	tmp := make(map[common.Hash]*types.Debt)
 
 	m.lock.RLock()
@@ -79,7 +81,7 @@ func (m *ConcurrentDebtMap) getAll() map[common.Hash]*types.Debt {
 	return tmp
 }
 
-func (m *ConcurrentDebtMap) getAllArray() []*types.Debt {
+func (m *ConcurrentDebtMap) getList() []*types.Debt {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
