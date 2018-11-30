@@ -47,7 +47,7 @@ func (m *ConcurrentDebtMap) add(debt *types.Debt) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if len(m.value) >= m.capacity {
+	if len(m.value) >= m.capacity && m.value[debt.Hash] == nil {
 		return errDebtFull
 	}
 
