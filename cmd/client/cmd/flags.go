@@ -176,7 +176,6 @@ var (
 	fileNameValue string
 	fileNameFlag  = cli.StringFlag{
 		Name:        "file",
-		Value:       ".keystore",
 		Usage:       "key store file name",
 		Destination: &fileNameValue,
 	}
