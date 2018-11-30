@@ -106,6 +106,7 @@ func minerPackWithVerifier(t *testing.T, verifier types.DebtVerifier) {
 		err := backend.DebtPool().AddDebt(d)
 		assert.Nil(t, err)
 	}
+	backend.debtPool.DoCheckingDebt()
 
 	totalTxCount := 10000
 	for i := 0; i < totalTxCount/2; i++ {

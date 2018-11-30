@@ -309,15 +309,15 @@ func (pool *Pool) removeObjects() {
 		return
 	}
 
-	txMap := pool.getTxMap()
-	for objHash, poolTx := range txMap {
+	objMap := pool.getObjectMap()
+	for objHash, poolTx := range objMap {
 		if pool.canRemove(pool.chain, state, poolTx) {
 			pool.removeOject(objHash)
 		}
 	}
 }
 
-func (pool *Pool) getTxMap() map[common.Hash]*poolItem {
+func (pool *Pool) getObjectMap() map[common.Hash]*poolItem {
 	pool.mutex.Lock()
 	defer pool.mutex.Unlock()
 
