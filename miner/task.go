@@ -64,7 +64,6 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) int {
 	size := core.BlockByteLimit
 
-	var recoverableDebts []*types.Debt
 	for size > 0 {
 		debts, _ := seele.DebtPool().GetProcessableDebts(size)
 		if len(debts) == 0 {
@@ -72,16 +71,10 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			recoverable, err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
+			_, err := core.ApplyDebt(statedb, d, task.coinbase, nil)
 			if err != nil {
-				if recoverable {
-					log.Info("apply debt recoverable error %s", err)
-					recoverableDebts = append(recoverableDebts, d)
-				} else {
-					log.Warn("apply debt error %s", err)
-					seele.DebtPool().RemoveDebtByHash(d.Hash)
-				}
-
+				log.Warn("apply debt error %s", err)
+				seele.DebtPool().RemoveDebtByHash(d.Hash)
 				continue
 			}
 
@@ -90,10 +83,6 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 	}
 
-	if len(recoverableDebts) > 0 {
-		// add recoverable debts back to debt pool
-		seele.DebtPool().AddBackDebts(recoverableDebts)
-	}
 	return size
 }
 

@@ -22,3 +22,6 @@ func DefaultTxPoolConfig() *TransactionPoolConfig {
 
 // DebtPoolCapacity we need bigger capacity to hold more debt
 const DebtPoolCapacity = 1000000
+
+// ToConfirmedDebtCapacity capacity for to confirmed debt map
+const ToConfirmedDebtCapacity = 1000000
