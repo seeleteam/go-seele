@@ -6,7 +6,6 @@
 package seele
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -141,7 +140,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address,
 
 	event, ok := parsed.Events[eventName]
 	if !ok {
-		return nil, fmt.Errorf("event name %v not found in ABI file %v", eventName, abiJSON)
+		return nil, fmt.Errorf("event name %v not found in ABI file", eventName)
 	}
 
 	topic := event.Id()
@@ -177,24 +176,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address,
 				return nil, errors.NewStackedError(err, "failed to decode event arguments")
 			}
 
-			encoded, err := json.Marshal(data)
-			if err != nil {
-				return nil, errors.NewStackedError(err, "failed to marshal event arguments")
-			}
-
-			outLogMap := map[string]interface{}{
-				"address":          log.Address.Hex(),
-				"blockNumber":      log.BlockNumber,
-				"data":             string(encoded),
-				"topics":           log.Topics,
-				"transactionIndex": log.TxIndex,
-			}
-
-			logs = append(logs, api2.GetLogsResponse{
-				Txhash:   receipt.TxHash,
-				LogIndex: uint(logIndex),
-				Log:      outLogMap,
-			})
+			logs = append(logs, api2.GetLogsResponse{ log, receipt.TxHash, uint(logIndex), data})
 		}
 	}
 

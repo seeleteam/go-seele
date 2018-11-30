@@ -78,7 +78,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Name:   "getreceipt",
 			Usage:  "get receipt by transaction hash",
 			Flags:  rpcFlags(hashFlag, abiFileFlag),
-			Action: rpcActionEx("txpool", "getReceiptByTxHash", getReceiptArgs, handleCallResult),
+			Action: rpcAction("txpool", "getReceiptByTxHash"),
 		},
 		{
 			Name:   "getpendingtxs",
@@ -370,7 +370,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Name:   "getlogs",
 				Usage:  "get logs",
 				Flags:  rpcFlags(heightFlag, contractFlag, abiFileFlag, eventNameFlag),
-				Action: rpcActionEx("seele", "getLogs", getLogsArgs, handleCallResult),
+				Action: rpcAction("seele", "getLogs"),
 			},
 			{
 				Name:   "getdebtbyhash",

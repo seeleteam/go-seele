@@ -6,6 +6,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/urfave/cli"
 )
@@ -24,6 +26,22 @@ func (flag seeleAddressFlag) getValue() (interface{}, error) {
 	}
 
 	return common.EmptyAddress, nil
+}
+
+type abiFlag struct {
+	cli.StringFlag
+}
+
+func (flag abiFlag) getValue() (interface{}, error) {
+	if val := *flag.Destination; len(val) > 0 {
+		abiJSON, err := readABIFile(val)
+		if err != nil {
+			return "", fmt.Errorf("failed to read abi file, err: %s", err)
+		}
+		return abiJSON, nil
+	}
+
+	return "", nil
 }
 
 var (
@@ -256,10 +274,12 @@ var (
 // GeneratePayload
 var (
 	abiFile     string
-	abiFileFlag = cli.StringFlag{
-		Name:        "abi",
-		Usage:       "the abi file of contract",
-		Destination: &abiFile,
+	abiFileFlag = abiFlag{
+		StringFlag: cli.StringFlag{
+			Name:        "abi",
+			Usage:       "the abi file of contract",
+			Destination: &abiFile,
+		},
 	}
 
 	methodName     string

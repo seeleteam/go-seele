@@ -223,33 +223,3 @@ func onTxAdded(inputs []interface{}, result interface{}) error {
 
 	return nil
 }
-
-func getABIJSON() (string, error) {
-	var abiJSON string
-	if abiFile != "" {
-		var err error
-		if abiJSON, err = readABIFile(abiFile); err != nil {
-			return "", fmt.Errorf("failed to read abi file, err: %s", err)
-		}
-	}
-
-	return abiJSON, nil
-}
-
-func getReceiptArgs(c *cli.Context, client *rpc.Client) ([]interface{}, error) {
-	abiJSON, err := getABIJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	return []interface{}{hashValue, abiJSON}, nil
-}
-
-func getLogsArgs(c *cli.Context, client *rpc.Client) ([]interface{}, error) {
-	abiJSON, err := getABIJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	return []interface{}{heightValue, contractValue, abiJSON, eventName}, nil
-}

@@ -102,8 +102,8 @@ func Test_GetLogs(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, len(result), 1)
 	assert.Equal(t, result[0].Txhash, receipt.TxHash)
-	addr := result[0].Log["address"]
-	assert.Equal(t, addr, contractAddress.Hex())
+	addr := result[0].Address
+	assert.Equal(t, addr, contractAddress)
 
 	// Verify the error contractAddress and error event
 	// error contract address is used to compare with the log, so if there is no relevant log, GetLogs returns empty slice with no error.
