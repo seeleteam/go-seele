@@ -25,19 +25,12 @@ type Auditor struct {
 }
 
 // NewAuditor returns a new auditor instance with specified log and an optional last time.
-func NewAuditor(log *SeeleLog, lastTime ...time.Time) *Auditor {
-	auditor := &Auditor{
-		id:  atomic.AddUint64(&globalAuditorID, 1),
-		log: log,
+func NewAuditor(log *SeeleLog) *Auditor {
+	return &Auditor{
+		id:       atomic.AddUint64(&globalAuditorID, 1),
+		log:      log,
+		lastTime: time.Now(),
 	}
-
-	if len(lastTime) == 0 {
-		auditor.lastTime = time.Now()
-	} else {
-		auditor.lastTime = lastTime[0]
-	}
-
-	return auditor
 }
 
 // Audit adds log for the specified parameterized message.
@@ -46,8 +39,8 @@ func (a *Auditor) Audit(format string, args ...interface{}) {
 		return
 	}
 
-	now := time.Now()
-	a.log.Debug("[Audit_%v] %v (elapsed: %v)", a.id, fmt.Sprintf(format, args...), now.Sub(a.lastTime))
+	now, msg := time.Now(), fmt.Sprintf(format, args...)
+	a.log.Debug("[Audit_%v] %v (elapsed: %v)", a.id, msg, now.Sub(a.lastTime))
 	a.lastTime = now
 }
 
@@ -57,9 +50,8 @@ func (a *Auditor) AuditEnter(method string) {
 		return
 	}
 
-	a.method = method
-	a.enterTime = time.Now()
-	a.log.Debug("[Audit_%v] enter %v (elapsed: %v)", a.id, method, a.enterTime.Sub(a.lastTime))
+	a.method, a.enterTime = method, time.Now()
+	a.log.Debug("[Audit_%v] enter %v", a.id, method)
 }
 
 // AuditLeave adds log for method leave.

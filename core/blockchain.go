@@ -252,8 +252,9 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
-	auditor := log.NewAuditor(bc.log, bc.lastBlockTime)
+	auditor := log.NewAuditor(bc.log)
 	auditor.AuditEnter("doWriteBlock")
+	auditor.Audit("elapse since last block: %v", time.Since(bc.lastBlockTime))
 	defer auditor.AuditLeave()
 
 	// validate block
