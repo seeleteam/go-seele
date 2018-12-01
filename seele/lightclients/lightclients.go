@@ -61,7 +61,8 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 
 		backends[i] = light.NewLightBackend(clients[i])
 
-		// At most, 20 * 8K = 160K hash values cached, about 5M memory consumed.
+		// At most, shardCount * 8K (txs+dets) hash values cached.
+		// In case of 8 shards, 64K hash values cached, consuming about 2M memory.
 		confirmedTxs[i] = common.MustNewCache(4096)
 		packedDebts[i] = common.MustNewCache(4096)
 	}
