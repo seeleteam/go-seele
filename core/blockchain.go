@@ -386,6 +386,8 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
 	}
 
+	bc.lastBlockTime = time.Now()
+
 	return nil
 }
 
