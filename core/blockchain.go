@@ -110,6 +110,8 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		lastBlockTime:  time.Now(),
 	}
 
+	bc.auditor = log.NewAuditor(bc.log, bc.lastBlockTime)
+
 	var err error
 
 	// recover from program crash
@@ -294,7 +296,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
 		return errors.NewStackedError(err, "failed to commit statedb changes to database batch")
 	}
-	bc.auditor.Audit("succeed to commit statedb changes to database")
+	bc.auditor.Audit("succeed to commit statedb changes to batch")
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
