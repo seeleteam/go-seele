@@ -47,7 +47,7 @@ func (a *Auditor) Audit(format string, args ...interface{}) {
 	}
 
 	now := time.Now()
-	a.log.Debug("[Audit] | [%v] | %v (elapsed: %v)", a.id, fmt.Sprintf(format, args...), now.Sub(a.lastTime))
+	a.log.Debug("[Audit_%v] %v (elapsed: %v)", a.id, fmt.Sprintf(format, args...), now.Sub(a.lastTime))
 	a.lastTime = now
 }
 
@@ -59,7 +59,7 @@ func (a *Auditor) AuditEnter(method string) {
 
 	a.method = method
 	a.enterTime = time.Now()
-	a.log.Debug("[Audit] | [%v] | enter %v (elapsed: %v)", a.id, method, a.enterTime.Sub(a.lastTime))
+	a.log.Debug("[Audit_%v] enter %v (elapsed: %v)", a.id, method, a.enterTime.Sub(a.lastTime))
 }
 
 // AuditLeave adds log for method leave.
@@ -68,5 +68,5 @@ func (a *Auditor) AuditLeave() {
 		return
 	}
 
-	a.log.Debug("[Audit] | [%v] | leave %v (elapsed: %v)", a.id, a.method, time.Since(a.enterTime))
+	a.log.Debug("[Audit_%v] leave %v (elapsed: %v)", a.id, a.method, time.Since(a.enterTime))
 }

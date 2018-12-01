@@ -94,8 +94,7 @@ type Blockchain struct {
 	rp           *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 	debtVerifier types.DebtVerifier
 
-	lastBlockTime time.Time    // last sucessful written block time.
-	auditor       *log.Auditor // used to audit when writing a block
+	lastBlockTime time.Time // last sucessful written block time.
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
@@ -109,8 +108,6 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		debtVerifier:   verifier,
 		lastBlockTime:  time.Now(),
 	}
-
-	bc.auditor = log.NewAuditor(bc.log, bc.lastBlockTime)
 
 	var err error
 
@@ -255,15 +252,15 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
-	bc.auditor = log.NewAuditor(bc.log, bc.lastBlockTime)
-	bc.auditor.AuditEnter("doWriteBlock")
-	defer bc.auditor.AuditLeave()
+	auditor := log.NewAuditor(bc.log, bc.lastBlockTime)
+	auditor.AuditEnter("doWriteBlock")
+	defer auditor.AuditLeave()
 
 	// validate block
 	if err := bc.validateBlock(block); err != nil {
 		return errors.NewStackedError(err, "failed to validate block")
 	}
-	bc.auditor.Audit("succeed to validate block %v", block.HeaderHash)
+	auditor.Audit("succeed to validate block %v", block.HeaderHash)
 
 	preHeader, err := bc.bcStore.GetBlockHeader(block.Header.PreviousBlockHash)
 	if err != nil {
@@ -276,7 +273,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if blockStatedb, receipts, err = bc.applyTxs(block, preHeader.StateHash); err != nil {
 		return errors.NewStackedError(err, "failed to apply block txs")
 	}
-	bc.auditor.Audit("succeed to apply %v txs and %v debts", len(block.Transactions), len(block.Debts))
+	auditor.Audit("succeed to apply %v txs and %v debts", len(block.Transactions), len(block.Debts))
 
 	// Validate receipts root hash.
 	if receiptsRootHash := types.ReceiptMerkleRootHash(receipts); !receiptsRootHash.Equal(block.Header.ReceiptHash) {
@@ -296,7 +293,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
 		return errors.NewStackedError(err, "failed to commit statedb changes to database batch")
 	}
-	bc.auditor.Audit("succeed to commit statedb changes to batch")
+	auditor.Audit("succeed to commit statedb changes to batch")
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
@@ -323,7 +320,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
 	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentBlock.Header.Height, currentTd)
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
-	bc.auditor.Audit("succeed to prepare block index")
+	auditor.Audit("succeed to prepare block index")
 
 	/////////////////////////////////////////////////////////////////
 	// PAY ATTENTION TO THE ORDER OF WRITING DATA INTO DB.
@@ -335,7 +332,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if err = batch.Commit(); err != nil {
 		return errors.NewStackedError(err, "failed to batch commit statedb changes to database")
 	}
-	bc.auditor.Audit("succeed to batch commit statedb chanages to database")
+	auditor.Audit("succeed to batch commit statedb chanages to database")
 
 	if err = bc.rp.onPutBlockStart(block, bc.bcStore, isHead); err != nil {
 		return errors.NewStackedErrorf(err, "failed to set recovery point before put block into store, isNewHead = %v", isHead)
@@ -348,7 +345,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if err = bc.bcStore.PutBlock(block, currentTd, isHead); err != nil {
 		return errors.NewStackedErrorf(err, "failed to save block into store, blockHash = %v, newTD = %v, isNewHead = %v", block.HeaderHash, currentTd, isHead)
 	}
-	bc.auditor.Audit("succeed to save block into store, newHead = %v", isHead)
+	auditor.Audit("succeed to save block into store, newHead = %v", isHead)
 
 	bc.rp.onPutBlockEnd()
 
@@ -359,19 +356,19 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		if err = DeleteLargerHeightBlocks(bc.bcStore, largerHeight, bc.rp); err != nil {
 			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight)
 		}
-		bc.auditor.Audit("succeed to delete larger height blocks, height = %v", largerHeight)
+		auditor.Audit("succeed to delete larger height blocks, height = %v", largerHeight)
 
 		previousHash := block.Header.PreviousBlockHash
 		if err = OverwriteStaleBlocks(bc.bcStore, previousHash, bc.rp); err != nil {
 			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash)
 		}
-		bc.auditor.Audit("succeed to overwrite stale blocks, hash = %v", previousHash)
+		auditor.Audit("succeed to overwrite stale blocks, hash = %v", previousHash)
 	}
 
 	// update block header after meta info updated
 	bc.blockLeaves.Add(blockIndex)
 	bc.blockLeaves.Remove(block.Header.PreviousBlockHash)
-	bc.auditor.Audit("succeed to update block index, new = %v, old = %v", blockIndex.blockHash, block.Header.PreviousBlockHash)
+	auditor.Audit("succeed to update block index, new = %v, old = %v", blockIndex.blockHash, block.Header.PreviousBlockHash)
 
 	committed = true
 	if isHead {
@@ -470,11 +467,13 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 // applyTxs processes the txs in the specified block and returns the new state DB of the block.
 // This method supposes the specified block is validated.
 func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Statedb, []*types.Receipt, error) {
+	auditor := log.NewAuditor(bc.log)
+
 	minerRewardTx, err := bc.validateMinerRewardTx(block)
 	if err != nil {
 		return nil, nil, errors.NewStackedError(err, "failed to validate miner reward tx")
 	}
-	bc.auditor.Audit("succeed to validate reward tx")
+	auditor.Audit("succeed to validate reward tx")
 
 	statedb, err := state.NewStatedb(root, bc.accountStateDB)
 	if err != nil {
@@ -488,13 +487,13 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
 	}
-	bc.auditor.Audit("succeed to validate %v debts", len(block.Debts))
+	auditor.Audit("succeed to validate %v debts", len(block.Debts))
 
 	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
 	if err != nil {
 		return nil, nil, errors.NewStackedErrorf(err, "failed to update statedb")
 	}
-	bc.auditor.Audit("succeed to update stateDB for %v txs", len(block.Transactions))
+	auditor.Audit("succeed to update stateDB for %v txs", len(block.Transactions))
 
 	return statedb, receipts, nil
 }
@@ -535,12 +534,14 @@ func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transact
 
 func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction,
 	blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
+	auditor := log.NewAuditor(bc.log)
+
 	// process miner reward
 	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
 	if err != nil {
 		return nil, errors.NewStackedError(err, "failed to apply miner reward tx")
 	}
-	bc.auditor.Audit("succeed to apply reward tx")
+	auditor.Audit("succeed to apply reward tx")
 
 	receipts := make([]*types.Receipt, len(txs)+1)
 
@@ -550,7 +551,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 	if err := types.BatchValidateTxs(txs); err != nil {
 		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(txs))
 	}
-	bc.auditor.Audit("succeed to batch validate %v txs", len(txs))
+	auditor.Audit("succeed to batch validate %v txs", len(txs))
 
 	// process other txs
 	for i, tx := range txs {
@@ -567,7 +568,7 @@ func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types
 
 		receipts[txIdx] = receipt
 	}
-	bc.auditor.Audit("succeed to apply %v txs", len(txs))
+	auditor.Audit("succeed to apply %v txs", len(txs))
 
 	return receipts, nil
 }
