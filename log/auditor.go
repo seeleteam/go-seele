@@ -7,11 +7,17 @@ package log
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
+
+var globalAuditorID uint64
 
 // Auditor is used for auditing step by step via log.
 type Auditor struct {
+	id        uint64
 	log       *SeeleLog
 	method    string
 	enterTime time.Time // timestamp for enter.
@@ -21,6 +27,7 @@ type Auditor struct {
 // NewAuditor returns a new auditor instance with specified log and an optional last time.
 func NewAuditor(log *SeeleLog, lastTime ...time.Time) *Auditor {
 	auditor := &Auditor{
+		id:  atomic.AddUint64(&globalAuditorID, 1),
 		log: log,
 	}
 
@@ -35,19 +42,31 @@ func NewAuditor(log *SeeleLog, lastTime ...time.Time) *Auditor {
 
 // Audit adds log for the specified parameterized message.
 func (a *Auditor) Audit(format string, args ...interface{}) {
+	if a.log.GetLevel() > logrus.DebugLevel {
+		return
+	}
+
 	now := time.Now()
-	a.log.Debug("[Audit] %v (elapsed: %v)", fmt.Sprintf(format, args...), now.Sub(a.lastTime))
+	a.log.Debug("[Audit] | [%v] | %v (elapsed: %v)", a.id, fmt.Sprintf(format, args...), now.Sub(a.lastTime))
 	a.lastTime = now
 }
 
 // AuditEnter adds log for method enter.
 func (a *Auditor) AuditEnter(method string) {
+	if a.log.GetLevel() > logrus.DebugLevel {
+		return
+	}
+
 	a.method = method
 	a.enterTime = time.Now()
-	a.log.Debug("[Audit] enter %v (elapsed: %v)", method, a.enterTime.Sub(a.lastTime))
+	a.log.Debug("[Audit] | [%v] | enter %v (elapsed: %v)", a.id, method, a.enterTime.Sub(a.lastTime))
 }
 
 // AuditLeave adds log for method leave.
 func (a *Auditor) AuditLeave() {
-	a.log.Debug("[Audit] leave %v (elapsed: %v)", a.method, time.Since(a.enterTime))
+	if a.log.GetLevel() > logrus.DebugLevel {
+		return
+	}
+
+	a.log.Debug("[Audit] | [%v] | leave %v (elapsed: %v)", a.id, a.method, time.Since(a.enterTime))
 }
