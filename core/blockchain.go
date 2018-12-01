@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -87,7 +88,7 @@ type Blockchain struct {
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves  *BlockLeaves
-	currentBlock *types.Block
+	currentBlock atomic.Value
 	log          *log.SeeleLog
 
 	rp           *recoveryPoint // used to recover blockchain in case of program crashed when write a block
@@ -139,10 +140,12 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
 	}
 
-	if bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash); err != nil {
+	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
+	if err != nil {
 		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", currentHeaderHash)
 	}
+	bc.currentBlock.Store(currentBlock)
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
@@ -150,7 +153,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
 	}
 
-	blockIndex := NewBlockIndex(currentHeaderHash, bc.currentBlock.Header.Height, td)
+	blockIndex := NewBlockIndex(currentHeaderHash, currentBlock.Header.Height, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
 
@@ -163,22 +166,12 @@ func (bc *Blockchain) AccountDB() database.Database {
 
 // CurrentBlock returns the HEAD block of the blockchain.
 func (bc *Blockchain) CurrentBlock() *types.Block {
-	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
-	return bc.currentBlock
+	return bc.currentBlock.Load().(*types.Block)
 }
 
 // CurrentHeader returns the HEAD block header of the blockchain.
 func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
-	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
-	if bc.currentBlock == nil {
-		return nil
-	}
-
-	return bc.currentBlock.Header
+	return bc.CurrentBlock().Header
 }
 
 // GetCurrentState returns the state DB of the current block.
@@ -370,7 +363,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	committed = true
 	if isHead {
-		bc.currentBlock = currentBlock
+		bc.currentBlock.Store(currentBlock)
 
 		bc.blockLeaves.PurgeAsync(bc.bcStore, func(err error) {
 			if err != nil {
