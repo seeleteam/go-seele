@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
@@ -29,6 +30,8 @@ var (
 type LightClientsManager struct {
 	lightClients        []*light.ServiceClient
 	lightClientsBackend []*light.LightBackend
+	confirmedTxs        []*lru.Cache
+	packedDebts         []*lru.Cache
 
 	localShard uint
 }
@@ -37,6 +40,8 @@ type LightClientsManager struct {
 func NewLightClientManager(targetShard uint, context context.Context, config *node.Config, engine consensus.Engine) (*LightClientsManager, error) {
 	clients := make([]*light.ServiceClient, common.ShardCount+1)
 	backends := make([]*light.LightBackend, common.ShardCount+1)
+	confirmedTxs := make([]*lru.Cache, common.ShardCount+1)
+	packedDebts := make([]*lru.Cache, common.ShardCount+1)
 
 	copyConf := config.Clone()
 	var err error
@@ -55,11 +60,17 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 		}
 
 		backends[i] = light.NewLightBackend(clients[i])
+
+		// At most, 20 * 8K = 160K hash values cached, about 5M memory consumed.
+		confirmedTxs[i] = common.MustNewCache(4096)
+		packedDebts[i] = common.MustNewCache(4096)
 	}
 
 	return &LightClientsManager{
 		lightClients:        clients,
 		lightClientsBackend: backends,
+		confirmedTxs:        confirmedTxs,
+		packedDebts:         packedDebts,
 		localShard:          targetShard,
 	}, nil
 }
@@ -71,38 +82,40 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
 	fromShard := debt.Data.From.Shard()
 	if fromShard == 0 || fromShard == manager.localShard {
-		retErr = errWrongShardDebt
-		return
+		return false, false, errWrongShardDebt
+	}
+
+	// check cache first
+	cache := manager.confirmedTxs[fromShard]
+	if _, ok := cache.Get(debt.Data.TxHash); ok {
+		return true, true, nil
 	}
 
 	backend := manager.lightClientsBackend[fromShard]
 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 	if err != nil {
-		retErr = errors.NewStackedError(err, "got error when get transaction.")
-		return
+		return false, false, errors.NewStackedErrorf(err, "failed to get tx %v", debt.Data.TxHash)
 	}
 
 	if index == nil {
-		retErr = errNotFoundTx
-		return
+		return false, false, errNotFoundTx
 	}
 
 	checkDebt := types.NewDebtWithoutContext(tx)
 	if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
-		retErr = errNotMatchedTx
-		return
+		return false, false, errNotMatchedTx
 	}
-
-	packed = true
 
 	header := backend.ChainBackend().CurrentHeader()
 	duration := header.Height - index.BlockHeight
-	if duration >= common.ConfirmedBlockNumber {
-		confirmed = true
-		retErr = fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+	if duration < common.ConfirmedBlockNumber {
+		return true, false, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
 	}
 
-	return
+	// cache the confirmed tx
+	cache.Add(debt.Data.TxHash, true)
+
+	return true, true, nil
 }
 
 // GetServices get node service
@@ -117,41 +130,45 @@ func (manager *LightClientsManager) GetServices() []node.Service {
 	return services
 }
 
-// IfDebtPacked
+// IfDebtPacked indicates whether the specified debt is packed.
 // returns packed whether debt is packed
 // returns confirmed whether debt is confirmed
 // returns retErr this error is return when debt is found invalid. which means we need remove this debt.
 func (manager *LightClientsManager) IfDebtPacked(debt *types.Debt) (packed bool, confirmed bool, retErr error) {
 	toShard := debt.Data.Account.Shard()
 	if toShard == 0 || toShard == manager.localShard {
-		retErr = errWrongShardDebt
-		return
+		return false, false, errWrongShardDebt
+	}
+
+	//check cache first
+	cache := manager.packedDebts[toShard]
+	if _, ok := cache.Get(debt.Hash); ok {
+		return true, true, nil
 	}
 
 	backend := manager.lightClientsBackend[toShard]
 	result, index, err := backend.GetDebt(debt.Hash)
-
 	if err != nil {
-		return
+		return false, false, errors.NewStackedErrorf(err, "failed to get debt %v", debt.Hash)
 	}
 
 	if index == nil {
-		return
+		return false, false, nil
 	}
 
 	_, err = result.Validate(nil, false, toShard)
 	if err != nil {
-		retErr = errors.NewStackedError(err, "debt validate failed")
-		return
+		return false, false, errors.NewStackedError(err, "failed to validate debt")
 	}
-
-	packed = true
 
 	// only marked as packed when the debt is confirmed
 	header := backend.ChainBackend().CurrentHeader()
-	if header.Height-index.BlockHeight >= common.ConfirmedBlockNumber {
-		confirmed = true
+	if header.Height-index.BlockHeight < common.ConfirmedBlockNumber {
+		return true, false, nil
 	}
 
-	return
+	// cache the confirmed debt
+	cache.Add(debt.Hash, true)
+
+	return true, true, nil
 }
