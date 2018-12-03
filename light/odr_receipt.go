@@ -71,14 +71,6 @@ func (request *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse
 }
 
 func (response *odrReceiptResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
-	if response.Receipt == nil {
-		return nil
-	}
-
-	if txHash := request.(*odrReceiptRequest).TxHash; !txHash.Equal(response.Receipt.TxHash) {
-		return types.ErrHashMismatch
-	}
-
 	header, err := response.proveHeader(bcStore)
 	if err != nil {
 		return errors.NewStackedError(err, "failed to prove block header")
@@ -88,8 +80,8 @@ func (response *odrReceiptResponse) validate(request odrRequest, bcStore store.B
 		return errReceipIndexNil
 	}
 
-	key := crypto.MustHash(response.Receipt).Bytes()
-	if err := response.proveMerkleTrie(header.ReceiptHash, key, response.Receipt); err != nil {
+	txHash := request.(*odrReceiptRequest).TxHash
+	if err := response.proveMerkleTrie(header.ReceiptHash, txHash.Bytes(), response.Receipt); err != nil {
 		return errors.NewStackedError(err, "failed to prove merkle trie")
 	}
 
