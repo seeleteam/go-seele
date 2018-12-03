@@ -6,17 +6,12 @@
 package light
 
 import (
-	"bytes"
-
 	"github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/trie"
 )
-
-var errForkTx = errors.New("get a transaction from a fork chain")
 
 // ODR object to send tx.
 type odrAddTx struct {
@@ -47,19 +42,8 @@ type odrTxByHashRequest struct {
 }
 
 type odrTxByHashResponse struct {
-	OdrItem
-	Tx         *types.Transaction `rlp:"nil"`
-	BlockIndex *api.BlockIndex    `rlp:"nil"`
-	Proof      []proofNode
-}
-
-func newOrdTxByHashErrorResponse(reqID uint32, err error) *odrTxByHashResponse {
-	return &odrTxByHashResponse{
-		OdrItem: OdrItem{
-			ReqID: reqID,
-			Error: err.Error(),
-		},
-	}
+	odrProvableResponse
+	Tx *types.Transaction `rlp:"nil"`
 }
 
 func (req *odrTxByHashRequest) code() uint16 {
@@ -74,21 +58,21 @@ func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 
 	if err != nil {
 		err = errors.NewStackedErrorf(err, "failed to get tx by hash %v", req.TxHash)
-		return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
+		return newErrorResponse(txByHashResponseCode, req.ReqID, err)
 	}
 
 	if result.Tx != nil && result.BlockIndex != nil && !result.BlockIndex.BlockHash.IsEmpty() {
 		block, err := lp.chain.GetStore().GetBlock(result.BlockIndex.BlockHash)
 		if err != nil {
 			err = errors.NewStackedErrorf(err, "failed to get block by hash %v", result.BlockIndex.BlockHash)
-			return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
+			return newErrorResponse(txByHashResponseCode, req.ReqID, err)
 		}
 
 		txTrie := types.GetTxTrie(block.Transactions)
 		proof, err := txTrie.GetProof(req.TxHash.Bytes())
 		if err != nil {
 			err = errors.NewStackedError(err, "failed to get tx trie proof")
-			return txByHashResponseCode, newOrdTxByHashErrorResponse(req.ReqID, err)
+			return newErrorResponse(txByHashResponseCode, req.ReqID, err)
 		}
 
 		result.Proof = mapToArray(proof)
@@ -97,12 +81,11 @@ func (req *odrTxByHashRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	return txByHashResponseCode, &result
 }
 
-func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
+func (response *odrTxByHashResponse) validateUnpackedTx(txHash common.Hash) error {
 	if response.Tx == nil {
 		return nil
 	}
 
-	txHash := request.(*odrTxByHashRequest).TxHash
 	if !txHash.Equal(response.Tx.Hash) {
 		return types.ErrHashMismatch
 	}
@@ -111,31 +94,25 @@ func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.
 		return errors.NewStackedError(err, "failed to validate tx without state")
 	}
 
-	// validate the tx trie proof if stored in blockchain already.
-	if response.BlockIndex != nil {
-		header, err := bcStore.GetBlockHeader(response.BlockIndex.BlockHash)
-		if err != nil {
-			return errors.NewStackedErrorf(err, "failed to get block header by hash %v", response.BlockIndex.BlockHash)
-		}
+	return nil
+}
 
-		blockHash, err := bcStore.GetBlockHash(response.BlockIndex.BlockHeight)
-		if err != nil {
-			return errors.NewStackedErrorf(err, "failed to get block hash by height %d", header.Height)
-		}
-		if !blockHash.Equal(header.Hash()) {
-			return errForkTx
-		}
+func (response *odrTxByHashResponse) validate(request odrRequest, bcStore store.BlockchainStore) error {
+	header, err := response.proveHeader(bcStore)
+	if err != nil {
+		return errors.NewStackedError(err, "failed to prove block header")
+	}
 
-		proof := arrayToMap(response.Proof)
-		value, err := trie.VerifyProof(header.TxHash, txHash.Bytes(), proof)
-		if err != nil {
-			return errors.NewStackedError(err, "failed to verify the tx trie proof")
-		}
+	txHash := request.(*odrTxByHashRequest).TxHash
 
-		buff := common.SerializePanic(response.Tx)
-		if !bytes.Equal(buff, value) {
-			return errTransactionVerifyFailed
-		}
+	// tx not packed yet.
+	if header == nil {
+		return response.validateUnpackedTx(txHash)
+	}
+
+	response.Tx = new(types.Transaction)
+	if err = response.proveMerkleTrie(header.TxHash, txHash.Bytes(), response.Tx); err != nil {
+		return errors.NewStackedError(err, "failed to prove merkle trie")
 	}
 
 	return nil
