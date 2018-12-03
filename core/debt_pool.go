@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
@@ -20,6 +19,8 @@ import (
 // DebtPool debt pool
 type DebtPool struct {
 	*Pool
+	verifier         types.DebtVerifier
+	toConfirmedDebts *ConcurrentDebtMap
 }
 
 func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
@@ -39,12 +40,7 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	}
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
-		debt := obj.(*types.Debt)
-		_, err := debt.Validate(verifier, true, common.LocalShardNumber)
-		if err != nil {
-			return errors.NewStackedError(err, "validate debt failed")
-		}
-
+		// skip as we already check before adding
 		return nil
 	}
 
@@ -56,8 +52,48 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 
 	pool := NewPool(DebtPoolCapacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd)
 
-	return &DebtPool{
-		Pool: pool,
+	debtPool := &DebtPool{
+		Pool:             pool,
+		verifier:         verifier,
+		toConfirmedDebts: NewConcurrentDebtMap(ToConfirmedDebtCapacity),
+	}
+
+	go debtPool.loopCheckingDebt()
+
+	return debtPool
+}
+
+// loopCheckingDebt check whether debt is confirmed.
+// we only add debt to pool when it is confirmed
+func (dp *DebtPool) loopCheckingDebt() {
+	for {
+		if dp.toConfirmedDebts.count() == 0 {
+			time.Sleep(10 * time.Second)
+		} else {
+			dp.DoCheckingDebt()
+		}
+	}
+}
+
+func (dp *DebtPool) DoCheckingDebt() {
+	tmp := dp.toConfirmedDebts.items()
+	for h, d := range tmp {
+		recoverable, err := d.Validate(dp.verifier, false, common.LocalShardNumber)
+		if err != nil {
+			if recoverable {
+				dp.log.Debug("check debt with recoverable error %s", err)
+			} else {
+				dp.log.Info("check debt with unrecoverable error %s", err)
+				dp.toConfirmedDebts.remove(h)
+			}
+		} else {
+			// confirmed
+			err := dp.addToPool(d)
+			if err == nil {
+				// remove if success
+				dp.toConfirmedDebts.remove(h)
+			}
+		}
 	}
 }
 
@@ -69,23 +105,35 @@ func (dp *DebtPool) AddDebtArray(debts []*types.Debt) {
 	dp.log.Debug("add %d debts, cap %d", len(debts), dp.getObjectCount(true, true))
 }
 
-func (dp *DebtPool) AddDebt(debt *types.Debt) {
+func (dp *DebtPool) AddDebt(debt *types.Debt) error {
 	if debt == nil {
-		return
+		return nil
 	}
 
+	// skip if already exist
+	if dp.toConfirmedDebts.has(debt.Hash) {
+		return nil
+	}
+
+	if dp.GetObject(debt.Hash) != nil {
+		return nil
+	}
+
+	err := dp.toConfirmedDebts.add(debt)
+	if err != nil {
+		dp.log.Warn("add debts to to be confirmed pool failed debt hash:%s, err: %s.", debt.Hash, err)
+	}
+
+	return err
+}
+
+func (dp *DebtPool) addToPool(debt *types.Debt) error {
 	err := dp.addObject(debt)
 	if err != nil {
 		dp.log.Warn("add debts failed debt hash:%s, err: %s.", debt.Hash, err)
 	}
-}
 
-func (dp *DebtPool) AddBackDebts(debts []*types.Debt) {
-	for _, d := range debts {
-		dp.RemoveDebtByHash(d.Hash)
-	}
-
-	dp.AddDebtArray(debts)
+	return err
 }
 
 func (dp *DebtPool) GetProcessableDebts(size int) ([]*types.Debt, int) {
@@ -113,8 +161,13 @@ func debtsToObjects(debts []*types.Debt) []poolObject {
 	return objects
 }
 
-func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
-	obj := dp.GetObject(debt)
+func (dp *DebtPool) GetDebtByHash(hash common.Hash) *types.Debt {
+	debt := dp.toConfirmedDebts.get(hash)
+	if debt != nil {
+		return debt
+	}
+
+	obj := dp.GetObject(hash)
 	if obj != nil {
 		return obj.(*types.Debt)
 	}
@@ -123,14 +176,26 @@ func (dp *DebtPool) GetDebtByHash(debt common.Hash) *types.Debt {
 }
 
 func (dp *DebtPool) RemoveDebtByHash(hash common.Hash) {
+	dp.toConfirmedDebts.remove(hash)
 	dp.removeOject(hash)
 }
 
 func (dp *DebtPool) GetDebts(processing, pending bool) []*types.Debt {
 	objects := dp.getObjects(processing, pending)
-	return objectsToDebts(objects)
+	debts := objectsToDebts(objects)
+
+	if pending {
+		debts = append(debts, dp.toConfirmedDebts.getList()...)
+	}
+
+	return debts
 }
 
 func (dp *DebtPool) GetDebtCount(processing, pending bool) int {
-	return dp.getObjectCount(processing, pending)
+	count := dp.getObjectCount(processing, pending)
+	if pending {
+		count += dp.toConfirmedDebts.count()
+	}
+
+	return count
 }

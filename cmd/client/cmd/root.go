@@ -78,7 +78,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Name:   "getreceipt",
 			Usage:  "get receipt by transaction hash",
 			Flags:  rpcFlags(hashFlag, abiFileFlag),
-			Action: rpcActionEx("txpool", "getReceiptByTxHash", getReceiptArgs, handleCallResult),
+			Action: rpcAction("txpool", "getReceiptByTxHash"),
 		},
 		{
 			Name:   "getpendingtxs",
@@ -134,14 +134,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				abiFileFlag, methodNameFlag, argsFlag,
 			},
 			Action: GeneratePayloadAction,
-		},
-		{
-			Name:  "topic",
-			Usage: "generate the topic according to the abi file and event name",
-			Flags: []cli.Flag{
-				abiFileFlag, eventNameFlag,
-			},
-			Action: GenerateTopicAction,
 		},
 		{
 			Name:  "deckeyfile",
@@ -377,7 +369,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			{
 				Name:   "getlogs",
 				Usage:  "get logs",
-				Flags:  rpcFlags(heightFlag, contractFlag, topicFlag),
+				Flags:  rpcFlags(heightFlag, contractFlag, abiFileFlag, eventNameFlag),
 				Action: rpcAction("seele", "getLogs"),
 			},
 			{

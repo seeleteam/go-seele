@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 )
 

@@ -125,7 +125,7 @@ func GetTxFeeShare(fee *big.Int) *big.Int {
 
 // IsCrossShardTx indicates whether the tx is to another shard.
 func (tx *Transaction) IsCrossShardTx() bool {
-	return !tx.Data.To.IsEmpty() && !tx.Data.To.IsReserved() && tx.Data.From.Shard() != tx.Data.To.Shard()
+	return !tx.Data.From.IsEmpty() && !tx.Data.To.IsEmpty() && !tx.Data.To.IsReserved() && tx.Data.From.Shard() != tx.Data.To.Shard()
 }
 
 // Size return the transaction size

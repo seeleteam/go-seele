@@ -56,6 +56,7 @@ func Test_DebtPool(t *testing.T) {
 	}()
 	pool.AddDebtArray(b1.Debts)
 	pool.AddDebtArray(b2.Debts)
+	pool.DoCheckingDebt()
 
 	assert.Equal(t, 4, pool.GetDebtCount(true, true))
 
@@ -78,6 +79,7 @@ func Test_OrderByFee(t *testing.T) {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
 	pool.AddDebtArray([]*types.Debt{d1, d2})
+	pool.DoCheckingDebt()
 
 	results, _ := pool.GetProcessableDebts(10000)
 	assert.Equal(t, 2, len(results))
@@ -97,34 +99,4 @@ func Test_AddWithValidation(t *testing.T) {
 	pool.AddDebt(d1)
 
 	assert.Equal(t, 1, pool.GetDebtCount(true, true))
-}
-
-func Test_DebtPool_AddBack(t *testing.T) {
-	verifier := types.NewTestVerifier(true, false, nil)
-	bc := NewTestBlockchain()
-	pool := NewDebtPool(bc, verifier)
-	d1 := types.NewTestDebtDetail(1, 10)
-	d2 := types.NewTestDebtDetail(2, 10)
-	d3 := types.NewTestDebtDetail(3, 10)
-
-	common.LocalShardNumber = 2
-	defer func() {
-		common.LocalShardNumber = common.UndefinedShardNumber
-	}()
-	pool.AddDebt(d1)
-	pool.AddDebt(d2)
-	pool.AddDebt(d3)
-
-	assert.Equal(t, 3, pool.GetDebtCount(true, true))
-
-	debts, size := pool.GetProcessableDebts(types.DebtSize * 2)
-	assert.True(t, size >= types.DebtSize)
-	assert.Equal(t, 2, pool.GetDebtCount(true, false))
-	assert.Equal(t, 1, pool.GetDebtCount(false, true))
-
-	assert.Equal(t, 2, len(debts))
-
-	pool.AddBackDebts(debts[0:1])
-	assert.Equal(t, 2, pool.GetDebtCount(false, true))
-	assert.Equal(t, 1, pool.GetDebtCount(true, false))
 }
