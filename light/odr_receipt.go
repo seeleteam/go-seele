@@ -11,7 +11,6 @@ import (
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/crypto"
 )
 
 var errReceipIndexNil = errors.New("got a nil receipt index")
@@ -59,7 +58,7 @@ func (request *odrReceiptRequest) handle(lp *LightProtocol) (uint16, odrResponse
 	}
 
 	receiptTrie := types.GetReceiptTrie(receipts)
-	proof, err := receiptTrie.GetProof(crypto.MustHash(result.Receipt).Bytes())
+	proof, err := receiptTrie.GetProof(result.Receipt.TxHash.Bytes())
 	if err != nil {
 		err = errors.NewStackedError(err, "failed to get receipt trie proof")
 		return newErrorResponse(receiptResponseCode, request.ReqID, err)
