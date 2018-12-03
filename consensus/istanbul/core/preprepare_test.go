@@ -161,10 +161,8 @@ OUTER:
 				t.Errorf("state mismatch: have %v, want %v", c.state, StatePreprepared)
 			}
 
-			if !test.existingBlock {
-				if !reflect.DeepEqual(c.current.Subject().View, curView) {
-					t.Errorf("view mismatch: have %v, want %v", c.current.Subject().View, curView)
-				}
+			if !test.existingBlock && !reflect.DeepEqual(c.current.Subject().View, curView) {
+				t.Errorf("view mismatch: have %v, want %v", c.current.Subject().View, curView)
 			}
 
 			// verify prepare messages
