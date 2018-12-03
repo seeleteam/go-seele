@@ -81,6 +81,7 @@ func (response *odrReceiptResponse) validate(request odrRequest, bcStore store.B
 	}
 
 	txHash := request.(*odrReceiptRequest).TxHash
+	response.Receipt = new(types.Receipt)
 	if err := response.proveMerkleTrie(header.ReceiptHash, txHash.Bytes(), response.Receipt); err != nil {
 		return errors.NewStackedError(err, "failed to prove merkle trie")
 	}
