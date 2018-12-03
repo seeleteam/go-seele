@@ -137,7 +137,7 @@ func (self *testSystemBackend) LastProposal() (istanbul.Proposal, common.Address
 // Only block height 5 will return true
 func (self *testSystemBackend) HasPropsal(hash common.Hash) bool {
 	//return number.Cmp(big.NewInt(5)) == 0
-	return true
+	return false
 }
 
 func (self *testSystemBackend) GetProposer(number uint64) common.Address {

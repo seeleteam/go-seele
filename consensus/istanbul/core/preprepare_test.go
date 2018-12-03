@@ -103,7 +103,6 @@ func TestHandlePreprepare(t *testing.T) {
 			// errOldMessage
 			func() *testSystem {
 				sys := NewTestSystemWithBackend(N, F)
-				sys.backends = sys.backends[1:]
 
 				for i, backend := range sys.backends {
 					c := backend.engine.(*core)
