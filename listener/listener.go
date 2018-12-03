@@ -18,7 +18,7 @@ import (
 
 var (
 	// ErrInvalidArguments is returned when NewContractEventABI arguments are invalid.
-	ErrInvalidArguments = errors.New("the abiPath or eventName or contract address should not be empty")
+	ErrInvalidArguments = errors.New("the abiPath, eventName and contract address cannot be empty")
 )
 
 // ContractEventABI represents contract event parser.
