@@ -439,7 +439,9 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	}
 
 	if !bMatch {
-		panic("can not come here")
+		p.log.Info("handleAnnounce, not found block to sync.")
+		p.curSyncMagic = 0
+		return nil
 	}
 
 	return p.sendSyncHashRequest(p.curSyncMagic, startNum)
