@@ -35,7 +35,7 @@ type ContractEventABI struct {
 }
 
 // NewContractEventABI returns a ContractEventABI instance.
-func NewContractEventABI(abiPath string, contract string, eventNames ...string) (*ContractEventABI, error) {
+func NewContractEventABI(abiPath, contract string, eventNames ...string) (*ContractEventABI, error) {
 	if len(abiPath) == 0 || len(contract) == 0 || len(eventNames) == 0 {
 		return nil, ErrInvalidArguments
 	}
