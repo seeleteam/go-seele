@@ -156,6 +156,28 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 	assert.Equal(t, poolTx3.poolObject, pool.hashToTxMap[poolTx3.GetHash()].poolObject)
 }
 
+func Test_TransactionPoolFull(t *testing.T) {
+	config := DefaultTxPoolConfig()
+	config.Capacity = 10000
+	pool, chain := newTestTransactionPool(config)
+	defer chain.dispose()
+
+	fromPrivKey, fromAddress := randomAccount(t)
+	chain.addAccount(fromAddress, uint64(config.Capacity*2)*common.SeeleToFan.Uint64(), 0)
+
+	for i := 0; i < config.Capacity; i++ {
+		poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 1, uint64(i), 1)
+		err := pool.addObject(poolTx.poolObject)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 1, uint64(config.Capacity+1), 1)
+	err := pool.addObject(poolTx.poolObject)
+	assert.Equal(t, errObjectPoolFull, err)
+}
+
 func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
 	pool, chain := newTestTransactionPool(DefaultTxPoolConfig())
 	defer chain.dispose()

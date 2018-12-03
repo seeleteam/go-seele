@@ -66,6 +66,11 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 // loopCheckingDebt check whether debt is confirmed.
 // we only add debt to pool when it is confirmed
 func (dp *DebtPool) loopCheckingDebt() {
+	if dp.verifier == nil {
+		dp.log.Info("exit checking as verifier is nil")
+		return
+	}
+
 	for {
 		if dp.toConfirmedDebts.count() == 0 {
 			time.Sleep(10 * time.Second)
