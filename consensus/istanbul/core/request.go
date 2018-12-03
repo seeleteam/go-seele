@@ -35,9 +35,9 @@ func (c *core) checkRequestMsg(request *istanbul.Request) error {
 		return errInvalidMessage
 	}
 
-	if c := c.current.sequence.Uint64() - request.Proposal.Height(); c > 0 {
+	if c.current.sequence.Uint64() > request.Proposal.Height() {
 		return errOldMessage
-	} else if c < 0 {
+	} else if c.current.sequence.Uint64() < request.Proposal.Height() {
 		return errFutureMessage
 	} else {
 		return nil
