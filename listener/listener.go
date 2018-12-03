@@ -6,7 +6,6 @@
 package listener
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/seeleteam/go-seele/accounts/abi"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 var (
@@ -26,27 +26,26 @@ type ContractEventABI struct {
 	// the map key is topic, the value is event name,
 	// topic to compare with log's topic,
 	// event name to label the event how to deal.
-	topicEventNames map[string]string
+	topicEventNames map[common.Hash]string
 
 	// contract address, to avoid different contracts have the same event name and arguments
-	contract string
+	contract common.Address
 
 	parser abi.ABI
 }
 
 // NewContractEventABI returns a ContractEventABI instance.
-func NewContractEventABI(abiPath, contract string, eventNames ...string) (*ContractEventABI, error) {
-	if len(abiPath) == 0 || len(contract) == 0 || len(eventNames) == 0 {
+func NewContractEventABI(abiPath string, contract common.Address, eventNames ...string) (*ContractEventABI, error) {
+	if len(abiPath) == 0 || len(eventNames) == 0 {
+		return nil, ErrInvalidArguments
+	}
+
+	if contract.Equal(common.EmptyAddress) {
 		return nil, ErrInvalidArguments
 	}
 
 	// ensure the contract address is EVM contract
-	tempAddress, err := common.HexToAddress(contract)
-	if err != nil {
-		return nil, errors.NewStackedError(err, "invalid contract address,")
-	}
-
-	if !tempAddress.IsEVMContract() {
+	if !contract.IsEVMContract() {
 		return nil, fmt.Errorf("the address is not EVM contract, %v", contract)
 	}
 
@@ -62,87 +61,78 @@ func NewContractEventABI(abiPath, contract string, eventNames ...string) (*Contr
 
 	c := &ContractEventABI{
 		contract:        contract,
-		topicEventNames: make(map[string]string),
+		topicEventNames: make(map[common.Hash]string),
 	}
 
 	c.parser = parser
 
-	var topic string
 	for _, eventName := range eventNames {
 		event, ok := parser.Events[eventName]
 		if !ok {
 			return nil, fmt.Errorf("event name %v not found in ABI file %v", eventName, abiPath)
 		}
-		topic = event.Id().Hex()
-		c.topicEventNames[topic] = eventName
+		c.topicEventNames[event.Id()] = eventName
 	}
 
 	return c, nil
 }
 
-// Receipt represents a receipt instance from main chain block.
-type Receipt struct {
-	Failed bool
-	Logs   []*Log
-}
-
-// Log represents a log instance from main chain block.
-type Log struct {
-	Address string
-	Data    []string
-	Topic   string
-}
-
 // Event represents a contract event instance from Log.
 type Event struct {
-	Contract  string
+	Contract  common.Address
 	EventName string
-	Topic     string
+	Topic     common.Hash
 	Arguments []interface{}
 }
 
-// GetEventsFromReceipts get events from receipts.
-func (c *ContractEventABI) GetEventsFromReceipts(receipts []*Receipt) ([]*Event, error) {
+// GetEvents get events from receipts.
+func (c *ContractEventABI) GetEvents(receipts []*types.Receipt) ([]*Event, error) {
 	var events []*Event
 	for _, receipt := range receipts {
-		if receipt.Failed {
+		eventsSlice, err := c.GetEvent(receipt)
+		if err != nil {
+			return nil, err
+		}
+
+		events = append(events, eventsSlice...)
+	}
+
+	return events, nil
+}
+
+// GetEvent get events from receipt.
+func (c *ContractEventABI) GetEvent(receipt *types.Receipt) ([]*Event, error) {
+	var events []*Event
+	if receipt.Failed {
+		return nil, nil
+	}
+
+	for _, log := range receipt.Logs {
+		if !log.Address.Equal(c.contract) {
 			continue
 		}
 
-		for _, log := range receipt.Logs {
-			if log.Address != c.contract {
-				continue
-			}
-
-			eventName, ok := c.topicEventNames[log.Topic]
-			if !ok {
-				continue
-			}
-
-			var event Event
-			if len(log.Data) != 0 {
-				args := make([]string, len(log.Data))
-				for i, data := range log.Data {
-					args[i] = data[2:]
-				}
-
-				b, err := hex.DecodeString(strings.Join(args, ""))
-				if err != nil {
-					return nil, errors.NewStackedError(err, "failed to decode hex string to bytes")
-				}
-
-				// unnecessary to check whether parser.Events has the event name, we have check it before
-				event.Arguments, err = c.parser.Events[eventName].Inputs.UnpackValues(b)
-				if err != nil {
-					return nil, fmt.Errorf("event name %v not found in ABI file", eventName)
-				}
-			}
-
-			event.Contract = c.contract
-			event.EventName = eventName
-			event.Topic = log.Topic
-			events = append(events, &event)
+		eventName, ok := c.topicEventNames[log.Topics[0]]
+		if !ok {
+			continue
 		}
+
+		event := &Event{
+			Contract:  c.contract,
+			EventName: eventName,
+			Topic:     log.Topics[0],
+		}
+
+		var err error
+		if log.Data != nil {
+			// unnecessary to check whether parser.Events has the event name, we have check it before
+			event.Arguments, err = c.parser.Events[eventName].Inputs.UnpackValues(log.Data)
+			if err != nil {
+				return nil, fmt.Errorf("event name %v not found in ABI file", eventName)
+			}
+		}
+
+		events = append(events, event)
 	}
 
 	return events, nil
