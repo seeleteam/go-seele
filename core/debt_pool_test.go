@@ -100,3 +100,46 @@ func Test_AddWithValidation(t *testing.T) {
 
 	assert.Equal(t, 1, pool.GetDebtCount(true, true))
 }
+
+func Test_DebtPoolFullForToConfirmed(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	bc := NewTestBlockchain()
+	pool := NewDebtPool(bc, nil)
+
+	for i := 0; i < ToConfirmedDebtCapacity; i++ {
+		d := types.NewTestDebt()
+		err := pool.AddDebt(d)
+		assert.Nil(t, err)
+	}
+
+	CheckMemory(t, 200*1024*1024)
+
+	d := types.NewTestDebt()
+	err := pool.AddDebt(d)
+	assert.Equal(t, err, errDebtFull)
+}
+
+func Test_DebtPoolFull(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
+	bc := NewTestBlockchain()
+	pool := NewDebtPool(bc, nil)
+
+	for i := 0; i < DebtPoolCapacity; i++ {
+		d := types.NewTestDebt()
+		err := pool.addToPool(d)
+		assert.Nil(t, err)
+	}
+
+	pool.DoCheckingDebt()
+	CheckMemory(t, 200*1024*1024)
+
+	d := types.NewTestDebt()
+	err := pool.addToPool(d)
+	assert.Equal(t, err, errObjectPoolFull)
+}
