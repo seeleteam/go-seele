@@ -102,10 +102,7 @@ func Test_AddWithValidation(t *testing.T) {
 }
 
 func Test_DebtPoolFullForToConfirmed(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
+	ToConfirmedDebtCapacity = 10000
 	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, nil)
 
@@ -115,18 +112,13 @@ func Test_DebtPoolFullForToConfirmed(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	CheckMemory(t, 200*1024*1024)
-
 	d := types.NewTestDebt()
 	err := pool.AddDebt(d)
 	assert.Equal(t, err, errDebtFull)
 }
 
 func Test_DebtPoolFull(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
+	DebtPoolCapacity = 10000
 	bc := NewTestBlockchain()
 	pool := NewDebtPool(bc, nil)
 
@@ -137,7 +129,6 @@ func Test_DebtPoolFull(t *testing.T) {
 	}
 
 	pool.DoCheckingDebt()
-	CheckMemory(t, 200*1024*1024)
 
 	d := types.NewTestDebt()
 	err := pool.addToPool(d)

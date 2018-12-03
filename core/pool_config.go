@@ -7,7 +7,7 @@ package core
 
 // TransactionPoolConfig is the configuration of the transaction pool.
 type TransactionPoolConfig struct {
-	Capacity uint // Maximum number of transactions in the pool.
+	Capacity int // Maximum number of transactions in the pool.
 }
 
 // DefaultTxPoolConfig returns the default configuration of the transaction pool.
@@ -23,8 +23,8 @@ func DefaultTxPoolConfig() *TransactionPoolConfig {
 
 // DebtPoolCapacity we need bigger capacity to hold more debt
 // in real test. the memory usage for 100000 will be about 150MB
-const DebtPoolCapacity = 100000
+var DebtPoolCapacity = 100000
 
 // ToConfirmedDebtCapacity capacity for to confirmed debt map
 // in real test. the memory usage for 100000 will be about 150MB
-const ToConfirmedDebtCapacity = 100000
+var ToConfirmedDebtCapacity = 100000

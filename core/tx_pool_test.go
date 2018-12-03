@@ -6,9 +6,7 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
-	"runtime"
 	"testing"
 	"time"
 
@@ -159,18 +157,15 @@ func Test_TransactionPool_Add_PoolFull(t *testing.T) {
 }
 
 func Test_TransactionPoolFull(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
 	config := DefaultTxPoolConfig()
+	config.Capacity = 10000
 	pool, chain := newTestTransactionPool(config)
 	defer chain.dispose()
 
 	fromPrivKey, fromAddress := randomAccount(t)
-	chain.addAccount(fromAddress, uint64(config.Capacity*2), 0)
+	chain.addAccount(fromAddress, uint64(config.Capacity*2)*common.SeeleToFan.Uint64(), 0)
 
-	for i := uint(0); i < config.Capacity; i++ {
+	for i := 0; i < config.Capacity; i++ {
 		poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 1, uint64(i), 1)
 		err := pool.addObject(poolTx.poolObject)
 		if err != nil {
@@ -178,20 +173,9 @@ func Test_TransactionPoolFull(t *testing.T) {
 		}
 	}
 
-	CheckMemory(t, 300*1024*1024)
-
 	poolTx := newTestPoolEx(t, fromPrivKey, fromAddress, 1, uint64(config.Capacity+1), 1)
 	err := pool.addObject(poolTx.poolObject)
 	assert.Equal(t, errObjectPoolFull, err)
-}
-
-func CheckMemory(t *testing.T, size uint64) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	memory := m.Alloc
-
-	fmt.Println(memory)
-	assert.True(t, memory < size)
 }
 
 func Test_TransactionPool_Add_TxNonceUsed(t *testing.T) {
