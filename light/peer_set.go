@@ -63,8 +63,8 @@ func (p *peerSet) bestPeer() *peer {
 }
 
 func (p *peerSet) Remove(peerID common.Address) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 
 	result := p.peerMap[peerID]
 	if result != nil {

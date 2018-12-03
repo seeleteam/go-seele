@@ -84,6 +84,7 @@ var startCmd = &cobra.Command{
 		}
 
 		common.IsLightMode = lightNode
+
 		// start pprof http server
 		if pprofPort > 0 {
 			go func() {

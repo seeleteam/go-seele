@@ -439,7 +439,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	}
 
 	if !bMatch {
-		p.log.Warn("handleAnnounce, not found block to sync.")
+		p.log.Info("handleAnnounce, not found block to sync.")
 		p.curSyncMagic = 0
 		return nil
 	}
