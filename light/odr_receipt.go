@@ -22,7 +22,7 @@ type odrReceiptRequest struct {
 }
 
 type odrReceiptResponse struct {
-	odrProvableResponse
+	OdrProvableResponse
 	Receipt *types.Receipt `rlp:"nil"`
 }
 

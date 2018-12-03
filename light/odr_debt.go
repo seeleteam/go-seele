@@ -20,7 +20,7 @@ type odrDebtRequest struct {
 }
 
 type odrDebtResponse struct {
-	odrProvableResponse
+	OdrProvableResponse
 	Debt *types.Debt `rlp:"nil"`
 }
 
@@ -36,7 +36,7 @@ func (req *odrDebtRequest) handle(lp *LightProtocol) (uint16, odrResponse) {
 	}
 
 	response := &odrDebtResponse{
-		odrProvableResponse: odrProvableResponse{
+		OdrProvableResponse: OdrProvableResponse{
 			OdrItem: OdrItem{
 				ReqID: req.ReqID,
 			},

@@ -14,8 +14,8 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
-// odrProvableResponse represents all provable ODR response.
-type odrProvableResponse struct {
+// OdrProvableResponse represents all provable ODR response.
+type OdrProvableResponse struct {
 	OdrItem
 	BlockIndex *api.BlockIndex `rlp:"nil"`
 	Proof      []proofNode
@@ -24,7 +24,7 @@ type odrProvableResponse struct {
 // proveHeader proves the response is valid with the specified blockchain store,
 // and returns the corresponding block heaer in canonical chain. If the retrieved
 // block index is nil, then return nil block header.
-func (response *odrProvableResponse) proveHeader(bcStore store.BlockchainStore) (*types.BlockHeader, error) {
+func (response *OdrProvableResponse) proveHeader(bcStore store.BlockchainStore) (*types.BlockHeader, error) {
 	if response.BlockIndex == nil {
 		return nil, nil
 	}
@@ -49,7 +49,7 @@ func (response *odrProvableResponse) proveHeader(bcStore store.BlockchainStore) 
 // proveMerkleTrie proves the merkle trie in the response with specified root and key.
 // If proved, decode the retrieved ODR object to obj (pointer type) from the value
 // of leaf node in merkle proof.
-func (response *odrProvableResponse) proveMerkleTrie(root common.Hash, key []byte, obj interface{}) error {
+func (response *OdrProvableResponse) proveMerkleTrie(root common.Hash, key []byte, obj interface{}) error {
 	proof := arrayToMap(response.Proof)
 
 	value, err := trie.VerifyProof(root, key, proof)

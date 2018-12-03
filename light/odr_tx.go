@@ -42,7 +42,7 @@ type odrTxByHashRequest struct {
 }
 
 type odrTxByHashResponse struct {
-	odrProvableResponse
+	OdrProvableResponse
 	Tx *types.Transaction `rlp:"nil"`
 }
 
