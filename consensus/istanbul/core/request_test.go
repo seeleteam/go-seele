@@ -54,10 +54,10 @@ func TestCheckRequestMsg(t *testing.T) {
 	r = &istanbul.Request{
 		Proposal: makeBlock(2),
 	}
-	//err = c.checkRequestMsg(r)
-	//if err != errFutureMessage {
-	//	t.Errorf("error mismatch: have %v, want %v", err, errFutureMessage)
-	//}
+	err = c.checkRequestMsg(r)
+	if err != errFutureMessage {
+		t.Errorf("error mismatch: have %v, want %v", err, errFutureMessage)
+	}
 
 	// current request
 	r = &istanbul.Request{
