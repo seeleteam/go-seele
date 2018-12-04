@@ -59,7 +59,9 @@ func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLo
 
 func (t *Table) addNode(node *Node) {
 	if node.Shard != t.selfNode.Shard {
-		t.shardBuckets[node.Shard].addNode(node)
+		if node.Shard <= common.ShardCount {
+			t.shardBuckets[node.Shard].addNode(node)
+		}
 	} else {
 		dis := logDist(t.selfNode.getSha(), node.getSha())
 
