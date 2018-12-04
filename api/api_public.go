@@ -50,14 +50,8 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address, hexHash string, he
 
 	balance := state.GetBalance(account)
 	err = state.GetDbErr()
-	if err != nil {
-		hash := common.MustHexToHash(hexHash)
-		block, getblockErr := api.s.GetBlock(hash, height)
-		if getblockErr != nil {
-			return nil, errors.NewStackedError(getblockErr, "failed to get balance, get block occurred error")
-		} else if !block.HeaderHash.Equal(hash) {
-			return nil, errors.NewStackedError(err, "failed to get balance, db error occurred")
-		}
+	if err != nil && !state.Exist(account) {
+		return nil, errors.NewStackedError(err, "failed to get balance, db error occurred")
 	}
 
 	info.Balance = balance
@@ -101,14 +95,8 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address, hexHash strin
 	nonce := state.GetNonce(account)
 	err = state.GetDbErr()
 
-	if err != nil {
-		hash := common.MustHexToHash(hexHash)
-		block, getblockErr := api.s.GetBlock(hash, height)
-		if getblockErr != nil {
-			return 0, errors.NewStackedError(getblockErr, "failed to get account nonce, get block occurred error")
-		} else if !block.HeaderHash.Equal(hash) {
-			return 0, errors.NewStackedError(err, "failed to get account nonce, db error occurred")
-		}
+	if err != nil && !state.Exist(account) {
+		return 0, errors.NewStackedError(err, "failed to get account nonce, db error occurred")
 	}
 
 	return nonce, nil
