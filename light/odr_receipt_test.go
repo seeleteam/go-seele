@@ -8,6 +8,8 @@ package light
 import (
 	"testing"
 
+	"github.com/seeleteam/go-seele/api"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -39,30 +41,36 @@ func Test_OdrReceipt_Serializable(t *testing.T) {
 
 	// with receipt
 	response := odrReceiptResponse{
-		OdrItem: OdrItem{
-			ReqID: 38,
-			Error: "hello",
-		},
-		ReceiptIndex: &types.ReceiptIndex{
-			BlockHash: common.StringToHash("tx hash"),
-			Index:     uint(0),
+		OdrProvableResponse: OdrProvableResponse{
+			OdrItem: OdrItem{
+				ReqID: 38,
+				Error: "hello",
+			},
+			BlockIndex: &api.BlockIndex{
+				BlockHash:   common.StringToHash("tx hash"),
+				BlockHeight: 38,
+				Index:       uint(0),
+			},
+			Proof: make([]proofNode, 0),
 		},
 		Receipt: newTestReceipt(),
-		Proof:   make([]proofNode, 0),
 	}
 	assertSerializable(t, &response, &odrReceiptResponse{})
 
 	// without receipt
 	response = odrReceiptResponse{
-		OdrItem: OdrItem{
-			ReqID: 38,
-			Error: "hello",
+		OdrProvableResponse: OdrProvableResponse{
+			OdrItem: OdrItem{
+				ReqID: 38,
+				Error: "hello",
+			},
+			BlockIndex: &api.BlockIndex{
+				BlockHash:   common.StringToHash("tx hash"),
+				BlockHeight: 38,
+				Index:       uint(0),
+			},
+			Proof: make([]proofNode, 0),
 		},
-		ReceiptIndex: &types.ReceiptIndex{
-			BlockHash: common.StringToHash("tx hash"),
-			Index:     uint(0),
-		},
-		Proof: make([]proofNode, 0),
 	}
 	assertSerializable(t, &response, &odrReceiptResponse{})
 }

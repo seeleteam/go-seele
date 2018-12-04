@@ -59,9 +59,8 @@ func Test_odrCache_addGet(t *testing.T) {
 		}
 		requests = append(requests, req)
 
-		resp := &odrTxByHashResponse{
-			OdrItem: req.OdrItem,
-		}
+		resp := &odrTxByHashResponse{}
+		resp.OdrItem = req.OdrItem
 		responses = append(responses, resp)
 
 		cache.add(req, resp)
@@ -87,9 +86,8 @@ func Test_odrCache_addGet(t *testing.T) {
 	}
 	requests = append(requests, req)
 
-	resp := &odrTxByHashResponse{
-		OdrItem: req.OdrItem,
-	}
+	resp := &odrTxByHashResponse{}
+	resp.OdrItem = req.OdrItem
 	responses = append(responses, resp)
 
 	cache.add(req, resp)
