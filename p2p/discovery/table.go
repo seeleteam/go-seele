@@ -61,6 +61,8 @@ func (t *Table) addNode(node *Node) {
 	if node.Shard != t.selfNode.Shard {
 		if node.Shard <= common.ShardCount {
 			t.shardBuckets[node.Shard].addNode(node)
+		} else {
+			t.log.Error("get invalid shard, shard count is %d, getting shard number is %d", common.ShardCount, node.Shard)
 		}
 	} else {
 		dis := logDist(t.selfNode.getSha(), node.getSha())
