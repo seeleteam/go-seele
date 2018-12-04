@@ -7,9 +7,7 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -62,54 +60,7 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 	}
 
 	if len(re.Logs) > 0 {
-		var logOuts []map[string]interface{}
-
-		for _, log := range re.Logs {
-			logOut, err := printableLog(log)
-			if err != nil {
-				return nil, err
-			}
-
-			logOuts = append(logOuts, logOut)
-		}
-
-		outMap["logs"] = logOuts
-	}
-
-	return outMap, nil
-}
-
-func printableLog(log *types.Log) (map[string]interface{}, error) {
-	if (len(log.Data) % 32) > 0 {
-		return nil, fmt.Errorf("invalid log data length %v", len(log.Data))
-	}
-
-	outMap := map[string]interface{}{
-		"address": log.Address.Hex(),
-	}
-
-	// data
-	dataLen := len(log.Data) / 32
-	if dataLen > 0 {
-		var data []string
-		for i := 0; i < dataLen; i++ {
-			data = append(data, hexutil.BytesToHex(log.Data[i*32:(i+1)*32]))
-		}
-		outMap["data"] = data
-	}
-
-	// topics
-	switch len(log.Topics) {
-	case 0:
-		// do not print empty topic
-	case 1:
-		outMap["topic"] = log.Topics[0].Hex()
-	default:
-		var topics []string
-		for _, t := range log.Topics {
-			topics = append(topics, t.Hex())
-		}
-		outMap["topics"] = fmt.Sprintf("[%v]", strings.Join(topics, ", "))
+		outMap["logs"] = re.Logs
 	}
 
 	return outMap, nil
