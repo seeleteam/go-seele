@@ -258,3 +258,10 @@ func DebtArrayToMap(debts []*Debt) [][]*Debt {
 
 	return debtsMap
 }
+
+func BatchValidateDebt(debts []*Debt, verifier DebtVerifier) error {
+	return BatchValidate(func(index int) error {
+		_, err := debts[index].Validate(verifier, false, common.LocalShardNumber)
+		return err
+	}, len(debts))
+}

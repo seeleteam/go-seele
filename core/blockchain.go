@@ -381,7 +381,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 			}
 		})
 
-		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
+		event.ChainHeaderChangedEventMananger.Fire(block)
 	}
 
 	bc.lastBlockTime = time.Now()
@@ -481,9 +481,15 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 		return nil, nil, errors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
 	}
 
+	//validate debts
+	err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
+	if err != nil {
+		return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+	}
+
 	// update debts
 	for _, d := range block.Debts {
-		_, err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
+		err = ApplyDebtWithoutVerify(statedb, d, block.Header.Creator)
 		if err != nil {
 			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
@@ -608,18 +614,11 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	return receipt, nil
 }
 
-// ApplyDebt applies a debt and update statedb.
-func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) (recoverable bool, retErr error) {
+// ApplyDebtWithoutVerify applies a debt and update statedb.
+func ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.Debt, coinbase common.Address) error {
 	data := statedb.GetData(d.Data.Account, d.Hash)
 	if bytes.Equal(data, types.DebtDataFlag) {
-		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
-		return
-	}
-
-	var err error
-	if recoverable, err = d.Validate(verifier, false, common.LocalShardNumber); err != nil {
-		retErr = errors.NewStackedError(err, "failed to validate debt")
-		return
+		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
 	}
 
 	if !statedb.Exist(d.Data.Account) {
@@ -631,7 +630,8 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
 	statedb.AddBalance(coinbase, d.Fee())
 	statedb.SetData(d.Data.Account, d.Hash, types.DebtDataFlag)
-	return
+
+	return nil
 }
 
 // DeleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.

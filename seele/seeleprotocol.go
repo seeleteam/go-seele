@@ -115,6 +115,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
+	event.ChainHeaderChangedEventMananger.AddAsyncListener(s.handleNewBlock)
 	event.DebtsInsertedEventManager.AddAsyncListener(s.handleNewDebt)
 	return s, nil
 }
@@ -287,10 +288,9 @@ func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) 
 			}
 		}
 	}
-
 }
 
-func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+func (p *SeeleProtocol) handleNewBlock(e event.Event) {
 	block := e.(*types.Block)
 
 	// propagate confirmed block
@@ -303,10 +303,13 @@ func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
 		} else {
 			debts := types.NewDebtMap(confirmedBlock.Transactions)
 			p.debtManager.AddDebtMap(debts)
-			p.propagateDebtMap(debts, true)
+			go p.propagateDebtMap(debts, true)
 		}
-
 	}
+}
+
+func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+	block := e.(*types.Block)
 
 	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
 		block.Header.Height, block.HeaderHash.Hex(), block.Header.PreviousBlockHash.Hex())
