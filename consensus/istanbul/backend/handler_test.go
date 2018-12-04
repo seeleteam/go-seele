@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/p2p"
 )
@@ -20,7 +19,7 @@ func TestIstanbulMessage(t *testing.T) {
 
 	// generate one msg
 	data := []byte("data1")
-	hash := istanbul.RLPHash(data)
+	hash := crypto.HashBytes(data)
 	msg := makeMsg(istanbulMsg, data)
 	addr := *crypto.MustGenerateRandomAddress()
 
