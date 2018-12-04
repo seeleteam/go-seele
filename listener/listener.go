@@ -108,7 +108,7 @@ func (c *ContractEventABI) GetEvent(receipt *types.Receipt) ([]*Event, error) {
 	}
 
 	for _, log := range receipt.Logs {
-		if !log.Address.Equal(c.contract) {
+		if !log.Address.Equal(c.contract) || len(log.Topics) < 1 {
 			continue
 		}
 
