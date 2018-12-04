@@ -49,8 +49,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address, hexHash string, he
 	}
 
 	balance := state.GetBalance(account)
-	err = state.GetDbErr()
-	if err != nil && !state.Exist(account) {
+	if err = state.GetDbErr(); err != nil && !state.Exist(account) {
 		return nil, errors.NewStackedError(err, "failed to get balance, db error occurred")
 	}
 
@@ -93,9 +92,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address, hexHash strin
 		return 0, err
 	}
 	nonce := state.GetNonce(account)
-	err = state.GetDbErr()
-
-	if err != nil && !state.Exist(account) {
+	if err = state.GetDbErr(); err != nil && !state.Exist(account) {
 		return 0, errors.NewStackedError(err, "failed to get account nonce, db error occurred")
 	}
 
