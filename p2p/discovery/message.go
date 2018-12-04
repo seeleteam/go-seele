@@ -122,22 +122,26 @@ func generateBuff(code msgType, encoding []byte) []byte {
 
 // handle send pong msg and add pending
 func (m *ping) handle(t *udp, from *net.UDPAddr) {
-	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
-	t.addNode(node, false)
-	t.timeoutNodesCount.Set(m.SelfID.Hex(), 0)
-
 	// response with pong
 	if m.Version != discoveryProtocolVersion {
 		return
 	}
 
-	resp := &pong{
-		SelfID:    t.self.ID,
-		SelfShard: t.self.Shard,
-	}
+	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
 
-	t.log.Debug("received [pingMsg] and send [pongMsg] to: %s", node)
-	t.sendMsg(pongMsgType, resp, node.ID, node.GetUDPAddr())
+	// just allows valid shards to be added in table
+	if checkShard(node.Shard) {
+		t.addNode(node, false)
+		t.timeoutNodesCount.Set(m.SelfID.Hex(), 0)
+
+		resp := &pong{
+			SelfID:    t.self.ID,
+			SelfShard: t.self.Shard,
+		}
+
+		t.log.Debug("received [pingMsg] and send [pongMsg] to: %s", node)
+		t.sendMsg(pongMsgType, resp, node.ID, node.GetUDPAddr())
+	}
 }
 
 // send send ping message and handle callback
