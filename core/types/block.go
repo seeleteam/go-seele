@@ -52,7 +52,7 @@ type BlockHeader struct {
 	Difficulty        *big.Int       // Difficulty is the difficulty of the block
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
-	Witness           []byte         //Witness is the block pow proof info
+	Witness           []byte         //Witness is the block pow proof info or the sign of vote
 	Consensus         ConsensusType
 	ExtraData         []byte // ExtraData stores the extra info of block header.
 }
