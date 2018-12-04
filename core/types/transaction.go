@@ -399,13 +399,18 @@ func GetTxTrie(txs []*Transaction) *trie.Trie {
 // Because the signature verification is time consuming (see test Benchmark_Transaction_ValidateWithoutState),
 // once a block includes too many txs (e.g. 5000), the txs validation will consume too much time.
 func BatchValidateTxs(txs []*Transaction) error {
-	len := len(txs)
-	threads := runtime.NumCPU() / 4 // in case of CPU 100%
+	return BatchValidate(func(index int) error {
+		return txs[index].ValidateWithoutState(true, true)
+	}, len(txs))
+}
+
+func BatchValidate(handler func(index int) error, len int) error {
+	threads := runtime.NumCPU() / 2 // in case of CPU 100%
 
 	// single thread for few CPU kernel or few txs to validate.
 	if threads <= 1 || len < threads {
-		for _, tx := range txs {
-			if err := tx.ValidateWithoutState(true, true); err != nil {
+		for i := 0; i < len; i++ {
+			if err := handler(i); err != nil {
 				return err
 			}
 		}
@@ -424,7 +429,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 			defer wg.Done()
 
 			for j := offset; j < len && atomic.LoadUint32(&hasErr) == 0; j += threads {
-				if e := txs[j].ValidateWithoutState(true, true); e != nil {
+				if e := handler(j); e != nil {
 					if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
 						err = e
 					}
