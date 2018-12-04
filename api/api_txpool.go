@@ -84,10 +84,8 @@ func printableLog(log *types.Log) (map[string]interface{}, error) {
 
 	outMap := map[string]interface{}{
 		"address": log.Address.Hex(),
+		"data":    hexutil.BytesToHex(log.Data),
 	}
-
-	// data
-	outMap["data"] = hexutil.BytesToHex(log.Data)
 
 	// topics
 	topics := make([]string, 0)
