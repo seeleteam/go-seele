@@ -50,7 +50,7 @@ func (api *PublicSeeleAPI) GetBalance(account common.Address, hexHash string, he
 
 	balance := state.GetBalance(account)
 	err = state.GetDbErr()
-	if balance.Cmp(big.NewInt(0)) == 0 && err != nil {
+	if err != nil {
 		hash := common.MustHexToHash(hexHash)
 		block, getblockErr := api.s.GetBlock(hash, height)
 		if getblockErr != nil {
@@ -101,7 +101,7 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address, hexHash strin
 	nonce := state.GetNonce(account)
 	err = state.GetDbErr()
 
-	if nonce == 0 && err != nil {
+	if err != nil {
 		hash := common.MustHexToHash(hexHash)
 		block, getblockErr := api.s.GetBlock(hash, height)
 		if getblockErr != nil {
