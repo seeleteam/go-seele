@@ -34,13 +34,13 @@ var gettps = &cobra.Command{
 				shard := getShard(client)
 				if tps.Duration > 0 {
 					t := float64(tps.Count) / float64(tps.Duration)
-					fmt.Printf("shard %d: from %d to %d, block number:%d, tx count:%d, interval:%d, tps:%.2f\n", shard, tps.StartHeight,
+					fmt.Printf("shard %d: from %d to %d, block number: %d, tx count: %d, interval: %d, tps: %.2f\n", shard, tps.StartHeight,
 						tps.EndHeight, tps.EndHeight-tps.StartHeight, tps.Count, tps.Duration, t)
 					sum += t
 				}
 			}
 
-			fmt.Printf("sum tps is %.2f\n", sum)
+			fmt.Printf("sum tps is: %.2f\n", sum)
 			time.Sleep(10 * time.Second)
 		}
 	},
