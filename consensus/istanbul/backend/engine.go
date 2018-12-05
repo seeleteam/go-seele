@@ -278,7 +278,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.BlockHe
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeader) error {
 	// unused fields, force to set to empty
 	header.Creator = common.Address{}
-	header.Witness = types.EmptyWitness
+	header.Witness = istanbul.EmptyWitness
 	header.Consensus = types.IstanbulConsensus
 
 	// copy the parent extra data as the header extra data

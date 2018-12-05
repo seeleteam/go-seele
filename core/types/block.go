@@ -31,8 +31,6 @@ var (
 	// ErrBlockDebtHashMismatch is returned when the calculated debts hash of block
 	// does not match the debts root hash in block header.
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
-
-	EmptyWitness = make([]byte, 8)
 )
 
 type ConsensusType uint
@@ -56,7 +54,7 @@ type BlockHeader struct {
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	// in pow consensus, witness is the nonce that proof whether the block is validate;
 	// in BFT consensus, witness is used to vote for validator candidates and Creator is the candidate address.
-	Witness           []byte
+	Witness   []byte
 	Consensus ConsensusType
 	ExtraData []byte // ExtraData stores the extra info of block header.
 }
