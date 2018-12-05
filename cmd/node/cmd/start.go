@@ -44,6 +44,9 @@ var (
 
 	//pprofPort http server port
 	pprofPort uint64
+
+	// profileSize is used to limit when need to collect profiles, set 6GB
+	profileSize = uint64(1024 * 1024 * 1024 * 6)
 )
 
 // startCmd represents the start command
@@ -209,19 +212,18 @@ func init() {
 }
 
 func monitorPC() {
-	size := uint64(1024 * 1024 * 1024 * 6)
 	var info runtime.MemStats
-	heapDir := filepath.Join(common.GetTempFolder(), "heap")
+	heapDir := filepath.Join(common.GetTempFolder(), "heapProfile")
 	err := os.MkdirAll(heapDir, os.ModePerm)
 	if err != nil {
-		fmt.Printf("failed to create %s dir: %s\n", heapDir, err)
+		fmt.Printf("failed to create folder %s: %s\n", heapDir, err)
 		return
 	}
 
-	profileDir := filepath.Join(common.GetTempFolder(), "cpu")
+	profileDir := filepath.Join(common.GetTempFolder(), "cpuProfile")
 	err = os.MkdirAll(profileDir, os.ModePerm)
 	if err != nil {
-		fmt.Printf("failed to create %s dir: %s\n", profileDir, err)
+		fmt.Printf("failed to create folder %s: %s\n", profileDir, err)
 		return
 	}
 
@@ -230,7 +232,7 @@ func monitorPC() {
 		select {
 		case <-ticker.C:
 			runtime.ReadMemStats(&info)
-			if info.Alloc > size {
+			if info.Alloc > profileSize {
 				heapFile := filepath.Join(heapDir, fmt.Sprint("heap-", time.Now().Format("2006-01-02-15-04-05")))
 				f, err := os.Create(heapFile)
 				if err != nil {
@@ -253,7 +255,6 @@ func monitorPC() {
 
 				time.Sleep(20 * time.Second)
 				pprof.StopCPUProfile()
-
 			}
 		}
 	}
