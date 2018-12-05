@@ -31,6 +31,8 @@ var (
 	// ErrBlockDebtHashMismatch is returned when the calculated debts hash of block
 	// does not match the debts root hash in block header.
 	ErrBlockDebtHashMismatch = errors.New("block debts hash mismatch")
+
+	EmptyWitness = make([]byte, 8)
 )
 
 type ConsensusType uint
