@@ -130,7 +130,7 @@ func (m *ping) handle(t *udp, from *net.UDPAddr) {
 	node := NewNodeWithAddr(m.SelfID, from, m.SelfShard)
 
 	// just allows valid shards to be added in table
-	if checkShard(node.Shard) {
+	if isShardValid(node.Shard) {
 		t.addNode(node, false)
 		t.timeoutNodesCount.Set(m.SelfID.Hex(), 0)
 

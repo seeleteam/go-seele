@@ -58,17 +58,19 @@ func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLo
 }
 
 func (t *Table) addNode(node *Node) {
-	if node.Shard != t.selfNode.Shard {
-		if node.Shard <= common.ShardCount {
+	if isShardValid(node.Shard) {
+		if node.Shard != t.selfNode.Shard {
 			t.shardBuckets[node.Shard].addNode(node)
+
 		} else {
-			t.log.Debug("get invalid shard, shard count is %d, getting shard number is %d", common.ShardCount, node.Shard)
+			dis := logDist(t.selfNode.getSha(), node.getSha())
+
+			t.buckets[dis].addNode(node)
 		}
 	} else {
-		dis := logDist(t.selfNode.getSha(), node.getSha())
-
-		t.buckets[dis].addNode(node)
+		t.log.Debug("get invalid shard, shard count is %d, getting shard number is %d", common.ShardCount, node.Shard)
 	}
+
 }
 
 // getPeersCount obtain all peers count

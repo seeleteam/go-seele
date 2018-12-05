@@ -160,7 +160,7 @@ func (u *udp) sendLoop() {
 	}
 }
 
-func checkShard(shard uint) bool {
+func isShardValid(shard uint) bool {
 	return shard <= common.ShardCount
 }
 
@@ -193,7 +193,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				fromAddr: from,
 				code:     code,
 				data:     msg,
-				err:      !checkShard(msg.SelfShard),
+				err:      !isShardValid(msg.SelfShard),
 			}
 
 			u.gotReply <- r
