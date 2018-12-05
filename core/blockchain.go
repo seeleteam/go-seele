@@ -489,7 +489,7 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 
 	// update debts
 	for _, d := range block.Debts {
-		err = ApplyDebtWithoutVerify(statedb, d, block.Header.Creator)
+		err = bc.ApplyDebtWithoutVerify(statedb, d, block.Header.Creator)
 		if err != nil {
 			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
@@ -615,9 +615,9 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 }
 
 // ApplyDebtWithoutVerify applies a debt and update statedb.
-func ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.Debt, coinbase common.Address) error {
-	data := statedb.GetData(d.Data.Account, d.Hash)
-	if bytes.Equal(data, types.DebtDataFlag) {
+func (bc *Blockchain) ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.Debt, coinbase common.Address) error {
+	debtIndex, _ := bc.bcStore.GetDebtIndex(d.Hash)
+	if debtIndex != nil {
 		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
 	}
 
@@ -629,7 +629,6 @@ func ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.Debt, coinbase comm
 
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
 	statedb.AddBalance(coinbase, d.Fee())
-	statedb.SetData(d.Data.Account, d.Hash, types.DebtDataFlag)
 
 	return nil
 }
