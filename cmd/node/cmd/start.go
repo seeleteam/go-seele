@@ -10,9 +10,13 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/factory"
@@ -91,6 +95,10 @@ var startCmd = &cobra.Command{
 					return
 				}
 			}()
+		}
+
+		if comm.LogConfiguration.IsDebug {
+			go monitorPC()
 		}
 
 		if lightNode {
@@ -198,4 +206,55 @@ func init() {
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
+}
+
+func monitorPC() {
+	size := uint64(1024 * 1024 * 1024 * 6)
+	var info runtime.MemStats
+	heapDir := filepath.Join(common.GetTempFolder(), "heap")
+	err := os.MkdirAll(heapDir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("failed to create %s dir: %s\n", heapDir, err)
+		return
+	}
+
+	profileDir := filepath.Join(common.GetTempFolder(), "cpu")
+	err = os.MkdirAll(profileDir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("failed to create %s dir: %s\n", profileDir, err)
+		return
+	}
+
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			runtime.ReadMemStats(&info)
+			if info.Alloc > size {
+				heapFile := filepath.Join(heapDir, fmt.Sprint("heap-", time.Now().Format("2006-01-02-15-04-05")))
+				f, err := os.Create(heapFile)
+				if err != nil {
+					fmt.Println("monitor create heap file err:", err)
+					return
+				}
+				pprof.WriteHeapProfile(f)
+
+				profileFile := filepath.Join(profileDir, fmt.Sprint("cpu-", time.Now().Format("2006-01-02-15-04-05")))
+				cpuf, err := os.Create(profileFile)
+				if err != nil {
+					fmt.Println("monitor create cpu file err:", err)
+					return
+				}
+
+				if err := pprof.StartCPUProfile(cpuf); err != nil {
+					fmt.Println("failed to start cpu profile err:", err)
+					return
+				}
+
+				time.Sleep(20 * time.Second)
+				pprof.StopCPUProfile()
+
+			}
+		}
+	}
 }
