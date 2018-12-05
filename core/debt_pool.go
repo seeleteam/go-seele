@@ -6,7 +6,6 @@
 package core
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -31,12 +30,12 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	}
 
 	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
-		if !state.Exist(item.ToAccount()) {
+		debtIndex, err := chain.GetStore().GetDebtIndex(item.GetHash())
+		if err != nil || debtIndex == nil {
 			return false
 		}
 
-		data := state.GetData(item.ToAccount(), item.GetHash())
-		return bytes.Equal(data, types.DebtDataFlag)
+		return true
 	}
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
