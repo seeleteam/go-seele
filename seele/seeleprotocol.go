@@ -345,7 +345,10 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 
 	p.log.Info("add peer %s -> %s to SeeleProtocol. nodeid=%s", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr(), newPeer.peerStrID)
 	p.peerSet.Add(newPeer)
-	p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
+	if newPeer.Node.Shard == common.LocalShardNumber {
+		p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
+
+	}
 	go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
 	return true
@@ -361,7 +364,10 @@ func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
 func (s *SeeleProtocol) handleDelPeer(peer *p2p.Peer) {
 	s.log.Debug("delete peer from peer set. %s", peer.Node)
 	s.peerSet.Remove(peer.Node.ID)
-	s.downloader.UnRegisterPeer(idToStr(peer.Node.ID))
+
+	if peer.Node.Shard == common.LocalShardNumber {
+		s.downloader.UnRegisterPeer(idToStr(peer.Node.ID))
+	}
 }
 
 // SendDifferentShardTx send tx to different shards
