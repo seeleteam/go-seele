@@ -170,12 +170,16 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		// one step
+		memory.Print(p.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
 	pHead, pTd := p.Head()
 
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
+		// two step
+		memory.Print(p.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
 		return
 	}
 
@@ -186,6 +190,10 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		} else {
 			sp.log.Error("synchronise err. %s", err)
 		}
+
+		// three step
+		memory.Print(p.log, "SeeleProtocol synchronise downloader error", now, true)
+
 		return
 	}
 
@@ -193,7 +201,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	sp.broadcastChainHead()
 
 	// exit
-	memory.Print(p.log, "SeeleProtocol synchronise entrance", now, true)
+	memory.Print(p.log, "SeeleProtocol synchronise exit", now, true)
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
@@ -227,7 +235,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	}
 
 	// exit
-	memory.Print(sp.log, "SeeleProtocol broadcastChainHead entrance", now, true)
+	memory.Print(sp.log, "SeeleProtocol broadcastChainHead exit", now, true)
 }
 
 // syncTransactions sends pending transactions to remote peer.
@@ -293,7 +301,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	}
 
 	//exit
-	memory.Print(p.log, "SeeleProtocol handleNewTx entrance", now, true)
+	memory.Print(p.log, "SeeleProtocol handleNewTx exit", now, true)
 }
 
 func (p *SeeleProtocol) handleNewDebt(e event.Event) {
@@ -340,7 +348,7 @@ func (p *SeeleProtocol) handleNewBlock(e event.Event) {
 			go p.propagateDebtMap(debts, true)
 
 			// exit
-			memory.Print(p.log, "SeeleProtocol handleNewBlock entrance", now, true)
+			memory.Print(p.log, "SeeleProtocol handleNewBlock exit", now, true)
 		}
 	}
 }
