@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	// Maximum number of peers that can be connected every shard
+	// Maximum number of peers that can be connected for each shard
 	maxConnsPerShard = 30
 
 	// Maximum number of peers that node actively connects to.
@@ -200,7 +200,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Debug("got discovery a new node event, node info:%s, need not connect to.", node)
+		srv.log.Debug("got discovery a new node event. Reached connection limit, node:%s", node)
 		return
 	}
 
@@ -376,7 +376,7 @@ func (srv *Server) listenLoop() {
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
 	if flags == inboundConn && srv.PeerCount() > srv.maxConnections {
-		srv.log.Info("setup connection with peer %s. but incoming connections are too many, reject!", dialDest)
+		srv.log.Info("setup connection with peer %s. reached max incoming connection limit, reject!", dialDest)
 		return errors.New("Too many incoming connections")
 	}
 
