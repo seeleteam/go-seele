@@ -111,7 +111,7 @@ func (sb *backend) Broadcast(valSet istanbul.ValidatorSet, payload []byte) error
 
 // Broadcast implements istanbul.Backend.Gossip
 func (sb *backend) Gossip(valSet istanbul.ValidatorSet, payload []byte) error {
-	hash := istanbul.RLPHash(payload)
+	hash := crypto.HashBytes(payload)
 	sb.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)

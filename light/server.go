@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
-	rpc "github.com/seeleteam/go-seele/rpc"
+	"github.com/seeleteam/go-seele/rpc"
 	"github.com/seeleteam/go-seele/seele"
 )
 
@@ -70,12 +71,12 @@ func (s *ServiceServer) APIs() (apis []rpc.API) {
 }
 
 func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
-	newHeader := e.(common.Hash)
-	if newHeader.IsEmpty() {
+	newBlock := e.(*types.Block)
+	if newBlock == nil || newBlock.HeaderHash.IsEmpty() {
 		return
 	}
 
-	pm.chainHeaderChangeCh <- newHeader
+	pm.chainHeaderChangeCh <- newBlock.HeaderHash
 }
 
 func (pm *LightProtocol) blockLoop() {

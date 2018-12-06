@@ -107,6 +107,7 @@ func (m *DebtManager) Has(hash common.Hash) bool {
 	return m.debts[hash] != nil
 }
 
+// checking resend debt if it is not packed after timeout
 func (m *DebtManager) checking() {
 	toChecking := m.GetAll()
 

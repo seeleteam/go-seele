@@ -71,7 +71,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			_, err := core.ApplyDebt(statedb, d, task.coinbase, nil)
+			err := seele.BlockChain().ApplyDebtWithoutVerify(statedb, d, task.coinbase)
 			if err != nil {
 				log.Warn("apply debt error %s", err)
 				seele.DebtPool().RemoveDebtByHash(d.Hash)

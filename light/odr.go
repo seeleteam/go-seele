@@ -56,7 +56,9 @@ type odrRequest interface {
 
 type odrResponse interface {
 	getRequestID() uint32                                             // get the random request ID.
+	setRequestID(requestID uint32)                                    // set the random request ID.
 	getError() error                                                  // get the response error if any.
+	setError(err error)                                               // set the response error.
 	validate(request odrRequest, bcStore store.BlockchainStore) error // validate the retrieved response.
 }
 
@@ -80,4 +82,19 @@ func (item *OdrItem) getError() error {
 	}
 
 	return errors.New(item.Error)
+}
+
+func (item *OdrItem) setError(err error) {
+	if err == nil {
+		item.Error = ""
+	} else {
+		item.Error = err.Error()
+	}
+}
+
+func newErrorResponse(respCode uint16, reqID uint32, err error) (uint16, odrResponse) {
+	response := odrResponseFactories[respCode]()
+	response.setRequestID(reqID)
+	response.setError(err)
+	return respCode, response
 }

@@ -37,7 +37,7 @@ func GetReceiptTrie(receipts []*Receipt) *trie.Trie {
 
 	for _, r := range receipts {
 		buff := common.SerializePanic(r)
-		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
+		emptyTrie.Put(r.TxHash.Bytes(), buff)
 	}
 
 	return emptyTrie

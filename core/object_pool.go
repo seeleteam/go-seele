@@ -63,7 +63,7 @@ type afterAddFunc func(obj poolObject)
 // An object will be removed from the pool once included in a blockchain or pending time too long (> timeoutDuration).
 type Pool struct {
 	mutex              sync.RWMutex
-	capacity           uint
+	capacity           int
 	chain              blockchain
 	hashToTxMap        map[common.Hash]*poolItem
 	pendingQueue       *pendingQueue
@@ -76,7 +76,7 @@ type Pool struct {
 }
 
 // NewPool creates and returns a transaction pool.
-func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
+func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
 	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc) *Pool {
 	pool := &Pool{
 		capacity:           capacity,
@@ -247,7 +247,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 
 	// if txpool capacity reached, then discard lower price txs if any.
 	// Otherwise, return errObjectPoolFull.
-	if uint(len(pool.hashToTxMap)) >= pool.capacity {
+	if len(pool.hashToTxMap) >= pool.capacity {
 		c := pool.pendingQueue.discard(obj.Price())
 		if c == nil || c.len() == 0 {
 			return errObjectPoolFull
