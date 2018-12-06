@@ -7,8 +7,10 @@ package miner
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
@@ -27,6 +29,7 @@ type Task struct {
 	debtVerifier types.DebtVerifier
 }
 
+// NewTask return Task object
 func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.DebtVerifier) *Task {
 	return &Task{
 		header:       header,
@@ -37,6 +40,10 @@ func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
 func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
+
 	// choose transactions from the given txs
 	size := task.chooseDebts(seele, statedb, log)
 
@@ -58,10 +65,17 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 
 	task.header.StateHash = root
 
+	// exit
+	memory.Print(log, "task applyTransactionsAndDebts exit", now, true)
+
 	return nil
 }
 
 func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) int {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task chooseDebts entrance", now, false)
+
 	size := core.BlockByteLimit
 
 	for size > 0 {
@@ -82,6 +96,9 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 			task.debts = append(task.debts, d)
 		}
 	}
+
+	// exit
+	memory.Print(log, "task chooseDebts exit", now, true)
 
 	return size
 }
@@ -108,6 +125,10 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int) {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task chooseTransactions entrance", now, false)
+
 	txIndex := 1 // the first tx is miner reward
 
 	for size > 0 {
@@ -139,6 +160,9 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 		size -= txsSize
 	}
+
+	// exit
+	memory.Print(log, "task chooseTransactions exit", now, true)
 }
 
 // generateBlock builds a block from task

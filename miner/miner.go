@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
@@ -287,7 +288,15 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 
 // saveBlock saves the block in the given result to the blockchain
 func (miner *Miner) saveBlock(result *types.Block) error {
+	now := time.Now()
+	// entrance
+	memory.Print(miner.log, "miner saveBlock entrance", now, false)
+
 	ret := miner.seele.BlockChain().WriteBlock(result)
+
+	// entrance
+	memory.Print(miner.log, "miner saveBlock exit", now, true)
+
 	return ret
 }
 
