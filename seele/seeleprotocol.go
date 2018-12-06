@@ -160,7 +160,7 @@ func (sp *SeeleProtocol) syncer() {
 func (sp *SeeleProtocol) synchronise(p *peer) {
 	now := time.Now()
 	// entrance
-	memory.Print(p.log, "SeeleProtocol synchronise entrance", now, false)
+	memory.Print(sp.log, "SeeleProtocol synchronise entrance", now, false)
 
 	if p == nil {
 		return
@@ -171,7 +171,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		// one step
-		memory.Print(p.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
+		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
 	pHead, pTd := p.Head()
@@ -179,7 +179,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
 		// two step
-		memory.Print(p.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
+		memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
 		return
 	}
 
@@ -192,7 +192,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		}
 
 		// three step
-		memory.Print(p.log, "SeeleProtocol synchronise downloader error", now, true)
+		memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
 
 		return
 	}
@@ -201,7 +201,7 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	sp.broadcastChainHead()
 
 	// exit
-	memory.Print(p.log, "SeeleProtocol synchronise exit", now, true)
+	memory.Print(sp.log, "SeeleProtocol synchronise exit", now, true)
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
