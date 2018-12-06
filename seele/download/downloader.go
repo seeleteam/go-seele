@@ -214,10 +214,11 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		return err
 	}
 
-	d.log.Debug("Downloader.doSynchronise start task manager from height=%d, target height=%d", ancestor, height)
+	d.log.Debug("Downloader.doSynchronise start task manager from height=%d, target height=%d master=%s", ancestor, height, d.masterPeer)
 	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
 	d.tm = tm
 
+	bMasterStarted := false
 	d.lock.Lock()
 	d.syncStatus = statusFetching
 	for _, pConn := range d.peers {
@@ -226,10 +227,22 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 			continue
 		}
 		d.sessionWG.Add(1)
+		if pConn.peerID == d.masterPeer {
+			d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
+			bMasterStarted = true
+		}
 
 		go d.peerDownload(pConn, tm)
 	}
 	d.lock.Unlock()
+
+	if !bMasterStarted {
+		// if master not starts, need cancel.
+		d.log.Debug("Downloader.doSynchronise bMasterStarted = %d. cancel. masterid=%s", bMasterStarted, d.masterPeer)
+		d.Cancel()
+	} else {
+		d.log.Debug("Downloader.doSynchronise bMasterStarted = %d.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
+	}
 	d.sessionWG.Wait()
 
 	d.lock.Lock()
@@ -421,7 +434,7 @@ func (d *Downloader) DeliverMsg(peerID string, msg *p2p.Message) {
 func (d *Downloader) Cancel() {
 	d.lock.Lock()
 	defer d.lock.Unlock()
-
+	d.log.Debug("Downloader.Cancel called")
 	if d.cancelCh != nil {
 		select {
 		case <-d.cancelCh:
@@ -443,7 +456,7 @@ func (d *Downloader) Terminate() {
 func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
 	defer d.sessionWG.Done()
 
-	d.log.Debug("Downloader.peerDownload start. peerID=%s", conn.peerID)
+	d.log.Debug("Downloader.peerDownload start. peerID=%s masterID=%s", conn.peerID, d.masterPeer)
 	isMaster := (conn.peerID == d.masterPeer)
 	peerID := conn.peerID
 
@@ -534,7 +547,7 @@ outLoop:
 	if isMaster || tm.isDone() {
 		d.Cancel()
 	}
-	d.log.Debug("Downloader.peerDownload end. peerID=%s", conn.peerID)
+	d.log.Debug("Downloader.peerDownload end. peerID=%s masterID=%s", conn.peerID, d.masterPeer)
 }
 
 // processBlocks writes blocks to the blockchain.
