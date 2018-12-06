@@ -15,7 +15,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/crypto"
 	"math/big"
-	"github.com/influxdata/influxdb/pkg/testing/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

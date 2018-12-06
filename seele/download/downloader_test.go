@@ -486,7 +486,11 @@ func Test_Downloader_Terminate(t *testing.T) {
 
 	dl.Terminate()
 	dl.Terminate()
-	assert.Equal(t, dl.cancelCh == nil, true)
+	select {
+	case <-dl.cancelCh:
+	default:
+		t.Fatalf("cancelCh not close!")
+	}
 }
 
 func Test_Downloader_PeerDownload(t *testing.T) {
