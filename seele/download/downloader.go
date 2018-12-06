@@ -427,7 +427,6 @@ func (d *Downloader) Cancel() {
 		case <-d.cancelCh:
 		default:
 			close(d.cancelCh)
-			d.cancelCh = nil
 		}
 	}
 }
