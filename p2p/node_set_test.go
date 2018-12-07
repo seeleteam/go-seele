@@ -20,7 +20,7 @@ func Test_NodeSet(t *testing.T) {
 	set := NewNodeSet()
 
 	p1 := getNode()
-	set.add(p1, false)
+	set.tryAdd(p1)
 
 	p2 := set.randSelect()
 	if p2 == nil {
