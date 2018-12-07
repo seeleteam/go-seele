@@ -69,6 +69,8 @@ var (
 	// TransferAmountIntrinsicGas is the intrinsic gas to transfer amount.
 	TransferAmountIntrinsicGas = ethIntrinsicGas(nil)
 
+	CrossShardTransactionGas = 3 * TransferAmountIntrinsicGas
+
 	// verified tx signature cache <txHash, error>
 	sigCache = common.MustNewCache(20 * 1024)
 )
@@ -116,8 +118,8 @@ func GetTransactionsSize(txs []*Transaction) int {
 
 // GetTxFeeShare returns the miner fee on sender shard of cross-shard tx.
 func GetTxFeeShare(fee *big.Int) *big.Int {
-	mod := big.NewInt(0).Mod(fee, big.NewInt(2))
-	unit := big.NewInt(0).Div(fee, big.NewInt(2))
+	mod := big.NewInt(0).Mod(fee, big.NewInt(3))
+	unit := big.NewInt(0).Div(fee, big.NewInt(3))
 
 	// give mod value to transaction fee share
 	return big.NewInt(0).Add(unit, mod)
@@ -158,7 +160,7 @@ func (tx *Transaction) GetHash() common.Hash {
 func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {
 	gasLimit := TransferAmountIntrinsicGas
 	if !from.IsEmpty() && !to.IsEmpty() && from.Shard() != to.Shard() {
-		gasLimit = 2 * gasLimit
+		gasLimit = CrossShardTransactionGas
 	}
 
 	return newTx(from, to, amount, price, gasLimit, nonce, nil)

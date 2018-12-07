@@ -153,13 +153,13 @@ func GetDebtsSize(debts []*Debt) int {
 
 // GetDebtShareFee get debt share fee
 func GetDebtShareFee(fee *big.Int) *big.Int {
-	unit := big.NewInt(0).Div(fee, big.NewInt(2))
-	return unit
+	unit := big.NewInt(0).Div(fee, big.NewInt(3))
+	return new(big.Int).Mul(unit, big.NewInt(2))
 }
 
 func (d *Debt) Fee() *big.Int {
 	// @todo for contract case, should use the fee in tx receipt
-	txIntrFee := new(big.Int).Mul(d.Data.Price, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
+	txIntrFee := new(big.Int).Mul(d.Data.Price, new(big.Int).SetUint64(CrossShardTransactionGas))
 
 	return GetDebtShareFee(txIntrFee)
 }

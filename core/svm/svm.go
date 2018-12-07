@@ -83,7 +83,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, error) {
 	receipt := &types.Receipt{
 		TxHash:  ctx.Tx.Hash,
-		UsedGas: types.TransferAmountIntrinsicGas * 2,
+		UsedGas: types.CrossShardTransactionGas,
 	}
 
 	// Add from nonce
