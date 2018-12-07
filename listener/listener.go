@@ -79,6 +79,7 @@ func NewContractEventABI(abiPath string, contract common.Address, eventNames ...
 
 // Event represents a contract event instance from Log.
 type Event struct {
+	TxHash    common.Hash
 	Contract  common.Address
 	EventName string
 	Topic     common.Hash
@@ -118,6 +119,7 @@ func (c *ContractEventABI) GetEvent(receipt *types.Receipt) ([]*Event, error) {
 		}
 
 		event := &Event{
+			TxHash:    receipt.TxHash,
 			Contract:  c.contract,
 			EventName: eventName,
 			Topic:     log.Topics[0],
