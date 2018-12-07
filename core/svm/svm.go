@@ -83,7 +83,7 @@ func Process(ctx *Context) (*types.Receipt, error) {
 func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, error) {
 	receipt := &types.Receipt{
 		TxHash:  ctx.Tx.Hash,
-		UsedGas: types.TransferAmountIntrinsicGas * 2,
+		UsedGas: types.CrossShardTotalGas,
 	}
 
 	// Add from nonce
@@ -106,7 +106,7 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 
 	// handle fee
 	ctx.Statedb.SubBalance(sender, txFee)
-	minerFee := types.GetTxFeeShare(txFee)
+	minerFee := new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(types.CrossShardTransactionGas))
 	ctx.Statedb.AddBalance(ctx.BlockHeader.Creator, minerFee)
 
 	// Record statedb hash
