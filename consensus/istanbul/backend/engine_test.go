@@ -50,7 +50,7 @@ func newTestGenesis(n int) (*core.Genesis, []*ecdsa.PrivateKey) {
 func newBlockChain(n int) (*core.Blockchain, *backend) {
 	db, _ := leveldb.NewTestDatabase()
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(db))
-	genesis, nodeKeys := newTestGenesis(1)
+	genesis, nodeKeys := newTestGenesis(n)
 
 	if err := genesis.InitializeAndValidate(bcStore, db); err != nil {
 		panic(err)
@@ -60,7 +60,6 @@ func newBlockChain(n int) (*core.Blockchain, *backend) {
 	b, _ := New(config, nodeKeys[0], db).(*backend)
 
 	bc, err := core.NewBlockchain(bcStore, db, "", b, nil)
-	//bc, err := core.NewBlockchain(bcStore, db, "", pow.NewEngine(1), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -92,17 +91,15 @@ func newBlockChain(n int) (*core.Blockchain, *backend) {
 
 func makeHeader(parent *types.Block, config *istanbul.Config) *types.BlockHeader {
 	TestCoinbase := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781")
-	time := new(big.Int).SetInt64(time.Now().Unix())
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.Header.Hash(),
 		Height:            parent.Height() + 1,
-		//CreateTimestamp:   new(big.Int).Add(parent.Header.CreateTimestamp, new(big.Int).SetUint64(config.BlockPeriod)),
-		CreateTimestamp: time,
-		Difficulty:      defaultDifficulty,
-		ExtraData:       parent.Header.ExtraData,
-		StateHash:       parent.Header.StateHash,
-		Witness:         istanbul.EmptyWitness,
-		Creator:         TestCoinbase,
+		CreateTimestamp:   new(big.Int).Add(parent.Header.CreateTimestamp, new(big.Int).SetUint64(config.BlockPeriod)),
+		Difficulty:        defaultDifficulty,
+		ExtraData:         parent.Header.ExtraData,
+		StateHash:         parent.Header.StateHash,
+		Witness:           istanbul.EmptyWitness,
+		Creator:           TestCoinbase,
 	}
 	return header
 }
@@ -182,7 +179,7 @@ func TestSealStopChannel(t *testing.T) {
 }
 
 func TestSealCommittedOtherHash(t *testing.T) {
-	chain, engine := newBlockChain(4)
+	chain, engine := newBlockChain(1)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	b, err := engine.updateBlock(block.Header, block)
 	if err != nil {
