@@ -287,8 +287,8 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.BlockHe
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeader) error {
 	// unused fields, force to set to empty
-	//header.Creator = common.Address{}
-	header.Witness = istanbul.EmptyWitness
+	header.Creator = common.Address{}
+	header.Witness = make([]byte, 8)
 	header.Consensus = types.IstanbulConsensus
 
 	// copy the parent extra data as the header extra data

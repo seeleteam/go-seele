@@ -10,8 +10,6 @@ import (
 	"github.com/seeleteam/go-seele/crypto"
 )
 
-var EmptyWitness = make([]byte, 8)
-
 // GetSignatureAddress gets the signer address from the signature
 func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// 1. Keccak data

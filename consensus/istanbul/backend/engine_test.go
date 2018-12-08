@@ -90,7 +90,6 @@ func newBlockChain(n int) (*core.Blockchain, *backend) {
 }
 
 func makeHeader(parent *types.Block, config *istanbul.Config) *types.BlockHeader {
-	TestCoinbase := common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781")
 	header := &types.BlockHeader{
 		PreviousBlockHash: parent.Header.Hash(),
 		Height:            parent.Height() + 1,
@@ -98,8 +97,7 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.BlockHeader
 		Difficulty:        defaultDifficulty,
 		ExtraData:         parent.Header.ExtraData,
 		StateHash:         parent.Header.StateHash,
-		Witness:           istanbul.EmptyWitness,
-		Creator:           TestCoinbase,
+		Witness:           make([]byte, 8),
 	}
 	return header
 }
@@ -115,6 +113,9 @@ func makeBlock(chain *core.Blockchain, engine *backend, parent *types.Block) *ty
 }
 
 func makeBlockWithoutSeal(chain *core.Blockchain, engine *backend, parent *types.Block) *types.Block {
+	api := API{chain: chain, istanbul: engine}
+	api.Propose(common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781"), true)
+
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	reward := consensus.GetReward(header.Height)
