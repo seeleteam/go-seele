@@ -97,7 +97,7 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.BlockHeader
 		Difficulty:        defaultDifficulty,
 		ExtraData:         parent.Header.ExtraData,
 		StateHash:         parent.Header.StateHash,
-		Witness:           make([]byte, 8),
+		Witness:           make([]byte, istanbul.WitnessSize),
 	}
 	return header
 }

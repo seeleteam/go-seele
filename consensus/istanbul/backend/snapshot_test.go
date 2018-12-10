@@ -343,7 +343,7 @@ func TestVoting(t *testing.T) {
 				CreateTimestamp: big.NewInt(int64(j) * int64(config.BlockPeriod)),
 				Creator:         accounts.address(vote.voted),
 				Difficulty:      defaultDifficulty,
-				Witness:         make([]byte, 8),
+				Witness:         make([]byte, istanbul.WitnessSize),
 				Consensus:       types.IstanbulConsensus,
 			}
 			extra, _ := prepareExtra(headers[j], validators)

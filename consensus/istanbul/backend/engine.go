@@ -288,7 +288,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.BlockHe
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeader) error {
 	// unused fields, force to set to empty
 	header.Creator = common.Address{}
-	header.Witness = make([]byte, 8)
+	header.Witness = make([]byte, istanbul.WitnessSize)
 	header.Consensus = types.IstanbulConsensus
 
 	// copy the parent extra data as the header extra data
@@ -304,6 +304,10 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeade
 	snap, err := sb.snapshot(chain, number-1, header.PreviousBlockHash, nil)
 	if err != nil {
 		return err
+	}
+
+	if proposer := snap.ValSet.GetProposer(); proposer != nil && header.Height == 1 {
+		header.Creator = proposer.Address()
 	}
 
 	// get valid candidate list
