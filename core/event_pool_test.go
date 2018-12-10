@@ -14,7 +14,7 @@ import (
 func newEventPool() (*EventPool, func()) {
 	chain := newMockBlockchain()
 	db, dispose := leveldb.NewTestDatabase()
-	return NewEventPool(10000, store.NewBlockchainDatabase(db), chain), dispose
+	return NewEventPool(10000, store.NewBlockchainDatabase(db), chain, nil), dispose
 }
 
 func getRandomTx() *types.Transaction {
@@ -67,13 +67,11 @@ func Test_EventPool_getBeginHeight(t *testing.T) {
 	pool, dispose := newEventPool()
 	defer dispose()
 
-	store := pool.mainChainStore
-
 	block := newTestFullBlock(3, 3)
 	err := pool.mainChainStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.NoError(t, err)
 
-	height, err := getBeginHeight(store)
+	height, err := pool.getBeginHeight()
 	assert.NoError(t, err)
 	assert.Equal(t, height, uint64(1))
 

@@ -27,7 +27,7 @@ type EventPool struct {
 }
 
 // NewEventPool creates and returns an event pool.
-func NewEventPool(capacity int, mainChainStore store.BlockchainStore, chain blockchain) *EventPool {
+func NewEventPool(capacity int, mainChainStore store.BlockchainStore, chain blockchain, abi *listener.ContractEventABI) *EventPool {
 	log := log.GetLogger("eventpool")
 
 	pool := &EventPool{
@@ -38,10 +38,22 @@ func NewEventPool(capacity int, mainChainStore store.BlockchainStore, chain bloc
 		chain:          chain,
 	}
 
+	startHeight, err := pool.getBeginHeight()
+	if err != nil {
+		// return no error as the chain could not deal event.
+		// return event pool to avoid nil pointer.
+		log.Warn("failed to get current header height, %v", err)
+		return pool
+	}
+
+	// height - 1 to ensure deal the current header height
+	go pool.PollingEvents(abi, startHeight-1)
+
 	return pool
 }
 
-func getBeginHeight(store store.BlockchainStore) (uint64, error) {
+func (pool *EventPool) getBeginHeight() (uint64, error) {
+	store := pool.mainChainStore
 	hash, err := store.GetHeadBlockHash()
 	if err != nil {
 		return 0, errors.NewStackedError(err, "failed to get block hash")
@@ -76,18 +88,18 @@ func (pool *EventPool) PollingEvents(abi *listener.ContractEventABI, beginHeight
 		select {
 		case <-ticker.C:
 			// get current header height
-			headerHeight, err = getBeginHeight(store)
+			headerHeight, err = pool.getBeginHeight()
 			if err != nil {
-				pool.log.Warn("failed to get current header height, %v", err)
+				pool.log.Error("failed to get current header height, %v", err)
 				continue
 			}
 
-			// void duplicate blocks request
-			if targetHeight+1 > headerHeight {
+			// avoid duplicate blocks request
+			if targetHeight >= headerHeight {
 				continue
 			}
 
-			// void skip block
+			// avoid skip block
 			targetHeight++
 
 			// get the confirmed blocks over ConfirmedBlockNumber
@@ -97,19 +109,19 @@ func (pool *EventPool) PollingEvents(abi *listener.ContractEventABI, beginHeight
 
 			blockHash, err := store.GetBlockHash(targetHeight - common.ConfirmedBlockNumber)
 			if err != nil {
-				pool.log.Warn("failed to get confirmed block hash, %v", err)
+				pool.log.Error("failed to get confirmed block hash, %v", err)
 				continue
 			}
 
 			receipts, err := store.GetReceiptsByBlockHash(blockHash)
 			if err != nil {
-				pool.log.Warn("failed to get receipts by block hash, %v", err)
+				pool.log.Error("failed to get receipts by block hash, %v", err)
 				continue
 			}
 
 			events, err := abi.GetEvents(receipts)
 			if err != nil {
-				pool.log.Warn("failed to get events from receipts, %v", err)
+				pool.log.Error("failed to get events from receipts, %v", err)
 				continue
 			}
 
