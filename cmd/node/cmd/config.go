@@ -62,6 +62,13 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 		config.SeeleConfig.Coinbase = common.HexMustToAddres(config.BasicConfig.Coinbase)
 	}
 
+	if len(config.BasicConfig.PrivateKey) > 0 {
+		config.SeeleConfig.CoinbasePrivateKey, err = crypto.LoadECDSAFromString(config.BasicConfig.PrivateKey)
+		if err != nil {
+			return config, err
+		}
+	}
+
 	config.SeeleConfig.TxConf = *core.DefaultTxPoolConfig()
 	config.SeeleConfig.GenesisConfig = cmdConfig.GenesisConfig
 	comm.LogConfiguration.PrintLog = config.LogConfig.PrintLog
