@@ -8,6 +8,7 @@ package consensus
 import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
@@ -77,4 +78,14 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlockByHash(hash common.Hash) *types.Block
+}
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// NewChainHead handles a new head block comes
+	NewChainHead() error
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, data p2p.Message) (bool, error)
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
 }
