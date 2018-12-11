@@ -36,7 +36,7 @@ func GetConsensusEngine(minerAlgorithm string) (consensus.Engine, error) {
 }
 
 func GetBFTEngine(privateKey *ecdsa.PrivateKey, folder string) (consensus.Engine, error) {
-	path := filepath.Join(folder, "bftdata")
+	path := filepath.Join(folder, common.BFTDataFolder)
 	db, err := leveldb.NewLevelDB(path)
 	if err != nil {
 		return nil, errors.NewStackedError(err, "create bft folder failed")

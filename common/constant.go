@@ -45,6 +45,9 @@ const (
 	// BFT mineralgorithm
 	BFTEngine = "bft"
 
+	// BFT data folder
+	BFTDataFolder = "bftdata"
+
 	// EVMStackLimit increase evm stack limit to 8192
 	EVMStackLimit = 8192
 
