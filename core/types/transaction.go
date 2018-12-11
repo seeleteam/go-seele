@@ -20,6 +20,15 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+// TxType represents transaction type
+type TxType byte
+
+// Transaction types
+const (
+	TxTypeRegular TxType = iota
+	TxTypeReward
+)
+
 const (
 	defaultMaxPayloadSize = 32 * 1024
 
@@ -81,6 +90,7 @@ var (
 
 // TransactionData wraps the data in a transaction.
 type TransactionData struct {
+	Type         TxType         // Transaction type
 	From         common.Address // From is the address of the sender
 	To           common.Address // To is the receiver address, and empty address is used to create contract
 	Amount       *big.Int       // Amount is the amount to be transferred
@@ -278,6 +288,7 @@ func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint6
 	}
 
 	rewardTxData := TransactionData{
+		Type:      TxTypeReward,
 		From:      common.EmptyAddress,
 		To:        miner,
 		Amount:    new(big.Int).Set(reward),
