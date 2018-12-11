@@ -116,8 +116,7 @@ func makeBlockWithoutSeal(chain *core.Blockchain, engine *backend, parent *types
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	reward := consensus.GetReward(header.Height)
-	header.Creator = engine.address
-	rewardTx, err := types.NewRewardTransaction(header.Creator, reward, header.CreateTimestamp.Uint64())
+	rewardTx, err := types.NewRewardTransaction(engine.address, reward, header.CreateTimestamp.Uint64())
 	if err != nil {
 		panic(err)
 	}
