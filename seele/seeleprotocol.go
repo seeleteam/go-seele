@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/event"
@@ -668,4 +669,16 @@ handler:
 
 func (p *SeeleProtocol) GetProtocolVersion() (uint, error) {
 	return p.Protocol.Version, nil
+}
+
+func (sp *SeeleProtocol) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {
+	m := make(map[common.Address]consensus.Peer)
+	for _, p := range sp.peerSet.getPeerByShard(common.LocalShardNumber) {
+		addr := p.Node.ID
+		if targets[addr] {
+			m[addr] = p
+		}
+	}
+
+	return m
 }
