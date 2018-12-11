@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	// Maximum number of peers that can be connected
-	defaultMaxPeers = 500
+	// Maximum number of peers that can be connected for each shard
+	maxConnsPerShard = 30
 
-	// Maximum number of inbound connections for concurrent handshaking.
-	maxAcceptConns = 50
+	// Maximum number of peers that node actively connects to.
+	maxActiveConnsPerShard = 24
 
 	defaultDialTimeout = 15 * time.Second
 
@@ -89,9 +89,6 @@ type Server struct {
 	peerLock sync.Mutex // lock for peer set
 	log      *log.SeeleLog
 
-	// MaxPeers max number of peers that can be connected
-	MaxPeers int
-
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
 	// Zero defaults to preset values.
@@ -106,6 +103,14 @@ type Server struct {
 
 	// genesisHash is used for handshake
 	genesisHash common.Hash
+
+	// maxConnections represents max connections that node can connect to.
+	// Reject connections if srv.PeerCount > maxConnections.
+	maxConnections int
+
+	// maxActiveConnections represents max connections that node can actively connect to.
+	// Need not connect to a new node if srv.PeerCount > maxActiveConnections.
+	maxActiveConnections int
 }
 
 // NewServer initialize a server
@@ -117,17 +122,17 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	genesis.ShardNumber = shard
 
 	return &Server{
-		Config:          config,
-		running:         false,
-		log:             log.GetLogger("p2p"),
-		MaxPeers:        defaultMaxPeers,
-		quit:            make(chan struct{}),
-		peerSet:         NewPeerSet(),
-		nodeSet:         NewNodeSet(),
-		MaxPendingPeers: 0,
-		Protocols:       protocols,
-		genesis:         genesis,
-		genesisHash:     hash,
+		Config:               config,
+		running:              false,
+		log:                  log.GetLogger("p2p"),
+		quit:                 make(chan struct{}),
+		peerSet:              NewPeerSet(),
+		MaxPendingPeers:      0,
+		Protocols:            protocols,
+		genesis:              genesis,
+		genesisHash:          hash,
+		maxConnections:       maxConnsPerShard * common.ShardCount,
+		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
 	}
 }
 
@@ -198,6 +203,11 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 
 	srv.nodeSet.tryAdd(node)
+	if srv.PeerCount() > srv.maxActiveConnections {
+		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
+		return
+	}
+
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
 	srv.connectNode(node)
 }
@@ -349,7 +359,7 @@ func (srv *Server) Wait() {
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
 	// If all slots are taken, no further connections are accepted.
-	tokens := maxAcceptConns
+	tokens := srv.maxConnections
 	if srv.MaxPendingPeers > 0 {
 		tokens = srv.MaxPendingPeers
 	}
@@ -390,6 +400,11 @@ func (srv *Server) listenLoop() {
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
+	if flags == inboundConn && srv.PeerCount() > srv.maxConnections {
+		srv.log.Warn("setup connection with peer %s. reached max incoming connection limit, reject!", dialDest)
+		return errors.New("Too many incoming connections")
+	}
+
 	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
