@@ -277,35 +277,6 @@ func NewMessageTransaction(from, to common.Address, amount *big.Int, price *big.
 	return newTx(from, to, amount, price, gasLimit, nonce, msg)
 }
 
-// NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
-func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint64) (*Transaction, error) {
-	if reward == nil {
-		return nil, ErrAmountNil
-	}
-
-	if reward.Sign() < 0 {
-		return nil, ErrAmountNegative
-	}
-
-	rewardTxData := TransactionData{
-		Type:      TxTypeReward,
-		From:      common.EmptyAddress,
-		To:        miner,
-		Amount:    new(big.Int).Set(reward),
-		GasPrice:  big.NewInt(0),
-		Timestamp: timestamp,
-		Payload:   make([]byte, 0),
-	}
-
-	rewardTx := &Transaction{
-		Hash:      crypto.MustHash(rewardTxData),
-		Data:      rewardTxData,
-		Signature: crypto.Signature{Sig: make([]byte, 0)},
-	}
-
-	return rewardTx, nil
-}
-
 // Sign signs the transaction with the specified private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Hash = crypto.MustHash(tx.Data)

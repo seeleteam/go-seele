@@ -12,6 +12,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -89,7 +90,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 // handleMinerRewardTx handles the miner reward transaction.
 func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
 	reward := consensus.GetReward(task.header.Height)
-	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
+	rewardTx, err := txs.NewRewardTx(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
 	if err != nil {
 		return nil, err
 	}
