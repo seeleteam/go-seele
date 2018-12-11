@@ -61,9 +61,6 @@ var (
 	// ErrPayloadEmpty is returned when create or call a contract without payload.
 	ErrPayloadEmpty = errors.New("empty payload")
 
-	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
-	ErrTimestampMismatch = errors.New("timestamp mismatch")
-
 	// ErrSigInvalid is returned when the transaction signature is invalid.
 	ErrSigInvalid = errors.New("signature is invalid")
 

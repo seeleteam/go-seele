@@ -53,10 +53,3 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 	emptyTrie := GetReceiptTrie(receipts)
 	return emptyTrie.Hash()
 }
-
-// MakeRewardReceipt generates the receipt for the specified reward transaction
-func MakeRewardReceipt(reward *Transaction) *Receipt {
-	return &Receipt{
-		TxHash: reward.Hash,
-	}
-}

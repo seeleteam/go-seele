@@ -95,7 +95,7 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 		return nil, err
 	}
 
-	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
+	rewardTxReceipt, err := txs.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
 		return nil, err
 	}

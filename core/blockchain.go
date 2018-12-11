@@ -6,7 +6,6 @@
 package core
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sync"
@@ -19,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
@@ -53,13 +53,6 @@ var (
 
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
-
-	// ErrBlockInvalidToAddress is returned when the to address of miner reward tx is nil.
-	ErrBlockInvalidToAddress = errors.New("invalid to address")
-
-	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
-	// the creator address in the block header.
-	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
 
 	// ErrBlockCreateTimeNull is returned when block create time is nil
 	ErrBlockCreateTimeNull = errors.New("block must have create time")
@@ -470,12 +463,6 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Statedb, []*types.Receipt, error) {
 	auditor := log.NewAuditor(bc.log)
 
-	minerRewardTx, err := bc.validateMinerRewardTx(block)
-	if err != nil {
-		return nil, nil, errors.NewStackedError(err, "failed to validate miner reward tx")
-	}
-	auditor.Audit("succeed to validate reward tx")
-
 	statedb, err := state.NewStatedb(root, bc.accountStateDB)
 	if err != nil {
 		return nil, nil, errors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
@@ -496,104 +483,57 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 	}
 	auditor.Audit("succeed to validate %v debts", len(block.Debts))
 
-	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
+	// apply txs
+	receipts, err := bc.applyRewardAndRegularTxs(statedb, block.Transactions[0], block.Transactions[1:], block.Header)
 	if err != nil {
-		return nil, nil, errors.NewStackedErrorf(err, "failed to update statedb")
+		return nil, nil, errors.NewStackedErrorf(err, "failed to apply reward and regular txs")
 	}
 	auditor.Audit("succeed to update stateDB for %v txs", len(block.Transactions))
 
 	return statedb, receipts, nil
 }
 
-func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
-	if len(block.Transactions) == 0 {
-		return nil, ErrBlockEmptyTxs
-	}
-
-	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data.To.IsEmpty() {
-		return nil, ErrBlockInvalidToAddress
-	}
-
-	if !bytes.Equal(minerRewardTx.Data.To.Bytes(), block.Header.Creator.Bytes()) {
-		return nil, ErrBlockCoinbaseMismatch
-	}
-
-	if minerRewardTx.Data.Amount == nil {
-		return nil, types.ErrAmountNil
-	}
-
-	if minerRewardTx.Data.Amount.Sign() < 0 {
-		return nil, types.ErrAmountNegative
-	}
-
-	reward := consensus.GetReward(block.Header.Height)
-	if reward == nil || reward.Cmp(minerRewardTx.Data.Amount) != 0 {
-		return nil, fmt.Errorf("invalid reward Amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
-	}
-
-	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {
-		return nil, types.ErrTimestampMismatch
-	}
-
-	return minerRewardTx, nil
-}
-
-func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction,
-	blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
+func (bc *Blockchain) applyRewardAndRegularTxs(statedb *state.Statedb, rewardTx *types.Transaction, regularTxs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
 	auditor := log.NewAuditor(bc.log)
 
-	// process miner reward
-	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
+	receipts := make([]*types.Receipt, len(regularTxs)+1)
+
+	// validate and apply reward txs
+	if err := txs.ValidateRewardTx(rewardTx, blockHeader); err != nil {
+		return nil, errors.NewStackedError(err, "failed to validate reward tx")
+	}
+
+	rewardReceipt, err := txs.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to apply miner reward tx")
+		return nil, errors.NewStackedError(err, "failed to apply reward tx")
 	}
-	auditor.Audit("succeed to apply reward tx")
+	receipts[0] = rewardReceipt
+	auditor.Audit("succeed to validate and apply reward tx")
 
-	receipts := make([]*types.Receipt, len(txs)+1)
-
-	// add the receipt of the reward tx
-	receipts[0] = rewardTxReceipt
-
-	if err := types.BatchValidateTxs(txs); err != nil {
-		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(txs))
+	// batch validate signature to improve perf
+	if err := types.BatchValidateTxs(regularTxs); err != nil {
+		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(regularTxs))
 	}
-	auditor.Audit("succeed to batch validate %v txs", len(txs))
+	auditor.Audit("succeed to batch validate (signature) %v txs", len(regularTxs))
 
-	// process other txs
-	for i, tx := range txs {
+	// process regular txs
+	for i, tx := range regularTxs {
 		txIdx := i + 1
 
 		if err := tx.ValidateState(statedb); err != nil {
 			return nil, errors.NewStackedErrorf(err, "failed to validate tx[%v] against statedb", txIdx)
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, txIdx, minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, txIdx, blockHeader.Creator, statedb, blockHeader)
 		if err != nil {
 			return nil, errors.NewStackedErrorf(err, "failed to apply tx[%v]", txIdx)
 		}
 
 		receipts[txIdx] = receipt
 	}
-	auditor.Audit("succeed to apply %v txs", len(txs))
+	auditor.Audit("succeed to apply %v txs", len(regularTxs))
 
 	return receipts, nil
-}
-
-// ApplyRewardTx applies a reward transaction, changes corresponding statedb and generates a receipt.
-func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.Receipt, error) {
-	statedb.CreateAccount(rewardTx.Data.To)
-	statedb.AddBalance(rewardTx.Data.To, rewardTx.Data.Amount)
-
-	hash, err := statedb.Hash()
-	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to get statedb root hash")
-	}
-
-	receipt := types.MakeRewardReceipt(rewardTx)
-	receipt.PostState = hash
-
-	return receipt, nil
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
