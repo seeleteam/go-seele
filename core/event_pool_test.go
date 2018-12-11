@@ -71,7 +71,7 @@ func Test_EventPool_getBeginHeight(t *testing.T) {
 	err := pool.mainChainStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.NoError(t, err)
 
-	height, err := pool.getBeginHeight()
+	height, err := pool.getMainChainHeight()
 	assert.NoError(t, err)
 	assert.Equal(t, height, uint64(1))
 
