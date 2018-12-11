@@ -113,12 +113,10 @@ func makeBlock(chain *core.Blockchain, engine *backend, parent *types.Block) *ty
 }
 
 func makeBlockWithoutSeal(chain *core.Blockchain, engine *backend, parent *types.Block) *types.Block {
-	api := API{chain: chain, istanbul: engine}
-	api.Propose(common.HexMustToAddres("0xd0c549b022f5a17a8f50a4a448d20ba579d01781"), true)
-
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	reward := consensus.GetReward(header.Height)
+	header.Creator = engine.address
 	rewardTx, err := types.NewRewardTransaction(header.Creator, reward, header.CreateTimestamp.Uint64())
 	if err != nil {
 		panic(err)
@@ -218,7 +216,7 @@ func TestSealCommittedOtherHash(t *testing.T) {
 	}
 	go eventLoop()
 	seal := func() {
-		engine.SealWithReturn(chain, otherBlock, nil)
+		engine.Seal(chain, otherBlock, nil, nil)
 		t.Error("seal should not be completed")
 	}
 	go seal()

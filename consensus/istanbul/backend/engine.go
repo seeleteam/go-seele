@@ -306,10 +306,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeade
 		return err
 	}
 
-	if proposer := snap.ValSet.GetProposer(); proposer != nil && header.Height == 1 {
-		header.Creator = proposer.Address()
-	}
-
 	// get valid candidate list
 	sb.candidatesLock.RLock()
 	var addresses []common.Address
