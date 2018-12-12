@@ -8,7 +8,6 @@ package consensus
 import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
@@ -85,7 +84,7 @@ type Handler interface {
 	// NewChainHead handles a new head block comes
 	NewChainHead() error
 	// HandleMsg handles a message from peer
-	HandleMsg(address common.Address, data p2p.Message) (bool, error)
+	HandleMsg(address common.Address, msg interface{}) (bool, error)
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
 }
