@@ -78,3 +78,13 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlockByHash(hash common.Hash) *types.Block
 }
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// NewChainHead handles a new head block comes
+	NewChainHead() error
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, msg interface{}) (bool, error)
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
+}

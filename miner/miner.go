@@ -125,6 +125,10 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil)
+	}
+
 	// try to prepare the first block
 	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
@@ -146,6 +150,10 @@ func (miner *Miner) Stop() {
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
 	miner.stopMining()
+
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		istanbul.Stop()
+	}
 }
 
 func (miner *Miner) stopMining() {
@@ -219,6 +227,10 @@ out:
 				if ret != nil {
 					miner.log.Error("failed to save the block, for %s", ret.Error())
 					break
+				}
+
+				if h, ok := miner.engine.(consensus.Handler); ok {
+					h.NewChainHead()
 				}
 
 				miner.log.Info("saved mined block successfully")
