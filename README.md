@@ -3,7 +3,7 @@
 
 
 
-The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem. https://seele.pro
+The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
 
 # Downloading & building the source
 
