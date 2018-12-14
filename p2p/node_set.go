@@ -35,12 +35,30 @@ func NewNodeSet() *nodeSet {
 	}
 }
 
-func (set *nodeSet) add(p *discovery.Node, bConnected bool) {
+func (set *nodeSet) setNodeStatus(p *discovery.Node, bConnected bool) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
+
+	item := set.nodeMap[p.ID]
+	if item == nil {
+		return
+	}
+
+	item.bConnected = bConnected
+}
+
+// tryAdd add a new node to the map if it's not exist.
+func (set *nodeSet) tryAdd(p *discovery.Node) {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+
+	if set.nodeMap[p.ID] != nil {
+		return
+	}
+
 	item := &nodeItem{
 		node:       p,
-		bConnected: bConnected,
+		bConnected: false,
 	}
 
 	set.nodeMap[p.ID] = item

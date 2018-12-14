@@ -42,8 +42,10 @@ const (
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
 
-	inboundConn  = 1
-	outboundConn = 2
+	// interval to select new node to connect from the free node list.
+	checkConnsNumInterval = 8 * time.Second
+	inboundConn           = 1
+	outboundConn          = 2
 
 	// In transferring handshake msg, length of extra data
 	extraDataLen = 24
@@ -82,6 +84,7 @@ type Server struct {
 
 	loopWG sync.WaitGroup // loop, listenLoop
 
+	nodeSet  *nodeSet
 	peerSet  *peerSet
 	peerLock sync.Mutex // lock for peer set
 	log      *log.SeeleLog
@@ -124,6 +127,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		log:                  log.GetLogger("p2p"),
 		quit:                 make(chan struct{}),
 		peerSet:              NewPeerSet(),
+		nodeSet:              NewNodeSet(),
 		MaxPendingPeers:      0,
 		Protocols:            protocols,
 		genesis:              genesis,
@@ -199,12 +203,17 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
+	srv.nodeSet.tryAdd(node)
 	if srv.PeerCount() > srv.maxActiveConnections {
 		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
 		return
 	}
 
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
+	srv.connectNode(node)
+}
+
+func (srv *Server) connectNode(node *discovery.Node) {
 	if srv.checkPeerExist(node.ID) {
 		return
 	}
@@ -233,6 +242,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 }
 
 func (srv *Server) deleteNode(node *discovery.Node) {
+	srv.nodeSet.delete(node)
 	srv.deletePeer(node.ID)
 }
 
@@ -261,6 +271,7 @@ func (srv *Server) addPeer(p *Peer) bool {
 	}
 
 	srv.peerSet.add(p)
+	srv.nodeSet.setNodeStatus(p.Node, true)
 	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
 	p.notifyProtocolsAddPeer()
 
@@ -275,6 +286,7 @@ func (srv *Server) deletePeer(id common.Address) {
 
 	p := srv.peerSet.find(id)
 	if p != nil {
+		srv.nodeSet.setNodeStatus(p.Node, false)
 		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
 		srv.log.Info("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
@@ -290,9 +302,12 @@ func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
 
+	checkTicker := time.NewTicker(checkConnsNumInterval)
 running:
 	for {
 		select {
+		case <-checkTicker.C:
+			go srv.doSelectNodeToConnect()
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
@@ -306,6 +321,17 @@ running:
 			peer.Disconnect(discServerQuit)
 		}
 	}
+}
+
+// doSelectNodeToConnect selects one free node from nodeMap to connect
+func (srv *Server) doSelectNodeToConnect() {
+	node := srv.nodeSet.randSelect()
+	if node == nil {
+		return
+	}
+
+	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.connectNode(node)
 }
 
 func (srv *Server) startListening() error {
