@@ -20,6 +20,15 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+// TxType represents transaction type
+type TxType byte
+
+// Transaction types
+const (
+	TxTypeRegular TxType = iota
+	TxTypeReward
+)
+
 const (
 	defaultMaxPayloadSize = 32 * 1024
 
@@ -52,9 +61,6 @@ var (
 	// ErrPayloadEmpty is returned when create or call a contract without payload.
 	ErrPayloadEmpty = errors.New("empty payload")
 
-	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
-	ErrTimestampMismatch = errors.New("timestamp mismatch")
-
 	// ErrSigInvalid is returned when the transaction signature is invalid.
 	ErrSigInvalid = errors.New("signature is invalid")
 
@@ -81,6 +87,7 @@ var (
 
 // TransactionData wraps the data in a transaction.
 type TransactionData struct {
+	Type         TxType         // Transaction type
 	From         common.Address // From is the address of the sender
 	To           common.Address // To is the receiver address, and empty address is used to create contract
 	Amount       *big.Int       // Amount is the amount to be transferred
@@ -265,34 +272,6 @@ func NewContractTransaction(from common.Address, amount *big.Int, price *big.Int
 // NewMessageTransaction returns a transaction with the specified message.
 func NewMessageTransaction(from, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, msg []byte) (*Transaction, error) {
 	return newTx(from, to, amount, price, gasLimit, nonce, msg)
-}
-
-// NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
-func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint64) (*Transaction, error) {
-	if reward == nil {
-		return nil, ErrAmountNil
-	}
-
-	if reward.Sign() < 0 {
-		return nil, ErrAmountNegative
-	}
-
-	rewardTxData := TransactionData{
-		From:      common.EmptyAddress,
-		To:        miner,
-		Amount:    new(big.Int).Set(reward),
-		GasPrice:  big.NewInt(0),
-		Timestamp: timestamp,
-		Payload:   make([]byte, 0),
-	}
-
-	rewardTx := &Transaction{
-		Hash:      crypto.MustHash(rewardTxData),
-		Data:      rewardTxData,
-		Signature: crypto.Signature{Sig: make([]byte, 0)},
-	}
-
-	return rewardTx, nil
 }
 
 // Sign signs the transaction with the specified private key.

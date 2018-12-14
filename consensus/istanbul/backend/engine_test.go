@@ -20,6 +20,7 @@ import (
 	istanbulCore "github.com/seeleteam/go-seele/consensus/istanbul/core"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
@@ -116,7 +117,8 @@ func makeBlockWithoutSeal(chain *core.Blockchain, engine *backend, parent *types
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	reward := consensus.GetReward(header.Height)
-	rewardTx, err := types.NewRewardTransaction(engine.address, reward, header.CreateTimestamp.Uint64())
+
+	rewardTx, err := txs.NewRewardTx(header.Creator, reward, header.CreateTimestamp.Uint64())
 	if err != nil {
 		panic(err)
 	}
