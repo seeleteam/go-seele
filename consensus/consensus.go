@@ -50,7 +50,7 @@ type Broadcaster interface {
 // Peer defines the interface to communicate with peer
 type Peer interface {
 	// Send sends the message to this peer
-	Send(msgcode uint64, data interface{}) error
+	Send(msgcode uint16, data interface{}) error
 }
 
 // Protocol defines the protocol of the consensus
