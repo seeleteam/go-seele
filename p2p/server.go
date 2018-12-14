@@ -127,6 +127,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		log:                  log.GetLogger("p2p"),
 		quit:                 make(chan struct{}),
 		peerSet:              NewPeerSet(),
+		nodeSet:              NewNodeSet(),
 		MaxPendingPeers:      0,
 		Protocols:            protocols,
 		genesis:              genesis,
