@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -11,10 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newEventPool() (*EventPool, func()) {
+func newEventPool() (*EventPool, error, func()) {
 	chain := newMockBlockchain()
 	db, dispose := leveldb.NewTestDatabase()
-	return NewEventPool(10000, store.NewBlockchainDatabase(db), chain, nil), dispose
+	pool, err := NewEventPool(10000, store.NewBlockchainDatabase(db), chain, nil)
+	if err != nil {
+		return nil, fmt.Errorf("NewEventPool failed, %v", err), dispose
+	}
+	return pool, nil, dispose
 }
 
 func getRandomTx() *types.Transaction {
@@ -64,11 +69,12 @@ func newTestFullBlock(debtNum, txNum int) *types.Block {
 }
 
 func Test_EventPool_getBeginHeight(t *testing.T) {
-	pool, dispose := newEventPool()
+	pool, err, dispose := newEventPool()
+	assert.NoError(t, err)
 	defer dispose()
 
 	block := newTestFullBlock(3, 3)
-	err := pool.mainChainStore.PutBlock(block, block.Header.Difficulty, true)
+	err = pool.mainChainStore.PutBlock(block, block.Header.Difficulty, true)
 	assert.NoError(t, err)
 
 	height, err := pool.getMainChainHeight()

@@ -45,7 +45,7 @@ func NewEventPool(capacity uint, mainChainStore store.BlockchainStore, chain blo
 
 	startHeight, err := pool.getMainChainHeight()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current header height, %v", err)
+		return pool, nil
 	}
 
 	pool.position = startHeight
