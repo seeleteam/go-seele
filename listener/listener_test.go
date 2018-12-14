@@ -24,6 +24,7 @@ const getY = "getY"
 var getXTopic = common.MustHexToHash("0x672e793f48f65acb771442258a567e553d1620c0684e1cbd9fe06ee380d1b642")
 var getYTopic = common.MustHexToHash("0x1086821eef716a909c39f2efe1e810bcd29246a6da19d04f9fc3f8d2889392e5")
 var contract1 = common.HexMustToAddres("0x12fe58608430e36ba6bfb0a9bc5623a634530002")
+var txHash1 = common.MustHexToHash("0xae073c03abc04ad182792bc5bf9faeb04d1c80888c985e839f896fd5fd08bf9f")
 
 const path2 = `/testConfig/SimpleEventTest2.abi`
 const getA = "getA"
@@ -32,6 +33,7 @@ const getB = "getB"
 var getATopic = common.MustHexToHash("0xa0acb9dd79e9d920ef642cb67cc5040eb54b29b163936c05777853bc5f4772b0")
 var getBTopic = common.MustHexToHash("0xa1c51915e437ec30e58312c6ff1ae0b5e7fc72426b83ddac06c2431e9edc5da1")
 var contract2 = common.HexMustToAddres("0x170677801cb2a9faf387573c7fae61e440480002")
+var txHash2 = common.MustHexToHash("0x51c48e7eaabf25dba25f426487f559a25c3429e7d6ae57fae65ea262ca336e75")
 
 const argString = "abcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyzabcdefghigklmnopqrstuvwxyz"
 
@@ -164,8 +166,8 @@ func Test_ContractEventABI_GetEvent(t *testing.T) {
 	events1, err := c1.GetEvent(receipts[0])
 	assert.NoError(t, err)
 	assert.Equal(t, len(events1), 2)
-	assert.Contains(t, events1, &Event{Contract: contract1, EventName: getX, Topic: getXTopic, Arguments: []interface{}{big.NewInt(1), big.NewInt(2)}})
-	assert.Contains(t, events1, &Event{Contract: contract1, EventName: getY, Topic: getYTopic, Arguments: []interface{}{big.NewInt(3), big.NewInt(4)}})
+	assert.Contains(t, events1, &Event{TxHash: txHash1, Contract: contract1, EventName: getX, Topic: getXTopic, Arguments: []interface{}{big.NewInt(1), big.NewInt(2)}})
+	assert.Contains(t, events1, &Event{TxHash: txHash1, Contract: contract1, EventName: getY, Topic: getYTopic, Arguments: []interface{}{big.NewInt(3), big.NewInt(4)}})
 }
 
 func Test_ContractEventABI_GetEvents(t *testing.T) {
@@ -186,12 +188,12 @@ func Test_ContractEventABI_GetEvents(t *testing.T) {
 	events1, err := c1.GetEvents(receipts)
 	assert.NoError(t, err)
 	assert.Equal(t, len(events1), 2)
-	assert.Contains(t, events1, &Event{Contract: contract1, EventName: getX, Topic: getXTopic, Arguments: []interface{}{big.NewInt(1), big.NewInt(2)}})
-	assert.Contains(t, events1, &Event{Contract: contract1, EventName: getY, Topic: getYTopic, Arguments: []interface{}{big.NewInt(3), big.NewInt(4)}})
+	assert.Contains(t, events1, &Event{TxHash: txHash1, Contract: contract1, EventName: getX, Topic: getXTopic, Arguments: []interface{}{big.NewInt(1), big.NewInt(2)}})
+	assert.Contains(t, events1, &Event{TxHash: txHash1, Contract: contract1, EventName: getY, Topic: getYTopic, Arguments: []interface{}{big.NewInt(3), big.NewInt(4)}})
 
 	events2, err := c2.GetEvents(receipts)
 	assert.NoError(t, err)
 	assert.Equal(t, len(events2), 2)
-	assert.Contains(t, events2, &Event{Contract: contract2, EventName: getA, Topic: getATopic, Arguments: []interface{}{argString}})
-	assert.Contains(t, events2, &Event{Contract: contract2, EventName: getB, Topic: getBTopic, Arguments: []interface{}{}})
+	assert.Contains(t, events2, &Event{TxHash: txHash2, Contract: contract2, EventName: getA, Topic: getATopic, Arguments: []interface{}{argString}})
+	assert.Contains(t, events2, &Event{TxHash: txHash2, Contract: contract2, EventName: getB, Topic: getBTopic, Arguments: []interface{}{}})
 }
