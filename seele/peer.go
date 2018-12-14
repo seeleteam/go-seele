@@ -109,6 +109,12 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
+// Send writes an RLP-encoded message with the given code.
+func (p *peer) Send(msgcode uint16, data interface{}) error {
+	buff := common.SerializePanic(data)
+	return p2p.SendMessage(p.rw, msgcode, buff)
+}
+
 func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	if p.knownTxs.Contains(txHash) {
 		return nil

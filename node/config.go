@@ -6,6 +6,8 @@
 package node
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log/comm"
@@ -62,6 +64,9 @@ type BasicConfig struct {
 	// coinbase used by the miner
 	Coinbase string `json:"coinbase"`
 
+	// privatekey for coinbase, used in bft consensus
+	PrivateKey string `json:"privateKey"`
+
 	// MinerAlgorithm miner algorithm
 	MinerAlgorithm string `json:"algorithm"`
 }
@@ -93,6 +98,8 @@ type SeeleConfig struct {
 	TxConf core.TransactionPoolConfig
 
 	Coinbase common.Address
+
+	CoinbasePrivateKey *ecdsa.PrivateKey
 
 	GenesisConfig core.GenesisInfo
 }

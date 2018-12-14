@@ -42,6 +42,12 @@ const (
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
 
+	// BFT mineralgorithm
+	BFTEngine = "bft"
+
+	// BFT data folder
+	BFTDataFolder = "bftdata"
+
 	// EVMStackLimit increase evm stack limit to 8192
 	EVMStackLimit = 8192
 
