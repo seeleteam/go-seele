@@ -11,6 +11,8 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
+const MaxBlockHeightGap = 40
+
 // EventPool event pool
 type EventPool struct {
 	capacity uint
@@ -22,13 +24,15 @@ type EventPool struct {
 	// so use the main chain database path initialize the store.
 	mainChainStore store.BlockchainStore
 
+	position uint64
+
 	log   *log.SeeleLog
 	chain blockchain
 	// todo add deal pools
 }
 
 // NewEventPool creates and returns an event pool.
-func NewEventPool(capacity uint, mainChainStore store.BlockchainStore, chain blockchain, abi *listener.ContractEventABI) *EventPool {
+func NewEventPool(capacity uint, mainChainStore store.BlockchainStore, chain blockchain, abi *listener.ContractEventABI) (*EventPool, error) {
 	log := log.GetLogger("eventpool")
 
 	pool := &EventPool{
@@ -41,16 +45,15 @@ func NewEventPool(capacity uint, mainChainStore store.BlockchainStore, chain blo
 
 	startHeight, err := pool.getMainChainHeight()
 	if err != nil {
-		// return no error as the chain could not deal event.
-		// return event pool to avoid nil pointer.
-		log.Warn("failed to get current header height, %v", err)
-		return pool
+		return nil, fmt.Errorf("failed to get current header height, %v", err)
 	}
 
-	// height - 1 to ensure deal the current header height
-	go pool.pollingEvents(abi, startHeight-1)
+	pool.position = startHeight
 
-	return pool
+	// height - 1 to ensure deal the current header height
+	go pool.pollingEvents(abi)
+
+	return pool, nil
 }
 
 func (pool *EventPool) getMainChainHeight() (uint64, error) {
@@ -69,7 +72,7 @@ func (pool *EventPool) getMainChainHeight() (uint64, error) {
 }
 
 // PollingEvents is used to poll for events from main chain.
-func (pool *EventPool) pollingEvents(abi *listener.ContractEventABI, beginHeight uint64) {
+func (pool *EventPool) pollingEvents(abi *listener.ContractEventABI) {
 	if abi == nil {
 		pool.log.Debug("no contract event to listen")
 		return
@@ -81,7 +84,7 @@ func (pool *EventPool) pollingEvents(abi *listener.ContractEventABI, beginHeight
 	for {
 		select {
 		case <-ticker.C:
-			if err := pool.getEvents(abi, beginHeight); err != nil {
+			if err := pool.getEvents(abi); err != nil {
 				pool.log.Error("failed to get events from main chain, %v", err)
 				continue
 			}
@@ -89,10 +92,9 @@ func (pool *EventPool) pollingEvents(abi *listener.ContractEventABI, beginHeight
 	}
 }
 
-func (pool *EventPool) getEvents(abi *listener.ContractEventABI, beginHeight uint64) error {
+func (pool *EventPool) getEvents(abi *listener.ContractEventABI) error {
 	var (
-		targetHeight = beginHeight
-		store        = pool.mainChainStore
+		store = pool.mainChainStore
 	)
 
 	// get current header height
@@ -102,19 +104,15 @@ func (pool *EventPool) getEvents(abi *listener.ContractEventABI, beginHeight uin
 	}
 
 	// avoid duplicate blocks request
-	if targetHeight >= headerHeight {
+	if pool.position >= headerHeight {
+		pool.position++
+		return nil
+	}
+	if pool.position <= common.ConfirmedBlockNumber+MaxBlockHeightGap {
 		return nil
 	}
 
-	// avoid skip block
-	targetHeight++
-
-	// get the confirmed blocks over ConfirmedBlockNumber
-	if targetHeight <= common.ConfirmedBlockNumber {
-		return nil
-	}
-
-	blockHash, err := store.GetBlockHash(targetHeight - common.ConfirmedBlockNumber)
+	blockHash, err := store.GetBlockHash(pool.position - (common.ConfirmedBlockNumber + MaxBlockHeightGap))
 	if err != nil {
 		return fmt.Errorf("failed to get confirmed block hash, %v", err)
 	}
