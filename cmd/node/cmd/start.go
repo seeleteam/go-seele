@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
@@ -84,7 +84,13 @@ var startCmd = &cobra.Command{
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
-		miningEngine, err := factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+		var engine consensus.Engine
+		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
+			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
+		} else {
+			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+		}
+
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -105,7 +111,7 @@ var startCmd = &cobra.Command{
 		}
 
 		if lightNode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), miningEngine)
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), engine)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -123,14 +129,14 @@ var startCmd = &cobra.Command{
 			}
 		} else {
 			// light client manager
-			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, miningEngine)
+			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, engine)
 			if err != nil {
 				fmt.Printf("create light client manager failed. %s", err)
 				return
 			}
 
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, miningEngine, manager)
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, manager)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
