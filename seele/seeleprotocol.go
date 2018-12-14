@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/seeleteam/go-seele/common/memory"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -157,6 +159,10 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(p *peer) {
+	now := time.Now()
+	// entrance
+	memory.Print(sp.log, "SeeleProtocol synchronise entrance", now, false)
+
 	if p == nil {
 		return
 	}
@@ -165,12 +171,16 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
 		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		// one step
+		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
 	pHead, pTd := p.Head()
 
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 	if localTD.Cmp(pTd) >= 0 {
+		// two step
+		memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
 		return
 	}
 
@@ -181,14 +191,25 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		} else {
 			sp.log.Error("synchronise err. %s", err)
 		}
+
+		// three step
+		memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
+
 		return
 	}
 
 	//broadcast chain head
 	sp.broadcastChainHead()
+
+	// exit
+	memory.Print(sp.log, "SeeleProtocol synchronise exit", now, true)
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
+	now := time.Now()
+	// entrance
+	memory.Print(sp.log, "SeeleProtocol broadcastChainHead entrance", now, false)
+
 	block := sp.chain.CurrentBlock()
 	head := block.HeaderHash
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
@@ -213,6 +234,9 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 			}
 		}
 	}
+
+	// exit
+	memory.Print(sp.log, "SeeleProtocol broadcastChainHead exit", now, true)
 }
 
 // syncTransactions sends pending transactions to remote peer.
@@ -262,6 +286,10 @@ loopOut:
 }
 
 func (p *SeeleProtocol) handleNewTx(e event.Event) {
+	now := time.Now()
+	// entrance
+	memory.Print(p.log, "SeeleProtocol handleNewTx entrance", now, false)
+
 	tx := e.(*types.Transaction)
 
 	// find shardId by tx from address.
@@ -272,6 +300,9 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
 		}
 	}
+
+	//exit
+	memory.Print(p.log, "SeeleProtocol handleNewTx exit", now, true)
 }
 
 func (p *SeeleProtocol) handleNewDebt(e event.Event) {
@@ -280,6 +311,10 @@ func (p *SeeleProtocol) handleNewDebt(e event.Event) {
 }
 
 func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) {
+	now := time.Now()
+	// entrance
+	memory.Print(p.log, "SeeleProtocol propagateDebtMap entrance", now, false)
+
 	peers := p.peerSet.getAllPeers()
 	for _, peer := range peers {
 		if len(debtsMap[peer.Node.Shard]) > 0 {
@@ -289,6 +324,9 @@ func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) 
 			}
 		}
 	}
+
+	// exit
+	memory.Print(p.log, "SeeleProtocol propagateDebtMap exit", now, true)
 }
 
 func (p *SeeleProtocol) handleNewBlock(e event.Event) {
@@ -302,20 +340,33 @@ func (p *SeeleProtocol) handleNewBlock(e event.Event) {
 		if err != nil {
 			p.log.Warn("failed to load confirmed block height %d, err %s", confirmedHeight, err)
 		} else {
+			now := time.Now()
+			// entrance
+			memory.Print(p.log, "SeeleProtocol handleNewBlock entrance", now, false)
+
 			debts := types.NewDebtMap(confirmedBlock.Transactions)
 			p.debtManager.AddDebtMap(debts)
 			go p.propagateDebtMap(debts, true)
+
+			// exit
+			memory.Print(p.log, "SeeleProtocol handleNewBlock exit", now, true)
 		}
 	}
 }
 
 func (p *SeeleProtocol) handleNewMinedBlock(e event.Event) {
+	now := time.Now()
+	// entrance
+	memory.Print(p.log, "SeeleProtocol handleNewMinedBlock entrance", now, false)
 	block := e.(*types.Block)
 
 	p.log.Debug("handleNewMinedBlock broadcast chainhead changed. new block: %d %s <- %s ",
 		block.Header.Height, block.HeaderHash.Hex(), block.Header.PreviousBlockHash.Hex())
 
 	p.broadcastChainHead()
+
+	// exit
+	memory.Print(p.log, "SeeleProtocol handleNewMinedBlock exit", now, true)
 }
 
 func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) bool {
@@ -409,8 +460,17 @@ handler:
 			}
 		}
 
+		// print transaction and debt pool length
+		p.log.Debug("handleMsg tx pool and debt pool length, tx %d, debt %d", p.txPool.GetTxCount(), p.debtPool.GetDebtCount(true, true))
+
+		// set time now
+		now := time.Now()
+
 		switch msg.Code {
 		case transactionHashMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg transactionHashMsgCode entrance", now, false)
+
 			var txHash common.Hash
 			err := common.Deserialize(msg.Payload, &txHash)
 			if err != nil {
@@ -429,7 +489,13 @@ handler:
 
 			}
 
+			// exit
+			memory.Print(p.log, "handleMsg transactionHashMsgCode exit", now, true)
+
 		case transactionRequestMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg transactionRequestMsgCode entrance", now, false)
+
 			var txHash common.Hash
 			err := common.Deserialize(msg.Payload, &txHash)
 			if err != nil {
@@ -449,7 +515,13 @@ handler:
 				break handler
 			}
 
+			// exit
+			memory.Print(p.log, "handleMsg transactionRequestMsgCode exit", now, true)
+
 		case transactionsMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg transactionsMsgCode entrance", now, false)
+
 			var txs []*types.Transaction
 			err := common.Deserialize(msg.Payload, &txs)
 			if err != nil {
@@ -470,7 +542,13 @@ handler:
 				}
 			}()
 
+			//exit
+			memory.Print(p.log, "handleMsg transactionsMsgCode exit", now, true)
+
 		case blockHashMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg blockHashMsgCode entrance", now, false)
+
 			var blockHash common.Hash
 			err := common.Deserialize(msg.Payload, &blockHash)
 			if err != nil {
@@ -490,7 +568,13 @@ handler:
 				}
 			}
 
+			//exit
+			memory.Print(p.log, "handleMsg blockHashMsgCode exit", now, true)
+
 		case blockRequestMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg blockRequestMsgCode entrance", now, false)
+
 			var blockHash common.Hash
 			err := common.Deserialize(msg.Payload, &blockHash)
 			if err != nil {
@@ -510,7 +594,13 @@ handler:
 				p.log.Warn("failed to send block msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
 			}
 
+			// exit
+			memory.Print(p.log, "handleMsg blockRequestMsgCode exit", now, true)
+
 		case blockMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg blockMsgCode entrance", now, false)
+
 			var block types.Block
 			err := common.Deserialize(msg.Payload, &block)
 			if err != nil {
@@ -525,7 +615,13 @@ handler:
 				p.chain.WriteBlock(&block)
 			}
 
+			// exit
+			memory.Print(p.log, "handleMsg blockMsgCode exit", now, true)
+
 		case debtMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg debtMsgCode entrance", now, false)
+
 			var debts []*types.Debt
 			err := common.Deserialize(msg.Payload, &debts)
 			if err != nil {
@@ -540,7 +636,13 @@ handler:
 
 			go p.debtPool.AddDebtArray(debts)
 
+			//exit
+			memory.Print(p.log, "handleMsg debtMsgCode exit", now, true)
+
 		case downloader.GetBlockHeadersMsg:
+			//entrance
+			memory.Print(p.log, "handleMsg downloader.GetBlockHeadersMsg entrance", now, false)
+
 			var query blockHeadersQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
@@ -586,7 +688,13 @@ handler:
 
 			go peer.sendBlockHeaders(query.Magic, headList)
 
+			// exit
+			memory.Print(p.log, "handleMsg downloader.GetBlockHeadersMsg exit", now, true)
+
 		case downloader.GetBlocksMsg:
+			// entrance
+			memory.Print(p.log, "handleMsg downloader.GetBlocksMsg entrance", now, false)
+
 			p.log.Debug("Received downloader.GetBlocksMsg")
 			var query blocksQuery
 			err := common.Deserialize(msg.Payload, &query)
@@ -641,11 +749,23 @@ handler:
 
 			go peer.sendBlocks(query.Magic, blocksL)
 
+			// exit
+			memory.Print(p.log, "handleMsg downloader.GetBlocksMsg exit", now, true)
+
 		case downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg:
+			// entrance
+			memory.Print(p.log, "handleMsg downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg entrance", now, false)
+
 			p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
 			p.downloader.DeliverMsg(peer.peerStrID, msg)
 
+			// exit
+			memory.Print(p.log, "handleMsg downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg exit", now, true)
+
 		case statusChainHeadMsgCode:
+			// entrance
+			memory.Print(p.log, "handleMsg statusChainHeadMsgCode entrance", now, false)
+
 			var status chainHeadStatus
 			err := common.Deserialize(msg.Payload, &status)
 			if err != nil {
@@ -656,6 +776,9 @@ handler:
 			p.log.Debug("Received statusChainHeadMsgCode. peer=%s, ip=%s, remoteTD=%d", peer.peerStrID, peer.Peer.RemoteAddr(), status.TD)
 			peer.SetHead(status.CurrentBlock, status.TD)
 			p.syncCh <- struct{}{}
+
+			// exit
+			memory.Print(p.log, "handleMsg statusChainHeadMsgCode exit", now, true)
 
 		default:
 			p.log.Warn("unknown code %d", msg.Code)
