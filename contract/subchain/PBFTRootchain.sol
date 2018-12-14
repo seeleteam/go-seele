@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 // external modules
 import "./ByteUtils.sol";
@@ -79,6 +79,7 @@ contract PBFTRootchain {
         require(ops.length == deposits.length, "Invalid deposits length");
         uint256 amount = 0;
         for (uint256 i = 0; i < ops.length && isValidAddOperator(ops[i], deposits[i]); i++){
+            require(operators[ops[i]] == 0, "Repeated operator");
             operators[ops[i]] = deposits[i];
             amount = amount.add(deposits[i]);
         }
