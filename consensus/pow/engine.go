@@ -151,13 +151,13 @@ func getMiningTarget(difficulty *big.Int) *big.Int {
 
 func getSecondMiningTarget(time uint64, parentHeader *types.BlockHeader) *big.Int {
     // target = maxUint256 / current difficulty
-    // current difficulty = 20,000,000 / min((current time - parentTime) / 20, 100)
+    // current difficulty = 20,000,000 / min((current time - parentTime) / 20 + 1, 100)
 
     parentTime := parentHeader.CreateTimestamp.Uint64()
 
     // the difficulty should be high at the beginning
     maxDifficulty := big.NewInt(20000000)
-    interval := (time - parentTime) / 20
+    interval := ((time - parentTime)  / 20 + 1)
     x := big.NewInt(int64(interval))
     big100 := big.NewInt(100)
 
