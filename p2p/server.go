@@ -323,12 +323,12 @@ func (srv *Server) Wait() {
 func (srv *Server) listenLoop() {
 	defer srv.loopWG.Done()
 	// If all slots are taken, no further connections are accepted.
-	tokens := maxAcceptConns
+	takens := maxAcceptConns
 	if srv.MaxPendingPeers > 0 {
-		tokens = srv.MaxPendingPeers
+		takens = srv.MaxPendingPeers
 	}
-	slots := make(chan struct{}, tokens)
-	for i := 0; i < tokens; i++ {
+	slots := make(chan struct{}, takens)
+	for i := 0; i < takens; i++ {
 		slots <- struct{}{}
 	}
 
