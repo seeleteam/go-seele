@@ -50,7 +50,7 @@ type Broadcaster interface {
 // Peer defines the interface to communicate with peer
 type Peer interface {
 	// Send sends the message to this peer
-	Send(msgcode uint64, data interface{}) error
+	Send(msgcode uint16, data interface{}) error
 }
 
 // Protocol defines the protocol of the consensus
@@ -77,4 +77,14 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlockByHash(hash common.Hash) *types.Block
+}
+
+// Handler should be implemented is the consensus needs to handle and send peer's message
+type Handler interface {
+	// NewChainHead handles a new head block comes
+	NewChainHead() error
+	// HandleMsg handles a message from peer
+	HandleMsg(address common.Address, msg interface{}) (bool, error)
+	// SetBroadcaster sets the broadcaster to send message to peers
+	SetBroadcaster(Broadcaster)
 }

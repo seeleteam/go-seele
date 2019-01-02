@@ -77,18 +77,3 @@ func Test_DebtSize(t *testing.T) {
 	fmt.Println(len(buff) / 5)
 	assert.Equal(t, len(buff)/5, DebtSize-2)
 }
-
-func Test_FeeShare(t *testing.T) {
-	for i := 0; i < 100000; i++ {
-		fee := big.NewInt(int64(i))
-
-		txFee := GetTxFeeShare(fee)
-		debtFee := GetDebtShareFee(fee)
-
-		sum := big.NewInt(0).Add(txFee, debtFee)
-
-		if sum.Cmp(fee) != 0 {
-			t.Fatal(fmt.Sprintf("init fee is %d, tx fee is %d, debt fee is %d, sum is %d", fee, txFee, debtFee, sum))
-		}
-	}
-}

@@ -109,6 +109,12 @@ func (p *peer) Info() *PeerInfo {
 	}
 }
 
+// Send writes an RLP-encoded message with the given code.
+func (p *peer) Send(msgcode uint16, data interface{}) error {
+	buff := common.SerializePanic(data)
+	return p2p.SendMessage(p.rw, msgcode, buff)
+}
+
 func (p *peer) sendTransactionHash(txHash common.Hash) error {
 	if p.knownTxs.Contains(txHash) {
 		return nil
@@ -135,16 +141,20 @@ func (p *peer) sendDebts(debts []*types.Debt, filter bool) error {
 		filterDebts = debts
 	}
 
-	buff := common.SerializePanic(filterDebts)
-	p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(filterDebts))
-	err := p2p.SendMessage(p.rw, debtMsgCode, buff)
-	if err == nil {
-		for _, d := range filterDebts {
-			p.knownDebts.Add(d.Hash, nil)
+	if len(filterDebts) > 0 {
+		buff := common.SerializePanic(filterDebts)
+		p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(filterDebts))
+		err := p2p.SendMessage(p.rw, debtMsgCode, buff)
+		if err == nil {
+			for _, d := range filterDebts {
+				p.knownDebts.Add(d.Hash, nil)
+			}
 		}
+
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (p *peer) sendTransactionRequest(txHash common.Hash) error {

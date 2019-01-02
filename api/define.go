@@ -76,9 +76,10 @@ type GetBalanceResponse struct {
 
 // GetLogsResponse response param for GetLogs api
 type GetLogsResponse struct {
+	*types.Log
 	Txhash   common.Hash
 	LogIndex uint
-	Log      *types.Log
+	Args interface{} `json:"data"`
 }
 
 type PoolCore interface {

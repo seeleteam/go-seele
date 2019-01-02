@@ -288,14 +288,14 @@ func preparePendingQueue(txs map[common.Address][]*poolItem) *pendingQueue {
 	return q
 }
 
-func prepareTxs(numAccounts, numTxsPerAccount uint) map[common.Address][]*poolItem {
+func prepareTxs(numAccounts, numTxsPerAccount int) map[common.Address][]*poolItem {
 	txs := make(map[common.Address][]*poolItem)
 
-	for i := uint(1); i <= numAccounts; i++ {
+	for i := 1; i <= numAccounts; i++ {
 		from := common.BigToAddress(big.NewInt(int64(i)))
 
 		accountTxs := make([]*poolItem, 0, numTxsPerAccount)
-		for j := uint(1); j <= numTxsPerAccount; j++ {
+		for j := 1; j <= numTxsPerAccount; j++ {
 			tx := &types.Transaction{
 				Data: types.TransactionData{
 					From:         from,

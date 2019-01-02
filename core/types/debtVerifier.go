@@ -41,3 +41,21 @@ func (v *TestVerifier) ValidateDebt(debt *Debt) (packed bool, confirmed bool, er
 func (v *TestVerifier) IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error) {
 	return v.packed, v.confirmed, v.err
 }
+
+type TestVerifierWithFunc struct {
+	fun func(debt *Debt) (bool, bool, error)
+}
+
+func NewTestVerifierWithFunc(fun func(debt *Debt) (bool, bool, error)) *TestVerifierWithFunc {
+	return &TestVerifierWithFunc{
+		fun: fun,
+	}
+}
+
+func (v *TestVerifierWithFunc) ValidateDebt(debt *Debt) (packed bool, confirmed bool, err error) {
+	return v.fun(debt)
+}
+
+func (v *TestVerifierWithFunc) IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error) {
+	return v.fun(debt)
+}

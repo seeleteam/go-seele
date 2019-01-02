@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	// Maximum number of peers that can be connected
-	defaultMaxPeers = 500
+	// Maximum number of peers that can be connected for each shard
+	maxConnsPerShard = 30
 
-	// Maximum number of inbound connections for concurrent handshaking.
-	maxAcceptConns = 50
+	// Maximum number of peers that node actively connects to.
+	maxActiveConnsPerShard = 24
 
 	defaultDialTimeout = 15 * time.Second
 
@@ -42,8 +42,10 @@ const (
 	// Maximum time allowed for reading a complete message.
 	frameReadTimeout = 30 * time.Second
 
-	inboundConn  = 1
-	outboundConn = 2
+	// interval to select new node to connect from the free node list.
+	checkConnsNumInterval = 8 * time.Second
+	inboundConn           = 1
+	outboundConn          = 2
 
 	// In transferring handshake msg, length of extra data
 	extraDataLen = 24
@@ -82,12 +84,10 @@ type Server struct {
 
 	loopWG sync.WaitGroup // loop, listenLoop
 
+	nodeSet  *nodeSet
 	peerSet  *peerSet
 	peerLock sync.Mutex // lock for peer set
 	log      *log.SeeleLog
-
-	// MaxPeers max number of peers that can be connected
-	MaxPeers int
 
 	// MaxPendingPeers is the maximum number of peers that can be pending in the
 	// handshake phase, counted separately for inbound and outbound connections.
@@ -103,6 +103,14 @@ type Server struct {
 
 	// genesisHash is used for handshake
 	genesisHash common.Hash
+
+	// maxConnections represents max connections that node can connect to.
+	// Reject connections if srv.PeerCount > maxConnections.
+	maxConnections int
+
+	// maxActiveConnections represents max connections that node can actively connect to.
+	// Need not connect to a new node if srv.PeerCount > maxActiveConnections.
+	maxActiveConnections int
 }
 
 // NewServer initialize a server
@@ -114,16 +122,18 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	genesis.ShardNumber = shard
 
 	return &Server{
-		Config:          config,
-		running:         false,
-		log:             log.GetLogger("p2p"),
-		MaxPeers:        defaultMaxPeers,
-		quit:            make(chan struct{}),
-		peerSet:         NewPeerSet(),
-		MaxPendingPeers: 0,
-		Protocols:       protocols,
-		genesis:         genesis,
-		genesisHash:     hash,
+		Config:               config,
+		running:              false,
+		log:                  log.GetLogger("p2p"),
+		quit:                 make(chan struct{}),
+		peerSet:              NewPeerSet(),
+		nodeSet:              NewNodeSet(),
+		MaxPendingPeers:      0,
+		Protocols:            protocols,
+		genesis:              genesis,
+		genesisHash:          hash,
+		maxConnections:       maxConnsPerShard * common.ShardCount,
+		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
 	}
 }
 
@@ -193,7 +203,17 @@ func (srv *Server) addNode(node *discovery.Node) {
 		return
 	}
 
+	srv.nodeSet.tryAdd(node)
+	if srv.PeerCount() > srv.maxActiveConnections {
+		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
+		return
+	}
+
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
+	srv.connectNode(node)
+}
+
+func (srv *Server) connectNode(node *discovery.Node) {
 	if srv.checkPeerExist(node.ID) {
 		return
 	}
@@ -222,6 +242,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 }
 
 func (srv *Server) deleteNode(node *discovery.Node) {
+	srv.nodeSet.delete(node)
 	srv.deletePeer(node.ID)
 }
 
@@ -250,6 +271,7 @@ func (srv *Server) addPeer(p *Peer) bool {
 	}
 
 	srv.peerSet.add(p)
+	srv.nodeSet.setNodeStatus(p.Node, true)
 	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
 	p.notifyProtocolsAddPeer()
 
@@ -264,6 +286,7 @@ func (srv *Server) deletePeer(id common.Address) {
 
 	p := srv.peerSet.find(id)
 	if p != nil {
+		srv.nodeSet.setNodeStatus(p.Node, false)
 		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
 		srv.log.Info("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
@@ -279,9 +302,12 @@ func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
 
+	checkTicker := time.NewTicker(checkConnsNumInterval)
 running:
 	for {
 		select {
+		case <-checkTicker.C:
+			go srv.doSelectNodeToConnect()
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
@@ -295,6 +321,17 @@ running:
 			peer.Disconnect(discServerQuit)
 		}
 	}
+}
+
+// doSelectNodeToConnect selects one free node from nodeMap to connect
+func (srv *Server) doSelectNodeToConnect() {
+	node := srv.nodeSet.randSelect()
+	if node == nil {
+		return
+	}
+
+	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.connectNode(node)
 }
 
 func (srv *Server) startListening() error {
@@ -364,6 +401,11 @@ func (srv *Server) listenLoop() {
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
 func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
+	if flags == inboundConn && srv.PeerCount() > srv.maxConnections {
+		srv.log.Warn("setup connection with peer %s. reached max incoming connection limit, reject!", dialDest)
+		return errors.New("Too many incoming connections")
+	}
+
 	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap

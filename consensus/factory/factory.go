@@ -6,12 +6,18 @@
 package factory
 
 import (
+	"crypto/ecdsa"
 	"fmt"
+	"path/filepath"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/ethash"
+	"github.com/seeleteam/go-seele/consensus/istanbul"
+	"github.com/seeleteam/go-seele/consensus/istanbul/backend"
 	"github.com/seeleteam/go-seele/consensus/pow"
+	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
 // GetConsensusEngine get consensus engine according to miner algorithm name
@@ -27,6 +33,16 @@ func GetConsensusEngine(minerAlgorithm string) (consensus.Engine, error) {
 	}
 
 	return minerEngine, nil
+}
+
+func GetBFTEngine(privateKey *ecdsa.PrivateKey, folder string) (consensus.Engine, error) {
+	path := filepath.Join(folder, common.BFTDataFolder)
+	db, err := leveldb.NewLevelDB(path)
+	if err != nil {
+		return nil, errors.NewStackedError(err, "create bft folder failed")
+	}
+
+	return backend.New(istanbul.DefaultConfig, privateKey, db), nil
 }
 
 func MustGetConsensusEngine(minerAlgorithm string) consensus.Engine {

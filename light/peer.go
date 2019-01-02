@@ -79,6 +79,8 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog,
 }
 
 func (p *peer) close() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	if p.quitCh != nil {
 		select {
 		case <-p.quitCh:
@@ -437,7 +439,9 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 	}
 
 	if !bMatch {
-		panic("can not come here")
+		p.log.Info("handleAnnounce, not found block to sync.")
+		p.curSyncMagic = 0
+		return nil
 	}
 
 	return p.sendSyncHashRequest(p.curSyncMagic, startNum)

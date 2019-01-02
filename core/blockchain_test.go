@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus/pow"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func newTestBlock(bc *Blockchain, parentHash common.Hash, blockHeight, startNonc
 
 func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, startNonce uint64, size int, apply bool) *types.Block {
 	minerAccount := types.NewTestAccount(consensus.GetReward(blockHeight), 0, 1)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.Addr, minerAccount.Amount, uint64(1))
+	rewardTx, _ := txs.NewRewardTx(minerAccount.Addr, minerAccount.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 	totalSize := 0
@@ -49,7 +50,7 @@ func newTestBlockWithApply(bc *Blockchain, parentHash common.Hash, blockHeight, 
 
 func newTestBlockWithDebt(bc *Blockchain, parentHash common.Hash, blockHeight uint64, size int, apply bool) *types.Block {
 	minerAccount := types.NewTestAccount(consensus.GetReward(blockHeight), 0, 2)
-	rewardTx, _ := types.NewRewardTransaction(minerAccount.Addr, minerAccount.Amount, uint64(1))
+	rewardTx, _ := txs.NewRewardTx(minerAccount.Addr, minerAccount.Amount, uint64(1))
 
 	txs := []*types.Transaction{rewardTx}
 
@@ -161,6 +162,17 @@ func Test_Blockchain_WriteBlock_InvalidExtraData(t *testing.T) {
 	newBlock.HeaderHash = newBlock.Header.Hash()
 
 	assert.True(t, errors.IsOrContains(bc.WriteBlock(newBlock), ErrBlockExtraDataNotEmpty))
+}
+
+func Test_Blockchain_WriteBlock_EmptyTxs(t *testing.T) {
+	bc := NewTestBlockchain()
+
+	newBlock := newTestBlock(bc, bc.genesisBlock.HeaderHash, 1, 3, 0)
+	newBlock.Transactions = nil
+	newBlock.Header.TxHash = types.MerkleRootHash(nil)
+	newBlock.HeaderHash = newBlock.Header.Hash()
+
+	assert.True(t, errors.IsOrContains(bc.WriteBlock(newBlock), ErrBlockEmptyTxs))
 }
 
 func Test_Blockchain_WriteBlock_ValidBlock(t *testing.T) {

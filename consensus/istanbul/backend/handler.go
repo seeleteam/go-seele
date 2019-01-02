@@ -35,9 +35,14 @@ func (sb *backend) Protocol() consensus.Protocol {
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
-func (sb *backend) HandleMsg(addr common.Address, msg p2p.Message) (bool, error) {
+func (sb *backend) HandleMsg(addr common.Address, message interface{}) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
+
+	msg, ok := message.(p2p.Message)
+	if !ok {
+		return false, errDecodeFailed
+	}
 
 	if msg.Code == istanbulMsg {
 		if !sb.coreStarted {

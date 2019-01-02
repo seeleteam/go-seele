@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -62,7 +63,7 @@ type afterAddFunc func(obj poolObject)
 // An object will be removed from the pool once included in a blockchain or pending time too long (> timeoutDuration).
 type Pool struct {
 	mutex              sync.RWMutex
-	capacity           uint
+	capacity           int
 	chain              blockchain
 	hashToTxMap        map[common.Hash]*poolItem
 	pendingQueue       *pendingQueue
@@ -75,7 +76,7 @@ type Pool struct {
 }
 
 // NewPool creates and returns a transaction pool.
-func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
+func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
 	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc) *Pool {
 	pool := &Pool{
 		capacity:           capacity,
@@ -91,6 +92,10 @@ func NewPool(capacity uint, chain blockchain, getObjectFromBlock getObjectFromBl
 	}
 
 	return pool
+}
+
+func (pool *Pool) SetLogLevel(level logrus.Level) {
+	pool.log.SetLevel(level)
 }
 
 // HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
@@ -242,7 +247,7 @@ func (pool *Pool) addObject(obj poolObject) error {
 
 	// if txpool capacity reached, then discard lower price txs if any.
 	// Otherwise, return errObjectPoolFull.
-	if uint(len(pool.hashToTxMap)) >= pool.capacity {
+	if len(pool.hashToTxMap) >= pool.capacity {
 		c := pool.pendingQueue.discard(obj.Price())
 		if c == nil || c.len() == 0 {
 			return errObjectPoolFull
@@ -256,13 +261,13 @@ func (pool *Pool) addObject(obj poolObject) error {
 		}
 	}
 
-	pool.doaddObject(obj)
+	pool.doAddObject(obj)
 	pool.afterAdd(obj)
 
 	return nil
 }
 
-func (pool *Pool) doaddObject(obj poolObject) {
+func (pool *Pool) doAddObject(obj poolObject) {
 	poolTx := newPooledItem(obj)
 	pool.hashToTxMap[obj.GetHash()] = poolTx
 	pool.pendingQueue.add(poolTx)
@@ -298,20 +303,30 @@ func (pool *Pool) doRemoveObject(objHash common.Hash) {
 
 // removeObjects removes finalized and old transactions in hashToTxMap
 func (pool *Pool) removeObjects() {
-	pool.mutex.Lock()
-	defer pool.mutex.Unlock()
-
 	state, err := pool.chain.GetCurrentState()
 	if err != nil {
 		pool.log.Warn("failed to get current state, err: %s", err)
 		return
 	}
 
-	for objHash, poolTx := range pool.hashToTxMap {
+	objMap := pool.getObjectMap()
+	for objHash, poolTx := range objMap {
 		if pool.canRemove(pool.chain, state, poolTx) {
-			pool.doRemoveObject(objHash)
+			pool.removeOject(objHash)
 		}
 	}
+}
+
+func (pool *Pool) getObjectMap() map[common.Hash]*poolItem {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+
+	txMap := make(map[common.Hash]*poolItem)
+	for hash, tx := range pool.hashToTxMap {
+		txMap[hash] = tx
+	}
+
+	return txMap
 }
 
 // getProcessableObjects retrieves processable transactions from pool.

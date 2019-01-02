@@ -113,7 +113,7 @@ func Test_Process_CrossTransfer(t *testing.T) {
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
 	assert.Equal(t, receipt.TxHash, ctx.Tx.CalculateHash())
-	assert.Equal(t, receipt.UsedGas, ctx.Tx.IntrinsicGas())
+	assert.Equal(t, receipt.UsedGas, types.CrossShardTotalGas)
 	assert.Equal(t, receipt.TotalFee, receipt.UsedGas*ctx.Tx.Data.GasPrice.Uint64())
 	// nonce + 1
 	nonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
@@ -121,7 +121,7 @@ func Test_Process_CrossTransfer(t *testing.T) {
 
 	// add fee to coinbase and sub fee from tx.from
 	balanceC := ctx.Statedb.GetBalance(ctx.BlockHeader.Creator)
-	assert.Equal(t, big.NewInt(0).SetUint64(receipt.TotalFee/2), balanceC)
+	assert.Equal(t, new(big.Int).Mul(ctx.Tx.Data.GasPrice, new(big.Int).SetUint64(types.CrossShardTransactionGas)), balanceC)
 
 	balanceF := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
 	assert.Equal(t, big.NewInt(0).Sub(big.NewInt(0).SetUint64(fromBalance-receipt.TotalFee), ctx.Tx.Data.Amount), balanceF)

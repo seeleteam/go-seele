@@ -11,13 +11,16 @@ import (
 	"testing"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/crypto"
+	"math/big"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testAddress  = "70524d664ffe731100208a0154e556f9bb679ae6"
-	testAddress2 = "b37866a925bccd69cfa98d43b510f1d23d78a851"
+	testAddress  = "0x70524d664ffe731100208a0154e556f9bb679ae6"
+	testAddress2 = "0xb37866a925bccd69cfa98d43b510f1d23d78a851"
 )
 
 func TestValidatorSet(t *testing.T) {
@@ -60,8 +63,8 @@ func testNewValidatorSet(t *testing.T) {
 }
 
 func testNormalValSet(t *testing.T) {
-	b1 := common.Hex2Bytes(testAddress)
-	b2 := common.Hex2Bytes(testAddress2)
+	b1 := hexutil.MustHexToBytes(testAddress)
+	b2 := hexutil.MustHexToBytes(testAddress2)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
 	val1 := New(addr1)
@@ -90,7 +93,7 @@ func testNormalValSet(t *testing.T) {
 		t.Errorf("validator mismatch: have %v, want %v", val, val2)
 	}
 	// test get by invalid address
-	invalidAddr := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
+	invalidAddr, _ := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
 	if _, val := valSet.GetByAddress(invalidAddr); val != nil {
 		t.Errorf("validator mismatch: have %v, want nil", val)
 	}
@@ -125,47 +128,49 @@ func testEmptyValSet(t *testing.T) {
 
 func testAddAndRemoveValidator(t *testing.T) {
 	valSet := NewSet(ExtractValidators([]byte{}), istanbul.RoundRobin)
-	if !valSet.AddValidator(common.StringToAddress(string(2))) {
+	if !valSet.AddValidator(common.BigToAddress(big.NewInt(2))) {
 		t.Error("the validator should be added")
 	}
-	if valSet.AddValidator(common.StringToAddress(string(2))) {
+	if valSet.AddValidator(common.BigToAddress(big.NewInt(2))) {
 		t.Error("the existing validator should not be added")
 	}
-	valSet.AddValidator(common.StringToAddress(string(1)))
-	valSet.AddValidator(common.StringToAddress(string(0)))
+	valSet.AddValidator(common.BigToAddress(big.NewInt(1)))
+	valSet.AddValidator(common.BigToAddress(big.NewInt(0)))
 	if len(valSet.List()) != 3 {
 		t.Error("the size of validator set should be 3")
 	}
 
 	for i, v := range valSet.List() {
-		expected := common.StringToAddress(string(i))
+		expected := common.BigToAddress(big.NewInt(int64(i)))
 		if v.Address() != expected {
 			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
 		}
 	}
 
-	if !valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if !valSet.RemoveValidator(common.BigToAddress(big.NewInt(2))) {
 		t.Error("the validator should be removed")
 	}
-	if valSet.RemoveValidator(common.StringToAddress(string(2))) {
+	if valSet.RemoveValidator(common.BigToAddress(big.NewInt(2))) {
 		t.Error("the non-existing validator should not be removed")
 	}
 	if len(valSet.List()) != 2 {
 		t.Error("the size of validator set should be 2")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(1)))
+	valSet.RemoveValidator(common.BigToAddress(big.NewInt(1)))
 	if len(valSet.List()) != 1 {
 		t.Error("the size of validator set should be 1")
 	}
-	valSet.RemoveValidator(common.StringToAddress(string(0)))
+	valSet.RemoveValidator(common.BigToAddress(big.NewInt(0)))
 	if len(valSet.List()) != 0 {
 		t.Error("the size of validator set should be 0")
 	}
 }
 
 func testStickyProposer(t *testing.T) {
-	b1 := common.Hex2Bytes(testAddress)
-	b2 := common.Hex2Bytes(testAddress2)
+	b1, err1 := hexutil.HexToBytes(testAddress)
+	assert.Equal(t, err1, nil)
+	b2, err2 := hexutil.HexToBytes(testAddress2)
+	assert.Equal(t, err2, nil)
 	addr1 := common.BytesToAddress(b1)
 	addr2 := common.BytesToAddress(b2)
 	val1 := New(addr1)

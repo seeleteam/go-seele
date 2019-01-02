@@ -7,11 +7,14 @@ package miner
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -27,6 +30,7 @@ type Task struct {
 	debtVerifier types.DebtVerifier
 }
 
+// NewTask return Task object
 func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.DebtVerifier) *Task {
 	return &Task{
 		header:       header,
@@ -37,6 +41,10 @@ func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
 func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
+
 	// choose transactions from the given txs
 	size := task.chooseDebts(seele, statedb, log)
 
@@ -58,13 +66,19 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 
 	task.header.StateHash = root
 
+	// exit
+	memory.Print(log, "task applyTransactionsAndDebts exit", now, true)
+
 	return nil
 }
 
 func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) int {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task chooseDebts entrance", now, false)
+
 	size := core.BlockByteLimit
 
-	var recoverableDebts []*types.Debt
 	for size > 0 {
 		debts, _ := seele.DebtPool().GetProcessableDebts(size)
 		if len(debts) == 0 {
@@ -72,16 +86,10 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 
 		for _, d := range debts {
-			recoverable, err := core.ApplyDebt(statedb, d, task.coinbase, task.debtVerifier)
+			err := seele.BlockChain().ApplyDebtWithoutVerify(statedb, d, task.coinbase)
 			if err != nil {
-				if recoverable {
-					log.Info("apply debt recoverable error %s", err)
-					recoverableDebts = append(recoverableDebts, d)
-				} else {
-					log.Warn("apply debt error %s", err)
-					seele.DebtPool().RemoveDebtByHash(d.Hash)
-				}
-
+				log.Warn("apply debt error %s", err)
+				seele.DebtPool().RemoveDebtByHash(d.Hash)
 				continue
 			}
 
@@ -90,22 +98,21 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		}
 	}
 
-	if len(recoverableDebts) > 0 {
-		// add recoverable debts back to debt pool
-		seele.DebtPool().AddBackDebts(recoverableDebts)
-	}
+	// exit
+	memory.Print(log, "task chooseDebts exit", now, true)
+
 	return size
 }
 
 // handleMinerRewardTx handles the miner reward transaction.
 func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) {
 	reward := consensus.GetReward(task.header.Height)
-	rewardTx, err := types.NewRewardTransaction(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
+	rewardTx, err := txs.NewRewardTx(task.coinbase, reward, task.header.CreateTimestamp.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
-	rewardTxReceipt, err := core.ApplyRewardTx(rewardTx, statedb)
+	rewardTxReceipt, err := txs.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +126,10 @@ func (task *Task) handleMinerRewardTx(statedb *state.Statedb) (*big.Int, error) 
 }
 
 func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int) {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task chooseTransactions entrance", now, false)
+
 	txIndex := 1 // the first tx is miner reward
 
 	for size > 0 {
@@ -150,6 +161,9 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 
 		size -= txsSize
 	}
+
+	// exit
+	memory.Print(log, "task chooseTransactions exit", now, true)
 }
 
 // generateBlock builds a block from task

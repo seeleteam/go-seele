@@ -1,0 +1,7 @@
+[
+	{ "constant": false, "inputs": [ { "name": "x", "type": "uint256" } ], "name": "set", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function" },
+	{ "constant": false, "inputs": [], "name": "get", "outputs": [ { "name": "", "type": "uint256" } ], "payable": false, "stateMutability": "nonpayable", "type": "function" },
+	{ "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor" },
+	{ "anonymous": false, "inputs": [ { "indexed": false, "name": "", "type": "string" } ], "name": "getA", "type": "event" },
+	{ "anonymous": false, "inputs": [], "name": "getB", "type": "event" }
+]

@@ -149,6 +149,7 @@ func (c *core) processBacklog() {
 					isFuture = true
 					break
 				}
+
 				c.logger.Debug("Skip the backlog event. msg %v. err %s", msg, err)
 				continue
 			}

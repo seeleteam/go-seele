@@ -9,12 +9,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/factory"
 	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
@@ -40,6 +44,9 @@ var (
 
 	//pprofPort http server port
 	pprofPort uint64
+
+	// profileSize is used to limit when need to collect profiles, set 6GB
+	profileSize = uint64(1024 * 1024 * 1024 * 6)
 )
 
 // startCmd represents the start command
@@ -77,7 +84,13 @@ var startCmd = &cobra.Command{
 		}
 		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
 
-		miningEngine, err := factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+		var engine consensus.Engine
+		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
+			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
+		} else {
+			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+		}
+
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -93,8 +106,12 @@ var startCmd = &cobra.Command{
 			}()
 		}
 
+		if comm.LogConfiguration.IsDebug {
+			go monitorPC()
+		}
+
 		if lightNode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), miningEngine)
+			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleNode.GetShardNumber(), engine)
 			if err != nil {
 				fmt.Println("Create light service error.", err.Error())
 				return
@@ -112,14 +129,14 @@ var startCmd = &cobra.Command{
 			}
 		} else {
 			// light client manager
-			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, miningEngine)
+			manager, err := lightclients.NewLightClientManager(seeleNode.GetShardNumber(), ctx, nCfg, engine)
 			if err != nil {
 				fmt.Printf("create light client manager failed. %s", err)
 				return
 			}
 
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, miningEngine, manager)
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, manager)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -198,4 +215,53 @@ func init() {
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
+}
+
+func monitorPC() {
+	var info runtime.MemStats
+	heapDir := filepath.Join(common.GetTempFolder(), "heapProfile")
+	err := os.MkdirAll(heapDir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("failed to create folder %s: %s\n", heapDir, err)
+		return
+	}
+
+	profileDir := filepath.Join(common.GetTempFolder(), "cpuProfile")
+	err = os.MkdirAll(profileDir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("failed to create folder %s: %s\n", profileDir, err)
+		return
+	}
+
+	ticker := time.NewTicker(1 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			runtime.ReadMemStats(&info)
+			if info.Alloc > profileSize {
+				heapFile := filepath.Join(heapDir, fmt.Sprint("heap-", time.Now().Format("2006-01-02-15-04-05")))
+				f, err := os.Create(heapFile)
+				if err != nil {
+					fmt.Println("monitor create heap file err:", err)
+					return
+				}
+				pprof.WriteHeapProfile(f)
+
+				profileFile := filepath.Join(profileDir, fmt.Sprint("cpu-", time.Now().Format("2006-01-02-15-04-05")))
+				cpuf, err := os.Create(profileFile)
+				if err != nil {
+					fmt.Println("monitor create cpu file err:", err)
+					return
+				}
+
+				if err := pprof.StartCPUProfile(cpuf); err != nil {
+					fmt.Println("failed to start cpu profile err:", err)
+					return
+				}
+
+				time.Sleep(20 * time.Second)
+				pprof.StopCPUProfile()
+			}
+		}
+	}
 }
