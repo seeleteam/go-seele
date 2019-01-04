@@ -47,14 +47,16 @@ func (p *peerSet) getPeers() map[common.Address]*peer {
 func (p *peerSet) bestPeer() *peer {
 	var (
 		bestPeer *peer
+		bestHash common.Hash
 		bestTd   *big.Int
 	)
 
 	v := p.getPeers()
 	for _, pe := range v {
-		if _, td := pe.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+		// if the total difficulties of the peers are the same, compare their head hashes
+		if hash, td := pe.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 || (td.Cmp(bestTd) == 0 && hash.Big().Cmp(bestHash.Big()) > 0) {
 			if !pe.isSyncing() {
-				bestPeer, bestTd = pe, td
+				bestPeer, bestTd, bestHash = pe, td, hash
 			}
 		}
 	}
