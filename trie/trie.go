@@ -20,7 +20,7 @@ import (
 
 var (
 	errNodeFormat   = errors.New("trie node format is invalid")
-	errNodeNotExist = errors.New("trie node not found")
+	errNodeNotExist = errors.New("trie node not found(this is a trie.go test string)")
 )
 
 // Database is used to load trie nodes by hash.
@@ -468,6 +468,11 @@ func (t *Trie) loadNode(hash []byte) (noder, error) {
 	key := append(t.dbprefix, hash...)
 	val, err := t.db.Get(key)
 	if err != nil || len(val) == 0 {
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("Get error due to len = 0 of value from db")
+		}
 		return nil, errNodeNotExist
 	}
 	return decodeNode(hash, val)
