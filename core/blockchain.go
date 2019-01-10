@@ -6,10 +6,10 @@
 package core
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/svm"
+	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/event"
@@ -53,13 +54,6 @@ var (
 	// ErrBlockEmptyTxs is returned when writing a block with empty transactions.
 	ErrBlockEmptyTxs = errors.New("empty transactions in block")
 
-	// ErrBlockInvalidToAddress is returned when the to address of miner reward tx is nil.
-	ErrBlockInvalidToAddress = errors.New("invalid to address")
-
-	// ErrBlockCoinbaseMismatch is returned when the to address of miner reward tx does not match
-	// the creator address in the block header.
-	ErrBlockCoinbaseMismatch = errors.New("coinbase mismatch")
-
 	// ErrBlockCreateTimeNull is returned when block create time is nil
 	ErrBlockCreateTimeNull = errors.New("block must have create time")
 
@@ -87,11 +81,13 @@ type Blockchain struct {
 	lock           sync.RWMutex // lock for update blockchain info. for example write block
 
 	blockLeaves  *BlockLeaves
-	currentBlock *types.Block
+	currentBlock atomic.Value
 	log          *log.SeeleLog
 
 	rp           *recoveryPoint // used to recover blockchain in case of program crashed when write a block
 	debtVerifier types.DebtVerifier
+
+	lastBlockTime time.Time // last sucessful written block time.
 }
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
@@ -103,6 +99,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		engine:         engine,
 		log:            log.GetLogger("blockchain"),
 		debtVerifier:   verifier,
+		lastBlockTime:  time.Now(),
 	}
 
 	var err error
@@ -110,75 +107,61 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	// recover from program crash
 	bc.rp, err = loadRecoveryPoint(recoveryPointFile)
 	if err != nil {
-		bc.log.Error("Failed to load recovery point info from file, %v", err.Error())
-		return nil, errors.NewStackedError(err, "failed to load recovery point info")
+		return nil, errors.NewStackedErrorf(err, "failed to load recovery point info from file %v", recoveryPointFile)
 	}
 
 	if err = bc.rp.recover(bcStore); err != nil {
-		bc.log.Error("Failed to recover blockchain, info = %+v, error = %v", *bc.rp, err.Error())
-		return nil, errors.NewStackedError(err, "failed to recover blockchain")
+		return nil, errors.NewStackedErrorf(err, "failed to recover blockchain with RP %+v", *bc.rp)
 	}
 
 	// Get the genesis block from store
 	genesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 	if err != nil {
-		bc.log.Error("Failed to get block hash of genesis block height, %v", err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get genesis block hash by height %v", genesisBlockHeight)
 	}
 
 	bc.genesisBlock, err = bcStore.GetBlock(genesisHash)
 	if err != nil {
-		bc.log.Error("Failed to get block by genesis block hash, hash = %v, error = %v", genesisHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", genesisHash)
 	}
 
 	// Get the HEAD block from store
 	currentHeaderHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
-		bc.log.Error("Failed to get HEAD block hash, %v", err.Error())
 		return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
 	}
 
-	if bc.currentBlock, err = bcStore.GetBlock(currentHeaderHash); err != nil {
-		bc.log.Error("Failed to get block by HEAD block hash, hash = %v, error = %v", currentHeaderHash.Hex(), err.Error())
+	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
+	if err != nil {
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", currentHeaderHash)
 	}
+	bc.currentBlock.Store(currentBlock)
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
-		bc.log.Error("Failed to get HEAD block TD, hash = %v, error = %v", currentHeaderHash.Hex(), err.Error())
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
 	}
 
-	blockIndex := NewBlockIndex(currentHeaderHash, bc.currentBlock.Header.Height, td)
+	blockIndex := NewBlockIndex(currentHeaderHash, currentBlock.Header.Height, td)
 	bc.blockLeaves = NewBlockLeaves()
 	bc.blockLeaves.Add(blockIndex)
 
 	return bc, nil
 }
 
+// AccountDB returns the account state database in blockchain.
 func (bc *Blockchain) AccountDB() database.Database {
 	return bc.accountStateDB
 }
 
 // CurrentBlock returns the HEAD block of the blockchain.
 func (bc *Blockchain) CurrentBlock() *types.Block {
-	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
-	return bc.currentBlock
+	return bc.currentBlock.Load().(*types.Block)
 }
 
 // CurrentHeader returns the HEAD block header of the blockchain.
 func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
-	bc.lock.RLock()
-	defer bc.lock.RUnlock()
-
-	if bc.currentBlock == nil {
-		return nil
-	}
-
-	return bc.currentBlock.Header
+	return bc.CurrentBlock().Header
 }
 
 // GetCurrentState returns the state DB of the current block.
@@ -187,7 +170,7 @@ func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 	return state.NewStatedb(block.Header.StateHash, bc.accountStateDB)
 }
 
-// GetHeader retrieves a block header from the database by hash and number.
+// GetHeaderByHeight retrieves a block header by height.
 func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 	hash, err := bc.bcStore.GetBlockHash(height)
 	if err != nil {
@@ -198,7 +181,7 @@ func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 	return bc.GetHeaderByHash(hash)
 }
 
-// GetHeaderByNumber retrieves a block header from the database by number.
+// GetHeaderByHash retrieves a block header by hash.
 func (bc *Blockchain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
 	header, err := bc.bcStore.GetBlockHeader(hash)
 	if err != nil {
@@ -209,7 +192,7 @@ func (bc *Blockchain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
 	return header
 }
 
-// GetHeaderByHash retrieves a block header from the database by its hash.
+// GetBlockByHash retrieves a block by hash.
 func (bc *Blockchain) GetBlockByHash(hash common.Hash) *types.Block {
 	block, err := bc.bcStore.GetBlock(hash)
 	if err != nil {
@@ -225,10 +208,12 @@ func (bc *Blockchain) GetState(root common.Hash) (*state.Statedb, error) {
 	return state.NewStatedb(root, bc.accountStateDB)
 }
 
+// GetStateByRootAndBlockHash will panic, since not supported
 func (bc *Blockchain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
 	panic("unsupported")
 }
 
+// Genesis returns the genesis block of blockchain.
 func (bc *Blockchain) Genesis() *types.Block {
 	return bc.genesisBlock
 }
@@ -260,9 +245,16 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
+	auditor := log.NewAuditor(bc.log)
+	auditor.AuditEnter("doWriteBlock")
+	auditor.Audit("elapse since last block: %v", time.Since(bc.lastBlockTime))
+	defer auditor.AuditLeave()
+
+	// validate block
 	if err := bc.validateBlock(block); err != nil {
 		return errors.NewStackedError(err, "failed to validate block")
 	}
+	auditor.Audit("succeed to validate block %v", block.HeaderHash)
 
 	preHeader, err := bc.bcStore.GetBlockHeader(block.Header.PreviousBlockHash)
 	if err != nil {
@@ -275,6 +267,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if blockStatedb, receipts, err = bc.applyTxs(block, preHeader.StateHash); err != nil {
 		return errors.NewStackedError(err, "failed to apply block txs")
 	}
+	auditor.Audit("succeed to apply %v txs and %v debts", len(block.Transactions), len(block.Debts))
 
 	// Validate receipts root hash.
 	if receiptsRootHash := types.ReceiptMerkleRootHash(receipts); !receiptsRootHash.Equal(block.Header.ReceiptHash) {
@@ -294,6 +287,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if stateRootHash, err = blockStatedb.Commit(batch); err != nil {
 		return errors.NewStackedError(err, "failed to commit statedb changes to database batch")
 	}
+	auditor.Audit("succeed to commit statedb changes to batch")
 
 	if !stateRootHash.Equal(block.Header.StateHash) {
 		return ErrBlockStateHashMismatch
@@ -320,6 +314,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
 	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentBlock.Header.Height, currentTd)
 	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
+	auditor.Audit("succeed to prepare block index")
 
 	/////////////////////////////////////////////////////////////////
 	// PAY ATTENTION TO THE ORDER OF WRITING DATA INTO DB.
@@ -329,48 +324,49 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	// 3. Write block
 	/////////////////////////////////////////////////////////////////
 	if err = batch.Commit(); err != nil {
-		bc.log.Error("Failed to batch commit account states, %v", err.Error())
-		return errors.NewStackedError(err, "failed to commit statedb changes into database")
+		return errors.NewStackedError(err, "failed to batch commit statedb changes to database")
 	}
+	auditor.Audit("succeed to batch commit statedb chanages to database")
 
 	if err = bc.rp.onPutBlockStart(block, bc.bcStore, isHead); err != nil {
-		bc.log.Error("Failed to set recovery point before put block into store, %v", err.Error())
 		return errors.NewStackedErrorf(err, "failed to set recovery point before put block into store, isNewHead = %v", isHead)
 	}
 
 	if err = bc.bcStore.PutReceipts(block.HeaderHash, receipts); err != nil {
-		bc.log.Error("Failed to save receipts into store, %v", err.Error())
 		return errors.NewStackedErrorf(err, "failed to save receipts into store, blockHash = %v, receipts count = %v", block.HeaderHash, len(receipts))
 	}
 
 	if err = bc.bcStore.PutBlock(block, currentTd, isHead); err != nil {
-		bc.log.Error("Failed to save block into store, %v", err.Error())
 		return errors.NewStackedErrorf(err, "failed to save block into store, blockHash = %v, newTD = %v, isNewHead = %v", block.HeaderHash, currentTd, isHead)
 	}
+	auditor.Audit("succeed to save block into store, newHead = %v", isHead)
 
 	bc.rp.onPutBlockEnd()
 
 	// If the new block has larger TD, the canonical chain will be changed.
 	// In this case, need to update the height-to-blockHash mapping for the new canonical chain.
 	if isHead {
-		if err = DeleteLargerHeightBlocks(bc.bcStore, block.Header.Height+1, bc.rp); err != nil {
-			bc.log.Error("Failed to delete larger height blocks when HEAD changed, larger height = %v, error = %v", block.Header.Height+1, err.Error())
-			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", block.Header.Height+1)
+		largerHeight := block.Header.Height + 1
+		if err = DeleteLargerHeightBlocks(bc.bcStore, largerHeight, bc.rp); err != nil {
+			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight)
 		}
+		auditor.Audit("succeed to delete larger height blocks, height = %v", largerHeight)
 
-		if err = OverwriteStaleBlocks(bc.bcStore, block.Header.PreviousBlockHash, bc.rp); err != nil {
-			bc.log.Error("Failed to overwrite stale blocks, hash = %v, error = %v", block.Header.PreviousBlockHash, err.Error())
-			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", block.Header.PreviousBlockHash)
+		previousHash := block.Header.PreviousBlockHash
+		if err = OverwriteStaleBlocks(bc.bcStore, previousHash, bc.rp); err != nil {
+			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash)
 		}
+		auditor.Audit("succeed to overwrite stale blocks, hash = %v", previousHash)
 	}
 
 	// update block header after meta info updated
 	bc.blockLeaves.Add(blockIndex)
 	bc.blockLeaves.Remove(block.Header.PreviousBlockHash)
+	auditor.Audit("succeed to update block index, new = %v, old = %v", blockIndex.blockHash, block.Header.PreviousBlockHash)
 
 	committed = true
 	if isHead {
-		bc.currentBlock = currentBlock
+		bc.currentBlock.Store(currentBlock)
 
 		bc.blockLeaves.PurgeAsync(bc.bcStore, func(err error) {
 			if err != nil {
@@ -378,8 +374,10 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 			}
 		})
 
-		event.ChainHeaderChangedEventMananger.Fire(block.HeaderHash)
+		event.ChainHeaderChangedEventMananger.Fire(block)
 	}
+
+	bc.lastBlockTime = time.Now()
 
 	return nil
 }
@@ -396,6 +394,10 @@ func (bc *Blockchain) validateBlock(block *types.Block) error {
 
 	if err := block.Validate(); err != nil {
 		return errors.NewStackedError(err, "failed to validate block")
+	}
+
+	if len(block.Transactions) == 0 {
+		return ErrBlockEmptyTxs
 	}
 
 	if (types.GetTransactionsSize(block.Transactions[1:]) + types.GetDebtsSize(block.Debts)) > BlockByteLimit {
@@ -459,116 +461,79 @@ func (bc *Blockchain) GetStore() store.BlockchainStore {
 // applyTxs processes the txs in the specified block and returns the new state DB of the block.
 // This method supposes the specified block is validated.
 func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Statedb, []*types.Receipt, error) {
-	minerRewardTx, err := bc.validateMinerRewardTx(block)
-	if err != nil {
-		return nil, nil, errors.NewStackedError(err, "failed to validate miner reward tx")
-	}
+	auditor := log.NewAuditor(bc.log)
 
 	statedb, err := state.NewStatedb(root, bc.accountStateDB)
 	if err != nil {
 		return nil, nil, errors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
 	}
 
+	//validate debts
+	err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
+	if err != nil {
+		return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+	}
+
 	// update debts
 	for _, d := range block.Debts {
-		_, err = ApplyDebt(statedb, d, block.Header.Creator, bc.debtVerifier)
+		err = bc.ApplyDebtWithoutVerify(statedb, d, block.Header.Creator)
 		if err != nil {
 			return nil, nil, errors.NewStackedError(err, "failed to apply debt")
 		}
 	}
+	auditor.Audit("succeed to validate %v debts", len(block.Debts))
 
-	receipts, err := bc.updateStateDB(statedb, minerRewardTx, block.Transactions[1:], block.Header)
+	// apply txs
+	receipts, err := bc.applyRewardAndRegularTxs(statedb, block.Transactions[0], block.Transactions[1:], block.Header)
 	if err != nil {
-		return nil, nil, errors.NewStackedErrorf(err, "failed to update statedb")
+		return nil, nil, errors.NewStackedErrorf(err, "failed to apply reward and regular txs")
 	}
+	auditor.Audit("succeed to update stateDB for %v txs", len(block.Transactions))
 
 	return statedb, receipts, nil
 }
 
-func (bc *Blockchain) validateMinerRewardTx(block *types.Block) (*types.Transaction, error) {
-	if len(block.Transactions) == 0 {
-		return nil, ErrBlockEmptyTxs
+func (bc *Blockchain) applyRewardAndRegularTxs(statedb *state.Statedb, rewardTx *types.Transaction, regularTxs []*types.Transaction, blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
+	auditor := log.NewAuditor(bc.log)
+
+	receipts := make([]*types.Receipt, len(regularTxs)+1)
+
+	// validate and apply reward txs
+	if err := txs.ValidateRewardTx(rewardTx, blockHeader); err != nil {
+		return nil, errors.NewStackedError(err, "failed to validate reward tx")
 	}
 
-	minerRewardTx := block.Transactions[0]
-	if minerRewardTx.Data.To.IsEmpty() {
-		return nil, ErrBlockInvalidToAddress
-	}
-
-	if !bytes.Equal(minerRewardTx.Data.To.Bytes(), block.Header.Creator.Bytes()) {
-		return nil, ErrBlockCoinbaseMismatch
-	}
-
-	if minerRewardTx.Data.Amount == nil {
-		return nil, types.ErrAmountNil
-	}
-
-	if minerRewardTx.Data.Amount.Sign() < 0 {
-		return nil, types.ErrAmountNegative
-	}
-
-	reward := consensus.GetReward(block.Header.Height)
-	if reward == nil || reward.Cmp(minerRewardTx.Data.Amount) != 0 {
-		return nil, fmt.Errorf("invalid reward Amount, block height %d, want %s, got %s", block.Header.Height, reward, minerRewardTx.Data.Amount)
-	}
-
-	if minerRewardTx.Data.Timestamp != block.Header.CreateTimestamp.Uint64() {
-		return nil, types.ErrTimestampMismatch
-	}
-
-	return minerRewardTx, nil
-}
-
-func (bc *Blockchain) updateStateDB(statedb *state.Statedb, minerRewardTx *types.Transaction, txs []*types.Transaction,
-	blockHeader *types.BlockHeader) ([]*types.Receipt, error) {
-	// process miner reward
-	rewardTxReceipt, err := ApplyRewardTx(minerRewardTx, statedb)
+	rewardReceipt, err := txs.ApplyRewardTx(rewardTx, statedb)
 	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to apply miner reward tx")
+		return nil, errors.NewStackedError(err, "failed to apply reward tx")
 	}
+	receipts[0] = rewardReceipt
+	auditor.Audit("succeed to validate and apply reward tx")
 
-	receipts := make([]*types.Receipt, len(txs)+1)
-
-	// add the receipt of the reward tx
-	receipts[0] = rewardTxReceipt
-
-	if err := types.BatchValidateTxs(txs); err != nil {
-		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(txs))
+	// batch validate signature to improve perf
+	if err := types.BatchValidateTxs(regularTxs); err != nil {
+		return nil, errors.NewStackedErrorf(err, "failed to batch validate %v txs", len(regularTxs))
 	}
+	auditor.Audit("succeed to batch validate (signature) %v txs", len(regularTxs))
 
-	// process other txs
-	for i, tx := range txs {
+	// process regular txs
+	for i, tx := range regularTxs {
 		txIdx := i + 1
 
 		if err := tx.ValidateState(statedb); err != nil {
 			return nil, errors.NewStackedErrorf(err, "failed to validate tx[%v] against statedb", txIdx)
 		}
 
-		receipt, err := bc.ApplyTransaction(tx, txIdx, minerRewardTx.Data.To, statedb, blockHeader)
+		receipt, err := bc.ApplyTransaction(tx, txIdx, blockHeader.Creator, statedb, blockHeader)
 		if err != nil {
 			return nil, errors.NewStackedErrorf(err, "failed to apply tx[%v]", txIdx)
 		}
 
 		receipts[txIdx] = receipt
 	}
+	auditor.Audit("succeed to apply %v txs", len(regularTxs))
 
 	return receipts, nil
-}
-
-// ApplyRewardTx applies a reward transaction, changes corresponding statedb and generates a receipt.
-func ApplyRewardTx(rewardTx *types.Transaction, statedb *state.Statedb) (*types.Receipt, error) {
-	statedb.CreateAccount(rewardTx.Data.To)
-	statedb.AddBalance(rewardTx.Data.To, rewardTx.Data.Amount)
-
-	hash, err := statedb.Hash()
-	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to get statedb root hash")
-	}
-
-	receipt := types.MakeRewardReceipt(rewardTx)
-	receipt.PostState = hash
-
-	return receipt, nil
 }
 
 // ApplyTransaction applies a transaction, changes corresponding statedb and generates its receipt
@@ -589,18 +554,11 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 	return receipt, nil
 }
 
-// ApplyDebt applies a debt and update statedb.
-func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, verifier types.DebtVerifier) (recoverable bool, retErr error) {
-	data := statedb.GetData(d.Data.Account, d.Hash)
-	if bytes.Equal(data, types.DebtDataFlag) {
-		retErr = fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
-		return
-	}
-
-	var err error
-	if recoverable, err = d.Validate(verifier, false, common.LocalShardNumber); err != nil {
-		retErr = errors.NewStackedError(err, "failed to validate debt")
-		return
+// ApplyDebtWithoutVerify applies a debt and update statedb.
+func (bc *Blockchain) ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.Debt, coinbase common.Address) error {
+	debtIndex, _ := bc.bcStore.GetDebtIndex(d.Hash)
+	if debtIndex != nil {
+		return fmt.Errorf("debt already packed, debt hash %s", d.Hash.Hex())
 	}
 
 	if !statedb.Exist(d.Data.Account) {
@@ -611,8 +569,8 @@ func ApplyDebt(statedb *state.Statedb, d *types.Debt, coinbase common.Address, v
 
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
 	statedb.AddBalance(coinbase, d.Fee())
-	statedb.SetData(d.Data.Account, d.Hash, types.DebtDataFlag)
-	return
+
+	return nil
 }
 
 // DeleteLargerHeightBlocks deletes the height-to-hash mappings with larger height in the canonical chain.

@@ -53,18 +53,35 @@ func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 		return nil, nil
 	}
 
-	var count = uint64(len(block.Transactions) - 1)
-	var duration uint64
+	startHeight := int64(block.Header.Height) - 6
+	// genesis block time is set by users, so must calculate from the number that greater than 1
+	if startHeight < 2 {
+		return nil, nil
+	}
+
+	count := uint64(0)
+	duration := uint64(0)
 	var endHeight uint64
-	startTime := block.Header.CreateTimestamp.Uint64()
-	for height := block.Header.Height - 1; height > 0; height-- {
+
+	for height := uint64(startHeight); height > 1; height-- {
 		current, err := chain.GetStore().GetBlockByHeight(height)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get block, error:%s, block height:%d", err, height)
 		}
 
-		count += uint64(len(current.Transactions) - 1)
-		duration = startTime - current.Header.CreateTimestamp.Uint64()
+		for _, tx := range current.Transactions {
+			if !tx.IsCrossShardTx() {
+				count = count + 1
+			}
+		}
+
+		count = count + uint64(len(current.Debts)) - 1
+		front, err := chain.GetStore().GetBlockByHeight(height - 1)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get block, error:%s, block height:%d", err, height-1)
+		}
+
+		duration += current.Header.CreateTimestamp.Uint64() - front.Header.CreateTimestamp.Uint64()
 		endHeight = height
 
 		if duration > timeInterval {
@@ -74,7 +91,7 @@ func (api *PrivateDebugAPI) GetTPS() (*TpsInfo, error) {
 
 	return &TpsInfo{
 		StartHeight: endHeight,
-		EndHeight:   block.Header.Height,
+		EndHeight:   uint64(startHeight),
 		Count:       count,
 		Duration:    duration,
 	}, nil

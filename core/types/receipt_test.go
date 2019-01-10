@@ -8,8 +8,8 @@ package types
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func newTestReceipt() *Receipt {
@@ -33,12 +33,4 @@ func Test_Receipt_ReceiptMerkleRootHash(t *testing.T) {
 	if root := ReceiptMerkleRootHash(receipts); root.IsEmpty() {
 		t.Fatal()
 	}
-}
-
-func Test_Receipt_MakeRewardReceipt(t *testing.T) {
-	tx := newTestTxWithSign(1, 2, 3, true)
-	txHash := tx.Hash
-	receipt := MakeRewardReceipt(tx)
-
-	assert.Equal(t, receipt.TxHash, txHash)
 }

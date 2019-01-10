@@ -19,19 +19,19 @@ var (
 	tailRewardCoin *big.Int
 
 	// blockNumberPerEra block number per reward era. It is approximation of block number generated per year.
-	blockNumberPerEra uint64 = 63000000
+	blockNumberPerEra uint64 = 3150000
 )
 
 func init() {
-	rewardTable := [...]float64{1.5, 1, 0.4, 0.4, 0.25}
-	tailReward := float64(0.25)
+	rewardTable := [...]float64{24, 16, 12, 10, 8, 6, 6, 6}
+	tailReward := float64(4)
 
 	rewardTableCoin = make([]*big.Int, len(rewardTable))
 	for i, r := range rewardTable {
-		rewardTableCoin[i] = convertSeeleToFan(r)
+		rewardTableCoin[i] = convertSeeleToFan(r / common.ShardCount)
 	}
 
-	tailRewardCoin = convertSeeleToFan(tailReward)
+	tailRewardCoin = convertSeeleToFan(tailReward / common.ShardCount)
 }
 
 func convertSeeleToFan(seele float64) *big.Int {

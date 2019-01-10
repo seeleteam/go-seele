@@ -33,12 +33,14 @@ func newPeerSet() *peerSet {
 
 func (p *peerSet) bestPeer(shard uint) *peer {
 	var bestPeer *peer
-	bestTd := big.NewInt(0)
+	var bestHash common.Hash
+	bestTd := big.NewInt(0)	
 
 	peers := p.getPeerByShard(shard)
 	for _, peer := range peers {
-		if _, td := peer.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
-			bestPeer, bestTd = peer, td
+		// if the total difficulties of the peers are the same, compare their head hashes
+		if hash, td := peer.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 || (td.Cmp(bestTd) == 0 && hash.Big().Cmp(bestHash.Big()) > 0) {
+			bestPeer, bestTd, bestHash = peer, td, hash
 		}
 	}
 

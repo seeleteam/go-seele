@@ -47,8 +47,8 @@ var (
 	errInvalidDifficulty = errors.New("invalid difficulty")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
 	errInvalidExtraDataFormat = errors.New("invalid extra data format")
-	// errInvalidMixDigest is returned if a block's mix digest is not Istanbul digest.
-	errInvalidMixDigest = errors.New("invalid Istanbul mix digest")
+	// errIstanbulConsensus is returned if a block's consensus mismatch Istanbul
+	errIstanbulConsensus = errors.New("mismatch Istanbul Consensus")
 	// errInvalidNonce is returned if a block's nonce is invalid
 	errInvalidNonce = errors.New("invalid nonce")
 	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
@@ -100,6 +100,11 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Block
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.BlockHeader, parents []*types.BlockHeader) error {
+	// Ensure that the type of consensus is satisfied
+	if header.Consensus != types.IstanbulConsensus {
+		return errIstanbulConsensus
+	}
+
 	// Don't waste time checking blocks from the future
 	if header.CreateTimestamp.Cmp(big.NewInt(now().Unix())) > 0 {
 		return consensus.ErrBlockCreateTimeOld
@@ -108,6 +113,11 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Block
 	// Ensure that the extra data format is satisfied
 	if _, err := types.ExtractIstanbulExtra(header); err != nil {
 		return errInvalidExtraDataFormat
+	}
+
+	// Ensure that the coinbase is valid
+	if header.Height != 0 && !bytes.Equal(header.Witness[:], nonceAuthVote) && !bytes.Equal(header.Witness[:], nonceDropVote) {
+		return errInvalidNonce
 	}
 
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
@@ -278,7 +288,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.BlockHe
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.BlockHeader) error {
 	// unused fields, force to set to empty
 	header.Creator = common.Address{}
-	header.Witness = []byte{}
+	header.Witness = make([]byte, istanbul.WitnessSize)
 	header.Consensus = types.IstanbulConsensus
 
 	// copy the parent extra data as the header extra data

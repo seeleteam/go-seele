@@ -102,6 +102,7 @@ func testWithBackend(verifier types.DebtVerifier, t *testing.T) (*types.Block, *
 	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
 	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
 	debtPool.AddDebt(types.NewTestDebtWithTargetShard(1))
+	debtPool.DoCheckingDebt()
 
 	state, err := state.NewStatedb(parent.Header.StateHash, bc.AccountDB())
 	assert.Equal(t, err, nil)

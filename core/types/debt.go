@@ -18,8 +18,6 @@ import (
 // DebtSize debt serialized size
 const DebtSize = 118
 
-var DebtDataFlag = []byte{0x01}
-
 var (
 	errWrongShardNumber  = errors.New("wrong from shard number")
 	errInvalidAccount    = errors.New("invalid account, unexpected shard number")
@@ -153,17 +151,9 @@ func GetDebtsSize(debts []*Debt) int {
 	return size
 }
 
-// GetDebtShareFee get debt share fee
-func GetDebtShareFee(fee *big.Int) *big.Int {
-	unit := big.NewInt(0).Div(fee, big.NewInt(2))
-	return unit
-}
-
 func (d *Debt) Fee() *big.Int {
 	// @todo for contract case, should use the fee in tx receipt
-	txIntrFee := new(big.Int).Mul(d.Data.Price, new(big.Int).SetUint64(TransferAmountIntrinsicGas*2))
-
-	return GetDebtShareFee(txIntrFee)
+	return new(big.Int).Mul(d.Data.Price, new(big.Int).SetUint64(DebtGas))
 }
 
 // NewDebtWithContext new a debt
@@ -257,4 +247,11 @@ func DebtArrayToMap(debts []*Debt) [][]*Debt {
 	}
 
 	return debtsMap
+}
+
+func BatchValidateDebt(debts []*Debt, verifier DebtVerifier) error {
+	return BatchValidate(func(index int) error {
+		_, err := debts[index].Validate(verifier, false, common.LocalShardNumber)
+		return err
+	}, len(debts))
 }

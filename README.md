@@ -3,18 +3,35 @@
 
 
 
-Official Golang implementation of Seele.
+The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
 
-# Building the source
+# Downloading & building the source
 
 Building the Seele project requires both a Go (version 1.7 or later) compiler and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
 
-- linux & mac
-```makefile
+- Building the Seele project requires both a Go (version 1.7 or later) compiler and a C compiler. Install Go v1.10 or higher, Git, and the C compiler.
+
+- Clone the go-seele repository to the GOPATH directory:
+
+```
+go get -u -v github.com/seeleteam/go-seele/... 
+```
+
+- Once successfully cloned source code:
+
+```
+cd GOPATH/src/seeleteam/go-seele/
+```
+
+- Linux & Mac
+
+```
 make all
 ```
-- windows
-```makefile
+
+- Windows
+
+```
 buildall.bat
 ```
 

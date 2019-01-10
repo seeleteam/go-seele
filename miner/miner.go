@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
@@ -125,7 +126,12 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	if err := miner.prepareNewBlock(); err != nil { // try to prepare the first block
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil)
+	}
+
+	// try to prepare the first block
+	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
 
@@ -145,6 +151,10 @@ func (miner *Miner) Stop() {
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
 	miner.stopMining()
+
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		istanbul.Stop()
+	}
 }
 
 func (miner *Miner) stopMining() {
@@ -195,7 +205,7 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 func (miner *Miner) newTxOrDebtCallback(e event.Event) {
 	// if not mining, start mining
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
-		if err := miner.prepareNewBlock(); err != nil {
+		if err := miner.prepareNewBlock(miner.recv); err != nil {
 			miner.log.Warn(err.Error())
 			atomic.StoreInt32(&miner.mining, 0)
 		}
@@ -218,6 +228,10 @@ out:
 				if ret != nil {
 					miner.log.Error("failed to save the block, for %s", ret.Error())
 					break
+				}
+
+				if h, ok := miner.engine.(consensus.Handler); ok {
+					h.NewChainHead()
 				}
 
 				miner.log.Info("saved mined block successfully")
@@ -244,7 +258,7 @@ func newHeaderByParent(parent *types.Block, coinbase common.Address, timestamp i
 }
 
 // prepareNewBlock prepares a new block to be mined
-func (miner *Miner) prepareNewBlock() error {
+func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	miner.log.Debug("starting mining the new block")
 
 	timestamp := time.Now().Unix()
@@ -279,23 +293,27 @@ func (miner *Miner) prepareNewBlock() error {
 	}
 
 	miner.log.Info("committing a new task to engine, height:%d, difficult:%d", header.Height, header.Difficulty)
-	miner.commitTask(miner.current)
+	miner.commitTask(miner.current, recv)
 
 	return nil
 }
 
 // saveBlock saves the block in the given result to the blockchain
 func (miner *Miner) saveBlock(result *types.Block) error {
+	now := time.Now()
+	// entrance
+	memory.Print(miner.log, "miner saveBlock entrance", now, false)
+
 	ret := miner.seele.BlockChain().WriteBlock(result)
+
+	// entrance
+	memory.Print(miner.log, "miner saveBlock exit", now, true)
+
 	return ret
 }
 
 // commitTask commits the given task to the miner
-func (miner *Miner) commitTask(task *Task) {
-	if atomic.LoadInt32(&miner.mining) != 1 {
-		return
-	}
-
+func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
 	block := task.generateBlock()
-	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, miner.recv)
+	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
 }

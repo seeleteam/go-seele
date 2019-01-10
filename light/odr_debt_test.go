@@ -43,45 +43,37 @@ func Test_odrDebtRequest_Serializable(t *testing.T) {
 func Test_odrDebtResponse_Serializable(t *testing.T) {
 	// debt in pool
 	response := &odrDebtResponse{
-		Debt:  newTestDebt(common.StringToHash("tx hash")),
-		Proof: make([]proofNode, 0),
+		OdrProvableResponse: OdrProvableResponse{
+			Proof: make([]proofNode, 0),
+		},
+		Debt: newTestDebt(common.StringToHash("tx hash")),
 	}
 
 	assertSerializable(t, response, &odrDebtResponse{})
 
 	// debt packed in blockchain
 	response = &odrDebtResponse{
+		OdrProvableResponse: OdrProvableResponse{
+			BlockIndex: &api.BlockIndex{
+				BlockHash:   common.StringToHash("block hash"),
+				BlockHeight: 38,
+				Index:       66,
+			},
+			Proof: []proofNode{
+				proofNode{
+					Key:   "root",
+					Value: []byte{1, 2, 3},
+				},
+				proofNode{
+					Key:   "leaf",
+					Value: []byte{3, 4, 5},
+				},
+			},
+		},
 		Debt: newTestDebt(common.StringToHash("tx hash")),
-		BlockIndex: &api.BlockIndex{
-			BlockHash:   common.StringToHash("block hash"),
-			BlockHeight: 38,
-			Index:       66,
-		},
-		Proof: []proofNode{
-			proofNode{
-				Key:   "root",
-				Value: []byte{1, 2, 3},
-			},
-			proofNode{
-				Key:   "leaf",
-				Value: []byte{3, 4, 5},
-			},
-		},
 	}
 
 	assertSerializable(t, response, &odrDebtResponse{})
-}
-
-func Test_odrDebtResponse_Validate_NilDebt(t *testing.T) {
-	response := &odrDebtResponse{
-		BlockIndex: &api.BlockIndex{
-			BlockHash:   common.StringToHash("block"),
-			BlockHeight: 38,
-			Index:       99,
-		},
-	}
-
-	assert.Nil(t, response.validate(nil, nil))
 }
 
 func Test_odrDebtResponse_Validate_HashMismatch(t *testing.T) {
@@ -135,13 +127,15 @@ func Test_odrDebtResponse_Validate(t *testing.T) {
 	assert.Nil(t, err)
 
 	response := &odrDebtResponse{
-		Debt: debts[1],
-		BlockIndex: &api.BlockIndex{
-			BlockHash:   common.StringToHash("block"),
-			BlockHeight: 38,
-			Index:       77,
+		OdrProvableResponse: OdrProvableResponse{
+			BlockIndex: &api.BlockIndex{
+				BlockHash:   common.StringToHash("block"),
+				BlockHeight: 38,
+				Index:       77,
+			},
+			Proof: mapToArray(proof),
 		},
-		Proof: mapToArray(proof),
+		Debt: debts[1],
 	}
 
 	// verify the debt trie proof

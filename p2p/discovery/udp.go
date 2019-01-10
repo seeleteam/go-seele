@@ -160,6 +160,10 @@ func (u *udp) sendLoop() {
 	}
 }
 
+func isShardValid(shard uint) bool {
+	return shard <= common.ShardCount
+}
+
 func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 	if len(data) > 0 {
 		code := byteToMsgType(data[0])
@@ -175,6 +179,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			// response ping
 			msg.handle(u, from)
+
 		case pongMsgType:
 			msg := &pong{}
 			err := common.Deserialize(data[1:], &msg)
@@ -188,10 +193,11 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 				fromAddr: from,
 				code:     code,
 				data:     msg,
-				err:      false,
+				err:      !isShardValid(msg.SelfShard),
 			}
 
 			u.gotReply <- r
+
 		case findNodeMsgType:
 			msg := &findNode{}
 
@@ -203,6 +209,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 
 			//response find
 			msg.handle(u, from)
+
 		case neighborsMsgType:
 			msg := &neighbors{}
 			err := common.Deserialize(data[1:], &msg)
@@ -220,6 +227,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			u.gotReply <- r
+
 		case findShardNodeMsgType:
 			msg := &findShardNode{}
 			err := common.Deserialize(data[1:], &msg)
@@ -229,6 +237,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			msg.handle(u, from)
+
 		case shardNodeMsgType:
 			msg := &shardNode{}
 			err := common.Deserialize(data[1:], &msg)
@@ -246,6 +255,7 @@ func (u *udp) handleMsg(from *net.UDPAddr, data []byte) {
 			}
 
 			u.gotReply <- r
+
 		default:
 			u.log.Error("unknown code %d", code)
 		}

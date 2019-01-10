@@ -316,14 +316,6 @@ func Test_Transaction_RlpMsgTx(t *testing.T) {
 	assertTxRlp(t, tx)
 }
 
-func Test_Transaction_RlpRewardTx(t *testing.T) {
-	miner := *crypto.MustGenerateRandomAddress()
-	tx, err := NewRewardTransaction(miner, big.NewInt(10), 666)
-	assert.Equal(t, err, nil)
-
-	assertTxRlp(t, tx)
-}
-
 func Test_Transaction_InvalidAmount(t *testing.T) {
 	_, fromAddress := randomAccount(t)
 	toAddress := *crypto.MustGenerateRandomAddress()

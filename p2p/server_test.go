@@ -25,7 +25,6 @@ func Test_NewServer(t *testing.T) {
 	assert.Equal(t, server != nil, true)
 	assert.Equal(t, server.Config, *config)
 	assert.Equal(t, server.running, false)
-	assert.Equal(t, server.MaxPeers, defaultMaxPeers)
 	assert.Equal(t, server.MaxPendingPeers, 0)
 	assert.Equal(t, server.genesis, genesis)
 

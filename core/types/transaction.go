@@ -20,6 +20,15 @@ import (
 	"github.com/seeleteam/go-seele/trie"
 )
 
+// TxType represents transaction type
+type TxType byte
+
+// Transaction types
+const (
+	TxTypeRegular TxType = iota
+	TxTypeReward
+)
+
 const (
 	defaultMaxPayloadSize = 32 * 1024
 
@@ -52,9 +61,6 @@ var (
 	// ErrPayloadEmpty is returned when create or call a contract without payload.
 	ErrPayloadEmpty = errors.New("empty payload")
 
-	// ErrTimestampMismatch is returned when the timestamp of the miner reward tx doesn't match with the block timestamp.
-	ErrTimestampMismatch = errors.New("timestamp mismatch")
-
 	// ErrSigInvalid is returned when the transaction signature is invalid.
 	ErrSigInvalid = errors.New("signature is invalid")
 
@@ -69,12 +75,19 @@ var (
 	// TransferAmountIntrinsicGas is the intrinsic gas to transfer amount.
 	TransferAmountIntrinsicGas = ethIntrinsicGas(nil)
 
+	CrossShardTransactionGas = TransferAmountIntrinsicGas
+
+	DebtGas = 2 * TransferAmountIntrinsicGas
+
+	CrossShardTotalGas = CrossShardTransactionGas + DebtGas
+
 	// verified tx signature cache <txHash, error>
 	sigCache = common.MustNewCache(20 * 1024)
 )
 
 // TransactionData wraps the data in a transaction.
 type TransactionData struct {
+	Type         TxType         // Transaction type
 	From         common.Address // From is the address of the sender
 	To           common.Address // To is the receiver address, and empty address is used to create contract
 	Amount       *big.Int       // Amount is the amount to be transferred
@@ -114,18 +127,9 @@ func GetTransactionsSize(txs []*Transaction) int {
 	return size
 }
 
-// GetTxFeeShare returns the miner fee on sender shard of cross-shard tx.
-func GetTxFeeShare(fee *big.Int) *big.Int {
-	mod := big.NewInt(0).Mod(fee, big.NewInt(2))
-	unit := big.NewInt(0).Div(fee, big.NewInt(2))
-
-	// give mod value to transaction fee share
-	return big.NewInt(0).Add(unit, mod)
-}
-
 // IsCrossShardTx indicates whether the tx is to another shard.
 func (tx *Transaction) IsCrossShardTx() bool {
-	return !tx.Data.To.IsEmpty() && !tx.Data.To.IsReserved() && tx.Data.From.Shard() != tx.Data.To.Shard()
+	return !tx.Data.From.IsEmpty() && !tx.Data.To.IsEmpty() && !tx.Data.To.IsReserved() && tx.Data.From.Shard() != tx.Data.To.Shard()
 }
 
 // Size return the transaction size
@@ -158,7 +162,7 @@ func (tx *Transaction) GetHash() common.Hash {
 func NewTransaction(from, to common.Address, amount *big.Int, price *big.Int, nonce uint64) (*Transaction, error) {
 	gasLimit := TransferAmountIntrinsicGas
 	if !from.IsEmpty() && !to.IsEmpty() && from.Shard() != to.Shard() {
-		gasLimit = 2 * gasLimit
+		gasLimit = CrossShardTotalGas
 	}
 
 	return newTx(from, to, amount, price, gasLimit, nonce, nil)
@@ -270,34 +274,6 @@ func NewMessageTransaction(from, to common.Address, amount *big.Int, price *big.
 	return newTx(from, to, amount, price, gasLimit, nonce, msg)
 }
 
-// NewRewardTransaction creates a reward transaction for the specified miner with the specified reward and block timestamp.
-func NewRewardTransaction(miner common.Address, reward *big.Int, timestamp uint64) (*Transaction, error) {
-	if reward == nil {
-		return nil, ErrAmountNil
-	}
-
-	if reward.Sign() < 0 {
-		return nil, ErrAmountNegative
-	}
-
-	rewardTxData := TransactionData{
-		From:      common.EmptyAddress,
-		To:        miner,
-		Amount:    new(big.Int).Set(reward),
-		GasPrice:  big.NewInt(0),
-		Timestamp: timestamp,
-		Payload:   make([]byte, 0),
-	}
-
-	rewardTx := &Transaction{
-		Hash:      crypto.MustHash(rewardTxData),
-		Data:      rewardTxData,
-		Signature: crypto.Signature{Sig: make([]byte, 0)},
-	}
-
-	return rewardTx, nil
-}
-
 // Sign signs the transaction with the specified private key.
 func (tx *Transaction) Sign(privKey *ecdsa.PrivateKey) {
 	tx.Hash = crypto.MustHash(tx.Data)
@@ -399,13 +375,18 @@ func GetTxTrie(txs []*Transaction) *trie.Trie {
 // Because the signature verification is time consuming (see test Benchmark_Transaction_ValidateWithoutState),
 // once a block includes too many txs (e.g. 5000), the txs validation will consume too much time.
 func BatchValidateTxs(txs []*Transaction) error {
-	len := len(txs)
-	threads := runtime.NumCPU() / 4 // in case of CPU 100%
+	return BatchValidate(func(index int) error {
+		return txs[index].ValidateWithoutState(true, true)
+	}, len(txs))
+}
+
+func BatchValidate(handler func(index int) error, len int) error {
+	threads := runtime.NumCPU() / 2 // in case of CPU 100%
 
 	// single thread for few CPU kernel or few txs to validate.
 	if threads <= 1 || len < threads {
-		for _, tx := range txs {
-			if err := tx.ValidateWithoutState(true, true); err != nil {
+		for i := 0; i < len; i++ {
+			if err := handler(i); err != nil {
 				return err
 			}
 		}
@@ -424,7 +405,7 @@ func BatchValidateTxs(txs []*Transaction) error {
 			defer wg.Done()
 
 			for j := offset; j < len && atomic.LoadUint32(&hasErr) == 0; j += threads {
-				if e := txs[j].ValidateWithoutState(true, true); e != nil {
+				if e := handler(j); e != nil {
 					if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
 						err = e
 					}

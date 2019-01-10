@@ -37,7 +37,7 @@ func GetReceiptTrie(receipts []*Receipt) *trie.Trie {
 
 	for _, r := range receipts {
 		buff := common.SerializePanic(r)
-		emptyTrie.Put(crypto.HashBytes(buff).Bytes(), buff)
+		emptyTrie.Put(r.TxHash.Bytes(), buff)
 	}
 
 	return emptyTrie
@@ -52,11 +52,4 @@ func ReceiptMerkleRootHash(receipts []*Receipt) common.Hash {
 
 	emptyTrie := GetReceiptTrie(receipts)
 	return emptyTrie.Hash()
-}
-
-// MakeRewardReceipt generates the receipt for the specified reward transaction
-func MakeRewardReceipt(reward *Transaction) *Receipt {
-	return &Receipt{
-		TxHash: reward.Hash,
-	}
 }
