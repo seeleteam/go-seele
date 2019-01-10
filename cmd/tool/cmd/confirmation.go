@@ -7,7 +7,7 @@ import (
 	//"sort"
 )
 
-func askForComfirmation() bool {
+func askForConfirmation() bool {
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
@@ -23,7 +23,7 @@ func askForComfirmation() bool {
 		return false
 	} else {
 		fmt.Println("Please type yes or no and then press enter:")
-		return askForComfirmation()
+		return askForConfirmation()
 	}
 }
 
