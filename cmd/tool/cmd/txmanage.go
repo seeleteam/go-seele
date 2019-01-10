@@ -23,12 +23,12 @@ import (
 
 var txAnalysisCmd = &cobra.Command{
 	Use:   "txAnalysis",
-	Short: "check whehter any tx gets lost. RUN ONLY AFTER TPS = 0",
+	Short: "check whether any tx gets lost. RUN ONLY AFTER TPS = 0",
 	Long: `For Example:
   		   tool.exe txAnalysis`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Have you stopped sendtx and TPS = 0 (y/n)?")
-		confirm := askForComfirmation()
+		confirm := askForConfirmation()
 		if confirm == true {
 			initClient()
 			//get the txs already minned on blockchain:
