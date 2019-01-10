@@ -23,9 +23,10 @@ var (
 	sendersAddress map[uint][]KeyInfo
 )
 
+// currently only work for one shard
 var checkBalanceCmd = &cobra.Command{
 	Use:   "checkbalance",
-	Short: "check the consistency of the sender addresses and the receiver addresses",
+	Short: "check the balance consistency of the sender addresses and the receiver addresses",
 	Long: `For example:
 	 tool.exe checkbalance`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -52,7 +53,7 @@ var checkBalanceCmd = &cobra.Command{
 			}
 			totalSendersAmount.Add(totalSendersAmount, amount)
 		}
-		fmt.Printf("sender balance %d\n", totalSendersAmount)
+
 		totalReceiversAmount := big.NewInt(0)
 		initToAccount()
 		for shardNum := range receiversAddress {
@@ -66,7 +67,6 @@ var checkBalanceCmd = &cobra.Command{
 				totalReceiversAmount.Add(totalReceiversAmount, amount)
 			}
 		}
-		fmt.Printf("receiver balance %d\n", totalReceiversAmount)
 
 		var height uint64
 		var counter uint64
@@ -89,8 +89,16 @@ var checkBalanceCmd = &cobra.Command{
 				counter++
 			}
 		}
+
+		fmt.Printf("sender balance %d\n", totalSendersAmount)
+		fmt.Printf("receiver balance  %d\n", totalReceiversAmount)
 		fmt.Printf("tx count %d\n", txCount)
 		fmt.Printf("tx fee %d\n", txCount*int(params.TxGas))
+		totalAmount := big.NewInt(0)
+		totalAmount.Add(totalAmount, totalSendersAmount)
+		totalAmount.Add(totalAmount, totalReceiversAmount)
+		totalAmount.Add(totalAmount, big.NewInt(int64(txCount*int(params.TxGas))))
+		fmt.Printf("total amount %d\n", totalAmount)
 
 	},
 }
