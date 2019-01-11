@@ -37,7 +37,7 @@ buildall.bat
 
 # Running Seele
 
-For running a node, please refer to [Get Started](https://github.com/seeleteam/go-seele/wiki/Getting-Started-With-Seele).
+For running a node, please refer to [Get Started](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html).
 For more usage details and deeper explanations, please consult the [Seele Wiki](https://github.com/seeleteam/go-seele/wiki).
 
 # Contribution
