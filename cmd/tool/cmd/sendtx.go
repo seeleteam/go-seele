@@ -65,7 +65,7 @@ type balance struct {
 
 var sendTxCmd = &cobra.Command{
 	Use:   "sendtx",
-	Short: "send tx peroidly",
+	Short: "send tx periodically",
 	Long: `For example:
 	 tool.exe sendtx`,
 	Run: func(cmd *cobra.Command, args []string) {

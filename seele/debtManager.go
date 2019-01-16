@@ -12,6 +12,7 @@ import (
 
 	"github.com/Jeffail/tunny"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 )
@@ -41,15 +42,17 @@ type DebtManager struct {
 	checker     types.DebtVerifier
 	propagation propagateDebts
 	log         *log.SeeleLog
+	chain       *core.Blockchain
 }
 
-func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts) *DebtManager {
+func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *core.Blockchain) *DebtManager {
 	return &DebtManager{
 		debts:       make(map[common.Hash]*DebtInfo),
 		checker:     debtChecker,
 		lock:        &sync.RWMutex{},
 		propagation: p,
 		log:         log.GetLogger("debt_manager"),
+		chain:       chain,
 	}
 }
 
@@ -119,14 +122,19 @@ func (m *DebtManager) checking() {
 		if time.Now().Sub(info.lastCheckTimestamp) > checkInterval {
 			packed, confirmed, err := m.checker.IfDebtPacked(debt)
 
-			// remove invalid block or confirmed block.
+			// remove confirmed debt.
 			if err != nil || confirmed {
 				if confirmed {
 					m.log.Info("remove debt as confirmed. hash:%s", debt.Hash.Hex())
+					m.Remove(debt.Hash)
 				} else {
-					m.log.Warn("remove debt cause got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
+					m.log.Warn("got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
 				}
+			}
 
+			// remove invalid debt
+			_, err = m.chain.GetStore().GetTxIndex(debt.Data.TxHash)
+			if err != nil {
 				m.Remove(debt.Hash)
 			}
 

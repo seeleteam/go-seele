@@ -114,7 +114,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	s.Protocol.DeletePeer = s.handleDelPeer
 	s.Protocol.GetPeer = s.handleGetPeer
 
-	s.debtManager = NewDebtManager(seele.debtVerifier, s)
+	s.debtManager = NewDebtManager(seele.debtVerifier, s, s.chain)
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
