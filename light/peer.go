@@ -430,7 +430,7 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 		}
 
 		// todo if not match, should clear local hash, and synchronize again?
-		if startNum == p.blockNumBegin+uint64(len(p.blockHashArr))-1 {
+		if startNum == msg.BlockNumArr[0] {
 			// need not sync
 			p.curSyncMagic = 0
 			return nil
