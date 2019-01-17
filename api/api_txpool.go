@@ -75,6 +75,15 @@ func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height
 	return api.GetBlockTransactionCountByHeight(height)
 }
 
+// GetBlockDebtCount returns the count of debts in the block with the given block hash or height.
+func (api *TransactionPoolAPI) GetBlockDebtCount(blockHash string, height int64) (int, error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockDebtCountByHash(blockHash)
+	}
+
+	return api.GetBlockDebtCountByHeight(height)
+}
+
 // GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
 func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
 	block, err := api.s.GetBlock(common.EmptyHash, height)
@@ -98,6 +107,31 @@ func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) 
 	}
 
 	return len(block.Transactions), nil
+}
+
+// GetBlockDebtCountByHeight returns the count of debts in the block with the given height.
+func (api *TransactionPoolAPI) GetBlockDebtCountByHeight(height int64) (int, error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Debts), nil
+}
+
+// GetBlockDebtCountByHash returns the count of debts in the block with the given hash.
+func (api *TransactionPoolAPI) GetBlockDebtCountByHash(blockHash string) (int, error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return 0, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Debts), nil
 }
 
 // GetTransactionByBlockIndex returns the transaction in the block with the given block hash/height and index.
