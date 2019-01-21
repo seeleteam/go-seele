@@ -485,7 +485,7 @@ func (p *peer) handShake(networkID string, td *big.Int, head common.Hash, headBl
 		return errGenesisNotMatch
 	}
 
-	if retStatusMsg.IsServer == p.protocolManager.bServerMode {
+	if retStatusMsg.IsServer != p.protocolManager.bServerMode {
 		return errModeNotMatch
 	}
 
