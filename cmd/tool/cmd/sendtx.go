@@ -25,6 +25,9 @@ import (
 )
 
 var (
+	//total tx
+	txTotal int
+
 	// tps number of sended tx every second
 	tps int
 
@@ -182,8 +185,10 @@ func SendMode3(current []*balance, next []*balance) {
 		next[i] = newBalance
 
 		tpsCount++
+		txTotal++
 		if tpsCount == tps {
 			fmt.Printf("send txs %d, [%d]\n", tpsCount, i)
+			fmt.Printf("Tx Sent: %d\n", txTotal)
 			elapse := time.Now().Sub(tpsStartTime)
 			if elapse < time.Second {
 				time.Sleep(time.Second - elapse)
@@ -250,9 +255,11 @@ func loopSendMode(balanceList []*balance, lock *sync.Mutex, threadNum int) {
 			}
 
 			count++
+			txTotal++
 			if count == tps {
 				elapse := time.Now().Sub(tpsStartTime)
 				fmt.Printf("from shard is %d sending txs %d at thread %d during %.2fs\n", b.shard, count, threadNum, elapse.Seconds())
+				fmt.Printf("Tx Sent: %d\n", txTotal)
 				if elapse < time.Second {
 					time.Sleep(time.Second - elapse)
 				}

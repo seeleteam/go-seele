@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//var txInBlockCount = uint64(0)
 var gettps = &cobra.Command{
 	Use:   "tps",
 	Short: "get tps from server list",
@@ -23,6 +24,7 @@ var gettps = &cobra.Command{
 
 		for {
 			sum := float64(0)
+
 			for _, client := range clientList {
 				var tps seele.TpsInfo
 				err := client.Call(&tps, "debug_getTPS")
@@ -32,6 +34,7 @@ var gettps = &cobra.Command{
 				}
 
 				shard := getShard(client)
+
 				if tps.Duration > 0 {
 					t := float64(tps.Count) / float64(tps.Duration)
 					fmt.Printf("shard %d: from %d to %d, block number: %d, tx count: %d, interval: %d, tps: %.2f\n", shard, tps.StartHeight,
