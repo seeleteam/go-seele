@@ -23,7 +23,9 @@ var (
 	sendersAddress map[uint][]KeyInfo
 )
 
-// currently only work for one shard
+// usage: ./tool -s 127.0.0.1:8027,127.0.0.1:8028 checkbalance -a accounts1.json -r receivers2.json
+// If receivers2.json includes accounts of several shards, nodes of these shards must be running to use this command.
+// only allow one node for one shard
 var checkBalanceCmd = &cobra.Command{
 	Use:   "checkbalance",
 	Short: "check the balance consistency of the sender addresses and the receiver addresses",
@@ -148,6 +150,6 @@ func getFullBalance(address common.Address, hexHash string, height int64) (*big.
 func init() {
 	rootCmd.AddCommand(checkBalanceCmd)
 
-	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "a", "", "sender address file")
-	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "r", "", "receiver address file")
+	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "x", "", "sender address file")
+	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "y", "", "receiver address file")
 }
