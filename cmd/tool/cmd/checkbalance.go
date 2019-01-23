@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	senderAccounts        string
+	senderAccounts string
 	// senders address
 	sendersAddress map[uint][]KeyInfo
 )
@@ -51,9 +51,9 @@ var checkBalanceCmd = &cobra.Command{
 			if !ok {
 				panic(fmt.Sprintf("Failed to get balance"))
 			}
-			totalSendersAmount.Add(totalSendersAmount, amount) 
+			totalSendersAmount.Add(totalSendersAmount, amount)
 		}
-		
+
 		totalReceiversAmount := big.NewInt(0)
 		initToAccount()
 		for shardNum := range receiversAddress {
@@ -64,11 +64,10 @@ var checkBalanceCmd = &cobra.Command{
 				if !ok {
 					panic(fmt.Sprintf("Failed to get balance"))
 				}
-				totalReceiversAmount.Add(totalReceiversAmount, amount) 
+				totalReceiversAmount.Add(totalReceiversAmount, amount)
 			}
 		}
-		
-		
+
 		var height uint64
 		var counter uint64
 		var txCount int
@@ -81,53 +80,56 @@ var checkBalanceCmd = &cobra.Command{
 
 		for clientIndex := range clientList {
 			if err := clientList[clientIndex].Call(&height, "seele_getBlockHeight"); err != nil {
-				panic(fmt.Sprintf("failed to get the block height: %s", err))			
+				panic(fmt.Sprintf("failed to get the block height: %s", err))
 			}
 			fmt.Printf("block height %d\n", height)
 			counter = 1
 			// get the tx count up to current block height
 			for counter <= height {
 
-				blockTxCount = 0							
+				blockTxCount = 0
 
 				if err := clientList[clientIndex].Call(&blockTxCount, "txpool_getBlockTransactionCount", "", counter); err != nil {
-					panic(fmt.Sprintf("failed to get the block tx count: %s\n", err))	
+					panic(fmt.Sprintf("failed to get the block tx count: %s\n", err))
 				}
 				txCount += blockTxCount - 1
 
-				fmt.Printf("block tx %d\n", blockTxCount - 1)
-
-				blockDebtCount = 0	
-				if err := clientList[clientIndex].Call(&blockDebtCount, "txpool_getBlockDebtCount", "", counter); err != nil {
-					panic(fmt.Sprintf("failed to get the block debt count: %s\n", err))	
+				if blockTxCount > 1 {
+					fmt.Printf("block tx %d\n", blockTxCount-1)
 				}
-				debtCount += blockDebtCount 
-				fmt.Printf("block debt %d\n", blockDebtCount)
+
+				blockDebtCount = 0
+				if err := clientList[clientIndex].Call(&blockDebtCount, "txpool_getBlockDebtCount", "", counter); err != nil {
+					panic(fmt.Sprintf("failed to get the block debt count: %s\n", err))
+				}
+				debtCount += blockDebtCount
+				if blockDebtCount > 0 {
+					fmt.Printf("block debt %d\n", blockDebtCount)
+				}
 
 				counter++
-			} 
+			}
 		}
 
-		fmt.Printf("sender balance %d\n", totalSendersAmount) 
+		fmt.Printf("sender balance %d\n", totalSendersAmount)
 		fmt.Printf("receiver balance  %d\n", totalReceiversAmount)
 		fmt.Printf("tx count %d\n", txCount)
 
 		fmt.Printf("debt count %d\n", debtCount)
-		fmt.Printf("tx fee %d\n", txCount * int(params.TxGas))
-		fmt.Printf("debt fee %d\n", debtCount * int(params.TxGas) * 2)
+		fmt.Printf("tx fee %d\n", txCount*int(params.TxGas))
+		fmt.Printf("debt fee %d\n", debtCount*int(params.TxGas)*2)
 
 		totalAmount := big.NewInt(0)
 		totalAmount.Add(totalAmount, totalSendersAmount)
 		totalAmount.Add(totalAmount, totalReceiversAmount)
-		totalAmount.Add(totalAmount, big.NewInt(int64(txCount * int(params.TxGas))))
+		totalAmount.Add(totalAmount, big.NewInt(int64(txCount*int(params.TxGas))))
 
-		totalAmount.Add(totalAmount, big.NewInt(int64(debtCount * int(params.TxGas) * 2)))
+		totalAmount.Add(totalAmount, big.NewInt(int64(debtCount*int(params.TxGas)*2)))
 
 		fmt.Printf("total amount %d\n", totalAmount)
 
 	},
 }
-
 
 func LoadAccountConfig(account string) (map[common.Address]*big.Int, error) {
 	result := make(map[common.Address]*big.Int)
