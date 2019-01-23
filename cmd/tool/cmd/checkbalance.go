@@ -74,11 +74,13 @@ var checkBalanceCmd = &cobra.Command{
 		var height uint64
 		var counter uint64
 		var txCount int
+
 		var debtCount int
 		txCount = 0
 		debtCount = 0
 		var blockTxCount int
 		var blockDebtCount int
+
 		for clientIndex := range clientList {
 			if err := clientList[clientIndex].Call(&height, "seele_getBlockHeight"); err != nil {
 				panic(fmt.Sprintf("failed to get the block height: %s", err))			
@@ -87,11 +89,14 @@ var checkBalanceCmd = &cobra.Command{
 			counter = 1
 			// get the tx count up to current block height
 			for counter <= height {
+
 				blockTxCount = 0							
+
 				if err := clientList[clientIndex].Call(&blockTxCount, "txpool_getBlockTransactionCount", "", counter); err != nil {
 					panic(fmt.Sprintf("failed to get the block tx count: %s\n", err))	
 				}
 				txCount += blockTxCount - 1
+
 				fmt.Printf("block tx %d\n", blockTxCount - 1)
 
 				blockDebtCount = 0	
@@ -100,6 +105,7 @@ var checkBalanceCmd = &cobra.Command{
 				}
 				debtCount += blockDebtCount 
 				fmt.Printf("block debt %d\n", blockDebtCount)
+
 				counter++
 			} 
 		}
@@ -107,14 +113,18 @@ var checkBalanceCmd = &cobra.Command{
 		fmt.Printf("sender balance %d\n", totalSendersAmount) 
 		fmt.Printf("receiver balance  %d\n", totalReceiversAmount)
 		fmt.Printf("tx count %d\n", txCount)
+
 		fmt.Printf("debt count %d\n", debtCount)
 		fmt.Printf("tx fee %d\n", txCount * int(params.TxGas))
 		fmt.Printf("debt fee %d\n", debtCount * int(params.TxGas) * 2)
+
 		totalAmount := big.NewInt(0)
 		totalAmount.Add(totalAmount, totalSendersAmount)
 		totalAmount.Add(totalAmount, totalReceiversAmount)
 		totalAmount.Add(totalAmount, big.NewInt(int64(txCount * int(params.TxGas))))
+
 		totalAmount.Add(totalAmount, big.NewInt(int64(debtCount * int(params.TxGas) * 2)))
+
 		fmt.Printf("total amount %d\n", totalAmount)
 
 	},
