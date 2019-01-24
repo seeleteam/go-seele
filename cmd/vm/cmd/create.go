@@ -8,7 +8,6 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"math/big"
 	"path/filepath"
 
@@ -86,7 +85,9 @@ func createContract() {
 	}
 
 	// Create a contract
-	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), math.MaxUint64, DefaultNonce, bytecode)
+	//createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), math.MaxUint64, DefaultNonce, bytecode)
+	accountNonce := statedb.GetNonce(from)
+	createContractTx, err := types.NewContractTransaction(from, big.NewInt(0), big.NewInt(1), uint64(3000000), accountNonce, bytecode)
 	if err != nil {
 		fmt.Println("Failed to create contract tx,", err.Error())
 		return
