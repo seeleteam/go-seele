@@ -23,7 +23,9 @@ var (
 	sendersAddress map[uint][]KeyInfo
 )
 
-// currently only work for one shard
+// usage: ./tool -s 127.0.0.1:8027,127.0.0.1:8028 checkbalance -a accounts1.json -r receivers2.json
+// If receivers2.json includes accounts of several shards, nodes of these shards must be running to use this command.
+// only allow one node for one shard
 var checkBalanceCmd = &cobra.Command{
 	Use:   "checkbalance",
 	Short: "check the balance consistency of the sender addresses and the receiver addresses",
@@ -71,7 +73,6 @@ var checkBalanceCmd = &cobra.Command{
 		var height uint64
 		var counter uint64
 		var txCount int
-
 		var debtCount int
 		txCount = 0
 		debtCount = 0
@@ -95,7 +96,9 @@ var checkBalanceCmd = &cobra.Command{
 				txCount += blockTxCount - 1
 
 				if blockTxCount > 1 {
-					fmt.Printf("block tx %d\n", blockTxCount-1)
+
+					 fmt.Printf("block tx %d\n", blockTxCount-1)
+
 				}
 
 				blockDebtCount = 0
@@ -104,7 +107,9 @@ var checkBalanceCmd = &cobra.Command{
 				}
 				debtCount += blockDebtCount
 				if blockDebtCount > 0 {
-					fmt.Printf("block debt %d\n", blockDebtCount)
+
+				  	fmt.Printf("block debt %d\n", blockDebtCount)
+
 				}
 
 				counter++
@@ -114,7 +119,6 @@ var checkBalanceCmd = &cobra.Command{
 		fmt.Printf("sender balance %d\n", totalSendersAmount)
 		fmt.Printf("receiver balance  %d\n", totalReceiversAmount)
 		fmt.Printf("tx count %d\n", txCount)
-
 		fmt.Printf("debt count %d\n", debtCount)
 		fmt.Printf("tx fee %d\n", txCount*int(params.TxGas))
 		fmt.Printf("debt fee %d\n", debtCount*int(params.TxGas)*2)
@@ -123,6 +127,7 @@ var checkBalanceCmd = &cobra.Command{
 		totalAmount.Add(totalAmount, totalSendersAmount)
 		totalAmount.Add(totalAmount, totalReceiversAmount)
 		totalAmount.Add(totalAmount, big.NewInt(int64(txCount*int(params.TxGas))))
+
 
 		totalAmount.Add(totalAmount, big.NewInt(int64(debtCount*int(params.TxGas)*2)))
 
@@ -159,7 +164,9 @@ func getFullBalance(address common.Address, hexHash string, height int64) (*big.
 
 func init() {
 	rootCmd.AddCommand(checkBalanceCmd)
-
-	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "a", "", "sender address file")
-	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "r", "", "receiver address file")
+	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "x", "", "sender address file")
+	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "y", "", "receiver address file")
 }
+
+
+
