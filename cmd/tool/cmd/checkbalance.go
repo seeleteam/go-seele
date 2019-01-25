@@ -88,7 +88,7 @@ var checkBalanceCmd = &cobra.Command{
 			// get the tx count up to current block height
 			for counter <= height {
 
-				blockTxCount = 0
+				blockTxCount = 0							
 
 				if err := clientList[clientIndex].Call(&blockTxCount, "txpool_getBlockTransactionCount", "", counter); err != nil {
 					panic(fmt.Sprintf("failed to get the block tx count: %s\n", err))
@@ -96,9 +96,7 @@ var checkBalanceCmd = &cobra.Command{
 				txCount += blockTxCount - 1
 
 				if blockTxCount > 1 {
-
 					 fmt.Printf("block tx %d\n", blockTxCount-1)
-
 				}
 
 				blockDebtCount = 0
@@ -107,9 +105,7 @@ var checkBalanceCmd = &cobra.Command{
 				}
 				debtCount += blockDebtCount
 				if blockDebtCount > 0 {
-
 				  	fmt.Printf("block debt %d\n", blockDebtCount)
-
 				}
 
 				counter++
@@ -127,8 +123,6 @@ var checkBalanceCmd = &cobra.Command{
 		totalAmount.Add(totalAmount, totalSendersAmount)
 		totalAmount.Add(totalAmount, totalReceiversAmount)
 		totalAmount.Add(totalAmount, big.NewInt(int64(txCount*int(params.TxGas))))
-
-
 		totalAmount.Add(totalAmount, big.NewInt(int64(debtCount*int(params.TxGas)*2)))
 
 		fmt.Printf("total amount %d\n", totalAmount)
