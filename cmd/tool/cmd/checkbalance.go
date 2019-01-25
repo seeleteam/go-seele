@@ -161,4 +161,3 @@ func init() {
 	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "x", "", "sender address file")
 	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "y", "", "receiver address file")
 }
-
