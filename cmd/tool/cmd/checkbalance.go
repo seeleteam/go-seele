@@ -148,6 +148,6 @@ func getFullBalance(address common.Address, hexHash string, height int64) (*big.
 func init() {
 	rootCmd.AddCommand(checkBalanceCmd)
 
-	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "a", "", "sender address file")
-	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "r", "", "receiver address file")
+	checkBalanceCmd.Flags().StringVarP(&senderAccounts, "sender", "x", "", "sender address file")
+	checkBalanceCmd.Flags().StringVarP(&receivers, "receiver", "y", "", "receiver address file")
 }
