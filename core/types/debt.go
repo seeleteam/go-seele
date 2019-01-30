@@ -108,9 +108,13 @@ func (d *Debt) Validate(verifier DebtVerifier, isPool bool, targetShard uint) (r
 			}
 		}
 	}
-
 	return
 }
+
+//batch debt validate
+// func (d []*Debt) BatchValidate(verifer BatchValidateDebt) (retErr error) {
+//
+// }
 
 func (data *DebtData) Hash() common.Hash {
 	return crypto.MustHash(data)

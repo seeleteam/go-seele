@@ -468,13 +468,12 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 		return nil, nil, errors.NewStackedErrorf(err, "failed to create statedb by root hash %v", root)
 	}
 
-	//validate debts
 	err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
 	if err != nil {
 		return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
 	}
-
 	// update debts
+
 	for _, d := range block.Debts {
 		err = bc.ApplyDebtWithoutVerify(statedb, d, block.Header.Creator)
 		if err != nil {

@@ -13,6 +13,9 @@ type DebtVerifier interface {
 	// returns retErr error info
 	ValidateDebt(debt *Debt) (packed bool, confirmed bool, err error)
 
+	//batch debt validate
+	//BatchValidateDebt(debt []*Debt) (err error)
+
 	// IfDebtPacked
 	// returns packed whether debt is packed
 	// returns confirmed whether debt is confirmed
@@ -37,6 +40,11 @@ func NewTestVerifier(p bool, c bool, err error) *TestVerifier {
 func (v *TestVerifier) ValidateDebt(debt *Debt) (packed bool, confirmed bool, err error) {
 	return v.packed, v.confirmed, v.err
 }
+
+//batch debt validate
+// func (v *TestVerifier) BatchValidateDebt(debt []*Debt) error {
+//
+// }
 
 func (v *TestVerifier) IfDebtPacked(debt *Debt) (packed bool, confirmed bool, err error) {
 	return v.packed, v.confirmed, v.err

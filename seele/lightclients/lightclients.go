@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
@@ -20,10 +21,16 @@ import (
 	"github.com/seeleteam/go-seele/node"
 )
 
+//for test zlk
+var backendCheckedNum int = 0
+
+var backendCheckedTime int64 = 0
+
 var (
 	errWrongShardDebt = errors.New("wrong debt with invalid shard")
 	errNotMatchedTx   = errors.New("transaction mismatch with request debt")
 	errNotFoundTx     = errors.New("not found debt's transaction")
+	errEmpty          = errors.New("confirmedTxs is empty")
 )
 
 // LightClientsManager manages light clients of other shards and provides services for debt validation.
@@ -76,6 +83,120 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 	}, nil
 }
 
+// BatchValidateDebts: validate batch debts
+// input batch debts
+// returns packed whether debt is packed
+// returns confirmed whether debt is confirmed
+// returns retErr error info
+
+//batch debt validate
+// BathUp: bath up debsts by shard
+// func (manager *LightClientsManager) BathUp(debts []*types.Debt) (debtPoolByShardRet [][]*types.Debt, reterr error) {
+// 	if len(debts) < 1 {
+// 		return nil, errEmpty
+// 	}
+// 	debtPoolByShard := make([][]*types.Debt, common.ShardCount+1)
+// 	for _, debt := range debts {
+// 		//first check toConfirmedDebts
+// 		fromShard := debt.Data.From.Shard()
+// 		if fromShard == 0 || fromShard == manager.localShard {
+// 			continue
+// 		}
+// 		cache := manager.confirmedTxs[fromShard]
+// 		if _, ok := cache.Get(debt.Data.TxHash); ok {
+// 			continue
+// 		}
+// 		debtPoolByShard[fromShard] = append(debtPoolByShard[fromShard], debt)
+// 	}
+// 	return debtPoolByShard, nil
+// }
+
+//batch debt validate
+// func (manager *LightClientsManager) BatchValidateDebts(debts []*types.Debt, verifier DebtVerifier) error {
+// 	//1. batch up debts by shardnumber
+// 	//2. send out Batch??? or validate in lightclient? but as batch
+// 	//3. handle confirmed debt
+//
+// 	//validate debtPoolByShard
+// 	var err error
+// 	debtPoolByShard, e := manager.BathUp(debts)
+// 	if e != nil {
+// 		err = e
+// 	}
+// 	for i := range debtPoolByShard {
+// 		len := len(debtPoolByShard[i])
+// 		fromShard := debtPoolByShard[i][0].Data.From.Shard()
+// 		backend := manager.lightClientsBackend[fromShard]
+//
+// 		//prepare multiple threads
+// 		//use multple threads to validate debts
+// 		threads := runtime.NumCPU() / 2                           // "/2": prevent 100% usage of CPU
+// 		fmt.Printf("Using %d threads to validate debts", threads) // TODO: will comment out in future
+// 		// no need to use wg
+// 		if threads <= 1 || len < threads {
+// 			for _, debt := range debtPoolByShard[i] {
+// 				e := manager.singleValidate(debt, backend, verifier)
+// 				if e != nil {
+// 					err = e
+// 					break
+// 				}
+// 			}
+// 		}
+// 		//len > threads, we need the paralell process, use wg
+// 		wg := sync.WaitGroup{}
+// 		var hasErr uint32
+// 		for j := 0; j < threads; j++ {
+// 			wg.Add(1)
+// 			go func(offset int) {
+// 				defer wg.Done()
+//
+// 				for m := offset; m < len && atomic.LoadUint32(&hasErr) == 0; m += threads {
+// 					if e := manager.singleValidate(debtPoolByShard[i][m], backend, verifier); e != nil {
+// 						if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
+// 							err = e
+// 						}
+// 						break
+// 					}
+// 				}
+// 			}(i)
+// 		}
+// 		wg.Wait()
+// 	}
+// 	return err
+// }
+
+//batch debt validate
+//singleValidate: validate one single debt
+// func (manager *LightClientsManager) singleValidate(debt *types.Debt, backend *light.LightBackend) error {
+// 	//func (manager *LightClientsManager)singleValidate (debt *types.Debt, backend *light.LightBackend) error {
+// 	//check confirmedTxs: done in Batchup function, no need to repeat it
+// 	fromShard := debt.Data.From.Shard()
+// 	cache := manager.confirmedTxs[fromShard]
+//
+// 	//check backend
+// 	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
+// 	if err != nil {
+// 		return errors.NewStackedErrorf(err, "failed to get tx %v", debt.Data.TxHash)
+// 	}
+// 	if index == nil {
+// 		return errNotFoundTx
+// 	}
+// 	checkDebt := types.NewDebtWithoutContext(tx)
+// 	if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
+// 		return errNotMatchedTx
+// 	}
+//
+// 	//check the block height is far enough!
+// 	header := backend.ChainBackend().CurrentHeader()
+// 	duration := header.Height - index.BlockHeight
+// 	if duration < common.ConfirmedBlockNumber {
+// 		return fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+// 	}
+// 	// cache the confirmed tx
+// 	cache.Add(debt.Data.TxHash, true)
+// 	return nil
+// }
+
 // ValidateDebt validate debt
 // returns packed whether debt is packed
 // returns confirmed whether debt is confirmed
@@ -85,37 +206,50 @@ func (manager *LightClientsManager) ValidateDebt(debt *types.Debt) (packed bool,
 	if fromShard == 0 || fromShard == manager.localShard {
 		return false, false, errWrongShardDebt
 	}
-
-	// check cache first
+	// 1. check cache tx first
 	cache := manager.confirmedTxs[fromShard]
 	if _, ok := cache.Get(debt.Data.TxHash); ok {
 		return true, true, nil
 	}
 
 	// comment out for test only
-	//backend := manager.lightClientsBackend[fromShard]
-	//tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
-	//if err != nil {
-	//	return false, false, errors.NewStackedErrorf(err, "failed to get tx %v", debt.Data.TxHash)
-	//}
 
-	//if index == nil {
-	//	return false, false, errNotFoundTx
-	//}
+	//2. check tx from backend
+	//for test zlk
+	t_backend := time.Now()
 
-	//checkDebt := types.NewDebtWithoutContext(tx)
-	//if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
-	//	return false, false, errNotMatchedTx
-	//}
+	backend := manager.lightClientsBackend[fromShard]
+	tx, index, err := backend.GetTransaction(backend.TxPoolBackend(), backend.ChainBackend().GetStore(), debt.Data.TxHash)
 
-	//header := backend.ChainBackend().CurrentHeader()
-	//duration := header.Height - index.BlockHeight
-	//if duration < common.ConfirmedBlockNumber {
-	//	return true, false, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
-	//}
+	if err != nil {
+		return false, false, errors.NewStackedErrorf(err, "failed to get tx %v", debt.Data.TxHash)
+	}
+
+	if index == nil {
+		return false, false, errNotFoundTx
+	}
+
+	checkDebt := types.NewDebtWithoutContext(tx)
+	if checkDebt == nil || !checkDebt.Hash.Equal(debt.Hash) {
+		return false, false, errNotMatchedTx
+	}
+
+	t_backendDone := time.Now()
+	backendCheckedTimeDur := t_backendDone.Sub(t_backend)
+	backendCheckedTime += int64(backendCheckedTimeDur / time.Millisecond)
+
+	//3. check the block height is far enough!
+	header := backend.ChainBackend().CurrentHeader()
+	duration := header.Height - index.BlockHeight
+	if duration < common.ConfirmedBlockNumber {
+		return true, false, fmt.Errorf("invalid debt because not enough confirmed block number, wanted is %d, actual is %d", common.ConfirmedBlockNumber, duration)
+	}
 
 	// cache the confirmed tx
 	cache.Add(debt.Data.TxHash, true)
+
+	backendCheckedNum++
+	fmt.Printf("check %d debt with %d\n", backendCheckedNum, backendCheckedTime)
 
 	return true, true, nil
 }
