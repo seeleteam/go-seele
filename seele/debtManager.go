@@ -9,12 +9,14 @@ import (
 	"runtime"
 	"sync"
 	"time"
+	"encoding/binary"
 
 	"github.com/Jeffail/tunny"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
+	"github.com/seeleteam/go-seele/database"
 )
 
 type propagateDebts interface {
@@ -26,6 +28,8 @@ type propagateDebts interface {
 const (
 	checkInterval = 12 * common.BlockPackInterval
 )
+
+var maxDebtBatchSize = 5000
 
 type DebtInfo struct {
 	debt               *types.Debt
@@ -43,9 +47,11 @@ type DebtManager struct {
 	propagation propagateDebts
 	log         *log.SeeleLog
 	chain       *core.Blockchain
+	blockHeights []uint64 
+	dmDB        database.Database
 }
 
-func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *core.Blockchain) *DebtManager {
+func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *core.Blockchain, debtManagerDB database.Database) *DebtManager {
 	return &DebtManager{
 		debts:       make(map[common.Hash]*DebtInfo),
 		checker:     debtChecker,
@@ -53,6 +59,7 @@ func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *cor
 		propagation: p,
 		log:         log.GetLogger("debt_manager"),
 		chain:       chain,
+		dmDB:        debtManagerDB, 
 	}
 }
 
@@ -68,18 +75,42 @@ func (m *DebtManager) AddDebts(debts []*types.Debt) {
 	}
 }
 
-func (m *DebtManager) AddDebtMap(debtMap [][]*types.Debt) {
+func (m *DebtManager) AddDebtMap(debtMap [][]*types.Debt, height uint64) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	var ToBeStoredDebts []*types.Debt
 	for _, debts := range debtMap {
 		for _, d := range debts {
-			m.debts[d.Hash] = &DebtInfo{
-				debt:               d,
-				lastCheckTimestamp: time.Now(),
+			if len(m.debts) < core.DebtManagerPoolCapacity {
+				m.debts[d.Hash] = &DebtInfo{
+					debt:               d,
+					lastCheckTimestamp: time.Now(),
+				}
+			} else {
+				// debtManager pool is full, store the debts in the database
+				if len(ToBeStoredDebts) == 0 {
+					m.blockHeights = append(m.blockHeights, height)
+				}
+				     
+				ToBeStoredDebts = append(ToBeStoredDebts, d) 
 			}
+
 		}
 	}
+
+	// commit the debts to the debtManager database
+	if len(ToBeStoredDebts) > 0 {
+		batch := m.dmDB.NewBatch()
+		encoded := make([]byte, 8)
+		binary.BigEndian.PutUint64(encoded, height)
+		batch.Put(encoded, common.SerializePanic(ToBeStoredDebts))
+		err := batch.Commit()
+		if err != nil {
+			m.log.Warn("failed to store extra debts in database, err %s", err)
+		}
+	}
+	
 }
 
 func (m *DebtManager) Remove(hash common.Hash) {
@@ -159,13 +190,20 @@ func (m *DebtManager) checking() {
 		// if the debt is not packed or confirmed, we will send it again.
 		if !info.isPacked && m.Has(info.debt.Hash) {
 			shard := info.debt.Data.Account.Shard()
-			toSend[shard] = append(toSend[shard], info.debt)
+			if len(toSend[shard]) < maxDebtBatchSize {
+				toSend[shard] = append(toSend[shard], info.debt)
+			}
 
 			m.log.Warn("debt is not packed or confirmed, send again. hash:%s", info.debt.Hash.Hex())
 		}
 	}
 
 	m.propagation.propagateDebtMap(toSend, false)
+
+	err := m.reinjectDebtFromDatabase()
+	if err != nil {
+		m.log.Warn("Error in debt reinjection")
+	}
 }
 
 func (m *DebtManager) TimingChecking() {
@@ -175,4 +213,47 @@ func (m *DebtManager) TimingChecking() {
 
 		time.Sleep(2 * checkInterval)
 	}
+}
+
+func (m *DebtManager) reinjectDebtFromDatabase() error {
+	if len(m.blockHeights) > 0 {
+		n := len(m.blockHeights)
+		i := 0
+		for i < n && i < 30 {
+			// scan debts from at most 30 blocks
+			height := m.blockHeights[0]
+			key := make([]byte, 8)
+			binary.BigEndian.PutUint64(key, height)
+			value, err := m.dmDB.Get(key)
+			if err != nil {
+				return err
+			}
+
+			var debts []*types.Debt
+			if err = common.Deserialize(value, &debts); err != nil {
+				panic(err)
+			}
+			m.log.Debug("Got debts from database. height: %d, hash of the first debt:%s", height, debts[0].Hash.Hex())
+
+			debtMap := make([][]*types.Debt, common.ShardCount + 1)
+			for _, d := range debts {
+				if d != nil {
+					shard := d.Data.Account.Shard()
+					debtMap[shard] = append(debtMap[shard], d)
+				}
+			}
+
+			// remove the debts from debt manager database
+			m.dmDB.Delete(key)
+			m.blockHeights = m.blockHeights[1:]
+
+			// reinject debts to debt manager pool; if the debt manager 
+			// pool is full, the debts will go back to the database
+			m.AddDebtMap(debtMap, height)
+
+			i++
+		}
+	}
+	return nil
+
 }

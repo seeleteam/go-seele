@@ -23,6 +23,9 @@ const (
 	// AccountStateDir account state info directory based on config.DataRoot
 	AccountStateDir = "/db/accountState"
 
+	// DebtManagerDir to-be-sent debt directory based on config.DataRoot
+	DebtManagerDir = "/db/debtManager"
+
 	// BlockChainRecoveryPointFile is used to store the recovery point info of blockchain.
 	BlockChainRecoveryPointFile = "recoveryPoint.json"
 )
