@@ -6,6 +6,10 @@
 package core
 
 import (
+	"fmt"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -74,7 +78,109 @@ func (dp *DebtPool) loopCheckingDebt() {
 		if dp.toConfirmedDebts.count() == 0 {
 			time.Sleep(10 * time.Second)
 		} else {
-			dp.DoCheckingDebt()
+			//dp.DoCheckingDebt()
+			err := dp.DoBatchCheckingDebt()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+// //Batch validate debts
+// func (dp *DebtPool) DoCheckingBatchDebt(batchDebts []*types.Debt) error {
+// 	debtPoolByShardRet, err := dp.BatchUp()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	for i := range debtPoolByShardRet {
+// 		err := types.BatchValidateDebt(debtPoolByShardRet[i], dp.verifier)
+// 		if err != nil {
+// 			return errors.NewStackedError(err, "failed to batch validate confirmed debt")
+// 		}
+// 	}
+// 	return nil
+// }
+
+//Batchup
+// func (dp *DebtPool) BatchUp() (debtPoolByShardRet [][]*types.Debt, reterr error) {
+// 	debts := dp.toConfirmedDebts.items()
+// 	if len(debts) < 1 {
+// 		return nil, errors.New("confirmedTxs is empty")
+// 	}
+// 	debtPoolByShard := make([][]*types.Debt, common.ShardCount+1)
+// 	for _, debt := range debts {
+// 		//first check toConfirmedDebts
+// 		fromShard := debt.Data.From.Shard()
+// 		if fromShard == 0 || fromShard == common.LocalShardNumber {
+// 			continue
+// 		}
+// 		// cache := manager.confirmedTxs[fromShard]
+// 		// if _, ok := cache.Get(debt.Data.TxHash); ok {
+// 		// 	continue
+// 		// }
+// 		debtPoolByShard[fromShard] = append(debtPoolByShard[fromShard], debt)
+// 	}
+// 	return debtPoolByShard, nil
+// }
+
+func (dp *DebtPool) DoBatchCheckingDebt() error {
+	tmp := dp.toConfirmedDebts.getList()
+	len := len(tmp)
+	threads := runtime.NumCPU()
+	//threads := runtime.NumCPU() / 2
+	fmt.Printf("use %d threads to validate debts\n", threads)
+	// single thread for few CPU kernel or few txs to validate.
+	if threads <= 1 || len < threads {
+		for i := 0; i < len; i++ {
+			if err := dp.DoBatchCheckingDebtHandler(tmp[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	// parallel validates txs
+	var err error
+	var hasErr uint32
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < threads; i++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+			for j := offset; j < len && atomic.LoadUint32(&hasErr) == 0; j += threads {
+				if e := dp.DoBatchCheckingDebtHandler(tmp[j]); e != nil {
+					if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
+						err = e
+					}
+					break
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+	return err
+}
+
+func (dp *DebtPool) DoBatchCheckingDebtHandler(d *types.Debt) error {
+	recoverable, err := d.Validate(dp.verifier, false, common.LocalShardNumber)
+	if err != nil {
+		if recoverable {
+			dp.log.Debug("check debt with recoverable error %s", err)
+		} else {
+			dp.log.Info("check debt with unrecoverable error %s", err)
+			dp.toConfirmedDebts.removeByValue(d)
+		}
+		return err
+	} else {
+		// confirmed
+		err := dp.addToPool(d)
+		if err == nil {
+			// remove if success
+			dp.toConfirmedDebts.removeByValue(d)
+			return nil
+		} else {
+			return err
 		}
 	}
 }
@@ -200,6 +306,6 @@ func (dp *DebtPool) GetDebtCount(processing, pending bool) int {
 	if pending {
 		count += dp.toConfirmedDebts.count()
 	}
-
+	fmt.Println("toConfirmedDebts is:", count)
 	return count
 }

@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/seeleteam/go-seele/common"
@@ -381,6 +382,11 @@ func BatchValidateTxs(txs []*Transaction) error {
 }
 
 func BatchValidate(handler func(index int) error, len int) error {
+	//test zlk
+
+	t_batchvalidate := time.Now()
+	fmt.Println(t_batchvalidate)
+
 	threads := runtime.NumCPU() / 2 // in case of CPU 100%
 
 	// single thread for few CPU kernel or few txs to validate.
@@ -403,20 +409,22 @@ func BatchValidate(handler func(index int) error, len int) error {
 		wg.Add(1)
 		go func(offset int) {
 			defer wg.Done()
-
 			for j := offset; j < len && atomic.LoadUint32(&hasErr) == 0; j += threads {
 				if e := handler(j); e != nil {
 					if atomic.CompareAndSwapUint32(&hasErr, 0, 1) {
 						err = e
 					}
-
 					break
 				}
 			}
 		}(i)
 	}
-
 	wg.Wait()
+
+	//test zlk
+	fmt.Printf("len: %d batch validate time is:", len)
+	t_batch_end := time.Now()
+	fmt.Println(t_batch_end.Sub(t_batchvalidate))
 
 	return err
 }
