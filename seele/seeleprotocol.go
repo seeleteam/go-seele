@@ -114,7 +114,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 	s.Protocol.DeletePeer = s.handleDelPeer
 	s.Protocol.GetPeer = s.handleGetPeer
 
-	s.debtManager = NewDebtManager(seele.debtVerifier, s, s.chain)
+	s.debtManager = NewDebtManager(seele.debtVerifier, s, s.chain, seele.debtManagerDB)
 
 	event.TransactionInsertedEventManager.AddAsyncListener(s.handleNewTx)
 	event.BlockMinedEventManager.AddAsyncListener(s.handleNewMinedBlock)
@@ -345,7 +345,7 @@ func (p *SeeleProtocol) handleNewBlock(e event.Event) {
 			memory.Print(p.log, "SeeleProtocol handleNewBlock entrance", now, false)
 
 			debts := types.NewDebtMap(confirmedBlock.Transactions)
-			p.debtManager.AddDebtMap(debts)
+			p.debtManager.AddDebtMap(debts, confirmedHeight)
 			go p.propagateDebtMap(debts, true)
 
 			// exit
