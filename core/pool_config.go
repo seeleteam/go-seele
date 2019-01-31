@@ -28,3 +28,7 @@ var DebtPoolCapacity = 100000
 // ToConfirmedDebtCapacity capacity for to confirmed debt map
 // in real test. the memory usage for 100000 will be about 150MB
 var ToConfirmedDebtCapacity = 100000
+
+// DebtManagerPoolCapacity capacity for to-be-sent debt
+// in real test. the memory usage for 100000 will be about 150MB
+var DebtManagerPoolCapacity = 100000

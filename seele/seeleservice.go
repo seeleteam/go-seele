@@ -45,6 +45,8 @@ type SeeleService struct {
 	chainDBPath        string
 	accountStateDB     database.Database // database used to store account state info.
 	accountStateDBPath string
+	debtManagerDB      database.Database // database used to store debts in debt manager.
+	debtManagerDBPath  string
 	miner              *miner.Miner
 
 	lastHeader               common.Hash
@@ -107,6 +109,11 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 		return nil, err
 	}
 
+	// Initialize debt manager DB.
+	if err = s.initDebtManagerDB(&serviceContext); err != nil {
+		return nil, err
+	}
+
 	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier, engine)
 
 	// initialize and validate genesis
@@ -146,6 +153,19 @@ func (s *SeeleService) initAccountStateDB(serviceContext *ServiceContext) (err e
 	if s.accountStateDB, err = leveldb.NewLevelDB(s.accountStateDBPath); err != nil {
 		s.Stop()
 		s.log.Error("NewSeeleService Create BlockChain err: failed to create account state DB, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *SeeleService) initDebtManagerDB(serviceContext *ServiceContext) (err error) {
+	s.debtManagerDBPath = filepath.Join(serviceContext.DataDir, DebtManagerDir)
+	s.log.Info("NewSeeleService debt manager datadir is %s", s.debtManagerDBPath)
+
+	if s.debtManagerDB, err = leveldb.NewLevelDB(s.debtManagerDBPath); err != nil {
+		s.Stop()
+		s.log.Error("NewSeeleService Create BlockChain err: failed to create debt manager DB, %s", err)
 		return err
 	}
 
@@ -253,6 +273,12 @@ func (s *SeeleService) Stop() error {
 		s.accountStateDB.Close()
 		os.RemoveAll(s.accountStateDBPath)
 		s.accountStateDB = nil
+	}
+
+	if s.accountStateDB != nil {
+		s.debtManagerDB.Close()
+		os.RemoveAll(s.debtManagerDBPath)
+		s.debtManagerDB = nil
 	}
 
 	return nil
