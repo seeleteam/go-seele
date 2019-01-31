@@ -56,7 +56,9 @@ func Test_DebtPool(t *testing.T) {
 	}()
 	pool.AddDebtArray(b1.Debts)
 	pool.AddDebtArray(b2.Debts)
-	pool.DoCheckingDebt()
+	//pool.DoCheckingDebt()
+	err := pool.DoBatchCheckingDebt()
+	assert.Equal(t, err, nil)
 
 	assert.Equal(t, 4, pool.GetDebtCount(true, true))
 
@@ -79,7 +81,9 @@ func Test_OrderByFee(t *testing.T) {
 		common.LocalShardNumber = common.UndefinedShardNumber
 	}()
 	pool.AddDebtArray([]*types.Debt{d1, d2})
-	pool.DoCheckingDebt()
+	//pool.DoCheckingDebt()
+	err := pool.DoBatchCheckingDebt()
+	assert.Equal(t, err, nil)
 
 	results, _ := pool.GetProcessableDebts(10000)
 	assert.Equal(t, 2, len(results))
@@ -128,7 +132,9 @@ func Test_DebtPoolFull(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	pool.DoCheckingDebt()
+	//pool.DoCheckingDebt()
+	err := pool.DoBatchCheckingDebt()
+	assert.Equal(t, err, nil)
 
 	d := types.NewTestDebt()
 	err := pool.addToPool(d)
