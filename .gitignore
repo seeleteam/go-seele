@@ -14,4 +14,9 @@
 .glide/
 .idea/
 .vscode/
+
+# ignore build file
 build/
+cmd/node/node
+cmd/tool/tool
+cmd/client/client

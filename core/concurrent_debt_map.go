@@ -6,6 +6,7 @@
 package core
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -43,11 +44,20 @@ func (m *ConcurrentDebtMap) remove(hash common.Hash) {
 	delete(m.value, hash)
 }
 
+func (m *ConcurrentDebtMap) removeByValue(debt *types.Debt) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	delete(m.value, debt.Hash)
+}
+
 func (m *ConcurrentDebtMap) add(debt *types.Debt) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	if len(m.value) >= m.capacity && m.value[debt.Hash] == nil {
+		//for test zlk
+		fmt.Println("confirmed debtpool len:", len(m.value))
 		return errDebtFull
 	}
 
