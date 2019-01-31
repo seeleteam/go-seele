@@ -275,7 +275,7 @@ func (s *SeeleService) Stop() error {
 		s.accountStateDB = nil
 	}
 
-	if s.accountStateDB != nil {
+	if s.debtManagerDB != nil {
 		s.debtManagerDB.Close()
 		os.RemoveAll(s.debtManagerDBPath)
 		s.debtManagerDB = nil
