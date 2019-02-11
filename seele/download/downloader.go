@@ -238,10 +238,10 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 
 	if !bMasterStarted {
 		// if master not starts, need cancel.
-		d.log.Debug("Downloader.doSynchronise bMasterStarted = %d. cancel. masterid=%s", bMasterStarted, d.masterPeer)
+		d.log.Debug("Downloader.doSynchronise bMasterStarted = %t. cancel. masterid=%s", bMasterStarted, d.masterPeer)
 		d.Cancel()
 	} else {
-		d.log.Debug("Downloader.doSynchronise bMasterStarted = %d.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
+		d.log.Debug("Downloader.doSynchronise bMasterStarted = %t.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
 	}
 	d.sessionWG.Wait()
 
