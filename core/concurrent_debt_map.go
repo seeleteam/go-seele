@@ -43,6 +43,14 @@ func (m *ConcurrentDebtMap) remove(hash common.Hash) {
 	delete(m.value, hash)
 }
 
+// removeByValue remove debts by Debt
+func (m *ConcurrentDebtMap) removeByValue(debt *types.Debt) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	delete(m.value, debt.Hash)
+}
+
 func (m *ConcurrentDebtMap) add(debt *types.Debt) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
