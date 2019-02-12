@@ -23,8 +23,8 @@ var (
 )
 
 func init() {
-	rewardTable := [...]float64{24, 16, 12, 10, 8, 6, 6, 6}
-	tailReward := float64(4)
+	rewardTable := [...]float64{24, 16, 12, 10, 8, 8, 6, 6}
+	tailReward := float64(6)
 
 	rewardTableCoin = make([]*big.Int, len(rewardTable))
 	for i, r := range rewardTable {
@@ -48,8 +48,12 @@ func GetReward(blockHeight uint64) *big.Int {
 	var result *big.Int
 	if era < len(rewardTableCoin) {
 		result = rewardTableCoin[era]
-	} else {
+	} else if era == len(rewardTableCoin) {
 		result = tailRewardCoin
+	}
+
+	if era > len(rewardTableCoin) {
+		result = big.NewInt(0)
 	}
 
 	return big.NewInt(0).Set(result)
