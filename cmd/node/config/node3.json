@@ -4,12 +4,12 @@
     "version": "1.0",
     "dataDir": "node3",
     "address": "0.0.0.0:8029",
-    "coinbase": "0x7222f89b38277d782fbd2a55736450cc1e4be631",
+    "coinbase": "0x5b95dcf6b0b0c88d575c65340d85da016940f7d1",
     "algorithm": "sha256"
   },
   "p2p": {
     "address": "0.0.0.0:8059",
-    "privateKey": "0x35255ad0f5dbfeca71071c846f274449e31c836e8c0f6d59a9b7f3133f35ce26",
+    "privateKey": "0xef4da2a762d411c7875c3d191e87fe8d9c5512fec2824447edf8487ee8d4b649",
     "staticNodes": [
       "127.0.0.1:8057"
     ],
@@ -46,7 +46,7 @@
   },
   "genesis": {
     "difficult":6000000,
-    "shard":2,
+    "shard":3,
     "timestamp":1539742676
   }
 }
