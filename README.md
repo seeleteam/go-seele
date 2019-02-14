@@ -20,7 +20,7 @@ go get -u -v github.com/seeleteam/go-seele/...
 - Once successfully cloned source code:
 
 ```
-cd GOPATH/src/seeleteam/go-seele/
+cd GOPATH/src/github.com/seeleteam/go-seele/
 ```
 
 - Linux & Mac
