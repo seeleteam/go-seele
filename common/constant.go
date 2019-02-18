@@ -22,7 +22,7 @@ const (
 	SeeleVersion uint = 1
 
 	// ShardCount represents the total number of shards.
-	ShardCount = 2
+	ShardCount = 4
 
 	// MetricsRefreshTime is the time of metrics sleep 1 minute
 	MetricsRefreshTime = time.Minute
