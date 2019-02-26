@@ -21,6 +21,7 @@ var gettps = &cobra.Command{
 		tool.exe tps`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initClient()
+		max := float64(0)
 
 		for {
 			sum := float64(0)
@@ -44,6 +45,10 @@ var gettps = &cobra.Command{
 			}
 
 			fmt.Printf("sum tps is: %.2f\n", sum)
+			if sum >= max {
+				max = sum
+			}
+			fmt.Printf("tps max is: %.2f\n", max)
 			time.Sleep(10 * time.Second)
 		}
 	},
