@@ -42,6 +42,9 @@ const (
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
 
+	// spow miner algorithm 
+	SpowAlgorithm = "spow"
+
 	// BFT mineralgorithm
 	BFTEngine = "bft"
 

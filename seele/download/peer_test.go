@@ -179,6 +179,7 @@ func newTestBlockHeader() *types.BlockHeader {
 		Height:            1,
 		CreateTimestamp:   big.NewInt(time.Now().Unix()),
 		Witness:           common.CopyBytes([]byte("")),
+		SecondWitness:           common.CopyBytes([]byte("")),
 		ExtraData:         common.CopyBytes([]byte("")),
 	}
 }

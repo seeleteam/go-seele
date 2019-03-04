@@ -53,8 +53,10 @@ type BlockHeader struct {
 	Height            uint64         // Height is the number of the block
 	CreateTimestamp   *big.Int       // CreateTimestamp is the timestamp when the block is created
 	// in pow consensus, witness is the nonce that proof whether the block is validate;
+	// in spow consensus, witness and secondWitness are the nonce pair
 	// in BFT consensus, witness is used to vote for validator candidates and Creator is the candidate address.
 	Witness   []byte
+	SecondWitness []byte
 	Consensus ConsensusType
 	ExtraData []byte // ExtraData stores the extra info of block header.
 }

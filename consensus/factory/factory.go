@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/consensus/istanbul/backend"
 	"github.com/seeleteam/go-seele/consensus/pow"
+	"github.com/seeleteam/go-seele/consensus/spow"
 	"github.com/seeleteam/go-seele/database/leveldb"
 )
 
@@ -28,6 +29,8 @@ func GetConsensusEngine(minerAlgorithm string) (consensus.Engine, error) {
 		minerEngine = ethash.New(ethash.GetDefaultConfig(), nil, false)
 	} else if minerAlgorithm == common.Sha256Algorithm {
 		minerEngine = pow.NewEngine(1)
+	} else if minerAlgorithm == common.SpowAlgorithm {
+		minerEngine = spow.NewSpowEngine(1)
 	} else {
 		return nil, fmt.Errorf("unknown miner algorithm")
 	}
