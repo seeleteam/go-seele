@@ -216,7 +216,6 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 
 miner:
 	for i := 0; i < len(hashPackIndex) - 1; i++ {
-		fmt.Printf("hashPack: %d", i)
 		baseHashPack, err := engine.getHashPack(i)
 		if err != nil {
 			break miner
@@ -224,8 +223,7 @@ miner:
 
 		// baseHashPack compare with itself
 		for k := uint64(0); k < hashPackIndex[i + 1] - hashPackIndex[i]; k++ {
-			for n := k; n < hashPackIndex[i] - hashPackIndex[i]; n++ {
-				fmt.Printf("nonce: %d, %d\n", k, n)
+			for n := k + 1; n < hashPackIndex[i + 1] - hashPackIndex[i]; n++ {
 				isFound := isPair(baseHashPack[k].Hash, baseHashPack[n].Hash, block.Header.Difficulty)
 				// nonce pair is found
 				if isFound {
@@ -240,7 +238,6 @@ miner:
 
 		// compare base hash pack with other hash packs
 		for j := i + 1; j < len(hashPackIndex) - 1; j++ {
-			fmt.Printf("compare with hashPack: %d", j)
 			compareHashPack, err := engine.getHashPack(j)
 			if err != nil {
 				break miner
