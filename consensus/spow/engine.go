@@ -16,8 +16,6 @@ import (
 	"os"
 	"bytes"
 	"encoding/binary"
-	"path/filepath"
-	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/rcrowley/go-metrics"
@@ -51,15 +49,13 @@ type SpowEngine struct {
 	hashPoolDBPath string
 }
 
-func NewSpowEngine(threads int) *SpowEngine {
+func NewSpowEngine(threads int, folder string) *SpowEngine {
 
-	baseDir := common.GetTempFolder()
-	datasetDir := filepath.Join(baseDir, "datasets")
 	return &SpowEngine{
 		threads:        threads,
 		log:            log.GetLogger("spow_engine"),
 		hashrate:       metrics.NewMeter(),
-		hashPoolDBPath: datasetDir,
+		hashPoolDBPath: folder,
 	}
 }
 

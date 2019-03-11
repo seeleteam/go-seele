@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"math/big"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
@@ -52,6 +53,14 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 
 		shard := uint(i)
 		copyConf.SeeleConfig.GenesisConfig.ShardNumber = shard
+
+		if shard == uint(1) {
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(1000000000000)
+		} else {
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(0)
+		}
 
 		dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", i))
 		clients[i], err = light.NewServiceClient(context, copyConf, log.GetLogger(fmt.Sprintf("lightclient_%d", i)), dbFolder, shard, engine)

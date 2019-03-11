@@ -17,6 +17,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -118,8 +119,17 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 	// add genesisHash with shard set to 0 to calculate hash
 	shard := genesis.ShardNumber
 	genesis.ShardNumber = 0
+
+	// set the master account and balance to empty to calculate hash
+	masteraccount := genesis.Masteraccount
+	balance := genesis.Balance
+	genesis.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	genesis.Balance = big.NewInt(0)
+
 	hash := genesis.Hash()
 	genesis.ShardNumber = shard
+	genesis.Masteraccount = masteraccount
+	genesis.Balance = balance
 
 	return &Server{
 		Config:               config,
@@ -528,7 +538,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 
 		capList, bValid := srv.peerIsValidate(recvMsg)
 		if !bValid {
-			return nil, 0, errors.New("node is not consitent with groups")
+			return nil, 0, errors.New("node is not consistent with groups")
 		}
 
 		sort.Sort(capsByNameAndVersion(capList))
@@ -548,7 +558,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 
 		capList, bValid := srv.peerIsValidate(recvMsg)
 		if !bValid {
-			return nil, 0, errors.New("node is not consitent with groups")
+			return nil, 0, errors.New("node is not consistent with groups")
 		}
 
 		sort.Sort(capsByNameAndVersion(capList))

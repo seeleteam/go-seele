@@ -58,6 +58,12 @@ type GenesisInfo struct {
 
 	// Validators istanbul consensus validators
 	Validators []common.Address `json:"validators"`
+
+	// master account
+	Masteraccount common.Address `json:"master"`
+
+	// balance of the master account
+	Balance *big.Int `json:"balance"`
 }
 
 func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
@@ -203,6 +209,16 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 
 func getStateDB(info *GenesisInfo) *state.Statedb {
 	statedb := state.NewEmptyStatedb(nil)
+
+	if info.ShardNumber == 1 {
+		info.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
+		info.Balance = big.NewInt(1000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else {
+		info.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		info.Balance = big.NewInt(0)
+	} 
 
 	for addr, amount := range info.Accounts {
 		if !common.IsShardEnabled() || addr.Shard() == info.ShardNumber {
