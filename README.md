@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
 |        Features        |      Description                                                                               |
-|:----------------------:|------------------------------------------------------------------------------------------------|
+|:----------------------|------------------------------------------------------------------------------------------------|
 | **Sharding**           | 4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
 | **Smart Contracts**    | Compile and Run Smart Contracts                                                                |
 | **Seele Wallet**       | easy to use wallet                                                                             |
