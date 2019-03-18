@@ -1,14 +1,17 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-### features:
-| Sharding      |Smart Contracts|Seele Wallet|High TPS |
-|:-----|:-----|:-----|:--------| 
-|4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |easy to use wallet|same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard|
-|------+------+-----+--------| 
-|Auditable Supply |Anti-ASIC Algorithm |Mining Reward | Block|
-|:-----|:-----|:-----|:-----|
-|Total supply  1,000,000,000 SEELE<br/> 300,000,000 SEELE for mining |SPOW: sate based proof of work  |self-customized reward fee<br/> higher fee for cross-shard one |100 KB block size<br/> 10 second block time<br/> 5000 transactions|
+| Features | Description |
+|-----|-----|
+| Sharding | 4 shards<br/> cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
+| Smart Contracts | Compile and Run Smart Contracts |
+| Seele Wallet | easy to use wallet |
+| High TPS | same-shard TPS:<br/> 1000 /shard<br/> cross-shard TPS:<br/> 12 / shard |
+| Auditable Supply | Total supply  1,000,000,000 SEELE<br/> 300,000,000 SEELE for mining |
+| Anti-ASIC Algorithm | SPOW: sate based proof of work  |
+| Mining Reward | self-customized reward fee<br/> higher fee for cross-shard one |
+| Block | 100 KB block size<br/> 10 second block time<br/> 5000 transactions |
+
 
 The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
 
