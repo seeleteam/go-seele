@@ -1,16 +1,16 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-| Features | Description |
-|:-----:|-----|
-| Sharding | 4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
-| Smart Contracts | Compile and Run Smart Contracts |
-| Seele Wallet | easy to use wallet |
-| High TPS | same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard |
-| Auditable Supply | Total supply  1,000,000,000 SEELE, 300,000,000 SEELE for mining |
-| Anti-ASIC Algorithm | SPOW: sate based proof of work  |
-| Mining Reward | self-customized reward fee, higher fee for cross-shard one |
-| Block | 100 KB block size, 10 second block time, 5000 transactions |
+|        Features        |      Description                                                                               |
+|:----------------------:|------------------------------------------------------------------------------------------------|
+| **Sharding**           | 4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
+| **Smart Contracts**    | Compile and Run Smart Contracts                                                                |
+| **Seele Wallet**       | easy to use wallet                                                                             |
+| **High TPS**           | same-shard TPS: 1000/shard, cross-shard TPS: 12/shard                                          |
+| **Auditable Supply**   | Total supply  1,000,000,000 SEELE, 300,000,000 SEELE for mining                                |
+| **Anti-ASIC Algorithm**| SPOW: sate based proof of work                                                                 |
+| **Mining Reward**      | self-customized reward fee, higher fee for cross-shard one                                     |
+| **Block**              | 100 KB block size, 10 second block time, 5000 transactions                                     |
 
 
 The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
