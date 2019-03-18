@@ -2,14 +2,15 @@
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
 |        Features        |      Description                                                                               |
-|:----------------------|------------------------------------------------------------------------------------------------|
-| **Sharding**           | 4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
+|:----------------------|-------------------------------------------------------------------------------------------------|
+| **Sharding**           | 4 shards, cross-shard transaction with higher transaction fee                                  |
 | **Smart Contracts**    | Compile and Run Smart Contracts                                                                |
 | **Seele Wallet**       | easy to use wallet                                                                             |
 | **High TPS**           | same-shard TPS: 1000/shard, cross-shard TPS: 12/shard                                          |
 | **Auditable Supply**   | Total supply  1,000,000,000 SEELE, 300,000,000 SEELE for mining                                |
 | **Anti-ASIC Algorithm**| SPOW: sate based proof of work                                                                 |
-| **Mining Reward**      | self-customized reward fee, higher fee for cross-shard one                                     |
+| **Mining Reward**      | 3150000 blocks/era and each era reward follows [24, 16, 12, 10, 8, 8, 6, 6] order until reaches last reward of 6 SEELE                                                  |
+| **Transaction Fee**    | self-customized transaction fee, higher fee for cross-shard one                                |
 | **Block**              | 100 KB block size, 10 second block time, 5000 transactions                                     |
 
 
