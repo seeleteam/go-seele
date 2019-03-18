@@ -5,7 +5,7 @@
 | Sharding      |Smart Contracts|Seele Wallet|High TPS |
 |:-----|:-----|:-----|:--------| 
 |4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |easy to use wallet|same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard|
-
+|------+------+-----+--------| 
 |Auditable Supply |Anti-ASIC Algorithm |Mining Reward | Block|
 |:-----|:-----|:-----|:-----|
 |Total supply  1,000,000,000 SEELE<br/> 300,000,000 SEELE for mining |SPOW: sate based proof of work  |self-customized reward fee<br/> higher fee for cross-shard one |100 KB block size<br/> 10 second block time<br/> 5000 transactions|
