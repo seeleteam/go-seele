@@ -3,7 +3,7 @@
 
 | Sharding      |Smart Contracts|Seele Wallet|High TPS |
 |:-----|:-----|:-----|:--------| 
-|4 shards<br/> cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |easy to use wallet|same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard|
+|4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |easy to use wallet|same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard|
 
 |Auditable Supply |Anti-ASIC Algorithm |Mining Reward | Block|
 |:-----|:-----|:-----|:-----|
