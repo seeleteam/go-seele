@@ -3,10 +3,10 @@
 
 | Features | Description |
 |-----|-----|
-| Sharding | 4 shards<br/> cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
+| Sharding | 4 shards, cross-shard transaction with higher transaction fee| Compile and Run Smart Contracts |
 | Smart Contracts | Compile and Run Smart Contracts |
 | Seele Wallet | easy to use wallet |
-| High TPS | same-shard TPS:<br/> 1000 /shard<br/> cross-shard TPS:<br/> 12 / shard |
+| High TPS | same-shard TPS: 1000/shard<br/> cross-shard TPS: 12/shard |
 | Auditable Supply | Total supply  1,000,000,000 SEELE<br/> 300,000,000 SEELE for mining |
 | Anti-ASIC Algorithm | SPOW: sate based proof of work  |
 | Mining Reward | self-customized reward fee<br/> higher fee for cross-shard one |
