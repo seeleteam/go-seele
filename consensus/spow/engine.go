@@ -27,8 +27,7 @@ import (
 
 var (
 	// the number of hashes for hash collison 
-	hashPoolSize = uint64(33000000)
-	pack = uint64(6000)
+	baseHashPoolSize = uint64(100000)
 )
 
 
@@ -37,7 +36,7 @@ type HashItem struct {
 	Nonce uint64
 }
 
-// Engine provides the consensus operations based on POW.
+// Engine provides the consensus operations based on SPOW.
 type SpowEngine struct {
 	threads        int
 	log            *log.SeeleLog
@@ -92,6 +91,16 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 	// make sure beginNonce is not too big
 	beginNonce := uint64(r.Int63n(int64(math.MaxUint64 / 2)))
 
+	var hashPoolSize uint64
+	if (block.Header.Difficulty.Uint64() > 5200000) {
+		hashPoolSize = baseHashPoolSize * uint64(1 << (( block.Header.Difficulty.Uint64() - 5200000) / 400000))
+	} else {
+		hashPoolSize = baseHashPoolSize >> uint64((5200000 - block.Header.Difficulty.Uint64()) / 400000)
+	}
+	
+	if hashPoolSize > uint64(80000000) {
+		hashPoolSize = uint64(80000000)
+	}
 	if beginNonce + hashPoolSize < math.MaxUint64 {
 
 		threads := engine.threads
@@ -101,7 +110,9 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 		}
 
 		// generate hashPool
+		engine.log.Info("start generating hashpool, %d", hashPoolSize)
 		hashPack, err := engine.generateHashPool(block, stop, beginNonce, hashesPerThread)
+		engine.log.Info("Hashpool is generated!")
 		if err != nil {
 			engine.log.Error("spow err: failed to generate hashPool, %s", err)
 			return err
@@ -166,6 +177,8 @@ func (engine *SpowEngine) generateHashPool(block *types.Block, stop <-chan struc
 
 func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashPack [][]*HashItem) {
 
+	numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
+
 miner:
 	for i := 0; i < len(hashPack); i++ {
 		baseHashPack := hashPack[i]
@@ -179,8 +192,6 @@ miner:
 					break miner
 	
 				default:
-					
-					numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
 					isFound := isPair(baseHashPack[k].Hash, baseHashPack[n].Hash, numOfBits)
 					// nonce pair is found
 					if isFound {
@@ -205,7 +216,6 @@ miner:
 						break miner
 		
 					default:
-						numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
 						isFound := isPair(baseHashPack[k].Hash, compareHashPack[n].Hash, numOfBits)
 						// nonce pair is found
 						if isFound {

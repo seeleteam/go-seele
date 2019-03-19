@@ -30,7 +30,7 @@ func GetConsensusEngine(minerAlgorithm string, folder string) (consensus.Engine,
 	} else if minerAlgorithm == common.Sha256Algorithm {
 		minerEngine = pow.NewEngine(1)
 	} else if minerAlgorithm == common.SpowAlgorithm {
-		minerEngine = spow.NewSpowEngine(16, folder)
+		minerEngine = spow.NewSpowEngine(1, folder)
 	} else {
 		return nil, fmt.Errorf("unknown miner algorithm")
 	}

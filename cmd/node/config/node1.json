@@ -43,7 +43,7 @@
     "password": "test123"
   },
   "genesis": {
-    "difficult":2000000,
+    "difficult":5200000,
     "shard":1,
     "timestamp":1539742676
   }
