@@ -13,9 +13,7 @@ import (
 	"time"
 	"runtime"
 	"sync"
-	"os"
 	"bytes"
-	"encoding/binary"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/rcrowley/go-metrics"
@@ -23,7 +21,6 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/database"
-	"github.com/seeleteam/go-seele/database/leveldb"
 	"github.com/seeleteam/go-seele/consensus/utils"
 	"github.com/seeleteam/go-seele/rpc"
 )
@@ -31,7 +28,7 @@ import (
 var (
 	// the number of hashes for hash collison 
 	hashPoolSize = uint64(33000000)
-	pack = uint64(600000)
+	pack = uint64(6000)
 )
 
 
@@ -70,7 +67,7 @@ func (engine *SpowEngine) SetThreads(threads int) {
 func (engine *SpowEngine) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{
 		{
-			Namespace: "spow",
+			Namespace: "miner",
 			Version:   "1.0",
 			Service:   &API{engine},
 			Public:    true,
@@ -91,73 +88,47 @@ func (engine *SpowEngine) Prepare(reader consensus.ChainReader, header *types.Bl
 
 func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
 
-	var err error
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// make sure beginNonce is not too big
 	beginNonce := uint64(r.Int63n(int64(math.MaxUint64 / 2)))
 
 	if beginNonce + hashPoolSize < math.MaxUint64 {
 
-		// new hashPool database
-		if engine.hashPoolDB, err = leveldb.NewLevelDB(engine.hashPoolDBPath); err != nil {
-			engine.log.Error("spow err: failed to create hashPool DB, %s", err)
-			return err
+		threads := engine.threads
+		hashesPerThread := hashPoolSize
+		if threads != 0 {
+			hashesPerThread = hashPoolSize / uint64(threads)
 		}
 
-		hashPackIndex, packsPerThread := engine.generateHashPackIndex()
-
 		// generate hashPool
-		if err = engine.generateHashPool(block, beginNonce, hashPackIndex, packsPerThread); err != nil {
+		hashPack, err := engine.generateHashPool(block, stop, beginNonce, hashesPerThread)
+		if err != nil {
 			engine.log.Error("spow err: failed to generate hashPool, %s", err)
 			return err
 		}
 
-		go engine.startCollision(block, results, stop, beginNonce, hashPackIndex)
+		select {
+		case <-stop:
+			return nil
+
+		default:
+			go engine.startCollision(block, results, stop, beginNonce, hashPack)
+		}
 	}
 
 	return nil
 		
 }
 
-func (engine *SpowEngine) generateHashPackIndex() ([]uint64, uint64) {
-	// generate the index list for hashPacks in the database
-	var hashPackIndex []uint64
-
-	threads := engine.threads
-	hashesPerThread := hashPoolSize
-	if threads != 0 {
-		hashesPerThread = hashPoolSize / uint64(threads)
-	}
-	packsPerThread := hashesPerThread / pack
-	begin := uint64(0)
-	for i := 0; i < threads; i++ {
-		for j := uint64(0); j < packsPerThread; j++ {
-			hashPackIndex = append(hashPackIndex, begin)
-			begin += pack
-		} 
-		if hashesPerThread > pack * packsPerThread {
-			hashPackIndex = append(hashPackIndex, begin)
-			begin += hashesPerThread - pack * packsPerThread
-		}
-	}
-
-	// mark the end
-	hashPackIndex = append(hashPackIndex, begin)
-	if hashesPerThread > pack * packsPerThread {
-		packsPerThread += 1
-	}
-
-	return hashPackIndex, packsPerThread
-}
-
-
-func (engine *SpowEngine) generateHashPool(block *types.Block, beginNonce uint64, hashPackIndex []uint64, packsPerThread uint64) error {
+func (engine *SpowEngine) generateHashPool(block *types.Block, stop <-chan struct{}, beginNonce uint64, hashesPerThread uint64) ([][]*HashItem, error) {
 
 	threads := engine.threads
 	
 	// generate the hashPool concurrently
 	var err error
 	var pend sync.WaitGroup
+	hashPack := make([][]*HashItem, threads) 
+
 	pend.Add(threads)
 
 	for i := 0; i < threads; i++ {
@@ -166,14 +137,14 @@ func (engine *SpowEngine) generateHashPool(block *types.Block, beginNonce uint64
 
 			header := block.Header.Clone()
 				
-			// Calculate the dataset segment
-			counter := uint64(0)
-			for counter < packsPerThread {
-
-				// create hash pack  
-				var hashPack []*HashItem 
-				idx := uint64(id) * packsPerThread + counter
-				for nonce := beginNonce + hashPackIndex[idx]; nonce < beginNonce + hashPackIndex[idx + 1]; nonce++ {
+			// Calculate the segment in each thread
+			for nonce := beginNonce + uint64(id) * hashesPerThread; nonce < beginNonce + uint64(id + 1) * hashesPerThread; nonce++ {
+				select {
+				case <-stop:
+					logAbort(engine.log)
+					return
+		
+				default:
 					header.Witness = []byte(strconv.FormatUint(nonce, 10))
 					header.SecondWitness = []byte{}
 					hash := header.Hash()					
@@ -181,74 +152,68 @@ func (engine *SpowEngine) generateHashPool(block *types.Block, beginNonce uint64
 						Hash: hash,
 						Nonce: nonce,
 					}
-					hashPack = append(hashPack, hashItem)
-				}	
-
-				// batch commit the hashes to the database
-				if len(hashPack) > 0 {
-					batch := engine.hashPoolDB.NewBatch()
-					encoded := make([]byte, 8)
-					binary.BigEndian.PutUint64(encoded, idx)
-					batch.Put(encoded, common.SerializePanic(hashPack))
-					err = batch.Commit()
-					if err != nil {
-						engine.log.Warn("failed to store hashPack in database, err %s", err)
-					}
+					hashPack[id] = append(hashPack[id], hashItem)
 				}
-
-				counter++					  
-			}
+			}	
 		}(i)
 	}
 	// Wait for all the generators to finish and return
 	pend.Wait()
-	return err
+	return hashPack, err
 
 }
 
-func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashPackIndex []uint64) {
-	
-	defer engine.removeDB()
+
+func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashPack [][]*HashItem) {
 
 miner:
-	for i := 0; i < len(hashPackIndex) - 1; i++ {
-		baseHashPack, err := engine.getHashPack(i)
-		if err != nil {
-			break miner
-		}
+	for i := 0; i < len(hashPack); i++ {
+		baseHashPack := hashPack[i]
 
 		// baseHashPack compare with itself
-		for k := uint64(0); k < hashPackIndex[i + 1] - hashPackIndex[i]; k++ {
-			for n := k + 1; n < hashPackIndex[i + 1] - hashPackIndex[i]; n++ {
-				isFound := isPair(baseHashPack[k].Hash, baseHashPack[n].Hash, block.Header.Difficulty)
-				// nonce pair is found
-				if isFound {
-					engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), baseHashPack[n].Nonce, baseHashPack[n].Hash.Hex())
-					engine.removeDB()
-					handleResults(block, results, stop, baseHashPack[k].Nonce, baseHashPack[n].Nonce, engine.log)
-
+		for k := 0; k < len(baseHashPack); k++ {
+			for n := k + 1; n < len(baseHashPack); n++ {
+				select {
+				case <-stop:
+					logAbort(engine.log)
 					break miner
+	
+				default:
+					
+					numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
+					isFound := isPair(baseHashPack[k].Hash, baseHashPack[n].Hash, numOfBits)
+					// nonce pair is found
+					if isFound {
+						engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), baseHashPack[n].Nonce, baseHashPack[n].Hash.Hex())
+						handleResults(block, results, stop, baseHashPack[k].Nonce, baseHashPack[n].Nonce, engine.log)
+
+						break miner
+					}
 				}
 			}
 		} 	
 
 		// compare base hash pack with other hash packs
-		for j := i + 1; j < len(hashPackIndex) - 1; j++ {
-			compareHashPack, err := engine.getHashPack(j)
-			if err != nil {
-				break miner
-			}
+		for j := i + 1; j < len(hashPack); j++ {
+			compareHashPack := hashPack[j]
 
-			for k := uint64(0); k < hashPackIndex[i + 1] - hashPackIndex[i]; k++ {
-				for n := uint64(0); n < hashPackIndex[j + 1] - hashPackIndex[j]; n++ {
-					isFound := isPair(baseHashPack[k].Hash, compareHashPack[n].Hash, block.Header.Difficulty)
-					// nonce pair is found
-					if isFound {
-						engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), compareHashPack[n].Nonce, compareHashPack[n].Hash.Hex())
-						engine.removeDB()
-						handleResults(block, results, stop, baseHashPack[k].Nonce, compareHashPack[n].Nonce, engine.log)
-	
+			for k := 0; k < len(baseHashPack); k++ {
+				for n := 0; n < len(compareHashPack); n++ {
+					select {
+					case <-stop:
+						logAbort(engine.log)
 						break miner
+		
+					default:
+						numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
+						isFound := isPair(baseHashPack[k].Hash, compareHashPack[n].Hash, numOfBits)
+						// nonce pair is found
+						if isFound {
+							engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), compareHashPack[n].Nonce, compareHashPack[n].Hash.Hex())
+							handleResults(block, results, stop, baseHashPack[k].Nonce, compareHashPack[n].Nonce, engine.log)
+	
+							break miner
+						}
 					}
 				}
 			} 	
@@ -256,37 +221,6 @@ miner:
 	}
 
 }
-
-func (engine *SpowEngine) removeDB() {
-
-	if engine.hashPoolDB != nil {
-		engine.hashPoolDB.Close()
-		os.RemoveAll(engine.hashPoolDBPath)
-		engine.hashPoolDB = nil
-	}
-
-	return
-
-}
-
-
-func (engine *SpowEngine) getHashPack(id int) ([]*HashItem, error) {
-
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, uint64(id))
-	value, err := engine.hashPoolDB.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	var hashPack []*HashItem
-	if err = common.Deserialize(value, &hashPack); err != nil {
-		return nil, err
-	}
-
-	return hashPack, nil
-}
-
 
 func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
 
@@ -344,9 +278,9 @@ func verifyPair(header *types.BlockHeader) error {
 	hashA := NewHeader.Hash()
 	NewHeader.Witness = nonceB
 	hashB := NewHeader.Hash()
-
-	numOfBits := header.Difficulty
 	
+	numOfBits := difficultyToNumOfBits(header.Difficulty)
+
 	if p := isPair(hashA, hashB, numOfBits); p == false {
 		return consensus.ErrBlockNonceInvalid
 	}
@@ -365,4 +299,14 @@ func isPair(hashA common.Hash, hashB common.Hash, numOfBits *big.Int) bool {
 	} else {
 		return false
 	}
+}
+
+func difficultyToNumOfBits(difficulty *big.Int) *big.Int {
+	bigDiv := big.NewInt(int64(200000))
+	var numOfBits = new(big.Int).Set(difficulty)
+	numOfBits.Div(difficulty, bigDiv)
+	if numOfBits.Cmp(big.NewInt(int64(45))) > 0 {
+		numOfBits = big.NewInt(int64(45))
+	}
+	return numOfBits
 }
