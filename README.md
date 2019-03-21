@@ -1,18 +1,6 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-|        Features        |      Description                                                                               |
-|------------------------|------------------------------------------------------------------------------------------------|
-| **Sharding**           | 4 shards, cross-shard transaction with higher transaction fee                                  |
-| **Smart Contracts**    | compile and run smart contracts within the same shard                                          |
-| **Seele Wallet**       | easy-to-use wallet                                                                             |
-| **High TPS**           | same-shard TPS: 200/shard, cross-shard TPS: 12/shard                                          |
-| **Auditable Supply**   | total supply: 1,000,000,000 SEELE, 300,000,000 SEELE for mining                                |
-| **Consensus Algorithm**| Seele POW: memory heavy proof of work algorithm                                             |
-| **Mining Reward**      | 3150000 blocks/era and era reward follows [24, 16, 12, 10, 8, 8, 6, 6] order until reaches last reward of 6 SEELE |
-| **Transaction Fee**    | self-customized transaction fee, higher fee for cross-shard transaction                        |
-| **Block**              | 100 KB block size, 10 second block time, 5000 transactions                                     |
-
 
 The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
 
