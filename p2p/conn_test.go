@@ -86,7 +86,7 @@ func Test_connection(t *testing.T) {
 	assert.Equal(t, err, nil)
 
 	con1 := connection{fd: fd1, log: log.GetLogger("p2p")}
-	randStr1 := getRandomString(zipBytesLimit * 10)
+	randStr1 := getRandomString(zipBytesLimit * 7)
 	msg1 := newMessage(randStr1)
 	msg1Copy := *msg1
 	var nounceCnt uint64

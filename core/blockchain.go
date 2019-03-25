@@ -566,7 +566,22 @@ func (bc *Blockchain) ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.De
 	}
 
 	// @todo handle contract
+	if d.Data.Amount == nil {
+		return types.ErrAmountNil
+	}
 
+	if d.Data.Amount.Sign() < 0 {
+		return types.ErrAmountNegative
+	}
+
+	if d.Fee() == nil {
+		return types.ErrAmountNil
+	}
+
+	if d.Fee().Sign() < 0 {
+		return types.ErrAmountNegative
+	}
+	
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
 	statedb.AddBalance(coinbase, d.Fee())
 

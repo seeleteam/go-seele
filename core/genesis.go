@@ -68,6 +68,16 @@ type GenesisInfo struct {
 
 func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
 	consensus types.ConsensusType, validator []common.Address) *GenesisInfo {
+
+	var masteraccount common.Address
+	var balance *big.Int
+	if shard == 1 {
+		masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
+		balance = big.NewInt(70000000000000000)
+	} else {
+		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		balance = big.NewInt(0)
+	}
 	return &GenesisInfo{
 		Accounts:        accounts,
 		Difficult:       difficult,
@@ -75,6 +85,8 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 		CreateTimestamp: timestamp,
 		Consensus:       consensus,
 		Validators:      validator,
+		Masteraccount:   masteraccount,
+		Balance:         balance,
 	}
 }
 
@@ -212,13 +224,13 @@ func getStateDB(info *GenesisInfo) *state.Statedb {
 
 	if info.ShardNumber == 1 {
 		info.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
-		info.Balance = big.NewInt(1000000000000)
+		info.Balance = big.NewInt(70000000000000000)
 		statedb.CreateAccount(info.Masteraccount)
 		statedb.SetBalance(info.Masteraccount, info.Balance)
 	} else {
 		info.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
 		info.Balance = big.NewInt(0)
-	} 
+	}
 
 	for addr, amount := range info.Accounts {
 		if !common.IsShardEnabled() || addr.Shard() == info.ShardNumber {

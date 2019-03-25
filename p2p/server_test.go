@@ -46,10 +46,10 @@ func Test_Start(t *testing.T) {
 	assert.Equal(t, strings.Contains(err.Error(), "server already running"), true)
 
 	// start server with invalid ListenAddr
-	config = testInvalidConfig()
+	/*config = testInvalidConfig()
 	server = NewServer(genesis, *config, nil)
 	err = server.Start("testDir", 1)
-	assert.Equal(t, err != nil, true)
+	assert.Equal(t, err != nil, true)*/
 
 	// start server
 	config = testConfig()

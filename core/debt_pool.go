@@ -80,7 +80,9 @@ func (dp *DebtPool) loopCheckingDebt() {
 		} else {
 			//dp.DoCheckingDebt()
 			err := dp.DoMulCheckingDebt()
-			dp.log.Warn("multiple threads checking error: %s", err)
+			if err != nil {
+				dp.log.Warn("multiple threads checking error: %s", err)
+			}
 		}
 	}
 }

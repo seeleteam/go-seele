@@ -56,7 +56,7 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 
 		if shard == uint(1) {
 			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
-			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(1000000000000)
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(70000000000000000)
 		} else {
 			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(0)

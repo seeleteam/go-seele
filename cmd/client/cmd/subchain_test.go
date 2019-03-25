@@ -48,7 +48,7 @@ func Test_getConfigFromSubChain(t *testing.T) {
 	assert.Equal(t, config.GenesisConfig.ShardNumber, uint(1))
 
 	reflectBasic := reflect.TypeOf(config.BasicConfig)
-	assert.Equalf(t, 7, reflectBasic.NumField(), errFormat, "Node.BasicConfig")
+	assert.Equalf(t, 8, reflectBasic.NumField(), errFormat, "Node.BasicConfig")
 
 	reflectP2p := reflect.TypeOf(config.P2PConfig)
 	assert.Equalf(t, 5, reflectP2p.NumField(), errFormat, "p2p.Config")
@@ -63,7 +63,7 @@ func Test_getConfigFromSubChain(t *testing.T) {
 	assert.Equalf(t, 2, reflectWSServer.NumField(), errFormat, "node.WSServerConfig")
 
 	reflectGenesis := reflect.TypeOf(config.GenesisConfig)
-	assert.Equalf(t, 6, reflectGenesis.NumField(), errFormat, "core.GenesisInfo")
+	assert.Equalf(t, 8, reflectGenesis.NumField(), errFormat, "core.GenesisInfo")
 
 	config.MetricsConfig = &metrics.Config{}
 	reflectMetrics := reflect.TypeOf(*config.MetricsConfig)

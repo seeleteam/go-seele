@@ -312,11 +312,16 @@ func isPair(hashA common.Hash, hashB common.Hash, numOfBits *big.Int) bool {
 }
 
 func difficultyToNumOfBits(difficulty *big.Int) *big.Int {
+
 	bigDiv := big.NewInt(int64(200000))
 	var numOfBits = new(big.Int).Set(difficulty)
 	numOfBits.Div(difficulty, bigDiv)
 	if numOfBits.Cmp(big.NewInt(int64(45))) > 0 {
 		numOfBits = big.NewInt(int64(45))
+	}
+
+	if numOfBits.Cmp(big.NewInt(int64(1))) < 0 {
+		numOfBits = big.NewInt(int64(1))
 	}
 	return numOfBits
 }
