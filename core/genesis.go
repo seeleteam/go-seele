@@ -73,16 +73,16 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 	var balance *big.Int
 	if shard == 1 {
 		masteraccount, _ = common.HexToAddress("0x8e37f6d73b35f171c4c85e5eb3ed8d7bd2645961")
-		balance = big.NewInt(175000000000000000)
+		balance = big.NewInt(17500000000000000)
 	} else if shard == 2 {
 		masteraccount, _ = common.HexToAddress("0x579c1c00d69fcae42c69ac037d54fce7bcec53b1")
-		balance = big.NewInt(175000000000000000)
+		balance = big.NewInt(17500000000000000)
 	} else if shard == 3 {
 		masteraccount, _ = common.HexToAddress("0xa64073843276c9edd431d512109e440e434c0501")
-		balance = big.NewInt(175000000000000000)
+		balance = big.NewInt(17500000000000000)
 	} else if shard == 4 {
 		masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
-		balance = big.NewInt(175000000000000000)
+		balance = big.NewInt(17500000000000000)
 	}
 	return &GenesisInfo{
 		Accounts:        accounts,
