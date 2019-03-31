@@ -123,18 +123,32 @@ needQuit:
 			}
 
 			curHeight := uint64(0)
+			counter := 0
 			for _, head := range headMsg.Hearders[1:] {
 				if err = d.chain.WriteHeader(head); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 					d.log.Warn("Downloader.doSynchronise WriteHeader error. %s", err)
 					break needQuit
 				}
 
-				d.log.Info("Downloader.doSynchronise WriteHeader to chain, Height=%d, hash=%s, newHeader=%v", head.Height, head.Hash(), err == nil)
+				d.log.Debug("Downloader.doSynchronise WriteHeader to chain, Height=%d, hash=%s, newHeader=%v, peer ID, %s, error: %s", head.Height, head.Hash(), err == nil, p.peerID.Hex(), err)
 				curHeight = head.Height
+				if errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
+					counter++
+				}
 			}
 
 			if headMsg.HasFinished {
+				d.log.Debug("Downloader.doSynchronise, has finished!")
 				break needQuit
+			}
+
+			if counter >= len(headMsg.Hearders) - 1  && counter >= 250 {
+				d.log.Debug("Downloader.doSynchronise, update ancestor! counter: %d, curHeight: %d", counter, curHeight)
+				d.lock.Lock()
+				if curHeight > p.updatedAncestor {
+					p.updatedAncestor = curHeight
+				}
+				d.lock.Unlock()
 			}
 
 			reqID = rand2.Uint32()

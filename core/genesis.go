@@ -72,11 +72,17 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 	var masteraccount common.Address
 	var balance *big.Int
 	if shard == 1 {
-		masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
-		balance = big.NewInt(70000000000000000)
-	} else {
-		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		balance = big.NewInt(0)
+		masteraccount, _ = common.HexToAddress("0x8e37f6d73b35f171c4c85e5eb3ed8d7bd2645961")
+		balance = big.NewInt(175000000000000000)
+	} else if shard == 2 {
+		masteraccount, _ = common.HexToAddress("0x579c1c00d69fcae42c69ac037d54fce7bcec53b1")
+		balance = big.NewInt(175000000000000000)
+	} else if shard == 3 {
+		masteraccount, _ = common.HexToAddress("0xa64073843276c9edd431d512109e440e434c0501")
+		balance = big.NewInt(175000000000000000)
+	} else if shard == 4 {
+		masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
+		balance = big.NewInt(175000000000000000)
 	}
 	return &GenesisInfo{
 		Accounts:        accounts,
@@ -223,13 +229,25 @@ func getStateDB(info *GenesisInfo) *state.Statedb {
 	statedb := state.NewEmptyStatedb(nil)
 
 	if info.ShardNumber == 1 {
-		info.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
-		info.Balance = big.NewInt(70000000000000000)
+		info.Masteraccount, _ = common.HexToAddress("0x8e37f6d73b35f171c4c85e5eb3ed8d7bd2645961")
+		info.Balance = big.NewInt(17500000000000000)	
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)		
+	} else if info.ShardNumber == 2 {
+		info.Masteraccount, _ = common.HexToAddress("0x579c1c00d69fcae42c69ac037d54fce7bcec53b1")
+		info.Balance = big.NewInt(17500000000000000)
 		statedb.CreateAccount(info.Masteraccount)
 		statedb.SetBalance(info.Masteraccount, info.Balance)
-	} else {
-		info.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		info.Balance = big.NewInt(0)
+	} else if info.ShardNumber == 3 {
+		info.Masteraccount, _ = common.HexToAddress("0xa64073843276c9edd431d512109e440e434c0501")
+		info.Balance = big.NewInt(17500000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else if info.ShardNumber == 4 {
+		info.Masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
+		info.Balance = big.NewInt(17500000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
 	}
 
 	for addr, amount := range info.Accounts {

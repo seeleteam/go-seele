@@ -55,11 +55,19 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 		copyConf.SeeleConfig.GenesisConfig.ShardNumber = shard
 
 		if shard == uint(1) {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0a57a2714e193b7ac50475ce625f2dcfb483d741")
-			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(70000000000000000)
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x8e37f6d73b35f171c4c85e5eb3ed8d7bd2645961")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
+		} else if shard == uint(2) {
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x579c1c00d69fcae42c69ac037d54fce7bcec53b1")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
+		} else if shard == uint(3) {
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0xa64073843276c9edd431d512109e440e434c0501")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
+		} else if shard == uint(4) {
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
-			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(0)
+			return nil, errors.New("Wrong shard number!")
 		}
 
 		dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", i))

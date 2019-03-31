@@ -159,7 +159,7 @@ func (m *DebtManager) checking() {
 					m.log.Debug("remove debt as confirmed. hash:%s", debt.Hash.Hex())
 					m.Remove(debt.Hash)
 				} else {
-					m.log.Warn("got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
+					m.log.Debug("got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
 				}
 			}
 
