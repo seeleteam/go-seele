@@ -83,6 +83,9 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 	} else if shard == 4 {
 		masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
 		balance = big.NewInt(17500000000000000)
+	} else {
+		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		balance = big.NewInt(0)
 	}
 	return &GenesisInfo{
 		Accounts:        accounts,
@@ -248,6 +251,9 @@ func getStateDB(info *GenesisInfo) *state.Statedb {
 		info.Balance = big.NewInt(17500000000000000)
 		statedb.CreateAccount(info.Masteraccount)
 		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else {
+		info.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		info.Balance = big.NewInt(0)
 	}
 
 	for addr, amount := range info.Accounts {

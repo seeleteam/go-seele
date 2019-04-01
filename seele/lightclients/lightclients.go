@@ -67,7 +67,8 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else {
-			return nil, errors.New("Wrong shard number!")
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(0)
 		}
 
 		dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", i))
