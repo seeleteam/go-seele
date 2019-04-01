@@ -9,7 +9,7 @@
   },
   "p2p": {
     "privateKey": "0xf65e40c6809643b25ce4df33153da2f3338876f181f83d2281c6ac4a987b1479",
-    "staticNodes": [""],
+    "staticNodes": [],
     "address": "0.0.0.0:8057",
     "networkID": "seele"
   },
