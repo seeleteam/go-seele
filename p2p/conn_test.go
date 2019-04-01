@@ -1,8 +1,8 @@
 package p2p
 
 import (
-	"crypto/rand"
-	"encoding/binary"
+	//"crypto/rand"
+	//"encoding/binary"
 	"net"
 	"testing"
 	"time"
@@ -76,7 +76,7 @@ func Test_Conn_ReadFullAndWriteFull(t *testing.T) {
 	assert.Equal(t, readBuff3[0:], writeBuff[0:10])
 }
 
-func Test_connection(t *testing.T) {
+/*func Test_connection(t *testing.T) {
 	con, ln, err := newConnection()
 	defer ln.Close()
 	defer con.close()
@@ -129,3 +129,4 @@ func Test_connection(t *testing.T) {
 	assert.Equal(t, err, errSize)
 	assert.Equal(t, msg2, &Message{})
 }
+*/
