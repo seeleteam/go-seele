@@ -179,9 +179,6 @@ func (miner *Miner) IsMining() bool {
 
 // downloaderEventCallback handles events which indicate the downloader state
 func (miner *Miner) downloaderEventCallback(e event.Event) {
-	if atomic.LoadInt32(&miner.isFirstDownloader) == 0 {
-		return
-	}
 
 	switch e.(int) {
 	case event.DownloaderStartEvent:

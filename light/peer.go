@@ -57,6 +57,7 @@ type peer struct {
 	curSyncMagic  uint32
 	blockNumBegin uint64        // first block number of blockHashArr
 	blockHashArr  []common.Hash // block hashes that should be identical with remote server peer, and is only useful in client mode.
+	updatedAncestor uint64
 	log           *log.SeeleLog
 }
 
@@ -75,6 +76,7 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog,
 		rw:              rw,
 		protocolManager: protocolManager,
 		log:             log,
+		updatedAncestor: uint64(0),
 	}
 }
 
@@ -138,6 +140,10 @@ func (p *peer) findAncestor() (uint64, error) {
 		}
 
 		if localBlock.HeaderHash == curHash {
+			if curNum < p.updatedAncestor {
+				p.log.Info("update Ancestor, from %d to %d", curNum, p.updatedAncestor)
+				curNum = p.updatedAncestor
+			}
 			return curNum, nil
 		}
 	}

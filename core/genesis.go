@@ -58,10 +58,35 @@ type GenesisInfo struct {
 
 	// Validators istanbul consensus validators
 	Validators []common.Address `json:"validators"`
+
+	// master account
+	Masteraccount common.Address `json:"master"`
+
+	// balance of the master account
+	Balance *big.Int `json:"balance"`
 }
 
 func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
 	consensus types.ConsensusType, validator []common.Address) *GenesisInfo {
+
+	var masteraccount common.Address
+	var balance *big.Int
+	if shard == 1 {
+		masteraccount, _ = common.HexToAddress("0xd9dd0a837a3eb6f6a605a5929555b36ced68fdd1")
+		balance = big.NewInt(17500000000000000)
+	} else if shard == 2 {
+		masteraccount, _ = common.HexToAddress("0xc71265f11acdacffe270c4f45dceff31747b6ac1")
+		balance = big.NewInt(17500000000000000)
+	} else if shard == 3 {
+		masteraccount, _ = common.HexToAddress("0x509bb3c2285a542e96d3500e1d04f478be12faa1")
+		balance = big.NewInt(17500000000000000)
+	} else if shard == 4 {
+		masteraccount, _ = common.HexToAddress("0xc6c5c85c585ee33aae502b874afe6cbc3727ebf1")
+		balance = big.NewInt(17500000000000000)
+	} else {
+		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		balance = big.NewInt(0)
+	}
 	return &GenesisInfo{
 		Accounts:        accounts,
 		Difficult:       difficult,
@@ -69,6 +94,8 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 		CreateTimestamp: timestamp,
 		Consensus:       consensus,
 		Validators:      validator,
+		Masteraccount:   masteraccount,
+		Balance:         balance,
 	}
 }
 
@@ -203,6 +230,31 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 
 func getStateDB(info *GenesisInfo) *state.Statedb {
 	statedb := state.NewEmptyStatedb(nil)
+
+	if info.ShardNumber == 1 {
+		info.Masteraccount, _ = common.HexToAddress("0xd9dd0a837a3eb6f6a605a5929555b36ced68fdd1")
+		info.Balance = big.NewInt(17500000000000000)	
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)		
+	} else if info.ShardNumber == 2 {
+		info.Masteraccount, _ = common.HexToAddress("0xc71265f11acdacffe270c4f45dceff31747b6ac1")
+		info.Balance = big.NewInt(17500000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else if info.ShardNumber == 3 {
+		info.Masteraccount, _ = common.HexToAddress("0x509bb3c2285a542e96d3500e1d04f478be12faa1")
+		info.Balance = big.NewInt(17500000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else if info.ShardNumber == 4 {
+		info.Masteraccount, _ = common.HexToAddress("0xc6c5c85c585ee33aae502b874afe6cbc3727ebf1")
+		info.Balance = big.NewInt(17500000000000000)
+		statedb.CreateAccount(info.Masteraccount)
+		statedb.SetBalance(info.Masteraccount, info.Balance)
+	} else {
+		info.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
+		info.Balance = big.NewInt(0)
+	}
 
 	for addr, amount := range info.Accounts {
 		if !common.IsShardEnabled() || addr.Shard() == info.ShardNumber {

@@ -156,10 +156,10 @@ func (m *DebtManager) checking() {
 			// remove confirmed debt.
 			if err != nil || confirmed {
 				if confirmed {
-					m.log.Info("remove debt as confirmed. hash:%s", debt.Hash.Hex())
+					m.log.Debug("remove debt as confirmed. hash:%s", debt.Hash.Hex())
 					m.Remove(debt.Hash)
 				} else {
-					m.log.Warn("got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
+					m.log.Debug("got err when checking. err:%s. hash:%s", err, debt.Hash.Hex())
 				}
 			}
 
@@ -194,7 +194,7 @@ func (m *DebtManager) checking() {
 				toSend[shard] = append(toSend[shard], info.debt)
 			}
 
-			m.log.Warn("debt is not packed or confirmed, send again. hash:%s", info.debt.Hash.Hex())
+			m.log.Debug("debt is not packed or confirmed, send again. hash:%s", info.debt.Hash.Hex())
 		}
 	}
 

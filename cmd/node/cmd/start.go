@@ -88,7 +88,7 @@ var startCmd = &cobra.Command{
 		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
 			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
 		} else {
-			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm)
+			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm, nCfg.BasicConfig.DataSetDir)
 		}
 
 		if err != nil {

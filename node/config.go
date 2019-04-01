@@ -58,6 +58,9 @@ type BasicConfig struct {
 	// The file system path of the node, used to store data
 	DataDir string `json:"dataDir"`
 
+	// The file system path of the temporary dataset, used for spow
+	DataSetDir string `json:"dataSetDir"`
+
 	// RPCAddr is the address on which to start RPC server.
 	RPCAddr string `json:"address"`
 

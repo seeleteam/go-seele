@@ -210,7 +210,7 @@ func (lp *LightProtocol) synchronise(p *peer) {
 	err = lp.downloader.synchronise(p)
 	if err != nil {
 		if err == ErrIsSynchronising {
-			lp.log.Info("exit synchronise as it is already running.")
+			lp.log.Debug("exit synchronise as it is already running.")
 		} else {
 			lp.log.Error("synchronise err. %s", err)
 		}
@@ -249,7 +249,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 
 	if err := newPeer.handShake(lp.networkID, localTD, hash, header.Height, genesisBlock.HeaderHash); err != nil {
 		if err == errModeNotMatch {
-			lp.log.Info("handleAddPeer message. %s", err)
+			lp.log.Debug("handleAddPeer message. %s", err)
 		} else {
 			lp.log.Error("handleAddPeer err. %s", err)
 		}
