@@ -55,16 +55,16 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 		copyConf.SeeleConfig.GenesisConfig.ShardNumber = shard
 
 		if shard == uint(1) {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x8e37f6d73b35f171c4c85e5eb3ed8d7bd2645961")
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0xd9dd0a837a3eb6f6a605a5929555b36ced68fdd1")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else if shard == uint(2) {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x579c1c00d69fcae42c69ac037d54fce7bcec53b1")
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0xc71265f11acdacffe270c4f45dceff31747b6ac1")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else if shard == uint(3) {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0xa64073843276c9edd431d512109e440e434c0501")
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x509bb3c2285a542e96d3500e1d04f478be12faa1")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else if shard == uint(4) {
-			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x3a7e1dedfb40ca284b6d77fad0ce56fa92f0cc71")
+			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0xc6c5c85c585ee33aae502b874afe6cbc3727ebf1")
 			copyConf.SeeleConfig.GenesisConfig.Balance = big.NewInt(175000000000000000)
 		} else {
 			copyConf.SeeleConfig.GenesisConfig.Masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
