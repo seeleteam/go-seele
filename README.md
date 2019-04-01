@@ -1,9 +1,22 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
+|        Features        |      Description                                                                               |
+|:-----------------------|------------------------------------------------------------------------------------------------|
+| **Sharding**           | 4 shards, transactions within the same shard and between different shards are supported<br/> higher transaction fee for cross-shard transaction                                  |
+| **Smart Contracts**    | smart contracts are supported within the same shard                                          |
+| **Seele Wallet**       | easy-to-use wallet                                                                             |
+| **High TPS**           | same shard TPS: 500/shard, cross shard TPS: 12/shard                                           |
+| **Auditable Supply**   | total supply: 1,000,000,000 SEELEs, 300,000,000 SEELEs for mining                              |
+| **Consensus Algorithm**| Seele POW: memory heavy proof of work algorithm                                                |
+| **Mining Reward**      | 3150000 blocks/era and era reward follows [6, 4, 3, 2.5, 2, 2, 1.5, 1.5] order until reaches the last reward of 1.5 SEELEs |
+| **Transaction Fee**    | self-customized transaction fee, higher fee for cross-shard transaction                        |
+| **Block**              | 100 KB block size, 10 seconds block time, ~6000 transactions per block                         |
 
 
-The official Golang implementation of Seele. Seele is powered by an up-scalable Neural Consensus protocol for high throughput concurrency among large scale heterogeneous nodes and is able to form a unique heterogeneous forest multi-chain ecosystem https://seele.pro
+The official Golang implementation of Seele. Seele blockchain is based on the Neural Consensus protocol, which consists of a mainchain and subchains to form a heterogeneous forest multi-chain ecosystem when fully developed. [https://seele.pro](https://seele.pro)
+
+The current mainnet release: Seele mainchain is powered by a new memory-consuming consensus PoW algorithm, which records intermediate hash strings. [SPOW PAPER](https://medium.com/@SeeleTech/the-seele-pow-consensus-algorithm-7f99495b500f) The mainchain has four shards. It can perform transactions within a shard or crossing shards. However, smart contracts currently can be only executed within the same shard. Seele subchains are under development. The so called EDA consensus algorithm [EDA PAPER](http://seele.hk.ufileos.com/Seele_Yellow_Paper_EDA_A_Parallel_Data_Sorting_Mechanism_for_Distributed_Information_Processing_System_Pre-Release.pdf) from Seele will be utilized for the subchains.
 
 # Downloading & building the source
 
