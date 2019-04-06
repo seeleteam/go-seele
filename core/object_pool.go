@@ -91,12 +91,35 @@ func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlo
 		afterAdd:           afterAdd,
 	}
 
+	go pool.loopCheckingPool()
+
 	return pool
 }
 
 func (pool *Pool) SetLogLevel(level logrus.Level) {
 	pool.log.SetLevel(level)
 }
+
+// check the pool frequently, remove finalized and old txs, reinject the txs not on the chain yet
+func (pool *Pool) loopCheckingPool() {
+	
+	for {
+		if pool.pendingQueue.count() > 0 {
+			time.Sleep(10 * time.Second)
+		} else {
+			pool.removeObjects()
+			if len(pool.hashToTxMap) > 0 {
+				for _, poolTx := range pool.hashToTxMap {
+					pool.mutex.Lock()
+					pool.pendingQueue.add(poolTx)
+					pool.mutex.Unlock()
+				}
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
 
 // HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
 func (pool *Pool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
