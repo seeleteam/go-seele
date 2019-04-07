@@ -50,6 +50,9 @@ const (
 
 	// In transferring handshake msg, length of extra data
 	extraDataLen = 24
+
+	// Minimum recommended number of peers of one shard
+	minNumOfPeerPerShard = uint(2)
 )
 
 // Config is the Configuration of p2p
@@ -112,6 +115,8 @@ type Server struct {
 	// maxActiveConnections represents max connections that node can actively connect to.
 	// Need not connect to a new node if srv.PeerCount > maxActiveConnections.
 	maxActiveConnections int
+
+	peerNumLock sync.Mutex // lock for num of peers per shard
 }
 
 // NewServer initialize a server
@@ -335,10 +340,40 @@ running:
 
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
-	node := srv.nodeSet.randSelect()
-	if node == nil {
-		return
+
+	var node *discovery.Node
+	i := 0
+	for i < 20 { 
+		node = srv.nodeSet.randSelect()
+		if node == nil {
+			return
+		}
+		
+		// get the number of connected peers per shard
+		peers := srv.peerSet.getPeers()
+		srv.peerNumLock.Lock()
+		numOfPeerPerShard := make(map[uint]uint)
+		j := uint(1)
+		for j <= common.ShardCount { 	
+			numOfPeerPerShard[j] = uint(0)
+			j++
+		} 
+		for _, p := range peers {
+			if p != nil {
+				numOfPeerPerShard[p.Node.Shard]++ 
+			}
+		}
+
+		// select nodes in unconnected shards
+		if numOfPeerPerShard[node.Shard] < minNumOfPeerPerShard {
+			srv.peerNumLock.Unlock()
+			break
+		}
+		srv.peerNumLock.Unlock()
+
+		i++
 	}
+	
 
 	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
