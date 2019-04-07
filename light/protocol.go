@@ -175,17 +175,17 @@ func (lp *LightProtocol) syncer() {
 	for {
 		select {
 		case <-lp.syncCh:
-			go lp.synchronise(lp.peerSet.bestPeer())
+			go lp.synchronise(lp.peerSet.bestPeers())
 		case <-forceSync.C:
-			go lp.synchronise(lp.peerSet.bestPeer())
+			go lp.synchronise(lp.peerSet.bestPeers())
 		case <-lp.quitCh:
 			return
 		}
 	}
 }
 
-func (lp *LightProtocol) synchronise(p *peer) {
-	if p == nil {
+func (lp *LightProtocol) synchronise(peers []*peer) {
+	if len(peers) == 0 {
 		return
 	}
 
@@ -200,19 +200,25 @@ func (lp *LightProtocol) synchronise(p *peer) {
 		lp.log.Error("lp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return
 	}
-	_, pTd := p.Head()
+
+	for _, p := range peers {
+		_, pTd := p.Head()
 
 	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
-	if localTD.Cmp(pTd) >= 0 {
-		return
-	}
+		if localTD.Cmp(pTd) >= 0 {
+			continue
+		}
 
-	err = lp.downloader.synchronise(p)
-	if err != nil {
-		if err == ErrIsSynchronising {
-			lp.log.Debug("exit synchronise as it is already running.")
-		} else {
-			lp.log.Error("synchronise err. %s", err)
+		err = lp.downloader.synchronise(p)
+		if err != nil {
+			if err == ErrIsSynchronising {
+				lp.log.Debug("exit synchronise as it is already running.")
+			} else {
+				lp.log.Error("synchronise err. %s", err)
+			}
+
+			continue
+
 		}
 	}
 }

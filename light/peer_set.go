@@ -64,6 +64,37 @@ func (p *peerSet) bestPeer() *peer {
 	return bestPeer
 }
 
+func (p *peerSet) bestPeers() []*peer {
+	var bestPeers []*peer
+	
+	v := p.getPeers()
+
+	peersMap := make(map[common.Address]bool)
+	// the number of best peers
+	NumOfBestPeers := 3
+	if len(v) < NumOfBestPeers {
+		NumOfBestPeers = len(v)
+	}
+	i := 0
+	for i < NumOfBestPeers {
+		bestTd := big.NewInt(0)
+		var bestPeer *peer
+		for _, pe := range v {
+			if peersMap[pe.peerID] == true {
+				continue
+			}			
+			if _, td := pe.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+				bestPeer, bestTd = pe, td
+			} 
+		}
+		bestPeers = append(bestPeers, bestPeer)
+		peersMap[bestPeer.peerID] = true
+		i++
+	}
+	return bestPeers
+
+}
+
 func (p *peerSet) Remove(peerID common.Address) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
