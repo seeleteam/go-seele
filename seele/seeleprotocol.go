@@ -197,6 +197,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
 			
 			continue
+
 		}
 
 		//broadcast chain head
