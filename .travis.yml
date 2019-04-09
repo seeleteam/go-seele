@@ -1,3 +1,5 @@
 language: go
 script: 
-    - echo "done"
+    - go test -p 1 -covermode=atomic -cover `go list ./... | grep -v istanbul`
+    - go test -bench=. -run Benchmark -cover `go list ./... | grep -v istanbul`
+    - make
