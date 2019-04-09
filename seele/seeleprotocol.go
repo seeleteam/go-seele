@@ -149,21 +149,21 @@ func (sp *SeeleProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
-			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
+			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber))
 		case <-forceSync.C:
-			go sp.synchronise(sp.peerSet.bestPeer(common.LocalShardNumber))
+			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber))
 		case <-sp.quitCh:
 			return
 		}
 	}
 }
 
-func (sp *SeeleProtocol) synchronise(p *peer) {
+func (sp *SeeleProtocol) synchronise(peers []*peer) {
 	now := time.Now()
 	// entrance
 	memory.Print(sp.log, "SeeleProtocol synchronise entrance", now, false)
 
-	if p == nil {
+	if len(peers) == 0 {
 		return
 	}
 
@@ -175,34 +175,38 @@ func (sp *SeeleProtocol) synchronise(p *peer) {
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
-	pHead, pTd := p.Head()
+	
+	for _, p := range peers {
+		pHead, pTd := p.Head()
 
-	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
-	if localTD.Cmp(pTd) >= 0 {
-		// two step
-		memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
-		return
-	}
+		// if total difficulty is not smaller than remote peer td, then do not need synchronise.
+		if localTD.Cmp(pTd) >= 0 {
+			// two step
+			memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
+			continue
+		}
+		err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
+		if err != nil {
+			if err == downloader.ErrIsSynchronising {
+				sp.log.Debug("exit synchronise as it is already running.")
+			} else {
+				sp.log.Error("synchronise err. %s", err)
+			}
 
-	err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
-	if err != nil {
-		if err == downloader.ErrIsSynchronising {
-			sp.log.Debug("exit synchronise as it is already running.")
-		} else {
-			sp.log.Error("synchronise err. %s", err)
+			// three step
+			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
+			
+			continue
 		}
 
-		// three step
-		memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
+		//broadcast chain head
+		sp.broadcastChainHead()
+
+		// exit
+		memory.Print(sp.log, "SeeleProtocol synchronise exit", now, true)
 
 		return
 	}
-
-	//broadcast chain head
-	sp.broadcastChainHead()
-
-	// exit
-	memory.Print(sp.log, "SeeleProtocol synchronise exit", now, true)
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {

@@ -47,6 +47,37 @@ func (p *peerSet) bestPeer(shard uint) *peer {
 	return bestPeer
 }
 
+func (p *peerSet) bestPeers(shard uint) []*peer {
+	var bestPeers []*peer
+	
+	peers := p.getPeerByShard(shard)
+
+	peersMap := make(map[common.Address]bool)
+	// the number of best peers
+	NumOfBestPeers := 3
+	if len(peers) < NumOfBestPeers {
+		NumOfBestPeers = len(peers)
+	}
+	i := 0
+	for i < NumOfBestPeers {
+		bestTd := big.NewInt(0)
+		var bestPeer *peer
+		for _, peer := range peers {
+			if peersMap[peer.peerID] == true {
+				continue
+			}			
+			if _, td := peer.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
+				bestPeer, bestTd = peer, td
+			} 
+		}
+		bestPeers = append(bestPeers, bestPeer)
+		peersMap[bestPeer.peerID] = true
+		i++
+	}
+	return bestPeers
+
+}
+
 func (p *peerSet) Find(address common.Address) *peer {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
