@@ -10,7 +10,7 @@ WORKDIR /go/src/github.com/seeleteam/go-seele
 RUN make all
 
 # Alpine container
-FROM alpine:latest
+FROM alpine:3.8
 
 RUN apk add --no-cache ca-certificates
 
