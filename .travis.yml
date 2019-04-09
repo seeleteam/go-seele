@@ -1,6 +1,0 @@
-language: go
-script: 
-    - sudo binutils-config x86_64-pc-linux-gnu-2.29.1
-    - go test -p 1 -covermode=atomic -cover `go list ./... | grep -v istanbul`
-    - go test -bench=. -run Benchmark -cover `go list ./... | grep -v istanbul`
-    - make
