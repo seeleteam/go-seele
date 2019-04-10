@@ -20,7 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/seele/download"
+	downloader "github.com/seeleteam/go-seele/seele/download"
 )
 
 var (
@@ -175,7 +175,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
-	
+
 	for _, p := range peers {
 		pHead, pTd := p.Head()
 
@@ -195,7 +195,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 
 			// three step
 			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
-			
+
 			continue
 		}
 
