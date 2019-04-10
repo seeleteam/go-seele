@@ -1,5 +1,6 @@
 # Go builder container
 FROM golang:alpine as builder
+ENV GOLANG_VERSION 1.10.6
 
 RUN apk add --no-cache make gcc musl-dev linux-headers
 
@@ -10,7 +11,7 @@ WORKDIR /go/src/github.com/seeleteam/go-seele
 RUN make all
 
 # Alpine container
-FROM alpine:latest
+FROM alpine:3.8
 
 RUN apk add --no-cache ca-certificates
 

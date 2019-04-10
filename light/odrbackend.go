@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	errNoMorePeers   = errors.New("No peers found")
+	errNoMorePeers   = errors.New("")
 	errServiceQuited = errors.New("Service has quited")
 )
 

@@ -17,7 +17,7 @@ const (
 	// Kademlia concurrency factor
 	alpha = 3
 	// TODO with this number for test
-	responseNodeNumber = 5
+	responseNodeNumber = 10
 	hashBits           = len(common.Hash{}) * 8
 	// Height of buckets
 	nBuckets = hashBits + 1
@@ -55,6 +55,28 @@ func newTable(id common.Address, addr *net.UDPAddr, shard uint, log *log.SeeleLo
 	}
 
 	return table
+}
+
+type nodesConnectedByPeers struct {
+	target  common.Hash
+	entries []*Node
+}
+
+// return the connected nodes
+// @repc_nodes
+func (t *Table) findConnectedNodes(target common.Hash) []*Node {
+	result := nodesConnectedByPeers{
+		target:  target,
+		entries: make([]*Node, 0),
+	}
+
+	for _, b := range t.buckets {
+		for _, n := range b.peers {
+			result.entries = append(result.entries, n)
+		}
+	}
+
+	return result.entries
 }
 
 func (t *Table) addNode(node *Node) {

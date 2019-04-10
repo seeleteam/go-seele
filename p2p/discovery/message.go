@@ -175,8 +175,14 @@ func (m *ping) send(t *udp) {
 func (m *findNode) handle(t *udp, from *net.UDPAddr) {
 	t.log.Debug("received request [findNodeMsg] from: %s, id: %s", from, m.SelfID.Hex())
 
-	nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
-
+	// nodes := t.table.findNodeWithTarget(crypto.HashBytes(m.QueryID.Bytes()))
+	// @rpcs_nodes
+	nodes := t.table.findConnectedNodes(crypto.HashBytes(m.QueryID.Bytes()))
+	//@forTestOnly
+	t.log.Debug("response nodes: %d", len(nodes))
+	for index, node := range nodes {
+		t.log.Debug("%dth response node %s", index, node)
+	}
 	if len(nodes) == 0 {
 		return
 	}
