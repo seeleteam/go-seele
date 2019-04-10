@@ -178,58 +178,37 @@ func (engine *SpowEngine) generateHashPool(block *types.Block, stop <-chan struc
 func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashPack [][]*HashItem) {
 
 	numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
+	bitsToNonceMap := make(map[uint64]*HashItem)
+	E := big.NewInt(0).Exp(big.NewInt(2), numOfBits, nil)
+	S := big.NewInt(0).Sub(E, big.NewInt(1))
 
 miner:
 	for i := 0; i < len(hashPack); i++ {
-		baseHashPack := hashPack[i]
+		curHashPack := hashPack[i]
 
 		// baseHashPack compare with itself
-		for k := 0; k < len(baseHashPack); k++ {
-			for n := k + 1; n < len(baseHashPack); n++ {
-				select {
-				case <-stop:
-					logAbort(engine.log)
-					break miner
+		for k := 0; k < len(curHashPack); k++ {
+			curHash := curHashPack[k].Hash
+			A := curHash.Big()
+			slice := big.NewInt(0).And(A.Rsh(A, 96), S).Uint64() 
+			select {
+			case <-stop:
+				logAbort(engine.log)
+				break miner
 	
-				default:
-					isFound := isPair(baseHashPack[k].Hash, baseHashPack[n].Hash, numOfBits)
+			default:
+				if curHashItem, ok := bitsToNonceMap[slice]; ok {
 					// nonce pair is found
-					if isFound {
-						engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), baseHashPack[n].Nonce, baseHashPack[n].Hash.Hex())
-						handleResults(block, results, stop, baseHashPack[k].Nonce, baseHashPack[n].Nonce, engine.log)
+					engine.log.Info("nonceA: %d, nonceB: %d", curHashPack[k].Nonce, curHashItem.Nonce)
+					handleResults(block, results, stop, curHashPack[k].Nonce, curHashItem.Nonce, engine.log)
 
-						break miner
-					}
+					break miner
+				} else {
+					bitsToNonceMap[slice] = curHashPack[k]
 				}
 			}
 		} 	
-
-		// compare base hash pack with other hash packs
-		for j := i + 1; j < len(hashPack); j++ {
-			compareHashPack := hashPack[j]
-
-			for k := 0; k < len(baseHashPack); k++ {
-				for n := 0; n < len(compareHashPack); n++ {
-					select {
-					case <-stop:
-						logAbort(engine.log)
-						break miner
-		
-					default:
-						isFound := isPair(baseHashPack[k].Hash, compareHashPack[n].Hash, numOfBits)
-						// nonce pair is found
-						if isFound {
-							engine.log.Info("nonceA: %d, hashA: %s, nonceB: %d, hashB: %s", baseHashPack[k].Nonce, baseHashPack[k].Hash.Hex(), compareHashPack[n].Nonce, compareHashPack[n].Hash.Hex())
-							handleResults(block, results, stop, baseHashPack[k].Nonce, compareHashPack[n].Nonce, engine.log)
-	
-							break miner
-						}
-					}
-				}
-			} 	
-		} 
 	}
-
 }
 
 func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
