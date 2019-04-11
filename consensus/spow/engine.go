@@ -13,6 +13,7 @@ import (
 	"time"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"bytes"
 
 	"github.com/seeleteam/go-seele/common"
@@ -43,6 +44,7 @@ type SpowEngine struct {
 	hashrate       metrics.Meter
 	hashPoolDB     database.Database
 	hashPoolDBPath string
+	lock	       sync.Mutex
 }
 
 func NewSpowEngine(threads int, folder string) *SpowEngine {
@@ -109,21 +111,12 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 			hashesPerThread = hashPoolSize / uint64(threads)
 		}
 
-		// generate hashPool
-		engine.log.Info("start generating hashpool, %d", hashPoolSize)
-		hashPack, err := engine.generateHashPool(block, stop, beginNonce, hashesPerThread)
-		engine.log.Info("Hashpool is generated!")
-		if err != nil {
-			engine.log.Error("spow err: failed to generate hashPool, %s", err)
-			return err
-		}
-
 		select {
 		case <-stop:
 			return nil
 
 		default:
-			go engine.startCollision(block, results, stop, beginNonce, hashPack)
+			go engine.startCollision(block, results, stop, beginNonce, hashesPerThread)
 		}
 	}
 
@@ -131,14 +124,19 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 		
 }
 
-func (engine *SpowEngine) generateHashPool(block *types.Block, stop <-chan struct{}, beginNonce uint64, hashesPerThread uint64) ([][]*HashItem, error) {
+func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashesPerThread uint64) {
 
-	threads := engine.threads
+	var isNonceFound int32
+	numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
+	bitsToNonceMap := make(map[uint64]uint64)
+	E := big.NewInt(0).Exp(big.NewInt(2), numOfBits, nil)
+	S := big.NewInt(0).Sub(E, big.NewInt(1))
 	
-	// generate the hashPool concurrently
-	var err error
+	threads := engine.threads
+	once := &sync.Once{}
+
+	// generate hashes concurrently
 	var pend sync.WaitGroup
-	hashPack := make([][]*HashItem, threads) 
 
 	pend.Add(threads)
 
@@ -147,71 +145,49 @@ func (engine *SpowEngine) generateHashPool(block *types.Block, stop <-chan struc
 			defer pend.Done()
 
 			header := block.Header.Clone()
-				
+			
 			// Calculate the segment in each thread
 			for nonce := beginNonce + uint64(id) * hashesPerThread; nonce < beginNonce + uint64(id + 1) * hashesPerThread; nonce++ {
 				select {
 				case <-stop:
 					logAbort(engine.log)
 					return
-		
+	
 				default:
+					if atomic.LoadInt32(&isNonceFound) != 0 {
+						engine.log.Debug("exit mining as nonce is found by other threads")
+						return
+					}
+
 					header.Witness = []byte(strconv.FormatUint(nonce, 10))
 					header.SecondWitness = []byte{}
-					hash := header.Hash()					
-					hashItem := &HashItem{
-						Hash: hash,
-						Nonce: nonce,
+					hash := header.Hash()
+					A := hash.Big()
+					slice := big.NewInt(0).And(A.Rsh(A, 96), S).Uint64()
+
+					engine.lock.Lock()
+					if compareNonce, ok := bitsToNonceMap[slice]; ok {
+						// nonce pair is found
+						once.Do(func() {
+							engine.log.Info("nonceA: %d, nonceB: %d", nonce, compareNonce)
+							handleResults(block, results, stop, &isNonceFound, nonce, compareNonce, engine.log)
+							engine.lock.Unlock()
+						})
+						return
+
+					} else {
+						bitsToNonceMap[slice] = nonce
 					}
-					hashPack[id] = append(hashPack[id], hashItem)
+					engine.lock.Unlock()
 				}
 			}	
 		}(i)
 	}
-	// Wait for all the generators to finish and return
+	// Wait for all the threads to finish and return
 	pend.Wait()
-	return hashPack, err
-
 }
 
-
-func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashPack [][]*HashItem) {
-
-	numOfBits := difficultyToNumOfBits(block.Header.Difficulty)
-	bitsToNonceMap := make(map[uint64]*HashItem)
-	E := big.NewInt(0).Exp(big.NewInt(2), numOfBits, nil)
-	S := big.NewInt(0).Sub(E, big.NewInt(1))
-
-miner:
-	for i := 0; i < len(hashPack); i++ {
-		curHashPack := hashPack[i]
-
-		// baseHashPack compare with itself
-		for k := 0; k < len(curHashPack); k++ {
-			curHash := curHashPack[k].Hash
-			A := curHash.Big()
-			slice := big.NewInt(0).And(A.Rsh(A, 96), S).Uint64() 
-			select {
-			case <-stop:
-				logAbort(engine.log)
-				break miner
-	
-			default:
-				if curHashItem, ok := bitsToNonceMap[slice]; ok {
-					// nonce pair is found
-					engine.log.Info("nonceA: %d, nonceB: %d", curHashPack[k].Nonce, curHashItem.Nonce)
-					handleResults(block, results, stop, curHashPack[k].Nonce, curHashItem.Nonce, engine.log)
-
-					break miner
-				} else {
-					bitsToNonceMap[slice] = curHashPack[k]
-				}
-			}
-		} 	
-	}
-}
-
-func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
+func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, isNonceFound *int32, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
 
 	// put the nonce pair in the block
 	header := block.Header.Clone()
@@ -224,6 +200,7 @@ func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan 
 	case <-abort:
 		logAbort(log)
 	case result <- block:
+		atomic.StoreInt32(isNonceFound, 1)
 		log.Info("nonce finding succeeded")
 	}
 
