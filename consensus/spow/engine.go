@@ -145,7 +145,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 			defer pend.Done()
 
 			header := block.Header.Clone()
-			
+
 			// Calculate the segment in each thread
 			for nonce := beginNonce + uint64(id) * hashesPerThread; nonce < beginNonce + uint64(id + 1) * hashesPerThread; nonce++ {
 				select {
@@ -179,6 +179,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 						bitsToNonceMap[slice] = nonce
 					}
 					engine.lock.Unlock()
+
 				}
 			}	
 		}(i)
