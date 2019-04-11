@@ -62,7 +62,7 @@ type nodesConnectedByPeers struct {
 	entries []*Node
 }
 
-// return the connected nodes
+// findConnectedNodes return the responseNodeNumber connected nodes
 // @repc_nodes
 func (t *Table) findConnectedNodes(target common.Hash) []*Node {
 	result := nodesConnectedByPeers{
