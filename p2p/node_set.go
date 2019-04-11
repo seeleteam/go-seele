@@ -6,7 +6,6 @@
 package p2p
 
 import (
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -91,11 +90,5 @@ func (set *nodeSet) randSelect() *discovery.Node {
 	}
 
 	perm := rand.Perm(len(nodeL))
-	//rpcs_nodes
-	//forTestOnly
-	fmt.Printf("Not Connected %d nodes\n", len(nodeL))
-	for i, node := range nodeL {
-		fmt.Printf("the nodeMap %d node is %s\n", i, node)
-	}
 	return nodeL[perm[0]]
 }
