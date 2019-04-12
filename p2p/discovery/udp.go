@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
-	cmap "github.com/orcaman/concurrent-map"
+	"github.com/orcaman/concurrent-map"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log"
