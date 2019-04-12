@@ -20,7 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/seele/download"
+	downloader "github.com/seeleteam/go-seele/seele/download"
 )
 
 var (
