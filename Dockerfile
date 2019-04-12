@@ -1,6 +1,5 @@
 # Go builder container
 FROM golang:alpine as builder
-# ENV GOLANG_VERSION 1.10.6
 
 RUN apk add --no-cache make gcc musl-dev linux-headers
 
