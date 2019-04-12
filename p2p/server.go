@@ -13,11 +13,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"sort"
 	"sync"
 	"time"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -348,19 +348,19 @@ func (srv *Server) doSelectNodeToConnect() {
 		if node == nil {
 			return
 		}
-		
+
 		// get the number of connected peers per shard
 		peers := srv.peerSet.getPeers()
 		srv.peerNumLock.Lock()
 		numOfPeerPerShard := make(map[uint]uint)
 		j := uint(1)
-		for j <= common.ShardCount { 	
+		for j <= common.ShardCount {
 			numOfPeerPerShard[j] = uint(0)
 			j++
-		} 
+		}
 		for _, p := range peers {
 			if p != nil {
-				numOfPeerPerShard[p.Node.Shard]++ 
+				numOfPeerPerShard[p.Node.Shard]++
 			}
 		}
 
@@ -373,7 +373,6 @@ func (srv *Server) doSelectNodeToConnect() {
 
 		i++
 	}
-	
 
 	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
