@@ -343,7 +343,7 @@ func (srv *Server) doSelectNodeToConnect() {
 
 	var node *discovery.Node
 	i := 0
-	for i < 20 {
+	for i < 30 {
 		node = srv.nodeSet.randSelect()
 		if node == nil {
 			return
