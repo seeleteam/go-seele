@@ -100,9 +100,6 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 		hashPoolSize = baseHashPoolSize >> uint64((5200000 - block.Header.Difficulty.Uint64()) / 400000)
 	}
 	
-	if hashPoolSize > uint64(400000000) {
-		hashPoolSize = uint64(400000000)
-	}
 	if beginNonce + hashPoolSize < math.MaxUint64 {
 
 		threads := engine.threads
@@ -145,7 +142,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 			defer pend.Done()
 
 			header := block.Header.Clone()
-			
+
 			// Calculate the segment in each thread
 			for nonce := beginNonce + uint64(id) * hashesPerThread; nonce < beginNonce + uint64(id + 1) * hashesPerThread; nonce++ {
 				select {
@@ -272,8 +269,8 @@ func difficultyToNumOfBits(difficulty *big.Int) *big.Int {
 	bigDiv := big.NewInt(int64(200000))
 	var numOfBits = new(big.Int).Set(difficulty)
 	numOfBits.Div(difficulty, bigDiv)
-	if numOfBits.Cmp(big.NewInt(int64(50))) > 0 {
-		numOfBits = big.NewInt(int64(50))
+	if numOfBits.Cmp(big.NewInt(int64(100))) > 0 {
+		numOfBits = big.NewInt(int64(100))
 	}
 
 	if numOfBits.Cmp(big.NewInt(int64(1))) < 0 {
