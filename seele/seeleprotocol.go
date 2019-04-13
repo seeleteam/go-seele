@@ -175,7 +175,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
-
+	
 	for _, p := range peers {
 		pHead, pTd := p.Head()
 
@@ -195,7 +195,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 
 			// three step
 			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
-
+			
 			continue
 		}
 
