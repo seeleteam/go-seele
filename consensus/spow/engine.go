@@ -6,34 +6,34 @@
 package spow
 
 import (
+	"bytes"
 	"math"
-	"math/rand"
 	"math/big"
-	"strconv"
-	"time"
+	"math/rand"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
-	"bytes"
+	"time"
 
-	"github.com/seeleteam/go-seele/common"
 	"github.com/rcrowley/go-metrics"
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
-	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/log"
-	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/consensus/utils"
+	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/rpc"
 )
 
 var (
-	// the number of hashes for hash collison 
+	// the number of hashes for hash collison
 	baseHashPoolSize = uint64(100000)
 )
 
-
 type HashItem struct {
-	Hash  common.Hash 
+	//Hash  common.Hash
+	Slice uint64
 	Nonce uint64
 }
 
@@ -44,7 +44,7 @@ type SpowEngine struct {
 	hashrate       metrics.Meter
 	hashPoolDB     database.Database
 	hashPoolDBPath string
-	lock	       sync.Mutex
+	lock           sync.Mutex
 }
 
 func NewSpowEngine(threads int, folder string) *SpowEngine {
@@ -94,16 +94,13 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 	beginNonce := uint64(r.Int63n(int64(math.MaxUint64 / 2)))
 
 	var hashPoolSize uint64
-	if (block.Header.Difficulty.Uint64() > 5200000) {
-		hashPoolSize = baseHashPoolSize * uint64(1 << (( block.Header.Difficulty.Uint64() - 5200000) / 400000))
+	if block.Header.Difficulty.Uint64() > 5200000 {
+		hashPoolSize = baseHashPoolSize * uint64(1<<((block.Header.Difficulty.Uint64()-5200000)/400000))
 	} else {
-		hashPoolSize = baseHashPoolSize >> uint64((5200000 - block.Header.Difficulty.Uint64()) / 400000)
+		hashPoolSize = baseHashPoolSize >> uint64((5200000-block.Header.Difficulty.Uint64())/400000)
 	}
-	
-	if hashPoolSize > uint64(400000000) {
-		hashPoolSize = uint64(400000000)
-	}
-	if beginNonce + hashPoolSize < math.MaxUint64 {
+
+	if beginNonce+hashPoolSize < math.MaxUint64 {
 
 		threads := engine.threads
 		hashesPerThread := hashPoolSize
@@ -121,9 +118,10 @@ func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block,
 	}
 
 	return nil
-		
+
 }
 
+/*use arrays and random read value*/
 func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *types.Block, stop <-chan struct{}, beginNonce uint64, hashesPerThread uint64) {
 
 	var isNonceFound int32
@@ -131,63 +129,124 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 	bitsToNonceMap := make(map[uint64]uint64)
 	E := big.NewInt(0).Exp(big.NewInt(2), numOfBits, nil)
 	S := big.NewInt(0).Sub(E, big.NewInt(1))
-	
-	threads := engine.threads
-	once := &sync.Once{}
 
-	// generate hashes concurrently
+	threads := engine.threads
+
+	const segmentInterval = 500000
+	hashArr := make([]uint64, (threads+1)*segmentInterval)
+	nonceArr := make([]uint64, (threads+1)*segmentInterval)
+	once := &sync.Once{}
+	timestampBegin := time.Now().Unix()
+
 	var pend sync.WaitGroup
 
 	pend.Add(threads)
 
 	for i := 0; i < threads; i++ {
+
 		go func(id int) {
 			defer pend.Done()
+			if id < threads-1 {
 
-			header := block.Header.Clone()
+				header := block.Header.Clone()
+				header.SecondWitness = []byte{}
+				r := rand.New(rand.NewSource(time.Now().UnixNano()))
+				starter := uint64(r.Int63n(int64(math.MaxUint64/2))) * uint64(r.Int63n(int64(math.MaxUint64/2))) * uint64(id+1)
+				uppBound := starter + uint64(segmentInterval)
 
-			// Calculate the segment in each thread
-			for nonce := beginNonce + uint64(id) * hashesPerThread; nonce < beginNonce + uint64(id + 1) * hashesPerThread; nonce++ {
-				select {
-				case <-stop:
-					logAbort(engine.log)
-					return
-	
-				default:
-					if atomic.LoadInt32(&isNonceFound) != 0 {
-						engine.log.Debug("exit mining as nonce is found by other threads")
-						return
+				header.Witness = []byte(strconv.FormatUint(uint64(1234), 10))
+				hash := header.Hash()
+				A := hash.Big()
+				slice := big.NewInt(0).And(A.Rsh(A, 96), S).Uint64()
+				arrIndex := uint64(0)
+				for {
+
+					r = rand.New(rand.NewSource(time.Now().UnixNano()))
+					starter = uint64(r.Int63n(int64(math.MaxUint64/2)))*uint64(r.Int63n(int64(math.MaxUint64/2)))*uint64(id+1) + starter
+
+					uppBound = starter + uint64(segmentInterval)
+
+					k := 0
+					for nonce := starter; nonce < uppBound; nonce++ {
+
+						select {
+						case <-stop:
+							logAbort(engine.log)
+							return
+						default:
+							if atomic.LoadInt32(&isNonceFound) != 0 {
+								engine.log.Debug("exit mining as nonce is found bybreak")
+
+								return
+							}
+
+							header.Witness = []byte(strconv.FormatUint(nonce, 10))
+
+							hash = header.Hash()
+
+							A = hash.Big()
+							slice = big.NewInt(0).And(A.Rsh(A, 96), S).Uint64()
+
+							arrIndex = uint64(id*segmentInterval + k) // in case the array index exceeds
+
+							hashArr[arrIndex] = slice
+							nonceArr[arrIndex] = nonce
+
+							k = k + 1
+
+						}
+
 					}
-
-					header.Witness = []byte(strconv.FormatUint(nonce, 10))
-					header.SecondWitness = []byte{}
-					hash := header.Hash()
-					A := hash.Big()
-					slice := big.NewInt(0).And(A.Rsh(A, 96), S).Uint64()
-
-					engine.lock.Lock()
-					if compareNonce, ok := bitsToNonceMap[slice]; ok {
-						// nonce pair is found
-						once.Do(func() {
-							engine.log.Info("nonceA: %d, nonceB: %d", nonce, compareNonce)
-							handleResults(block, results, stop, &isNonceFound, nonce, compareNonce, engine.log)
-							engine.lock.Unlock()
-						})
-						return
-
-					} else {
-						bitsToNonceMap[slice] = nonce
-					}
-					engine.lock.Unlock()
-
+					time.Sleep(time.Millisecond * 300)
 				}
-			}	
+			} else {
+				index := int(0)
+				Slice := uint64(0)
+				Nonce := uint64(0)
+				for {
+					if atomic.LoadInt32(&isNonceFound) != 0 {
+
+						engine.log.Debug("exit mining as nonce is found by break")
+
+						return
+					}
+
+					Slice = hashArr[index]
+					Nonce = nonceArr[index]
+
+					if index >= threads*segmentInterval { //rescan the array
+						index = 0
+					} else {
+						index = index + 1
+					}
+
+					if compareNonce, ok := bitsToNonceMap[Slice]; ok {
+
+						if compareNonce != Nonce {
+							once.Do(func() {
+								engine.log.Info("Find solution,nonceA: %d, nonceB: %d, Map Size %d ", Nonce, compareNonce, len(bitsToNonceMap))
+								engine.log.Info("solution time: %d (s)", time.Now().Unix()-timestampBegin)
+								handleResults(block, results, stop, &isNonceFound, Nonce, compareNonce, engine.log)
+
+							})
+							return
+						}
+					} else {
+						if Nonce > 0 {
+							bitsToNonceMap[Slice] = Nonce
+						}
+
+					}
+				}
+
+			}
+
 		}(i)
 	}
 	// Wait for all the threads to finish and return
+
 	pend.Wait()
 }
-
 func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, isNonceFound *int32, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
 
 	// put the nonce pair in the block
@@ -213,7 +272,6 @@ func logAbort(log *log.SeeleLog) {
 	log.Info("nonce finding aborted")
 }
 
-
 // ValidateHeader validates the specified header and returns error if validation failed.
 func (engine *SpowEngine) VerifyHeader(reader consensus.ChainReader, header *types.BlockHeader) error {
 	parent := reader.GetHeaderByHash(header.PreviousBlockHash)
@@ -232,12 +290,11 @@ func (engine *SpowEngine) VerifyHeader(reader consensus.ChainReader, header *typ
 	return nil
 }
 
-
 func verifyPair(header *types.BlockHeader) error {
 
 	NewHeader := header.Clone()
 	// two nonces must be different
-	if (bytes.Equal(NewHeader.Witness, NewHeader.SecondWitness)) {
+	if bytes.Equal(NewHeader.Witness, NewHeader.SecondWitness) {
 		return consensus.ErrBlockNonceInvalid
 	}
 	nonceB := NewHeader.SecondWitness
@@ -245,7 +302,7 @@ func verifyPair(header *types.BlockHeader) error {
 	hashA := NewHeader.Hash()
 	NewHeader.Witness = nonceB
 	hashB := NewHeader.Hash()
-	
+
 	numOfBits := difficultyToNumOfBits(header.Difficulty)
 
 	if p := isPair(hashA, hashB, numOfBits); p == false {
@@ -273,8 +330,8 @@ func difficultyToNumOfBits(difficulty *big.Int) *big.Int {
 	bigDiv := big.NewInt(int64(200000))
 	var numOfBits = new(big.Int).Set(difficulty)
 	numOfBits.Div(difficulty, bigDiv)
-	if numOfBits.Cmp(big.NewInt(int64(50))) > 0 {
-		numOfBits = big.NewInt(int64(50))
+	if numOfBits.Cmp(big.NewInt(int64(70))) > 0 {
+		numOfBits = big.NewInt(int64(70))
 	}
 
 	if numOfBits.Cmp(big.NewInt(int64(1))) < 0 {
