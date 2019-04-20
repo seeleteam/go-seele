@@ -139,6 +139,8 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 	once := &sync.Once{}
 	timestampBegin := time.Now().Unix()
 	bitsToNonceMap := make(map[uint64]uint64)
+	sizeOfBitsToNonceMap := len(hashArr) * 50 
+	refreshSize := 100000
 
 	var pend sync.WaitGroup
 
@@ -214,7 +216,18 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 								}
 							} else {
 								if Nonce > 0 {
-									bitsToNonceMap[Slice] = Nonce
+									// refresh bitsToNonceMap if it is too big
+									if len(bitsToNonceMap) > sizeOfBitsToNonceMap {
+										counter := 0
+										for bitsKey, _ := range bitsToNonceMap {
+											if counter > refreshSize {
+												break
+											} 
+											delete(bitsToNonceMap, bitsKey)
+											counter++
+										}
+									}
+									bitsToNonceMap[Slice] = Nonce									
 								}
 							}
 						}
@@ -287,6 +300,17 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 							}
 						} else {
 							if Nonce > 0 {
+								// refresh bitsToNonceMap if it is too big
+								if len(bitsToNonceMap) > sizeOfBitsToNonceMap {
+									counter := 0
+									for bitsKey, _ := range bitsToNonceMap {
+										if counter > refreshSize {
+											break
+										} 
+										delete(bitsToNonceMap, bitsKey)
+										counter++
+									}
+								}
 								bitsToNonceMap[Slice] = Nonce
 							}
 						}
