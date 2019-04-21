@@ -92,6 +92,7 @@ type Downloader struct {
 	syncStatus int
 	tm         *taskMgr
 
+	seele     SeeleBackend
 	chain     *core.Blockchain
 	sessionWG sync.WaitGroup
 	log       *log.SeeleLog
@@ -110,11 +111,18 @@ type BlocksMsgBody struct {
 	Blocks []*types.Block
 }
 
+// SeeleBackend wraps all methods required for downloader.
+type SeeleBackend interface {
+	TxPool() *core.TransactionPool
+	DebtPool() *core.DebtPool
+}
+
 // NewDownloader create Downloader
-func NewDownloader(chain *core.Blockchain) *Downloader {
+func NewDownloader(chain *core.Blockchain, seele SeeleBackend) *Downloader {
 	d := &Downloader{
 		cancelCh:   make(chan struct{}),
 		peers:      make(map[string]*peerConn),
+		seele:      seele,
 		chain:      chain,
 		syncStatus: statusNone,
 	}
@@ -191,7 +199,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 }
 
 func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
-	d.log.Debug("Downloader.doSynchronise start")
+	d.log.Debug("Downloader.doSynchronise start, masterID: %s", d.masterPeer)
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
 		if err != nil {
@@ -210,6 +218,11 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	height := latest.Height
 
 	ancestor, err := d.findCommonAncestorHeight(conn, height)
+	if err != nil {
+		return err
+	}
+
+	err = d.reverseBCstore(ancestor)
 	if err != nil {
 		return err
 	}
@@ -563,4 +576,73 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 
 		h.status = taskStatusProcessed
 	}
+}
+
+// reverse the chain back to the common ancestor of local node and peer
+// TODO: keep the blocks of local node after the common ancestor
+func (d *Downloader) reverseBCstore(ancestor uint64) error {
+
+	localCurBlock := d.chain.CurrentBlock()
+	localHeight := localCurBlock.Header.Height
+	curHeight := localHeight
+	bcStore := d.chain.GetStore()
+	
+	
+	
+	for curHeight > ancestor {
+		// delete blockleaves
+		if localHeight == curHeight {
+			d.chain.RemoveBlockLeaves(localCurBlock.HeaderHash)
+		}
+		hash, err := bcStore.GetBlockHash(curHeight)
+
+		d.log.Debug("reverse curHeight: %d, hash: %v", curHeight, hash)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to get block hash by height %v", curHeight)
+		}
+
+		block, err := bcStore.GetBlock(hash)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
+		}
+		
+		// reinject the block objects to the pool
+		d.seele.TxPool().HandleChainReversed(block)
+		d.seele.DebtPool().HandleChainReversed(block)
+
+		if err = bcStore.DeleteIndices(block); err != nil {
+			return errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", block.HeaderHash)
+		}
+	
+		// delete the block hash in canonical chain.
+		_, err = bcStore.DeleteBlockHash(curHeight)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to delete block hash by height %v", curHeight)
+		}
+
+		curHeight--
+	}
+	// use the ancestor as currentBlock
+	curHash, err := bcStore.GetBlockHash(ancestor)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to get block hash by height %v", ancestor)
+	}
+
+	curBlock, err := bcStore.GetBlock(curHash)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to get block by hash %v", curHash)
+	}
+
+	d.chain.UpdateCurrentBlock(curBlock)
+	d.log.Debug("update current block: %d, hash: %v", curBlock.Header.Height, curBlock.HeaderHash)
+	// update blockLeaves
+	var currentTd *big.Int
+	if currentTd, err = bcStore.GetBlockTotalDifficulty(curBlock.HeaderHash); err != nil {
+		return errors.NewStackedErrorf(err, "failed to get block TD by hash %v", curBlock.HeaderHash)
+	}
+	blockIndex := core.NewBlockIndex(curBlock.HeaderHash, curBlock.Header.Height, currentTd)
+	d.chain.AddBlockLeaves(blockIndex)
+	
+	return nil
+
 }

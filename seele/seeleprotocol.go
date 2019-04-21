@@ -102,7 +102,7 @@ func NewSeeleProtocol(seele *SeeleService, log *log.SeeleLog) (s *SeeleProtocol,
 		txPool:     seele.TxPool(),
 		debtPool:   seele.debtPool,
 		chain:      seele.BlockChain(),
-		downloader: downloader.NewDownloader(seele.BlockChain()),
+		downloader: downloader.NewDownloader(seele.BlockChain(), seele),
 		log:        log,
 		quitCh:     make(chan struct{}),
 		syncCh:     make(chan struct{}),
@@ -170,7 +170,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 	block := sp.chain.CurrentBlock()
 	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
 	if err != nil {
-		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s]", err)
+		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s], Hash: %v", err, block.HeaderHash)
 		// one step
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return

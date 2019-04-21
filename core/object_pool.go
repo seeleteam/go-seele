@@ -132,6 +132,19 @@ func (pool *Pool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
 	pool.removeObjects()
 }
 
+func (pool *Pool) HandleChainReversed(block *types.Block) {
+	reinject := make([]poolObject, 0)
+	for _, obj := range pool.getObjectFromBlock(block) {
+		reinject = append(reinject, obj)
+	}
+	count := pool.addObjectArray(reinject)
+	if count > 0 {
+		pool.log.Info("add %d reinject objects", count)
+	}
+
+	pool.removeObjects()
+}
+
 func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObject {
 	chainStore := pool.chain.GetStore()
 	log := pool.log

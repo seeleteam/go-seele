@@ -159,6 +159,19 @@ func (bc *Blockchain) CurrentBlock() *types.Block {
 	return bc.currentBlock.Load().(*types.Block)
 }
 
+// UpdateCurrentBlock updates the HEAD block of the blockchain.
+func (bc *Blockchain) UpdateCurrentBlock(block *types.Block) {
+	bc.currentBlock.Store(block)
+}
+
+func (bc *Blockchain) AddBlockLeaves(blockIndex *BlockIndex) {
+	bc.blockLeaves.Add(blockIndex)
+}
+
+func (bc *Blockchain) RemoveBlockLeaves(hash common.Hash) {
+	bc.blockLeaves.Remove(hash)
+}
+
 // CurrentHeader returns the HEAD block header of the blockchain.
 func (bc *Blockchain) CurrentHeader() *types.BlockHeader {
 	return bc.CurrentBlock().Header
@@ -685,22 +698,20 @@ func overwriteSingleStaleBlock(bcStore store.BlockchainStore, hash common.Hash) 
 	}
 
 	canonicalHash, err := bcStore.GetBlockHash(header.Height)
-	if err != nil {
-		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block hash by height %v in canonical chain", header.Height)
-	}
+	if err == nil {
+		if hash.Equal(canonicalHash) {
+			return false, header.PreviousBlockHash, nil
+		}
 
-	if hash.Equal(canonicalHash) {
-		return false, header.PreviousBlockHash, nil
-	}
+		// delete the tx/debt indices in previous canonical chain.
+		canonicalBlock, err := bcStore.GetBlock(canonicalHash)
+		if err != nil {
+			return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block by hash %v", canonicalHash)
+		}
 
-	// delete the tx/debt indices in previous canonical chain.
-	canonicalBlock, err := bcStore.GetBlock(canonicalHash)
-	if err != nil {
-		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to get block by hash %v", canonicalHash)
-	}
-
-	if err = bcStore.DeleteIndices(canonicalBlock); err != nil {
-		return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", canonicalBlock.HeaderHash)
+		if err = bcStore.DeleteIndices(canonicalBlock); err != nil {
+			return false, common.EmptyHash, errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", canonicalBlock.HeaderHash)
+		}
 	}
 
 	// add the tx/debt indices in new canonical chain.
