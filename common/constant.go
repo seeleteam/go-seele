@@ -36,6 +36,9 @@ const (
 	// ForkHeight after this height we change the content of block: hardFork
 	ForkHeight = 130000
 
+	// ForkHeight after this height we change the content of block: hardFork
+	SecondForkHeight = 145000
+
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"
 

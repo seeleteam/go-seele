@@ -143,7 +143,7 @@ func (p *peer) sendDebts(debts []*types.Debt, filter bool) error {
 
 	if len(filterDebts) > 0 {
 		buff := common.SerializePanic(filterDebts)
-		p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts", len(buff), len(filterDebts))
+		p.log.Debug("peer send [debtMsgCode] with size %d bytes and %d debts, first debt hash: %v", len(buff), len(filterDebts), filterDebts[0].Hash.Hex())
 		err := p2p.SendMessage(p.rw, debtMsgCode, buff)
 		if err == nil {
 			for _, d := range filterDebts {
@@ -347,4 +347,8 @@ func verifyGenesisAndNetworkID(retStatusMsg statusData, genesis common.Hash, net
 		}
 	}
 	return nil
+}
+
+func (p *peer) DisconnectPeer(reason string) {
+	p.Peer.Disconnect(reason)
 }

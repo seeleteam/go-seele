@@ -8,6 +8,7 @@ package utils
 import (
 	"math/big"
 
+	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core/types"
 )
@@ -25,6 +26,7 @@ func GetDifficult(time uint64, parentHeader *types.BlockHeader) *big.Int {
 
 	big1 := big.NewInt(1)
 	big99 := big.NewInt(-99)
+	big1024 := big.NewInt(1024)
 	big2048 := big.NewInt(2048)
 
 	interval := (time - parentTime) / 10
@@ -36,7 +38,11 @@ func GetDifficult(time uint64, parentHeader *types.BlockHeader) *big.Int {
 	}
 
 	var y = new(big.Int).Set(parentDifficult)
-	y.Div(parentDifficult, big2048)
+	if parentHeader.Height < common.SecondForkHeight {
+		y.Div(parentDifficult, big2048)
+	} else {
+		y.Div(parentDifficult, big1024)
+	}
 
 	var result = big.NewInt(0)
 	result.Mul(x, y)

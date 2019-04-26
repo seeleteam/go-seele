@@ -12,10 +12,12 @@ import (
 	"math/rand"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"gonum.org/v1/gonum/mat"
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
@@ -29,6 +31,9 @@ import (
 var (
 	// the number of hashes for hash collison
 	baseHashPoolSize = uint64(100000)
+	// Hadamard's bound for the absolute determinant of an 𝑛×𝑛 0-1 matrix is {(n + 1)^[(n+1)/2]} / 2^n
+	maxDet30x30 = new(big.Int).Mul(big.NewInt(2), new(big.Int).Exp(big.NewInt(10), big.NewInt(13), big.NewInt(0)))
+	matrixDim = int(30)
 )
 
 type HashItem struct {
@@ -88,6 +93,10 @@ func (engine *SpowEngine) Prepare(reader consensus.ChainReader, header *types.Bl
 }
 
 func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+
+	if block.Header.Height >= common.SecondForkHeight {
+		return engine.MSeal(reader, block, stop, results)
+	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	// make sure beginNonce is not too big
@@ -371,9 +380,16 @@ func (engine *SpowEngine) VerifyHeader(reader consensus.ChainReader, header *typ
 		return err
 	}
 
-	if err := verifyPair(header); err != nil {
-		return err
+	if header.Height >= common.SecondForkHeight {
+		if err := engine.verifyTarget(header); err != nil {
+			return err
+		}
+	} else {
+		if err := verifyPair(header); err != nil {
+			return err
+		}
 	}
+	
 
 	return nil
 }
@@ -431,4 +447,277 @@ func difficultyToNumOfBits(difficulty *big.Int, height uint64) *big.Int {
 		numOfBits = big.NewInt(int64(1))
 	}
 	return numOfBits
+}
+
+func (engine *SpowEngine) MSeal(reader consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+	threads := engine.threads
+
+	var step uint64
+	var seed uint64
+	if threads != 0 {
+		step = math.MaxUint64 / uint64(threads)
+	}
+
+	var isNonceFound int32
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	once := &sync.Once{}
+	for i := 0; i < threads; i++ {
+		if threads == 1 {
+			seed = r.Uint64()
+		} else {
+			seed = uint64(r.Int63n(int64(step)))
+		}
+		tSeed := seed + uint64(i)*step
+		var min uint64
+		var max uint64
+		min = uint64(i) * step
+
+		if i != threads-1 {
+			max = min + step - 1
+		} else {
+			max = math.MaxUint64
+		}
+
+		go func(tseed uint64, tmin uint64, tmax uint64) {
+			engine.MStartMining(block, tseed, tmin, tmax, results, stop, &isNonceFound, once, engine.hashrate, engine.log)
+		}(tSeed, min, max)
+	}
+
+	return nil
+}
+
+func (engine *SpowEngine) MStartMining(block *types.Block, seed uint64, min uint64, max uint64, result chan<- *types.Block, abort <-chan struct{},
+	isNonceFound *int32, once *sync.Once, hashrate metrics.Meter, log *log.SeeleLog) {
+	var nonce = seed
+	var hashInt big.Int
+	var caltimes = int64(0)
+	var isBegining = true
+	target := getMiningTarget(block.Header.Difficulty)
+	nonZeroCountTarget := getNonZeroCountTarget(matrixDim)
+	header := block.Header.Clone()
+	dim := matrixDim
+	matrix := mat.NewDense(dim, 256, nil)
+
+miner:
+	for {
+		select {
+		case <-abort:
+			logAbort(log)
+			hashrate.Mark(caltimes)
+			break miner
+
+		default:
+			if atomic.LoadInt32(isNonceFound) != 0 {
+				log.Debug("exit mining as nonce is found by other threads")
+				break miner
+			}
+
+			caltimes++
+			if caltimes == 0x7FFF {
+				hashrate.Mark(caltimes)
+				caltimes = 0
+			}
+
+			header.Witness = []byte(strconv.FormatUint(nonce, 10))
+			hash := header.Hash()
+			hashInt.SetBytes(hash.Bytes())
+
+			// isBegining: fresh start or nonce reverse: make sure nonce verify is right
+			if nonce+uint64(dim) >= max || isBegining == true {
+				nonce = min
+				header.Witness = []byte(strconv.FormatUint(nonce, 10))
+				hash = header.Hash()
+				matrix = newMatrix(header, nonce, dim, log)
+				isBegining = false
+			} else { // matrix is already exist, just shift up rows by one and set last row
+				matrix = submatCopyByRow(header, matrix, 1, dim, nonce)
+				header.Witness = []byte(strconv.FormatUint(nonce-uint64(dim-1), 10))
+				hash = header.Hash()
+			}
+			res, count := calDetmLoop(matrix, dim, log)
+			restInt := int64(res)
+			restBig := big.NewInt(restInt)
+
+			// found
+			if restBig.Cmp(target) >= 0 && count >= nonZeroCountTarget {
+				once.Do(func() {
+					block.Header = header
+					block.HeaderHash = hash
+
+					select {
+					case <-abort:
+						logAbort(log)
+					case result <- block:
+						atomic.StoreInt32(isNonceFound, 1)
+						log.Info("found det:%d\n", restBig)
+						log.Info("target:%d\n", target)
+						log.Info("times2try:%d\n", caltimes)
+					}
+				})
+				break miner
+			}
+			// outage
+			if nonce == seed - 1 {
+				select {
+				case <-abort:
+					logAbort(log)
+				case result <- nil:
+					log.Warn("nonce finding outage")
+				}
+
+				break miner
+			}
+			nonce++
+		}
+	}
+}
+
+func (engine *SpowEngine) verifyTarget(header *types.BlockHeader) error {
+	dim := matrixDim
+	NewHeader := header.Clone()
+	nonceUint64, err := strconv.ParseUint(string(NewHeader.Witness), 10, 64)
+	if err != nil {
+		return err
+	}
+	matrix := newMatrix(header, nonceUint64, dim, engine.log)
+	res, count := calDetmLoop(matrix, dim, engine.log)
+	restInt := int64(res)
+	restBig := big.NewInt(restInt)
+	target := getMiningTarget(header.Difficulty)
+	if restBig.Cmp(target) < 0 || count < getNonZeroCountTarget(dim) {
+		return consensus.ErrBlockNonceInvalid
+	}
+	return nil
+}
+
+// getMiningTarget returns the mining target for the specified difficulty.
+func getMiningTarget(difficulty *big.Int) *big.Int {
+	// 65: when switch from spow to mpow, diff is 11M, for mpow the test data show 80M is stable for block time (10ish second)
+	target := new(big.Int).Mul(difficulty, big.NewInt(65))
+	if target.Cmp(maxDet30x30) > 0 {
+		return maxDet30x30
+	}
+	return target
+}
+
+func getNonZeroCountTarget(matrixDim int) int {
+	return (256 - matrixDim) / 2 + matrixDim / 5
+}
+
+func newMatrix(headerTarget *types.BlockHeader, seedNonce uint64, dim int, log *log.SeeleLog) *mat.Dense {
+	header := headerTarget.Clone()
+	nonce := seedNonce
+	matrix := mat.NewDense(dim, 256, nil)
+	for i := 0; i < dim; i++ {
+		header.Witness = []byte(strconv.FormatUint(nonce, 10))
+		header.SecondWitness = []byte{}
+		hash := header.Hash()
+		col, isLeg := getBinaryArray(hash.String())
+		if isLeg == false {
+			return nil
+		}
+		matrix.SetRow(i, col)
+		nonce++
+	}
+	return matrix
+}
+
+func calDetm(matrix *mat.Dense, dim int, log *log.SeeleLog) float64 {
+	submatrix := mat.NewDense(dim, dim, nil)
+	submatrix.Copy(matrix)
+	log.Debug("\n%0.1v\n\n", mat.Formatted(submatrix))
+	det := mat.Det(submatrix)
+	log.Debug("try det:%f\n", det)
+	return det
+}
+
+// matrix is dim x 256
+// calDetmLoop will loop from 0 to 256 - dim
+func calDetmLoop(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
+	var ret = float64(0)
+	var nonZerosCount = int(0)
+	nonZeroCountTarget := getNonZeroCountTarget(dim)
+	submatrix := mat.NewDense(dim, dim, nil)
+	for i := 0; i < 256 - dim; i++ {
+		submatrix = submatCopy(matrix, i, dim)
+
+		det := mat.Det(submatrix)
+		// return first det
+		if i == 0 {
+			ret = det
+		} else {
+			// check number of det whose det is larger than 0
+			detInt := int64(det)
+			detBig := big.NewInt(detInt)
+			if detBig.Cmp(big.NewInt(0)) > 0 {
+				nonZerosCount++
+			}
+			// already meet the requirement, just stop and return
+			if nonZerosCount >= nonZeroCountTarget {
+				return det, nonZerosCount
+			}
+			// at this point, even all left are ok, the total is still smaller than target, just stop!
+			if nonZerosCount+(256-i) < nonZeroCountTarget {
+				return det, nonZerosCount
+			}
+		}
+	}
+	return ret, nonZerosCount
+}
+
+func submatCopy(matrix *mat.Dense, beginCol int, dim int) *mat.Dense {
+	submatrix := mat.NewDense(dim, dim, nil)
+	for i := 0; i < dim; i++ {
+		col := mat.Col(nil, beginCol+i, matrix)
+		submatrix.SetCol(i, col)
+	}
+	return submatrix
+}
+
+func submatCopyByRow(headerTarget *types.BlockHeader, matrix *mat.Dense, beginRow int, dim int, nonce uint64) *mat.Dense {
+
+	header := headerTarget.Clone()
+	submatrix := mat.NewDense(dim, 256, nil)
+	for i := 0; i < dim-1; i++ {
+		row := mat.Row(nil, beginRow+i, matrix)
+		submatrix.SetRow(i, row)
+	}
+	header.Witness = []byte(strconv.FormatUint(nonce, 10))
+	header.SecondWitness = []byte{}
+	hash := header.Hash()
+	col, isLeg := getBinaryArray(hash.String())
+	if isLeg == false {
+		return nil
+	}
+	submatrix.SetRow(dim-1, col)
+	return submatrix
+}
+
+func getBinaryArray(hash string) ([]float64, bool) {
+	binmap := map[int32][]float64{
+		48:  {0, 0, 0, 0}, //0
+		49:  {0, 0, 0, 1}, //1
+		50:  {0, 0, 1, 0}, //2
+		51:  {0, 0, 1, 1}, //3
+		52:  {0, 1, 0, 0}, //4
+		53:  {0, 1, 0, 1}, //5
+		54:  {0, 1, 1, 0}, //6
+		55:  {0, 1, 1, 1}, //7
+		56:  {1, 0, 0, 0}, //8
+		57:  {1, 0, 0, 1}, //9
+		97:  {1, 0, 1, 0}, //a
+		98:  {1, 0, 1, 1}, //b
+		99:  {1, 1, 0, 0}, //c
+		100: {1, 1, 0, 1}, //d
+		101: {1, 1, 1, 0}, //e
+		102: {1, 1, 1, 1}, //f
+	}
+	bits := make([]float64, 0)
+	if !strings.HasPrefix(hash, "0x") {
+		return bits, false
+	}
+	for _, c := range strings.TrimPrefix(hash, "0x") {
+		bits = append(bits, binmap[c]...)
+	}
+	return bits, true
 }

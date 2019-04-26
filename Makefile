@@ -7,6 +7,7 @@ discovery:
 	@echo "Done discovery building"
 
 node:
+	go get gonum.org/v1/gonum/mat
 	go build -o ./build/node ./cmd/node 
 	@echo "Done node building"
 
