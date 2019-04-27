@@ -214,7 +214,7 @@ func (lp *LightProtocol) synchronise(peers []*peer) {
 			if err == ErrIsSynchronising {
 				lp.log.Debug("exit synchronise as it is already running.")
 			} else {
-				lp.log.Error("synchronise err. %s", err)
+				lp.log.Debug("synchronise err. %s", err)
 			}
 
 			continue
@@ -267,7 +267,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 
 		magic := rand2.Uint32()
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
-			lp.log.Error("sendAnnounce err. %s", err)
+			lp.log.Debug("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
 			return false
 		}

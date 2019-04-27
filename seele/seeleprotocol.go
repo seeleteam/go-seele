@@ -190,7 +190,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 			if err == downloader.ErrIsSynchronising {
 				sp.log.Debug("exit synchronise as it is already running.")
 			} else {
-				sp.log.Error("synchronise err. %s", err)
+				sp.log.Debug("synchronise err. %s", err)
 			}
 
 			// three step
