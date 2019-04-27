@@ -94,7 +94,7 @@ needQuit:
 				if p != nil {
 					err := p.sendAnnounce(magic, uint64(0), uint64(0))
 					if err != nil {
-						pm.log.Error("blockLoop sendAnnounce err=%s", err)
+						pm.log.Debug("blockLoop sendAnnounce err=%s", err)
 					}
 				}
 

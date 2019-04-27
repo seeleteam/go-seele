@@ -89,7 +89,7 @@ errLoop:
 	for {
 		select {
 		case err = <-readErr:
-			p.log.Warn("p2p.peer.run read err %s", err)
+			p.log.Debug("p2p.peer.run read err %s", err)
 			break errLoop
 		case reason := <-p.disconnection:
 			p.log.Info("p2p peer got disconnection request")
@@ -104,7 +104,7 @@ errLoop:
 	}
 	p.close()
 	p.wg.Wait()
-	p.log.Info("p2p.peer.run quit. err=%s", err)
+	p.log.Debug("p2p.peer.run quit. err=%s", err)
 	return err
 }
 

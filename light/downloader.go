@@ -11,6 +11,7 @@ import (
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -127,6 +128,9 @@ needQuit:
 			for _, head := range headMsg.Hearders[1:] {
 				if err = d.chain.WriteHeader(head); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 					d.log.Warn("Downloader.doSynchronise WriteHeader error. %s", err)
+					if errors.IsOrContains(err, consensus.ErrBlockNonceInvalid) {
+						p.Peer.Disconnect("light PeerDownload anormaly")
+					}
 					break needQuit
 				}
 

@@ -486,7 +486,7 @@ outLoop:
 
 			msg, err := conn.waitMsg(magic, BlockHeadersMsg, d.cancelCh)
 			if err != nil {
-				d.log.Warn("peerDownload waitMsg BlockHeadersMsg err! err=%s, magic=%d, id=%s", err, magic, conn.peerID)
+				d.log.Debug("peerDownload waitMsg BlockHeadersMsg err! err=%s, magic=%d, id=%s", err, magic, conn.peerID)
 				break
 			}
 
@@ -519,7 +519,7 @@ outLoop:
 
 			msg, err := conn.waitMsg(magic, BlocksMsg, d.cancelCh)
 			if err != nil {
-				d.log.Warn("peerDownload waitMsg BlocksMsg err! err=%s", err)
+				d.log.Debug("peerDownload waitMsg BlocksMsg err! err=%s", err)
 				break
 			}
 
@@ -545,6 +545,7 @@ outLoop:
 		for {
 			select {
 			case <-d.cancelCh:
+				conn.peer.DisconnectPeer("peerDownload anormaly")
 				break outLoop
 			case <-conn.quitCh:
 				break outLoop
