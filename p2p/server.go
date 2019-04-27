@@ -242,7 +242,7 @@ func (srv *Server) connectNode(node *discovery.Node) {
 
 	conn, err := net.DialTimeout("tcp", addr.String(), defaultDialTimeout)
 	if err != nil {
-		srv.log.Error("connect to a new node err: %s, node: %s", err, node)
+		srv.log.Debug("connect to a new node err: %s, node: %s", err, node)
 		if conn != nil {
 			conn.Close()
 		}
@@ -304,7 +304,7 @@ func (srv *Server) deletePeer(id common.Address) {
 		srv.nodeSet.setNodeStatus(p.Node, false)
 		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
-		srv.log.Info("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
+		srv.log.Debug("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
 
 		metricsDeletePeerMeter.Mark(1)
 		metricsPeerCountGauge.Update(int64(srv.PeerCount()))

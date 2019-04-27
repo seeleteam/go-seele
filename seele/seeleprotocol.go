@@ -394,7 +394,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 	}
 
 	if err := newPeer.handShake(p.networkID, localTD, head, genesisBlock.HeaderHash, genesisBlock.Header.Difficulty.Uint64()); err != nil {
-		p.log.Error("handleAddPeer err. %s", err)
+		p.log.Debug("handleAddPeer err. %s", err)
 		newPeer.Disconnect(DiscHandShakeErr)
 		return false
 	}
@@ -453,7 +453,7 @@ handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			p.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
+			p.log.Debug("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 

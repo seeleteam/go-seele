@@ -257,7 +257,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 		if err == errModeNotMatch {
 			lp.log.Debug("handleAddPeer message. %s", err)
 		} else {
-			lp.log.Error("handleAddPeer err. %s", err)
+			lp.log.Debug("handleAddPeer err. %s", err)
 		}
 
 		return false
@@ -301,7 +301,7 @@ handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
 		if err != nil {
-			lp.log.Error("get error when read msg from %s, %s", peer.peerStrID, err)
+			lp.log.Debug("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
 		}
 
