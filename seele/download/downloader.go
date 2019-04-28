@@ -213,6 +213,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 
 	latest, err := d.fetchHeight(conn)
 	if err != nil {
+		conn.peer.DisconnectPeer("peerDownload anormaly")
 		return err
 	}
 	height := latest.Height
@@ -222,13 +223,13 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		return err
 	}
 
-	err = d.reverseBCstore(ancestor)
+	localHeight, localBlocks, err := d.reverseBCstore(ancestor)
 	if err != nil {
 		return err
 	}
 
 	d.log.Debug("Downloader.doSynchronise start task manager from height=%d, target height=%d master=%s", ancestor, height, d.masterPeer)
-	tm := newTaskMgr(d, d.masterPeer, ancestor+1, height)
+	tm := newTaskMgr(d, d.masterPeer, conn, ancestor+1, height, localHeight, localBlocks)
 	d.tm = tm
 
 	bMasterStarted := false
@@ -289,7 +290,7 @@ func (d *Downloader) fetchHeight(conn *peerConn) (*types.BlockHeader, error) {
 
 func verifyBlockHeadersMsg(msg interface{}, head common.Hash) (*types.BlockHeader, error) {
 	headers := msg.([]*types.BlockHeader)
-	if len(headers) != 1 {
+	if len(headers) < 1 { 
 		return nil, errInvalidPacketReceived
 	}
 
@@ -545,7 +546,6 @@ outLoop:
 		for {
 			select {
 			case <-d.cancelCh:
-				conn.peer.DisconnectPeer("peerDownload anormaly")
 				break outLoop
 			case <-conn.quitCh:
 				break outLoop
@@ -564,13 +564,29 @@ outLoop:
 }
 
 // processBlocks writes blocks to the blockchain.
-func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
+func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, localHeight uint64, localBlocks []*types.Block, conn *peerConn) {
 	for _, h := range headInfos {
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 
 		if err := d.chain.WriteBlock(h.block); err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
+			// recover local blocks if localHeight is larger than the synchronized height
+			d.log.Debug("localheight: %d, current block: %d", localHeight, d.chain.CurrentBlock().Header.Height)
+			if localHeight > h.block.Header.Height - 1 {
+				_, _, err = d.reverseBCstore(ancestor)
+				if err != nil {
+					d.log.Error("failed to reverse synced blocks err=%s", err)
+				}
+				for _, localBlock := range localBlocks {
+					d.log.Info("write back local blocks: %d", localBlock.Header.Height)
+					if err = d.chain.WriteBlock(localBlock); err != nil {
+						d.log.Error("failed to write localBlock back err=%s, height: %d", err, localBlock.Header.Height)
+						break
+					}
+				}
+			}
+			conn.peer.DisconnectPeer("peerDownload anormaly")
 			d.Cancel()
 			break
 		}
@@ -581,15 +597,14 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo) {
 
 // reverse the chain back to the common ancestor of local node and peer
 // TODO: keep the blocks of local node after the common ancestor
-func (d *Downloader) reverseBCstore(ancestor uint64) error {
+func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, error) {
 
 	localCurBlock := d.chain.CurrentBlock()
 	localHeight := localCurBlock.Header.Height
 	curHeight := localHeight
 	bcStore := d.chain.GetStore()
-	
-	
-	
+	localBlocks := make([]*types.Block, 0)
+		
 	for curHeight > ancestor {
 		// delete blockleaves
 		if localHeight == curHeight {
@@ -599,26 +614,29 @@ func (d *Downloader) reverseBCstore(ancestor uint64) error {
 
 		d.log.Debug("reverse curHeight: %d, hash: %v", curHeight, hash)
 		if err != nil {
-			return errors.NewStackedErrorf(err, "failed to get block hash by height %v", curHeight)
+			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block hash by height %v", curHeight)
 		}
 
 		block, err := bcStore.GetBlock(hash)
 		if err != nil {
-			return errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
+			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
 		}
+
+		// save the local blocks
+		localBlocks = append([]*types.Block{block}, localBlocks...)
 		
 		// reinject the block objects to the pool
 		d.seele.TxPool().HandleChainReversed(block)
 		d.seele.DebtPool().HandleChainReversed(block)
 
-		if err = bcStore.DeleteIndices(block); err != nil {
-			return errors.NewStackedErrorf(err, "failed to delete tx/debt indices of block %v", block.HeaderHash)
+		if err = bcStore.DeleteBlock(hash); err != nil {
+			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to delete block %v", block.HeaderHash)
 		}
-	
+
 		// delete the block hash in canonical chain.
 		_, err = bcStore.DeleteBlockHash(curHeight)
 		if err != nil {
-			return errors.NewStackedErrorf(err, "failed to delete block hash by height %v", curHeight)
+			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to delete block hash by height %v", curHeight)
 		}
 
 		curHeight--
@@ -626,12 +644,12 @@ func (d *Downloader) reverseBCstore(ancestor uint64) error {
 	// use the ancestor as currentBlock
 	curHash, err := bcStore.GetBlockHash(ancestor)
 	if err != nil {
-		return errors.NewStackedErrorf(err, "failed to get block hash by height %v", ancestor)
+		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block hash by height %v", ancestor)
 	}
 
 	curBlock, err := bcStore.GetBlock(curHash)
 	if err != nil {
-		return errors.NewStackedErrorf(err, "failed to get block by hash %v", curHash)
+		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block by hash %v", curHash)
 	}
 
 	d.chain.UpdateCurrentBlock(curBlock)
@@ -639,11 +657,11 @@ func (d *Downloader) reverseBCstore(ancestor uint64) error {
 	// update blockLeaves
 	var currentTd *big.Int
 	if currentTd, err = bcStore.GetBlockTotalDifficulty(curBlock.HeaderHash); err != nil {
-		return errors.NewStackedErrorf(err, "failed to get block TD by hash %v", curBlock.HeaderHash)
+		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block TD by hash %v", curBlock.HeaderHash)
 	}
 	blockIndex := core.NewBlockIndex(curBlock.HeaderHash, curBlock.Header.Height, currentTd)
 	d.chain.AddBlockLeaves(blockIndex)
 	
-	return nil
+	return localHeight, localBlocks, nil
 
 }
