@@ -158,7 +158,7 @@ func (pool *Pool) getReinjectObject(newHeader, lastHeader common.Hash) []poolObj
 	if newBlock.Header.PreviousBlockHash != lastHeader {
 		lastBlock, err := chainStore.GetBlock(lastHeader)
 		if err != nil {
-			log.Error("got block failed, %s", err)
+			log.Debug("got block failed, %s", err)
 			return nil
 		}
 
