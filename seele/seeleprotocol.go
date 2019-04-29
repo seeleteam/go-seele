@@ -659,7 +659,7 @@ handler:
 
 			if query.Hash != common.EmptyHash {
 				if head, err = p.chain.GetStore().GetBlockHeader(query.Hash); err != nil {
-					p.log.Error("HandleMsg GetBlockHeader err from query hash.err= %s magic= %d id= %d ip= %s", err, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
+					p.log.Debug("HandleMsg GetBlockHeader err from query hash.err= %s magic= %d id= %d ip= %s", err, query.Magic, peer.peerID, peer.Peer.RemoteAddr())
 					break
 				}
 				orgNum = head.Height

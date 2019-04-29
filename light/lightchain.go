@@ -97,7 +97,7 @@ func (lc *LightChain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 func (lc *LightChain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
 	header, err := lc.bcStore.GetBlockHeader(hash)
 	if err != nil {
-		lc.log.Warn("get block header by hash failed, err %s", err)
+		lc.log.Debug("get block header by hash failed, err %s, hash: %v", err, hash)
 		return nil
 	}
 
