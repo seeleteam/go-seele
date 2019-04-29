@@ -187,7 +187,7 @@ func (bc *Blockchain) GetCurrentState() (*state.Statedb, error) {
 func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 	hash, err := bc.bcStore.GetBlockHash(height)
 	if err != nil {
-		bc.log.Warn("get block header by height failed, err %s. height %d", err, height)
+		bc.log.Debug("get block header by height failed, err %s. height %d", err, height)
 		return nil
 	}
 
@@ -198,7 +198,7 @@ func (bc *Blockchain) GetHeaderByHeight(height uint64) *types.BlockHeader {
 func (bc *Blockchain) GetHeaderByHash(hash common.Hash) *types.BlockHeader {
 	header, err := bc.bcStore.GetBlockHeader(hash)
 	if err != nil {
-		bc.log.Warn("get block header by hash failed, err %s", err)
+		bc.log.Warn("get block header by hash failed, err %s, hash: %v", err, hash)
 		return nil
 	}
 
@@ -379,6 +379,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	committed = true
 	if isHead {
+		//fmt.Printf("store currentBlock: %d", currentBlock.Header.Height)
 		bc.currentBlock.Store(currentBlock)
 
 		bc.blockLeaves.PurgeAsync(bc.bcStore, func(err error) {

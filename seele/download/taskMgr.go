@@ -53,10 +53,13 @@ type taskMgr struct {
 	fromNo, toNo     uint64 // block number range [from, to]
 	curNo            uint64 // the smallest block number need to recv
 	downloadedNum    uint64
+	recoverHeight    uint64
+	recoverBlocks    []*types.Block
 	peersHeaderMap   map[string]*peerHeadInfo // peer's header information
 	downloadInfoList []*downloadInfo          // download process info
 
 	masterPeer string
+	masterConn *peerConn
 	lock       sync.RWMutex
 	quitCh     chan struct{}
 	wg         sync.WaitGroup
@@ -64,7 +67,7 @@ type taskMgr struct {
 	startTime  time.Time
 }
 
-func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskMgr {
+func newTaskMgr(d *Downloader, masterPeer string, conn *peerConn, from uint64, to uint64, localHeight uint64, localBlocks []*types.Block) *taskMgr {
 	t := &taskMgr{
 		log:              d.log,
 		downloader:       d,
@@ -72,7 +75,10 @@ func newTaskMgr(d *Downloader, masterPeer string, from uint64, to uint64) *taskM
 		toNo:             to,
 		curNo:            from,
 		downloadedNum:    0,
+		recoverHeight:    localHeight,
+		recoverBlocks:    localBlocks,
 		masterPeer:       masterPeer,
+		masterConn:       conn,
 		startTime:        time.Now(),
 		peersHeaderMap:   make(map[string]*peerHeadInfo),
 		downloadInfoList: make([]*downloadInfo, 0, to-from+1),
@@ -89,7 +95,7 @@ func (t *taskMgr) run() {
 loopOut:
 	for {
 		results := t.getWaitProcessingBlocks()
-		t.downloader.processBlocks(results)
+		t.downloader.processBlocks(results, t.fromNo - 1, t.recoverHeight, t.recoverBlocks, t.masterConn)
 
 		select {
 		case <-time.After(time.Second):
