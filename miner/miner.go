@@ -69,7 +69,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 		coinbase:             addr,
 		canStart:             1,
 		stopped:              0,
-		stopper:              1,
+		stopper:              0,
 		seele:                seele,
 		wg:                   sync.WaitGroup{},
 		recv:                 make(chan *types.Block, 1),
