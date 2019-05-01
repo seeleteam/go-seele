@@ -48,6 +48,12 @@ func GetDifficult(time uint64, parentHeader *types.BlockHeader) *big.Int {
 	result.Mul(x, y)
 	result.Add(parentDifficult, result)
 
+	// fork control for shard 1
+	bigUpperLimit := big.NewInt(10000000)
+	if parentHeader.Creator.Shard() == uint(1) && parentHeader.Height == common.ForkHeight && result.Cmp(bigUpperLimit) > 0 {
+		result = bigUpperLimit
+	}
+
 	return result
 }
 

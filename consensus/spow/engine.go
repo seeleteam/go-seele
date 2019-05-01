@@ -94,7 +94,8 @@ func (engine *SpowEngine) Prepare(reader consensus.ChainReader, header *types.Bl
 
 func (engine *SpowEngine) Seal(reader consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
 
-	if block.Header.Height >= common.SecondForkHeight {
+	// fork control
+	if block.Header.Height >= common.SecondForkHeight || (block.Header.Creator.Shard() == uint(1) && block.Header.Height > common.ForkHeight) {
 		return engine.MSeal(reader, block, stop, results)
 	}
 
@@ -380,7 +381,7 @@ func (engine *SpowEngine) VerifyHeader(reader consensus.ChainReader, header *typ
 		return err
 	}
 
-	if header.Height >= common.SecondForkHeight {
+	if header.Height >= common.SecondForkHeight || (header.Creator.Shard() == uint(1) && header.Height > common.ForkHeight) {
 		if err := engine.verifyTarget(header); err != nil {
 			return err
 		}
