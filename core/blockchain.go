@@ -92,7 +92,7 @@ type Blockchain struct {
 
 // NewBlockchain returns an initialized blockchain with the given store and account state DB.
 func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Database, recoveryPointFile string, engine consensus.Engine,
-	verifier types.DebtVerifier) (*Blockchain, error) {
+	verifier types.DebtVerifier, startHeight int) (*Blockchain, error) {
 	bc := &Blockchain{
 		bcStore:        bcStore,
 		accountStateDB: accountStateDB,
@@ -126,9 +126,19 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 
 	// Get the HEAD block from store
-	currentHeaderHash, err := bcStore.GetHeadBlockHash()
-	if err != nil {
-		return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
+	var currentHeaderHash common.Hash
+	if startHeight == -1 {
+		currentHeaderHash, err = bcStore.GetHeadBlockHash()
+		if err != nil {
+			return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
+		}
+	} else { 
+		// start from a specified height
+		curHeight := uint64(startHeight)
+		currentHeaderHash, err = bcStore.GetBlockHash(curHeight)
+		if err != nil {
+			return nil, errors.NewStackedError(err, "failed to get block hash at the specified height")
+		}
 	}
 
 	currentBlock, err := bcStore.GetBlock(currentHeaderHash)

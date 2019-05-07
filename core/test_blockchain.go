@@ -37,7 +37,7 @@ func NewTestBlockchainWithVerifier(verifier types.DebtVerifier) *Blockchain {
 		panic(err)
 	}
 
-	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), verifier)
+	bc, err := NewBlockchain(bcStore, db, "", pow.NewEngine(1), verifier, -1)
 	if err != nil {
 		panic(err)
 	}
