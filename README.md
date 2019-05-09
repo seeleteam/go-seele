@@ -18,7 +18,16 @@ The official Golang implementation of Seele. Seele blockchain is based on the Ne
 
 The current mainnet release: Seele mainchain is powered by a new memory-consuming consensus PoW algorithm, which records intermediate hash strings. [SPOW PAPER](https://medium.com/@SeeleTech/the-seele-pow-consensus-algorithm-7f99495b500f) The mainchain has four shards. It can perform transactions within a shard or crossing shards. However, smart contracts currently can be only executed within the same shard. Seele subchains are under development. The so called EDA consensus algorithm [EDA PAPER](http://seele.hk.ufileos.com/Seele_Yellow_Paper_EDA_A_Parallel_Data_Sorting_Mechanism_for_Distributed_Information_Processing_System_Pre-Release.pdf) from Seele will be utilized for the subchains.
 
-# Downloading & building the source
+# Downloading (without building)
+If you want to directly run the node and use client without setting up the compiling enviroment and building the executable files, you can choose right version to download and run:
+
+| Operation System |      Download Link     |
+|---------|----------------------------------------------------------|
+| Linux   | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
+| MacOs   | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
+| Windows | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
+
+# Or Downloading & Building the source
 
 Building the Seele project requires both a Go (version 1.7 or later) compiler and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
 
