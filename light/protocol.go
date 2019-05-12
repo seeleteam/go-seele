@@ -11,6 +11,7 @@ import (
 	rand2 "math/rand"
 	"sync"
 	"time"
+	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -19,6 +20,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
+	"github.com/seeleteam/go-seele/event"
 )
 
 const (
@@ -43,8 +45,11 @@ type BlockChain interface {
 	GetState(root common.Hash) (*state.Statedb, error)
 	GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error)
 	GetStore() store.BlockchainStore
+	GetHeadRollbackEventManager() *event.EventManager
 	CurrentHeader() *types.BlockHeader
 	WriteHeader(*types.BlockHeader) error
+	PutCurrentHeader(*types.BlockHeader) 
+	PutTd(*big.Int)
 }
 
 // TransactionPool define some interfaces related to add and get txs

@@ -36,6 +36,9 @@ type BlockchainStore interface {
 	// The input parameter isHead indicates if the header is a HEAD block header.
 	PutBlockHeader(hash common.Hash, header *types.BlockHeader, td *big.Int, isHead bool) error
 
+	// DeleteBlockHeader deletes the block header in light chains
+	DeleteBlockHeader(hash common.Hash) error
+
 	// GetBlockTotalDifficulty retrieves a block's total difficulty for the specified block hash.
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
 

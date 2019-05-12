@@ -111,6 +111,30 @@ func (store *cachedStore) PutBlockHeader(hash common.Hash, header *types.BlockHe
 	return err
 }
 
+// Delete block header
+func (store *cachedStore) DeleteBlockHeader(hash common.Hash) error {
+	// remove height-to-hash cache in canonical chain.
+	header, err := store.raw.GetBlockHeader(hash)
+	if err != nil {
+		return err
+	}
+
+	canonicalHash, err := store.GetBlockHash(header.Height)
+	if err != nil {
+		return err
+	}
+
+	if canonicalHash.Equal(hash) {
+		store.hashCache.Remove(header.Height)
+	}
+
+	// remove other caches: header, td and block
+	store.headerCache.Remove(hash)
+	store.tdCache.Remove(hash)
+
+	return store.raw.DeleteBlockHeader(hash)
+}
+
 // GetBlockTotalDifficulty retrieves a block's total difficulty for the specified block hash.
 func (store *cachedStore) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	if td, found := store.tdCache.Get(hash); found {

@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
@@ -588,7 +589,9 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 					}
 				}
 			}
-			conn.peer.DisconnectPeer("peerDownload anormaly")
+			if errors.IsOrContains(err, consensus.ErrBlockNonceInvalid) || errors.IsOrContains(err, consensus.ErrBlockDifficultInvalid) {
+				conn.peer.DisconnectPeer("peerDownload anormaly")
+			}
 			d.Cancel()
 			break
 		}

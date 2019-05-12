@@ -752,3 +752,16 @@ func (bc *Blockchain) GetShardNumber() (uint, error) {
 
 	return data.ShardNumber, nil
 }
+
+// The following functions are only supported in lightclient
+func (bc *Blockchain) PutCurrentHeader(header *types.BlockHeader) {
+	panic("Not Supported")
+}
+
+func (bc *Blockchain) PutTd(td *big.Int) {
+	panic("Not Supported")
+}
+
+func (bc *Blockchain) GetHeadRollbackEventManager() *event.EventManager {
+	panic("Not Supported")
+}
