@@ -159,7 +159,7 @@ func (pool *txPool) eventLoop() {
 		select {
 		case newHeader := <-pool.headerCh:
 			if err := pool.setNewHeader(newHeader); err != nil {
-				pool.log.Error(errors.NewStackedError(err, "failed to set new header").Error())
+				pool.log.Debug(errors.NewStackedError(err, "failed to set new header").Error())
 			}
 		}
 	}
