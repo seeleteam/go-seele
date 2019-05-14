@@ -229,8 +229,6 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 		return err
 	}
 
-	d.log.Info("ancestor: %d, peerHeight: %d, localHeight: %d", ancestor, height, localHeight)
-
 	d.log.Debug("Downloader.doSynchronise start task manager from height=%d, target height=%d master=%s", ancestor, height, d.masterPeer)
 	tm := newTaskMgr(d, d.masterPeer, conn, ancestor+1, height, localHeight, localBlocks)
 	d.tm = tm
