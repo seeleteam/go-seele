@@ -666,6 +666,12 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, er
 	}
 	blockIndex := core.NewBlockIndex(curBlock.HeaderHash, curBlock.Header.Height, currentTd)
 	d.chain.AddBlockLeaves(blockIndex)
+
+	// update head block hash
+	err = bcStore.PutHeadBlockHash(curHash)
+	if err != nil {
+		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to put head block: %v", curHash)
+	}
 	
 	return localHeight, localBlocks, nil
 
