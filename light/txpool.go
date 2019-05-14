@@ -36,10 +36,11 @@ type txPool struct {
 	headerCh                  chan *types.BlockHeader            // channel to receive new header in canonical chain.
 	currentHeader             *types.BlockHeader                 // current HEAD header in canonical chain.
 	headerChangedEventManager *event.EventManager
+	headRollbackEventManager  *event.EventManager
 	log                       *log.SeeleLog
 }
 
-func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManager *event.EventManager) *txPool {
+func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManager *event.EventManager, headRollbackEventManager *event.EventManager) *txPool {
 	pool := &txPool{
 		chain:                     chain,
 		odrBackend:                odrBackend,
@@ -49,10 +50,12 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManag
 		headerCh:                  make(chan *types.BlockHeader, headerChanBufSize),
 		currentHeader:             chain.CurrentHeader(),
 		headerChangedEventManager: headerChangedEventManager,
+		headRollbackEventManager:  headRollbackEventManager,
 		log: log.GetLogger("lightTxPool"),
 	}
 
 	headerChangedEventManager.AddAsyncListener(pool.onBlockHeaderChanged)
+	headRollbackEventManager.AddAsyncListener(pool.onBlockHeadRollback)
 
 	go pool.eventLoop()
 
@@ -136,6 +139,7 @@ func (pool *txPool) GetTxCount() int {
 
 func (pool *txPool) stop() {
 	pool.headerChangedEventManager.RemoveListener(pool.onBlockHeaderChanged)
+	pool.headRollbackEventManager.RemoveListener(pool.onBlockHeadRollback)
 	close(pool.headerCh)
 }
 
@@ -143,12 +147,19 @@ func (pool *txPool) onBlockHeaderChanged(e event.Event) {
 	pool.headerCh <- e.(*types.BlockHeader)
 }
 
+func (pool *txPool) onBlockHeadRollback(e event.Event) {
+	oldBlockHashes := e.([]common.Hash)
+	for _, blockHash := range oldBlockHashes {
+		pool.rollbackTxs(blockHash)
+	}
+}
+
 func (pool *txPool) eventLoop() {
 	for {
 		select {
 		case newHeader := <-pool.headerCh:
 			if err := pool.setNewHeader(newHeader); err != nil {
-				pool.log.Error(errors.NewStackedError(err, "failed to set new header").Error())
+				pool.log.Debug(errors.NewStackedError(err, "failed to set new header").Error())
 			}
 		}
 	}

@@ -8,7 +8,6 @@ package seele
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/seeleteam/go-seele/api"
@@ -87,7 +86,7 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 }
 
 // NewSeeleService create SeeleService
-func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine, verifier types.DebtVerifier) (s *SeeleService, err error) {
+func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine, verifier types.DebtVerifier, startHeight int) (s *SeeleService, err error) {
 	s = &SeeleService{
 		log:          log,
 		networkID:    conf.P2PConfig.NetworkID,
@@ -117,7 +116,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier, engine)
 
 	// initialize and validate genesis
-	if err = s.initGenesisAndChain(&serviceContext, conf); err != nil {
+	if err = s.initGenesisAndChain(&serviceContext, conf, startHeight); err != nil {
 		return nil, err
 	}
 
@@ -172,7 +171,7 @@ func (s *SeeleService) initDebtManagerDB(serviceContext *ServiceContext) (err er
 	return nil
 }
 
-func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config) (err error) {
+func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config, startHeight int) (err error) {
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
 	genesis := core.GetGenesis(&conf.SeeleConfig.GenesisConfig)
 
@@ -183,7 +182,7 @@ func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf 
 	}
 
 	recoveryPointFile := filepath.Join(serviceContext.DataDir, BlockChainRecoveryPointFile)
-	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile, s.miner.GetEngine(), s.debtVerifier); err != nil {
+	if s.chain, err = core.NewBlockchain(bcStore, s.accountStateDB, recoveryPointFile, s.miner.GetEngine(), s.debtVerifier, startHeight); err != nil {
 		s.Stop()
 		s.log.Error("failed to init chain in NewSeeleService. %s", err)
 		return err
@@ -265,19 +264,16 @@ func (s *SeeleService) Stop() error {
 
 	if s.chainDB != nil {
 		s.chainDB.Close()
-		os.RemoveAll(s.chainDBPath)
 		s.chainDB = nil
 	}
 
 	if s.accountStateDB != nil {
 		s.accountStateDB.Close()
-		os.RemoveAll(s.accountStateDBPath)
 		s.accountStateDB = nil
 	}
 
 	if s.debtManagerDB != nil {
 		s.debtManagerDB.Close()
-		os.RemoveAll(s.debtManagerDBPath)
 		s.debtManagerDB = nil
 	}
 

@@ -103,6 +103,13 @@ func (store *MemStore) PutBlockHeader(hash common.Hash, header *types.BlockHeade
 	return nil
 }
 
+func (store *MemStore) DeleteBlockHeader(hash common.Hash) error {
+	
+	delete(store.Blocks, hash)
+
+	return nil
+}
+
 func (store *MemStore) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	block := store.Blocks[hash]
 	if block == nil {

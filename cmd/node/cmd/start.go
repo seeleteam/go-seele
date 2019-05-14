@@ -38,6 +38,7 @@ var (
 	metricsEnableFlag   bool
 	accountsConfig      string
 	threads             int
+	startHeight         int
 
 	// default is full node
 	lightNode bool
@@ -136,7 +137,7 @@ var startCmd = &cobra.Command{
 			}
 
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, manager)
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, manager, startHeight)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -215,6 +216,7 @@ func init() {
 	startCmd.Flags().IntVarP(&threads, "threads", "", 1, "miner thread value")
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
+	startCmd.Flags().IntVarP(&startHeight, "startheight", "", -1, "the block height to start from")
 }
 
 func monitorPC() {
