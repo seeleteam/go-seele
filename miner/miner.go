@@ -45,7 +45,7 @@ type Miner struct {
 	mining   int32
 	canStart int32
 	stopped  int32
-
+	stopper  int32 // manually stop miner
 	wg       sync.WaitGroup
 	stopChan chan struct{}
 	current  *Task
@@ -69,6 +69,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 		coinbase:             addr,
 		canStart:             1,
 		stopped:              0,
+		stopper:              0,
 		seele:                seele,
 		wg:                   sync.WaitGroup{},
 		recv:                 make(chan *types.Block, 1),
@@ -150,6 +151,7 @@ func (miner *Miner) Start() error {
 func (miner *Miner) Stop() {
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
+	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
 
 	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
@@ -191,7 +193,7 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 		atomic.StoreInt32(&miner.canStart, 1)
 		atomic.StoreInt32(&miner.isFirstDownloader, 0)
 
-		if atomic.LoadInt32(&miner.stopped) == 0 {
+		if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
 			miner.log.Info("got download end event, start miner")
 			miner.Start()
 		}
