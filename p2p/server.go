@@ -252,7 +252,7 @@ func (srv *Server) connectNode(node *discovery.Node) {
 
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Info("failed to add new node. err=%s", err)
+		srv.log.Debug("failed to add new node. err=%s", err)
 	}
 }
 
@@ -375,7 +375,7 @@ func (srv *Server) doSelectNodeToConnect() {
 	}
 	
 
-	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
 
@@ -451,7 +451,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		return errors.New("Too many incoming connections")
 	}
 
-	srv.log.Info("setup connection with peer %s", dialDest)
+	srv.log.Debug("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
@@ -461,7 +461,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	sort.Sort(capsByNameAndVersion(caps))
 	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
-		srv.log.Info("failed to do handshake with peer %s, err info %s", dialDest, err)
+		srv.log.Debug("failed to do handshake with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}

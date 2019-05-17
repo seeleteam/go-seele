@@ -625,6 +625,12 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, er
 			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
 		}
 
+		// use last block as the temporary chain head
+		err = d.updateHeadInfo(curHeight - 1)
+		if err != nil {
+			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to update head info while reversing the chain")
+		}
+
 		// save the local blocks
 		localBlocks = append([]*types.Block{block}, localBlocks...)
 		
@@ -644,33 +650,40 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, er
 
 		curHeight--
 	}
+	
+	return localHeight, localBlocks, nil
+
+}
+
+func (d *Downloader) updateHeadInfo(height uint64) error {
+	bcStore := d.chain.GetStore()
+
 	// use the ancestor as currentBlock
-	curHash, err := bcStore.GetBlockHash(ancestor)
+	curHash, err := bcStore.GetBlockHash(height)
 	if err != nil {
-		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block hash by height %v", ancestor)
+		return err
 	}
 
 	curBlock, err := bcStore.GetBlock(curHash)
 	if err != nil {
-		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block by hash %v", curHash)
+		return err
 	}
-
-	d.chain.UpdateCurrentBlock(curBlock)
-	d.log.Debug("update current block: %d, hash: %v", curBlock.Header.Height, curBlock.HeaderHash)
-	// update blockLeaves
-	var currentTd *big.Int
-	if currentTd, err = bcStore.GetBlockTotalDifficulty(curBlock.HeaderHash); err != nil {
-		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block TD by hash %v", curBlock.HeaderHash)
-	}
-	blockIndex := core.NewBlockIndex(curBlock.HeaderHash, curBlock.Header.Height, currentTd)
-	d.chain.AddBlockLeaves(blockIndex)
 
 	// update head block hash
 	err = bcStore.PutHeadBlockHash(curHash)
 	if err != nil {
-		return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to put head block: %v", curHash)
+		return err
 	}
-	
-	return localHeight, localBlocks, nil
 
+	// update blockLeaves
+	var currentTd *big.Int
+	if currentTd, err = bcStore.GetBlockTotalDifficulty(curBlock.HeaderHash); err != nil {
+		return err
+	}
+	blockIndex := core.NewBlockIndex(curBlock.HeaderHash, curBlock.Header.Height, currentTd)
+	d.chain.AddBlockLeaves(blockIndex)
+	d.chain.UpdateCurrentBlock(curBlock)
+	d.log.Debug("update current block: %d, hash: %v", curBlock.Header.Height, curBlock.HeaderHash)
+	
+	return nil
 }

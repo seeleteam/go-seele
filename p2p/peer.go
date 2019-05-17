@@ -154,7 +154,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 
 func (p *Peer) notifyProtocolsAddPeer() {
 	p.wg.Add(len(p.protocolMap))
-	p.log.Info("notifyProtocolsAddPeer called, len(protocolMap)= %d, %s -> %s", len(p.protocolMap), p.LocalAddr(), p.RemoteAddr())
+	p.log.Debug("notifyProtocolsAddPeer called, len(protocolMap)= %d, %s -> %s", len(p.protocolMap), p.LocalAddr(), p.RemoteAddr())
 	for _, proto := range p.protocolMap {
 		go func(proto protocolRW) {
 			defer p.wg.Done()

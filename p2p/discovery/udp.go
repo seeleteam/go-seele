@@ -332,7 +332,7 @@ func (u *udp) loopReply() {
 				if p.deadline.Sub(time.Now()) <= 0 {
 					errorMsg := fmt.Sprintf("time out to wait for msg with msg type %s for node %s", codeToStr(p.code), p.from)
 					if p.code == pongMsgType {
-						u.log.Info(errorMsg)
+						u.log.Debug(errorMsg)
 					} else {
 						u.log.Debug(errorMsg)
 					}
@@ -520,7 +520,7 @@ func (u *udp) deleteNode(n *Node) {
 		u.log.Info("after delete node %s, total nodes:%d", n, u.db.size())
 		u.timeoutNodesCount.Remove(idStr)
 	} else {
-		u.log.Info("node %s got time out, current timeout count %d", n, count)
+		u.log.Debug("node %s got time out, current timeout count %d", n, count)
 		u.timeoutNodesCount.Set(idStr, count)
 	}
 }

@@ -190,9 +190,6 @@ func (lp *LightProtocol) syncer() {
 }
 
 func (lp *LightProtocol) synchronise(peers []*peer) {
-	if len(peers) == 0 {
-		return
-	}
 
 	hash, err := lp.chain.GetStore().GetHeadBlockHash()
 	if err != nil {
@@ -205,6 +202,21 @@ func (lp *LightProtocol) synchronise(peers []*peer) {
 		lp.log.Error("lp.synchronise GetBlockTotalDifficulty err.[%s]", err)
 		return
 	}
+
+	// print the light chain info
+	localCurHeader, err := lp.chain.GetStore().GetBlockHeader(hash)
+	if err != nil {
+		lp.log.Error("lp.synchronise GetHeadBlockHeader err.[%s]", err)
+		return
+	}
+
+	if len(peers) == 0 {
+		lp.log.Info("lightchain, shard: %d, local height: %d, no peer connected", lp.shard, localCurHeader.Height)
+		return
+	}
+
+	bestPeer := peers[0]
+	lp.log.Info("lightchain, shard: %d, local height: %d, best peer: %v, peer height: %d", lp.shard, localCurHeader.Height, bestPeer.peerID, bestPeer.headBlockNum)
 
 	for _, p := range peers {
 		_, pTd := p.Head()
