@@ -33,6 +33,7 @@ goto:eof
 
 :node
 echo on
+go get gonum.org/v1/gonum/mat
 go build -o ./build/node.exe ./cmd/node
 @echo "Done node building"
 @echo off
