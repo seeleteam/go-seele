@@ -235,6 +235,11 @@ func (d *Downloader) reverseLightBCstore(ancestor uint64) error {
 			return errors.NewStackedErrorf(err, "failed to get block hash by height %v", curHeight)
 		}
 
+		err = d.updateLightChainHeadInfo(curHeight - 1)
+		if err != nil {
+			return errors.NewStackedErrorf(err, "failed to update head: %v while reversing lightchain", hash)
+		}
+
 		// save the local blocks
 		localHashes = append([]common.Hash{hash}, localHashes...)
 
@@ -253,15 +258,17 @@ func (d *Downloader) reverseLightBCstore(ancestor uint64) error {
 
 	// rollback the txs in txpool
 	d.chain.GetHeadRollbackEventManager().Fire(localHashes)
-	
-	// use the ancestor as currentBlock
-	curHash, err := bcStore.GetBlockHash(ancestor)
+
+	return nil
+
+}
+
+func (d *Downloader) updateLightChainHeadInfo(height uint64) error {
+
+	bcStore := d.chain.GetStore()
+	curHash, err := bcStore.GetBlockHash(height)
 	if err != nil {
-		return errors.NewStackedErrorf(err, "failed to get block hash by height: %v", ancestor)
-	}
-	err = bcStore.PutHeadBlockHash(curHash)
-	if err != nil {
-		return errors.NewStackedErrorf(err, "failed to put head block: %v", curHash)
+		return errors.NewStackedErrorf(err, "failed to get block hash by height: %v", height)
 	}
 
 	curHeader, err := bcStore.GetBlockHeader(curHash)
@@ -272,10 +279,14 @@ func (d *Downloader) reverseLightBCstore(ancestor uint64) error {
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to get block td by hash: %v", curHash)
 	}
-	d.log.Debug("update current block header: %d, hash: %v, td: %d", ancestor, curHash, curTd)
+  
+	d.log.Debug("update current block header: %d, hash: %v, td: %d", height, curHash, curTd)
+	err = bcStore.PutHeadBlockHash(curHash)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to put head block: %v", curHash)
+	}
 	d.chain.PutTd(curTd)
 	d.chain.PutCurrentHeader(curHeader)
-	
-	return nil
 
+	return nil
 }
