@@ -35,7 +35,7 @@ const (
 	// Maximum number of peers that node actively connects to.
 	maxActiveConnsPerShard = 24
 
-	defaultDialTimeout = 15 * time.Second
+	defaultDialTimeout = 5 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
 	connWriteTimeout = 30 * time.Second
@@ -44,7 +44,7 @@ const (
 	frameReadTimeout = 30 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 8 * time.Second
+	checkConnsNumInterval = 30 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -179,7 +179,10 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
-
+	// add static nodes to srv node set;
+	for _, node:= range srv.StaticNodes {
+		srv.nodeSet.tryAdd(node)
+	}
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -246,13 +249,12 @@ func (srv *Server) connectNode(node *discovery.Node) {
 		if conn != nil {
 			conn.Close()
 		}
-
 		return
 	}
 
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Debug("failed to add new node. err=%s", err)
+		srv.log.Info("failed to add new node. err=%s", err)
 	}
 }
 
@@ -263,7 +265,7 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 
 func (srv *Server) checkPeerExist(id common.Address) bool {
 	srv.peerLock.Lock()
-	srv.peerLock.Unlock()
+	defer srv.peerLock.Unlock()
 
 	peer := srv.peerSet.find(id)
 	return peer != nil
@@ -341,6 +343,14 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	for _,node := range srv.StaticNodes {
+		if srv.checkPeerExist(node.ID) {
+			continue
+		}
+		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
+			srv.connectNode(node)
+		}
+	}
 	var node *discovery.Node
 	i := 0
 	for i < 30 {
@@ -375,7 +385,7 @@ func (srv *Server) doSelectNodeToConnect() {
 	}
 	
 
-	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
 
@@ -451,7 +461,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		return errors.New("Too many incoming connections")
 	}
 
-	srv.log.Debug("setup connection with peer %s", dialDest)
+	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
@@ -461,7 +471,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	sort.Sort(capsByNameAndVersion(caps))
 	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
-		srv.log.Debug("failed to do handshake with peer %s, err info %s", dialDest, err)
+		srv.log.Info("failed to do handshake with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
