@@ -198,6 +198,22 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 	return batch.Commit()
 }
 
+// DeleteBlockHeader deletes the block header of the specified block hash.
+func (store *blockchainDatabase) DeleteBlockHeader(hash common.Hash) error {
+	hashBytes := hash.Bytes()
+	batch := store.db.NewBatch()
+
+	// delete header, TD and receipts if any.
+	headerKey := hashToHeaderKey(hashBytes)
+	tdKey := hashToTDKey(hashBytes)
+	receiptsKey := hashToReceiptsKey(hashBytes)
+	if err := store.delete(batch, headerKey, tdKey, receiptsKey); err != nil {
+		return err
+	}
+
+	return batch.Commit()
+}
+
 // GetBlockTotalDifficulty gets the total difficulty of the block with the specified hash in the blockchain database
 func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error) {
 	tdBytes, err := store.db.Get(hashToTDKey(hash.Bytes()))

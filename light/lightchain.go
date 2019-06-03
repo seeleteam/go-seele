@@ -30,6 +30,7 @@ type LightChain struct {
 	currentHeader             *types.BlockHeader
 	canonicalTD               *big.Int
 	headerChangedEventManager *event.EventManager
+	headRollbackEventManager  *event.EventManager
 	log                       *log.SeeleLog
 }
 
@@ -39,6 +40,7 @@ func newLightChain(bcStore store.BlockchainStore, lightDB database.Database, odr
 		odrBackend: odrBackend,
 		engine:     engine,
 		headerChangedEventManager: event.NewEventManager(),
+		headRollbackEventManager: event.NewEventManager(),
 		log: log.GetLogger("LightChain"),
 	}
 
@@ -154,4 +156,17 @@ func (lc *LightChain) WriteHeader(header *types.BlockHeader) error {
 // GetCurrentState get current state
 func (lc *LightChain) GetCurrentState() (*state.Statedb, error) {
 	return lc.GetStateByRootAndBlockHash(lc.currentHeader.StateHash, lc.currentHeader.Hash())
+}
+
+
+func (lc *LightChain) GetHeadRollbackEventManager() *event.EventManager {
+	return lc.headRollbackEventManager
+}
+
+func (lc *LightChain) PutTd(td *big.Int) {
+	lc.canonicalTD = td
+}
+
+func (lc *LightChain) PutCurrentHeader(header *types.BlockHeader) {
+	lc.currentHeader = header
 }
