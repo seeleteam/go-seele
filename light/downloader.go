@@ -279,6 +279,7 @@ func (d *Downloader) updateLightChainHeadInfo(height uint64) error {
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to get block td by hash: %v", curHash)
 	}
+  
 	d.log.Debug("update current block header: %d, hash: %v, td: %d", height, curHash, curTd)
 	err = bcStore.PutHeadBlockHash(curHash)
 	if err != nil {

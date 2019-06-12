@@ -547,6 +547,7 @@ outLoop:
 		for {
 			select {
 			case <-d.cancelCh:
+				conn.peer.DisconnectPeer("peerDownload anormaly")
 				break outLoop
 			case <-conn.quitCh:
 				break outLoop
