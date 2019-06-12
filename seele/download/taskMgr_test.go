@@ -192,7 +192,7 @@ var (
 )
 
 func newTestTaskMgr(d *Downloader, db database.Database) *taskMgr {
-	taskMgr := newTaskMgr(d, masterPeer, from, to)
+	taskMgr := newTaskMgr(d, masterPeer, nil, from, to, uint64(0), nil)
 
 	return taskMgr
 }
