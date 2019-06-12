@@ -22,6 +22,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestSeeleBackend implements the SeeleBackend interface.
+type TestSeeleBackend struct {}
+
+func (seeleBackend *TestSeeleBackend) TxPool() *core.TransactionPool {
+	return nil
+} 	
+
+func (seeleBackend *TestSeeleBackend) DebtPool() *core.DebtPool {
+	return nil
+} 
+
+func NewTestSeeleBackend() *TestSeeleBackend {
+	seeleBackend := &TestSeeleBackend{}
+	return seeleBackend
+}
+
 func randomAccount(t *testing.T) (*ecdsa.PrivateKey, common.Address) {
 	privKey, keyErr := crypto.GenerateKey()
 	if keyErr != nil {
@@ -45,8 +61,9 @@ func newTestTx(t *testing.T, amount int64, nonce uint64) *types.Transaction {
 
 func newTestDownloader(db database.Database) *Downloader {
 	bc := core.NewTestBlockchain()
-	d := NewDownloader(bc)
-	d.tm = newTaskMgr(d, d.masterPeer, 1, 2)
+	seele := NewTestSeeleBackend()
+	d := NewDownloader(bc, seele)
+	d.tm = newTaskMgr(d, d.masterPeer, nil, 1, 2, 1, nil)
 
 	return d
 }
@@ -56,6 +73,8 @@ type TestPeer struct {
 	head  common.Hash
 	td    *big.Int // total difficulty
 }
+
+func (p *TestPeer) DisconnectPeer(reason string) {}
 
 // Head retrieves a copy of the current head hash and total difficulty.
 func (p *TestPeer) Head() (hash common.Hash, td *big.Int) {
@@ -545,7 +564,7 @@ func Test_Downloader_ProcessBlocks(t *testing.T) {
 	dl := newTestDownloader(db)
 
 	headInfos := []*downloadInfo{newDownloadInfo(1, taskStatusWaitProcessing)}
-	dl.processBlocks(headInfos)
+	dl.processBlocks(headInfos, 0, 0, nil, nil)
 	assert.Equal(t, headInfos[0].status, taskStatusWaitProcessing)
 }
 

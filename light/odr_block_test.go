@@ -17,6 +17,7 @@ import (
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/database/leveldb"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -110,6 +111,8 @@ type TestBlockChain struct{}
 
 func (chain *TestBlockChain) GetCurrentState() (*state.Statedb, error) { return nil, nil }
 
+func (chain *TestBlockChain) GetHeadRollbackEventManager() (*event.EventManager) { return nil}
+
 func (chain *TestBlockChain) GetState(root common.Hash) (*state.Statedb, error) { return nil, nil }
 
 func (chain *TestBlockChain) GetStateByRootAndBlockHash(root, blockHash common.Hash) (*state.Statedb, error) {
@@ -162,6 +165,10 @@ func newTestTx(amount, price, nonce uint64, sign bool) *types.Transaction {
 
 	return tx
 }
+
+func (chain *TestBlockChain) PutCurrentHeader(header *types.BlockHeader) {}
+
+func (chain *TestBlockChain) PutTd(td *big.Int) {}
 
 func randomAccount() (*ecdsa.PrivateKey, common.Address) {
 	privKey, keyErr := crypto.GenerateKey()

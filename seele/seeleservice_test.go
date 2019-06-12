@@ -41,7 +41,7 @@ func newTestSeeleService() *SeeleService {
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
 
-	seeleService, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil)
+	seeleService, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil, -1)
 	if err != nil {
 		panic(err)
 	}
