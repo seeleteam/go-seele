@@ -313,7 +313,7 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "txpool",
 			Version:   "1.0",
 			Service:   NewTransactionPoolAPI(s),
-			Public:    false,
+			Public:    true,
 		},
 	}...)
 
