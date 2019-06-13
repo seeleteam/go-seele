@@ -35,7 +35,7 @@ const (
 	// Maximum number of peers that node actively connects to.
 	maxActiveConnsPerShard = 24
 
-	defaultDialTimeout = 5 * time.Second
+	defaultDialTimeout = 15 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
 	connWriteTimeout = 30 * time.Second
@@ -44,7 +44,7 @@ const (
 	frameReadTimeout = 30 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 30 * time.Second
+	checkConnsNumInterval = 8 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -181,7 +181,10 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 	// add static nodes to srv node set;
 	for _, node:= range srv.StaticNodes {
-		srv.nodeSet.tryAdd(node)
+		if !node.ID.IsEmpty()  {
+			srv.nodeSet.tryAdd(node)
+		}
+
 	}
 	if err := srv.startListening(); err != nil {
 		return err
@@ -254,7 +257,7 @@ func (srv *Server) connectNode(node *discovery.Node) {
 
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
-		srv.log.Info("failed to add new node. err=%s", err)
+		srv.log.Debug("failed to add new node. err=%s", err)
 	}
 }
 
@@ -344,7 +347,7 @@ running:
 func (srv *Server) doSelectNodeToConnect() {
 
 	for _,node := range srv.StaticNodes {
-		if srv.checkPeerExist(node.ID) {
+		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
 		}
 		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
@@ -471,7 +474,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	sort.Sort(capsByNameAndVersion(caps))
 	recvMsg, _, err := srv.doHandShake(caps, peer, flags, dialDest)
 	if err != nil {
-		srv.log.Info("failed to do handshake with peer %s, err info %s", dialDest, err)
+		srv.log.Debug("failed to do handshake with peer %s, err info %s", dialDest, err)
 		peer.close()
 		return err
 	}
