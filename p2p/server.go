@@ -179,7 +179,13 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
+	// add static nodes to srv node set;
+	for _, node:= range srv.StaticNodes {
+		if !node.ID.IsEmpty()  {
+			srv.nodeSet.tryAdd(node)
+		}
 
+	}
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -246,7 +252,6 @@ func (srv *Server) connectNode(node *discovery.Node) {
 		if conn != nil {
 			conn.Close()
 		}
-
 		return
 	}
 
@@ -263,7 +268,7 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 
 func (srv *Server) checkPeerExist(id common.Address) bool {
 	srv.peerLock.Lock()
-	srv.peerLock.Unlock()
+	defer srv.peerLock.Unlock()
 
 	peer := srv.peerSet.find(id)
 	return peer != nil
@@ -341,6 +346,14 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	for _,node := range srv.StaticNodes {
+		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+			continue
+		}
+		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
+			srv.connectNode(node)
+		}
+	}
 	var node *discovery.Node
 	i := 0
 	for i < 30 {
@@ -375,7 +388,7 @@ func (srv *Server) doSelectNodeToConnect() {
 	}
 	
 
-	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
 
@@ -451,7 +464,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		return errors.New("Too many incoming connections")
 	}
 
-	srv.log.Debug("setup connection with peer %s", dialDest)
+	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
