@@ -83,22 +83,21 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if !rp.WritingBlockHash.IsEmpty() {
 		if err := bcStore.DeleteBlock(rp.WritingBlockHash); err != nil {
 			rpLog.Error("Failed to delete the crashed block, hash = %v, error = %v", rp.WritingBlockHash, err.Error())
-			return errors.NewStackedErrorf(err, "failed to delete block by hash %v", rp.WritingBlockHash)
+		} else {
+			rpLog.Info("the crashed block deleted successfully")
 		}
 
 		rp.WritingBlockHash = common.EmptyHash
 		saved = false
-		rpLog.Info("the crashed block deleted successfully")
 	}
 
 	// go on to delete larger height blocks from canonical chain.
 	if saved && rp.LargerHeight > 0 {
 		if err := DeleteLargerHeightBlocks(bcStore, rp.LargerHeight, nil); err != nil {
 			rpLog.Error("Failed to delete the larger height blocks in canonical chain, height = %v, error = %v", rp.LargerHeight, err.Error())
-			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", rp.LargerHeight)
+		} else {
+			rpLog.Info("the larger height blocks in canonical chain deleted successfully")
 		}
-
-		rpLog.Info("the larger height blocks in canonical chain deleted successfully")
 	}
 
 	rp.LargerHeight = 0
@@ -107,10 +106,9 @@ func (rp *recoveryPoint) recover(bcStore store.BlockchainStore) error {
 	if saved && !rp.StaleHash.IsEmpty() {
 		if err := OverwriteStaleBlocks(bcStore, rp.StaleHash, nil); err != nil {
 			rpLog.Error("Failed to overwrite the stale blocks in canonical chain, hash = %v, error = %v", rp.StaleHash, err.Error())
-			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", rp.StaleHash)
+		} else {
+			rpLog.Info("stale blocks in canonical chain overwrited successfully")
 		}
-
-		rpLog.Info("stale blocks in canonical chain overwrited successfully")
 	}
 
 	rp.StaleHash = common.EmptyHash
