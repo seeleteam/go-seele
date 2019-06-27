@@ -155,7 +155,9 @@ func quitCmd(address []byte, context *Context) ([]byte, error) {
 	if info != nil && !info.IsQuit {
 		info.IsQuit = true
 		info.QuitBlock = context.BlockHeader.Height
-		saveInfo(address, context.statedb, info)
+		if err := saveInfo(address, context.statedb, info); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil

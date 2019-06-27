@@ -248,7 +248,9 @@ func (s *stateObject) flush(trie Trie) error {
 
 	// Remove the account from state DB if suicided.
 	if s.suicided && !s.deleted {
-		trie.DeletePrefix(s.addrHash.Bytes())
+		if _, err := trie.DeletePrefix(s.addrHash.Bytes()); err != nil {
+			return err
+		}
 		s.deleted = true
 	}
 

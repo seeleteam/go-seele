@@ -136,8 +136,11 @@ func preprocessContract() (database.Database, *state.Statedb, store.BlockchainSt
 			return
 		}
 
-		db.PutString(KeyStateRootHash, hash.Hex())
+		err = db.PutString(KeyStateRootHash, hash.Hex())
 		db.Close()
+		if err != nil {
+			panic(err)
+		}
 	}, nil
 }
 

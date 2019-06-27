@@ -166,7 +166,7 @@ func nodeHash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch
 	switch n := node.(type) {
 	case *LeafNode:
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			n.Key,
 			n.Value,
 		})
@@ -174,7 +174,7 @@ func nodeHash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch
 		nexthash := nodeHash(n.NextNode, buf, sha, batch, dbPrefix)
 
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			true, //add it to diff with extension node;modify later using compact func?
 			n.Key,
 			nexthash,
@@ -186,7 +186,7 @@ func nodeHash(node noder, buf *bytes.Buffer, sha hash.Hash, batch database.Batch
 		}
 
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			children,
 		})
 	case hashNode:
@@ -222,7 +222,7 @@ func encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 	switch n := node.(type) {
 	case *LeafNode:
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			n.Key,
 			n.Value,
 		})
@@ -230,7 +230,7 @@ func encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 		nexthash := nodeHash(n.NextNode, buf, sha, nil, nil)
 
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			true, //add it to diff with extension node;modify later using compact func?
 			n.Key,
 			nexthash,
@@ -242,7 +242,7 @@ func encodeNode(node noder, buf *bytes.Buffer, sha hash.Hash) {
 		}
 
 		buf.Reset()
-		rlp.Encode(buf, []interface{}{
+		MustRlpEncode(buf, []interface{}{
 			children,
 		})
 	default:
@@ -642,4 +642,10 @@ func matchkeyLen(a, b []byte) int {
 		}
 	}
 	return i
+}
+
+func MustRlpEncode(w io.Writer, val interface{}) {
+	if err := rlp.Encode(w, val); err != nil {
+		panic(fmt.Sprintf("rlp encoding err: %v", err))
+	}
 }

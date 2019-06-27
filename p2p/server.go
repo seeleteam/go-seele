@@ -560,7 +560,10 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 	copy(handshakeMsg.NodeID[0:], nodeID[0:])
 	if flags == outboundConn {
 		// client side. Send msg first
-		binary.Read(rand.Reader, binary.BigEndian, &nounceCnt)
+		if err := binary.Read(rand.Reader, binary.BigEndian, &nounceCnt); err != nil {
+			return nil, 0, err
+		}
+		
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err
