@@ -499,6 +499,13 @@ func (c *Command) MarkFlagRequired(name string) error {
 	return MarkFlagRequired(c.Flags(), name)
 }
 
+func (c *Command) MustMarkFlagRequired(name string) {
+    err := MarkFlagRequired(c.Flags(), name)
+    if err != nil {
+        panic(fmt.Sprintf("an error in MarkFlagRequired: %v", err))
+    }
+}
+
 // MarkPersistentFlagRequired adds the BashCompOneRequiredFlag annotation to the named persistent flag, if it exists.
 func (c *Command) MarkPersistentFlagRequired(name string) error {
 	return MarkFlagRequired(c.PersistentFlags(), name)

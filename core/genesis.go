@@ -216,7 +216,10 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	statedb := getStateDB(genesis.info)
 
 	batch := accountStateDB.NewBatch()
-	statedb.Commit(batch)
+	if _, err := statedb.Commit(batch); err != nil {
+		return errors.NewStackedError(err, "failed to commit batch into statedb")
+	}
+	
 	if err := batch.Commit(); err != nil {
 		return errors.NewStackedError(err, "failed to commit batch into database")
 	}
