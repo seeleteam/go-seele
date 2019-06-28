@@ -139,6 +139,11 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		if err != nil {
 			return nil, errors.NewStackedError(err, "failed to get block hash at the specified height")
 		}
+
+		err = bcStore.PutHeadBlockHash(currentHeaderHash)
+		if err != nil {
+			return nil, errors.NewStackedError(err, "failed to update HEAD block hash")
+		}
 	}
 
 	currentBlock, err := bcStore.GetBlock(currentHeaderHash)
@@ -459,18 +464,7 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 		return ErrBlockExtraDataNotEmpty
 	}
 
-	// Do not write the block if already exists.
-	blockHash := header.Hash()
-	exist, err := bcStore.HasBlock(blockHash)
-	if err != nil {
-		return errors.NewStackedErrorf(err, "failed to check if block exists by hash %v", blockHash)
-	}
-
-	if exist {
-		return ErrBlockAlreadyExists
-	}
-
-	if err = engine.VerifyHeader(chainReader, header); err != nil {
+	if err := engine.VerifyHeader(chainReader, header); err != nil {
 		return errors.NewStackedError(err, "failed to verify header by consensus engine")
 	}
 

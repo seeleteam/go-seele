@@ -217,7 +217,7 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 
 	startCmd.Flags().StringVarP(&seeleNodeConfigFile, "config", "c", "", "seele node config file (required)")
-	startCmd.MarkFlagRequired("config")
+	startCmd.MustMarkFlagRequired("config")
 
 	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
 	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
@@ -258,7 +258,11 @@ func monitorPC() {
 					fmt.Println("monitor create heap file err:", err)
 					return
 				}
-				pprof.WriteHeapProfile(f)
+				err = pprof.WriteHeapProfile(f)
+				if err != nil {
+					fmt.Println("monitor write heap file err:", err)
+					return
+				}
 
 				profileFile := filepath.Join(profileDir, fmt.Sprint("cpu-", time.Now().Format("2006-01-02-15-04-05")))
 				cpuf, err := os.Create(profileFile)

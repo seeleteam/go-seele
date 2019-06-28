@@ -244,7 +244,9 @@ func (m *DebtManager) reinjectDebtFromDatabase() error {
 			}
 
 			// remove the debts from debt manager database
-			m.dmDB.Delete(key)
+			if err := m.dmDB.Delete(key); err != nil {
+				m.log.Debug("Failed to delete debts from database.")
+			}
 			m.blockHeights = m.blockHeights[1:]
 
 			// reinject debts to debt manager pool; if the debt manager 

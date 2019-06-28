@@ -39,7 +39,9 @@ func SaveFile(filePath string, content []byte) error {
 		return err
 	}
 
-	f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
 
 	return os.Rename(f.Name(), filePath)
 }

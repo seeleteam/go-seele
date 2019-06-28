@@ -26,13 +26,13 @@ func init() {
 	// Set account
 	setCmd.Flags().StringVarP(&account, "account", "a", "", "the account to set balance(Required)")
 	setCmd.Flags().Uint64VarP(&balance, "balance", "b", 0, "the balance of the account to set(Required)")
-	setCmd.MarkFlagRequired("account")
-	setCmd.MarkFlagRequired("balance")
+	setCmd.MustMarkFlagRequired("account")
+	setCmd.MustMarkFlagRequired("balance")
 	rootCmd.AddCommand(setCmd)
 
 	// Get account
 	getCmd.Flags().StringVarP(&account, "account", "a", "", "the account to get balance(Required)")
-	getCmd.MarkFlagRequired("account")
+	getCmd.MustMarkFlagRequired("account")
 	rootCmd.AddCommand(getCmd)
 }
 

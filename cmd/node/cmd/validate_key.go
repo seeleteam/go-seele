@@ -39,5 +39,5 @@ func init() {
 	rootCmd.AddCommand(validatekeyCmd)
 
 	privateKey = validatekeyCmd.Flags().StringP("key", "k", "", "private key")
-	validatekeyCmd.MarkFlagRequired("key")
+	validatekeyCmd.MustMarkFlagRequired("key")
 }
