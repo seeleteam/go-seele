@@ -6,6 +6,7 @@
 package p2p
 
 import (
+	"github.com/avadesian/scan-api/log"
 	"math/rand"
 	"sync"
 	"time"
@@ -20,18 +21,24 @@ type nodeItem struct {
 	bConnected bool // whether node is connected or not
 }
 
-// nodeSet is thread safe collection, contains all active nodes, wether it is connected or not
+// nodeSet is thread safe collection, contains all active nodes, weather it is connected or not
 type nodeSet struct {
 	lock    sync.RWMutex
 	nodeMap map[common.Address]*nodeItem
+	ipSet 	map[uint]map[string]uint
 }
 
 // NewNodeSet creates new nodeSet
 func NewNodeSet() *nodeSet {
 	rand.Seed(time.Now().UnixNano())
+	ipSet := make(map[uint]map[string]uint)
+	for i:=uint(1) ; i<= common.ShardCount; i++ {
+		ipSet[i] = make(map[string]uint)
+	}
 	return &nodeSet{
 		nodeMap: make(map[common.Address]*nodeItem),
 		lock:    sync.RWMutex{},
+		ipSet:   ipSet,
 	}
 }
 
@@ -55,13 +62,24 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 	if set.nodeMap[p.ID] != nil {
 		return
 	}
-
+	// Ignore node if nodes from same ip reach max limit
+	if set.ipSet != nil {
+		nodeCnt,_ := set.ipSet[p.Shard][p.IP.String()]
+		if nodeCnt > maxConnsPerShardPerIp {
+			log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%s",p)
+			return
+		}
+	}
 	item := &nodeItem{
 		node:       p,
 		bConnected: false,
 	}
-
 	set.nodeMap[p.ID] = item
+	if _,ok := set.ipSet[p.Shard][p.IP.String()]; ok {
+		set.ipSet[p.Shard][p.IP.String()]++
+	}else{
+		set.ipSet[p.Shard][p.IP.String()] = 1
+	}  // add ip count
 }
 
 func (set *nodeSet) delete(p *discovery.Node) {
@@ -69,6 +87,7 @@ func (set *nodeSet) delete(p *discovery.Node) {
 	defer set.lock.Unlock()
 
 	delete(set.nodeMap, p.ID)
+	set.ipSet[p.Shard][p.IP.String()]-- //update ip count
 }
 
 // randSelect select one node randomly from nodeMap which is not connected yet
