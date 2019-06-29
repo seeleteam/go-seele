@@ -6,7 +6,7 @@
 package p2p
 
 import (
-	"github.com/avadesian/scan-api/log"
+	"github.com/seeleteam/go-seele/log"
 	"math/rand"
 	"sync"
 	"time"
@@ -26,6 +26,7 @@ type nodeSet struct {
 	lock    sync.RWMutex
 	nodeMap map[common.Address]*nodeItem
 	ipSet 	map[uint]map[string]uint
+	log 	*log.SeeleLog
 }
 
 // NewNodeSet creates new nodeSet
@@ -66,7 +67,7 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 	if set.ipSet != nil {
 		nodeCnt,_ := set.ipSet[p.Shard][p.IP.String()]
 		if nodeCnt > maxConnsPerShardPerIp {
-			log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%s",p)
+			set.log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%s",p)
 			return
 		}
 	}
