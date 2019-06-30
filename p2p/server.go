@@ -53,6 +53,10 @@ const (
 
 	// Minimum recommended number of peers of one shard
 	minNumOfPeerPerShard = uint(2)
+
+	// maxConnectionsPerIp represents max connections that node from one ip can connect to.
+	// Reject connections if  ipSet[ip] > maxConnectionsPerIp.
+	maxConnsPerShardPerIp = uint(maxConnsPerShard/2)
 )
 
 // Config is the Configuration of p2p
@@ -149,6 +153,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		genesisHash:          hash,
 		maxConnections:       maxConnsPerShard * common.ShardCount,
 		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
+
 	}
 }
 
@@ -223,7 +228,6 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-
 	srv.nodeSet.tryAdd(node)
 	if srv.PeerCount() > srv.maxActiveConnections {
 		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
@@ -388,7 +392,7 @@ func (srv *Server) doSelectNodeToConnect() {
 	}
 	
 
-	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
 
@@ -464,7 +468,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		return errors.New("Too many incoming connections")
 	}
 
-	srv.log.Debug("setup connection with peer %s", dialDest)
+	srv.log.Info("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
@@ -506,6 +510,14 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}()
 
 	return nil
+}
+
+func (srv *Server) SetMaxConnections(maxConns int) {
+	srv.maxConnections = maxConns
+}
+
+func (srv *Server) SetMaxActiveConnections(maxActiveConns int) {
+	srv.maxActiveConnections = maxActiveConns
 }
 
 func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {

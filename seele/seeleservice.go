@@ -84,6 +84,8 @@ func (s *SeeleService) Miner() *miner.Miner { return s.miner }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
 }
+// P2PServer get p2pServer
+func (s *SeeleService) P2PServer() *p2p.Server { return s.p2pServer }
 
 // NewSeeleService create SeeleService
 func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine, verifier types.DebtVerifier, startHeight int) (s *SeeleService, err error) {
