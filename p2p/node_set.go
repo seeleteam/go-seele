@@ -33,7 +33,7 @@ type nodeSet struct {
 func NewNodeSet() *nodeSet {
 	rand.Seed(time.Now().UnixNano())
 	ipSet := make(map[uint]map[string]uint)
-	for i:=uint(1) ; i<= common.ShardCount; i++ {
+	for i := uint(1); i <= common.ShardCount; i++ {
 		ipSet[i] = make(map[string]uint)
 	}
 	return &nodeSet{
@@ -67,7 +67,7 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 	if set.ipSet != nil {
 		nodeCnt,_ := set.ipSet[p.Shard][p.IP.String()]
 		if nodeCnt > maxConnsPerShardPerIp {
-			set.log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%s",p)
+			set.log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%v", p.String())
 			return
 		}
 	}
