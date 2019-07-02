@@ -53,6 +53,10 @@ const (
 
 	// Minimum recommended number of peers of one shard
 	minNumOfPeerPerShard = uint(2)
+
+	// maxConnectionsPerIp represents max connections that node from one ip can connect to.
+	// Reject connections if  ipSet[ip] > maxConnectionsPerIp.
+	maxConnsPerShardPerIp = uint(maxConnsPerShard/2)
 )
 
 // Config is the Configuration of p2p
@@ -149,6 +153,7 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		genesisHash:          hash,
 		maxConnections:       maxConnsPerShard * common.ShardCount,
 		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
+
 	}
 }
 
@@ -179,7 +184,13 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
+	// add static nodes to srv node set;
+	for _, node:= range srv.StaticNodes {
+		if !node.ID.IsEmpty()  {
+			srv.nodeSet.tryAdd(node)
+		}
 
+	}
 	if err := srv.startListening(); err != nil {
 		return err
 	}
@@ -217,7 +228,6 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-
 	srv.nodeSet.tryAdd(node)
 	if srv.PeerCount() > srv.maxActiveConnections {
 		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
@@ -246,7 +256,6 @@ func (srv *Server) connectNode(node *discovery.Node) {
 		if conn != nil {
 			conn.Close()
 		}
-
 		return
 	}
 
@@ -263,7 +272,7 @@ func (srv *Server) deleteNode(node *discovery.Node) {
 
 func (srv *Server) checkPeerExist(id common.Address) bool {
 	srv.peerLock.Lock()
-	srv.peerLock.Unlock()
+	defer srv.peerLock.Unlock()
 
 	peer := srv.peerSet.find(id)
 	return peer != nil
@@ -341,6 +350,14 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	for _,node := range srv.StaticNodes {
+		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+			continue
+		}
+		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
+			srv.connectNode(node)
+		}
+	}
 	var node *discovery.Node
 	i := 0
 	for i < 30 {
@@ -493,6 +510,14 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}()
 
 	return nil
+}
+
+func (srv *Server) SetMaxConnections(maxConns int) {
+	srv.maxConnections = maxConns
+}
+
+func (srv *Server) SetMaxActiveConnections(maxActiveConns int) {
+	srv.maxActiveConnections = maxActiveConns
 }
 
 func (srv *Server) peerIsValidate(recvMsg *ProtoHandShake) ([]Cap, bool) {
