@@ -50,7 +50,7 @@ var (
 	profileSize = uint64(1024 * 1024 * 1024 * 6)
 
 	maxConns 	= int(0)
-	maxActiveConns =int(0)
+	maxActiveConns = int(0)
 )
 
 // startCmd represents the start command

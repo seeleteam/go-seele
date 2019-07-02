@@ -230,7 +230,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 	srv.nodeSet.tryAdd(node)
 	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
+		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
 		return
 	}
 
@@ -392,7 +392,7 @@ func (srv *Server) doSelectNodeToConnect() {
 	}
 	
 
-	srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s", node.String())
+	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
 
@@ -468,7 +468,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		return errors.New("Too many incoming connections")
 	}
 
-	srv.log.Info("setup connection with peer %s", dialDest)
+	srv.log.Debug("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
 	var caps []Cap
 	for _, proto := range srv.Protocols {
