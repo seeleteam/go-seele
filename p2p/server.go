@@ -230,7 +230,7 @@ func (srv *Server) addNode(node *discovery.Node) {
 	}
 	srv.nodeSet.tryAdd(node)
 	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%s", node)
+		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
 		return
 	}
 
