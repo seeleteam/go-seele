@@ -40,6 +40,7 @@ func NewNodeSet() *nodeSet {
 		nodeMap: make(map[common.Address]*nodeItem),
 		lock:    sync.RWMutex{},
 		ipSet:   ipSet,
+		log:     log.GetLogger("nodeSet"),
 	}
 }
 
