@@ -33,6 +33,7 @@ type nodeSet struct {
 func NewNodeSet() *nodeSet {
 	rand.Seed(time.Now().UnixNano())
 	ipSet := make(map[uint]map[string]uint)
+
 	for i := uint(1); i <= common.ShardCount; i++ {
 		ipSet[i] = make(map[string]uint)
 	}
@@ -40,6 +41,7 @@ func NewNodeSet() *nodeSet {
 		nodeMap: make(map[common.Address]*nodeItem),
 		lock:    sync.RWMutex{},
 		ipSet:   ipSet,
+		log : log.GetLogger("p2p"),
 	}
 }
 
