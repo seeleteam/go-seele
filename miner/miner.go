@@ -128,7 +128,9 @@ func (miner *Miner) Start() error {
 	miner.stopChan = make(chan struct{})
 
 	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil)
+		if err := istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
+			panic(fmt.Sprintf("failed to start istanbul engine: %v", err))
+		}
 	}
 
 	// try to prepare the first block
@@ -155,7 +157,9 @@ func (miner *Miner) Stop() {
 	miner.stopMining()
 
 	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		istanbul.Stop()
+		if err := istanbul.Stop(); err != nil {
+			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
+		}
 	}
 }
 

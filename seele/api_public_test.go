@@ -34,7 +34,7 @@ func Test_PublicSeeleAPI(t *testing.T) {
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	dataDir := ctx.Value("ServiceContext").(ServiceContext).DataDir
 	log := log.GetLogger("seele")
-	ss, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil)
+	ss, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil, -1)
 	if err != nil {
 		t.Fatal()
 	}
@@ -123,7 +123,7 @@ func newTestAPI(t *testing.T, dbPath string) *PublicSeeleAPI {
 	var key interface{} = "ServiceContext"
 	ctx := context.WithValue(context.Background(), key, serviceContext)
 	log := log.GetLogger("seele")
-	ss, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil)
+	ss, err := NewSeeleService(ctx, conf, log, factory.MustGetConsensusEngine(common.Sha256Algorithm), nil, -1)
 	assert.Equal(t, err, nil)
 	return NewPublicSeeleAPI(ss)
 }

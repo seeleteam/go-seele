@@ -20,6 +20,8 @@ import (
 // TestDownloadPeer implements the inferace of Peer
 type TestDownloadPeer struct{}
 
+func (s TestDownloadPeer) DisconnectPeer(reason string) {}
+
 func (s TestDownloadPeer) Head() (common.Hash, *big.Int) {
 	return common.EmptyHash, nil
 }

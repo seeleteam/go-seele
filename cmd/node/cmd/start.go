@@ -48,6 +48,9 @@ var (
 
 	// profileSize is used to limit when need to collect profiles, set 6GB
 	profileSize = uint64(1024 * 1024 * 1024 * 6)
+
+	maxConns 	= int(0)
+	maxActiveConns = int(0)
 )
 
 // startCmd represents the start command
@@ -168,6 +171,12 @@ var startCmd = &cobra.Command{
 			}
 
 			err = seeleNode.Start()
+			if maxConns > 0 {
+				seeleService.P2PServer().SetMaxConnections(maxConns)
+			}
+			if maxActiveConns > 0 {
+				seeleService.P2PServer().SetMaxConnections(maxActiveConns)
+			}
 			if err != nil {
 				fmt.Printf("got error when start node: %s\n", err)
 				return
@@ -208,7 +217,7 @@ func init() {
 	rootCmd.AddCommand(startCmd)
 
 	startCmd.Flags().StringVarP(&seeleNodeConfigFile, "config", "c", "", "seele node config file (required)")
-	startCmd.MarkFlagRequired("config")
+	startCmd.MustMarkFlagRequired("config")
 
 	startCmd.Flags().StringVarP(&miner, "miner", "m", "start", "miner start or not, [start, stop]")
 	startCmd.Flags().BoolVarP(&metricsEnableFlag, "metrics", "t", false, "start metrics")
@@ -217,6 +226,8 @@ func init() {
 	startCmd.Flags().BoolVarP(&lightNode, "light", "l", false, "whether start with light mode")
 	startCmd.Flags().Uint64VarP(&pprofPort, "port", "", 0, "which port pprof http server listen to")
 	startCmd.Flags().IntVarP(&startHeight, "startheight", "", -1, "the block height to start from")
+	startCmd.Flags().IntVarP(&maxConns, "maxConns", "", 0, "node max connections")
+	startCmd.Flags().IntVarP(&maxActiveConns, "maxActiveConns", "", 0, "node max active connections")
 }
 
 func monitorPC() {
@@ -247,7 +258,11 @@ func monitorPC() {
 					fmt.Println("monitor create heap file err:", err)
 					return
 				}
-				pprof.WriteHeapProfile(f)
+				err = pprof.WriteHeapProfile(f)
+				if err != nil {
+					fmt.Println("monitor write heap file err:", err)
+					return
+				}
 
 				profileFile := filepath.Join(profileDir, fmt.Sprint("cpu-", time.Now().Format("2006-01-02-15-04-05")))
 				cpuf, err := os.Create(profileFile)

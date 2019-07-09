@@ -14,20 +14,20 @@
 | **Block**              | 100 KB block size, 10 seconds block time, ~6000 transactions per block                         |
 
 
-The official Golang implementation of Seele. Seele blockchain is based on the Neural Consensus protocol, which consists of a mainchain and subchains to form a heterogeneous forest multi-chain ecosystem when fully developed. [https://seele.pro](https://seele.pro)
+The official Golang implementation of Seele. Seele is an open source blockchain project which consists of advanced sharding technology and the innovative anti-asic MPoW consensus algorithm. [https://seele.pro](https://seele.pro)
 
-The current mainnet release: Seele mainchain is powered by a new memory-consuming consensus PoW algorithm, which records intermediate hash strings. [SPOW PAPER](https://medium.com/@SeeleTech/the-seele-pow-consensus-algorithm-7f99495b500f) The mainchain has four shards. It can perform transactions within a shard or crossing shards. However, smart contracts currently can be only executed within the same shard. Seele subchains are under development. The so called EDA consensus algorithm [EDA PAPER](http://seele.hk.ufileos.com/Seele_Yellow_Paper_EDA_A_Parallel_Data_Sorting_Mechanism_for_Distributed_Information_Processing_System_Pre-Release.pdf) from Seele will be utilized for the subchains.
+The current mainnet release: Seele mainchain is powered by a new anti-ASIC consensus PoW algorithm, which requires scientific calculation related to matrix. [MPOW PAPER](https://arxiv.org/abs/1905.04565) The mainchain has four shards. It can perform transactions within a shard or crossing shards. However, smart contracts currently can be only executed within the same shard. Seele subchains are under development. The so called EDA consensus algorithm [EDA PAPER](http://seele.hk.ufileos.com/Seele_Yellow_Paper_EDA_A_Parallel_Data_Sorting_Mechanism_for_Distributed_Information_Processing_System_Pre-Release.pdf) from Seele will be utilized for the subchains.
 
-# Downloading (without building)
+# Download (without building)
 If you want to directly run the node and use client without setting up the compiling enviroment and building the executable files, you can choose right version to download and run:
 
 | Operation System |      Download Link     |
 |---------|----------------------------------------------------------|
-| Linux   | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
-| MacOs   | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
-| Windows | [https://github.com/seeleteam/go-seele/releases/tag/v1.0.1]|
+| Linux   | [https://github.com/seeleteam/go-seele/releases]|
+| MacOs   | [https://github.com/seeleteam/go-seele/releases]|
+| Windows | [https://github.com/seeleteam/go-seele/releases]|
 
-# Or Downloading & Building the source
+# Or Download & Build the source
 
 Building the Seele project requires both a Go (version 1.7 or later) compiler and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
 
@@ -57,7 +57,7 @@ make all
 buildall.bat
 ```
 
-# Running Seele
+# Run Seele
 A simple version Seele mining tutorial: English-[SeeleMiningTutorial](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-MiningTutorial_Eng), 中文-[Seele挖矿教程中文简版](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-%E4%B8%AD%E6%96%87%E7%AE%80%E7%89%88%E6%8C%96%E7%9F%BF%E6%95%99%E7%A8%8B).
 
 For running a node, please refer to [Get Started](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html).

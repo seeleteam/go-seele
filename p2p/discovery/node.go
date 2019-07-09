@@ -162,15 +162,28 @@ func (n *Node) String() string {
 
 // UnmarshalText unmarshal json to node
 func (n *Node) UnmarshalText(json []byte) error {
-	node, err := NewNodeFromIP(string(json))
-	if err != nil {
-		return err
+	if strings.HasPrefix(string(json),nodeHeader) {
+		node, err := NewNodeFromString(string(json))
+		if err != nil {
+			return err
+		}
+		*n = *node
+		return nil
+	}else{
+		node, err := NewNodeFromIP(string(json))
+		if err != nil {
+			return err
+		}
+		*n = *node
+		return nil
 	}
-	*n = *node
-	return nil
+
+
 }
 
-// MarshalText marshal node to josn
+
+
+// MarshalText marshal node to json
 func (n Node) MarshalText() ([]byte, error) {
 	strIP := fmt.Sprintf("%s:%d", n.IP.String(), n.UDPPort)
 	return []byte(strIP), nil
