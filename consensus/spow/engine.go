@@ -17,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gonum.org/v1/gonum/mat"
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus"
@@ -26,6 +25,7 @@ import (
 	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/rpc"
+	"gonum.org/v1/gonum/mat"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 	baseHashPoolSize = uint64(100000)
 	// Hadamard's bound for the absolute determinant of an 𝑛×𝑛 0-1 matrix is {(n + 1)^[(n+1)/2]} / 2^n
 	maxDet30x30 = new(big.Int).Mul(big.NewInt(2), new(big.Int).Exp(big.NewInt(10), big.NewInt(13), big.NewInt(0)))
-	matrixDim = int(30)
+	matrixDim   = int(30)
 )
 
 type HashItem struct {
@@ -143,13 +143,13 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 	threads := engine.threads
 	segmentInterval := uint64(5000) * uint64(numOfBits.Int64())
 
-	hashArr := make([]uint64, uint64((threads + 4))*segmentInterval)
-	nonceArr := make([]uint64, uint64((threads + 4))*segmentInterval)
+	hashArr := make([]uint64, uint64((threads+4))*segmentInterval)
+	nonceArr := make([]uint64, uint64((threads+4))*segmentInterval)
 	LEN := uint64(uint64((threads + 4)) * segmentInterval)
 	once := &sync.Once{}
 	timestampBegin := time.Now().Unix()
 	bitsToNonceMap := make(map[uint64]uint64)
-	sizeOfBitsToNonceMap := len(hashArr) * 50 
+	sizeOfBitsToNonceMap := len(hashArr) * 50
 	refreshSize := 100000
 
 	var pend sync.WaitGroup
@@ -174,7 +174,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 			arrIndex = uint64(id) * segmentInterval
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-			if threadsID < uint64(threads - 1) || uint64(threads) == 1 {
+			if threadsID < uint64(threads-1) || uint64(threads) == 1 {
 				thisThreads := threadsID
 				if uint64(threads) == 1 {
 					for {
@@ -184,8 +184,8 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 						}
 
 						for nonce := uint64(0); nonce < segmentInterval; nonce++ {
-							arrIndex = uint64(threadsID) * segmentInterval + uint64(100) + nonce
-							Nonce := uint64(r.Int63n(int64(math.MaxUint64 / 2))) + nonce + thisThreads * segmentInterval
+							arrIndex = uint64(threadsID)*segmentInterval + uint64(100) + nonce
+							Nonce := uint64(r.Int63n(int64(math.MaxUint64/2))) + nonce + thisThreads*segmentInterval
 							header.Witness = []byte(strconv.FormatUint(Nonce, 10))
 							hash = header.Hash()
 							A = hash.Big()
@@ -203,12 +203,12 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 							return
 						}
 
-						for index := uint64(0); index < uint64(threads) * segmentInterval; index++ {
-							if index > uint64(len(hashArr)) - 2 {
+						for index := uint64(0); index < uint64(threads)*segmentInterval; index++ {
+							if index > uint64(len(hashArr))-2 {
 								engine.log.Debug("WRONG,%d,%d", index, len(hashArr))
 							}
 
-							if index > LEN - 1 {
+							if index > LEN-1 {
 								index = uint64(0)
 							}
 							Slice = hashArr[index]
@@ -232,12 +232,12 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 										for bitsKey, _ := range bitsToNonceMap {
 											if counter > refreshSize {
 												break
-											} 
+											}
 											delete(bitsToNonceMap, bitsKey)
 											counter++
 										}
 									}
-									bitsToNonceMap[Slice] = Nonce									
+									bitsToNonceMap[Slice] = Nonce
 								}
 							}
 						}
@@ -275,7 +275,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 				}
 			}
 
-			if threadsID == uint64(threads - 1) && int64(threads) > 1 {
+			if threadsID == uint64(threads-1) && int64(threads) > 1 {
 				thisThreads := threadsID
 				for {
 					Slice := uint64(0)
@@ -286,12 +286,12 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 						return
 					}
 
-					for index := uint64(0); index < uint64(thisThreads + 1) * segmentInterval; index++ {
-						if index > uint64(len(hashArr)) - 2 {
+					for index := uint64(0); index < uint64(thisThreads+1)*segmentInterval; index++ {
+						if index > uint64(len(hashArr))-2 {
 							engine.log.Debug("WRONG,%d,%d", index, len(hashArr))
 						}
 
-						if index > LEN - 1 {
+						if index > LEN-1 {
 							index = uint64(0)
 						}
 						Slice = hashArr[index]
@@ -316,7 +316,7 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 									for bitsKey, _ := range bitsToNonceMap {
 										if counter > refreshSize {
 											break
-										} 
+										}
 										delete(bitsToNonceMap, bitsKey)
 										counter++
 									}
@@ -342,7 +342,6 @@ func (engine *SpowEngine) startCollision(block *types.Block, results chan<- *typ
 	}
 	pend.Wait()
 }
-
 
 func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan struct{}, isNonceFound *int32, nonceA uint64, nonceB uint64, log *log.SeeleLog) {
 
@@ -390,7 +389,6 @@ func (engine *SpowEngine) VerifyHeader(reader consensus.ChainReader, header *typ
 			return err
 		}
 	}
-	
 
 	return nil
 }
@@ -438,11 +436,11 @@ func difficultyToNumOfBits(difficulty *big.Int, height uint64) *big.Int {
 
 	if height > uint64(common.ForkHeight) && numOfBits.Cmp(big.NewInt(int64(70))) > 0 {
 		numOfBits = big.NewInt(int64(70))
-	} 
+	}
 
 	if height <= uint64(common.ForkHeight) && numOfBits.Cmp(big.NewInt(int64(50))) > 0 {
 		numOfBits = big.NewInt(int64(50))
-	} 
+	}
 
 	if numOfBits.Cmp(big.NewInt(int64(1))) < 0 {
 		numOfBits = big.NewInt(int64(1))
@@ -524,13 +522,15 @@ miner:
 			hashInt.SetBytes(hash.Bytes())
 
 			// isBegining: fresh start or nonce reverse: make sure nonce verify is right
-			if nonce+uint64(dim) >= max || isBegining == true {
-				nonce = min
+			if isBegining == true { // there is no matrix yet
+				if nonce+uint64(dim) >= max { // reach out of tail, reverse
+					nonce = min
+				}
 				header.Witness = []byte(strconv.FormatUint(nonce, 10))
 				hash = header.Hash()
 				matrix = newMatrix(header, nonce, dim, log)
 				isBegining = false
-			} else { // matrix is already exist, just shift up rows by one and set last row
+			} else {
 				matrix = submatCopyByRow(header, matrix, 1, dim, nonce)
 				header.Witness = []byte(strconv.FormatUint(nonce-uint64(dim-1), 10))
 				hash = header.Hash()
@@ -558,7 +558,7 @@ miner:
 				break miner
 			}
 			// outage
-			if nonce == seed - 1 {
+			if nonce == seed-1 {
 				select {
 				case <-abort:
 					logAbort(log)
@@ -602,7 +602,7 @@ func getMiningTarget(difficulty *big.Int) *big.Int {
 }
 
 func getNonZeroCountTarget(matrixDim int) int {
-	return (256 - matrixDim) / 2 + matrixDim / 5
+	return (256-matrixDim)/2 + matrixDim/5
 }
 
 func newMatrix(headerTarget *types.BlockHeader, seedNonce uint64, dim int, log *log.SeeleLog) *mat.Dense {
@@ -639,7 +639,7 @@ func calDetmLoop(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
 	var nonZerosCount = int(0)
 	nonZeroCountTarget := getNonZeroCountTarget(dim)
 	submatrix := mat.NewDense(dim, dim, nil)
-	for i := 0; i < 256 - dim; i++ {
+	for i := 0; i < 256-dim; i++ {
 		submatrix = submatCopy(matrix, i, dim)
 
 		det := mat.Det(submatrix)
