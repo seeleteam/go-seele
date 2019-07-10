@@ -531,6 +531,9 @@ miner:
 				matrix = newMatrix(header, nonce, dim, log)
 				isBegining = false
 			} else {
+				if nonce+uint64(dim) >= max { // reach out of tail, reverse
+					nonce = min
+				}
 				matrix = submatCopyByRow(header, matrix, 1, dim, nonce)
 				header.Witness = []byte(strconv.FormatUint(nonce-uint64(dim-1), 10))
 				hash = header.Hash()
