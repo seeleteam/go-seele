@@ -1,4 +1,4 @@
-/**
+ /**
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
@@ -151,7 +151,7 @@ needQuit:
 				break needQuit
 			}
 
-			if counter >= len(headMsg.Hearders)-1 || counter >= 250 {
+			if counter >= len(headMsg.Hearders)-1 && counter >= 250 {
 				d.log.Debug("Downloader.doSynchronise, update ancestor! counter: %d, curHeight: %d， ancestor: %d", counter, curHeight, p.updatedAncestor)
 				d.lock.Lock()
 				if curHeight > p.updatedAncestor {
