@@ -54,11 +54,11 @@ type peer struct {
 	protocolManager *LightProtocol
 	rw              p2p.MsgReadWriter // the read write method for this peer
 
-	curSyncMagic  uint32
-	blockNumBegin uint64        // first block number of blockHashArr
-	blockHashArr  []common.Hash // block hashes that should be identical with remote server peer, and is only useful in client mode.
+	curSyncMagic    uint32
+	blockNumBegin   uint64        // first block number of blockHashArr
+	blockHashArr    []common.Hash // block hashes that should be identical with remote server peer, and is only useful in client mode.
 	updatedAncestor uint64
-	log           *log.SeeleLog
+	log             *log.SeeleLog
 }
 
 func idToStr(id common.Address) string {
@@ -289,7 +289,7 @@ func (p *peer) handleSyncHash(msg *HeaderHashSync) error {
 	}
 
 	lastBlockNum := p.blockNumBegin + uint64(len(p.blockHashArr)) - 1
-	if lastBlockNum == p.headBlockNum {
+	if lastBlockNum == p.headBlockNum { // already to the highest
 		// sync finished this round
 		p.curSyncMagic = 0
 		return nil
@@ -399,20 +399,21 @@ func (p *peer) handleAnnounce(msg *AnnounceBody) error {
 			if err != nil {
 				continue
 			}
-
+			// find the nearest sync point
 			if hash == msg.HeaderArr[idx] {
 				startNum, bMatch = height, true
-				if idx != (len(msg.HeaderArr)-1) && msg.BlockNumArr[idx+1] > height && (msg.BlockNumArr[idx+1]-height) > MaxGapForAnnounce {
+				if idx != 0 && (msg.BlockNumArr[idx-1]-height) > MaxGapForAnnounce {
 					// send announceRequest message because gap is big enough
-					return p.sendAnnounceQuery(p.curSyncMagic, height, msg.BlockNumArr[idx+1])
+					p.log.Debug("\n sendAnnounceQuery with begin %d, end %d", height, msg.BlockNumArr[idx-1])
+					return p.sendAnnounceQuery(p.curSyncMagic, height, msg.BlockNumArr[idx-1])
 				}
 				break
 			}
 		}
 
-		if p.headBlockNum-startNum < MinHashesCached {
+		if p.headBlockNum-startNum < MinHashesCached { // not enough
 			if p.headBlockNum > MinHashesCached {
-				startNum = p.headBlockNum - MinHashesCached
+				startNum = p.headBlockNum - MinHashesCached // in case softfork back by 256 for safty
 			} else {
 				startNum = uint64(0)
 			}
