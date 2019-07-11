@@ -32,6 +32,7 @@ var (
 	errModeNotMatch    = errors.New("server/client mode mismatch")
 	errGenesisNotMatch = errors.New("genesis hash mismatch")
 	errBlockNotFound   = errors.New("block not found")
+	errBlocksExist     = errors.New("peer sync hashArray already exit locally")
 )
 
 // PeerInfo represents a short summary of a connected peer.
@@ -132,6 +133,15 @@ func (p *peer) findAncestor() (uint64, error) {
 	}
 
 	chain := p.protocolManager.chain
+	lb, _ := chain.GetStore().GetBlockByHeight(p.blockNumBegin + uint64(len(p.blockHashArr)) - 1)
+	if lb != nil { // the highest height already exist locally
+		updatedAncestorOld := p.updatedAncestor
+		p.lock.Lock()
+		p.updatedAncestor = uint64(len(p.blockHashArr)-1) + p.blockNumBegin
+		p.lock.Unlock()
+		p.log.Info("findAncestor, peer's sync hashArray all exit locally, just updated updatedAncestor %d to hashArray end %d", updatedAncestorOld, p.updatedAncestor)
+		return 0, errBlocksExist
+	}
 	for idx := len(p.blockHashArr) - 1; idx >= 0; idx-- {
 		curNum, curHash := p.blockNumBegin+uint64(idx), p.blockHashArr[idx]
 		localBlock, err := chain.GetStore().GetBlockByHeight(curNum)
