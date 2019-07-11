@@ -32,7 +32,7 @@ var (
 	errModeNotMatch    = errors.New("server/client mode mismatch")
 	errGenesisNotMatch = errors.New("genesis hash mismatch")
 	errBlockNotFound   = errors.New("block not found")
-	errBlocksExist     = errors.New("peer sync hashArray already exit locally")
+	errBlocksExist     = errors.New("peer sync hashArray already exist locally")
 )
 
 // PeerInfo represents a short summary of a connected peer.
