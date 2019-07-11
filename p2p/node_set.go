@@ -6,6 +6,7 @@
 package p2p
 
 import (
+	"fmt"
 	"github.com/seeleteam/go-seele/log"
 	"math/rand"
 	"sync"
@@ -90,7 +91,12 @@ func (set *nodeSet) delete(p *discovery.Node) {
 	defer set.lock.Unlock()
 
 	delete(set.nodeMap, p.ID)
-	set.ipSet[p.Shard][p.IP.String()]-- //update ip count
+	if _,ok := set.ipSet[p.Shard][p.IP.String()]; ok{
+		set.ipSet[p.Shard][p.IP.String()]-- //update ip count
+	}else{
+		fmt.Println("no IP found to delete")
+	}
+
 }
 
 // randSelect select one node randomly from nodeMap which is not connected yet
