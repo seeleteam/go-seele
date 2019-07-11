@@ -133,22 +133,20 @@ func (p *peer) findAncestor() (uint64, error) {
 	}
 
 	chain := p.protocolManager.chain
-	lb, _ := chain.GetStore().GetBlockByHeight(p.blockNumBegin + uint64(len(p.blockHashArr)) - 1)
-	if lb != nil { // the highest height already exist locally
-		updatedAncestorOld := p.updatedAncestor
-		p.lock.Lock()
-		p.updatedAncestor = uint64(len(p.blockHashArr)-1) + p.blockNumBegin
-		p.lock.Unlock()
-		p.log.Info("findAncestor, peer's sync hashArray all exit locally, just updated updatedAncestor %d to hashArray end %d", updatedAncestorOld, p.updatedAncestor)
-		return 0, errBlocksExist
-	}
 	for idx := len(p.blockHashArr) - 1; idx >= 0; idx-- {
 		curNum, curHash := p.blockNumBegin+uint64(idx), p.blockHashArr[idx]
 		localBlock, err := chain.GetStore().GetBlockByHeight(curNum)
 		if err != nil {
 			continue
 		}
-
+		if idx == len(p.blockHashArr)-1 {
+			if localBlock.HeaderHash == curHash { // the highest height already exist locally
+				updatedAncestorOld := p.updatedAncestor
+				p.updatedAncestor = curNum
+				p.log.Info("findAncestor, peer's sync hashArray all exit locally, just updated updatedAncestor %d to hashArray end %d", updatedAncestorOld, p.updatedAncestor)
+				return 0, errBlocksExist
+			}
+		}
 		if localBlock.HeaderHash == curHash {
 			if curNum < p.updatedAncestor {
 				p.log.Debug("update Ancestor, from %d to %d", curNum, p.updatedAncestor)
