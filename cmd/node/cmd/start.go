@@ -175,7 +175,7 @@ var startCmd = &cobra.Command{
 				seeleService.P2PServer().SetMaxConnections(maxConns)
 			}
 			if maxActiveConns > 0 {
-				seeleService.P2PServer().SetMaxConnections(maxActiveConns)
+				seeleService.P2PServer().SetMaxActiveConnections(maxActiveConns)
 			}
 			if err != nil {
 				fmt.Printf("got error when start node: %s\n", err)
