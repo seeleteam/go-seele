@@ -1,4 +1,4 @@
-/**
+ /**
 *  @file
 *  @copyright defined in go-seele/LICENSE
  */
@@ -151,7 +151,7 @@ needQuit:
 				break needQuit
 			}
 
-			if counter >= len(headMsg.Hearders) - 1  && counter >= 250 {
+			if counter >= len(headMsg.Hearders)-1 && counter >= 250 {
 				d.log.Debug("Downloader.doSynchronise, update ancestor! counter: %d, curHeight: %d， ancestor: %d", counter, curHeight, p.updatedAncestor)
 				d.lock.Lock()
 				if curHeight > p.updatedAncestor {
@@ -209,10 +209,8 @@ func (d *Downloader) Terminate() {
 	d.wg.Wait()
 }
 
-
 // reverse the light chain back to the common ancestor of local light chain and peer chain
 func (d *Downloader) reverseLightBCstore(ancestor uint64) error {
-
 	bcStore := d.chain.GetStore()
 	localCurHash, err := bcStore.GetHeadBlockHash()
 	if err != nil {
@@ -220,13 +218,14 @@ func (d *Downloader) reverseLightBCstore(ancestor uint64) error {
 	}
 
 	localCurHeader, err := bcStore.GetBlockHeader(localCurHash)
+	d.log.Debug("lightchain START reverse local %d to Height: %d", localCurHeader.Height, ancestor)
 	if err != nil {
 		return err
 	}
 
 	localHeight := localCurHeader.Height
 	curHeight := localHeight
-	localHashes := make([]common.Hash, 0)	
+	localHashes := make([]common.Hash, 0)
 
 	for curHeight > ancestor {
 		hash, err := bcStore.GetBlockHash(curHeight)
@@ -279,7 +278,7 @@ func (d *Downloader) updateLightChainHeadInfo(height uint64) error {
 	if err != nil {
 		return errors.NewStackedErrorf(err, "failed to get block td by hash: %v", curHash)
 	}
-  
+
 	d.log.Debug("update current block header: %d, hash: %v, td: %d", height, curHash, curTd)
 	err = bcStore.PutHeadBlockHash(curHash)
 	if err != nil {
