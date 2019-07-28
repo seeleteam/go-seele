@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	errReadChain = errors.New("Load message from chain err")
+	errReadChain = errors.New("load message from chain err")
 )
 
 // BlockChain define some interfaces related to underlying blockchain
@@ -325,13 +325,20 @@ handler:
 		bNeedDeliverOdr := false
 		switch msg.Code {
 		case announceRequestCode:
+			lp.log.Debug("get announceRequestCode msg from %s,",peer.peerStrID )
 			var query AnnounceQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				lp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
 				break handler
 			}
-
+			//peer.protocolManager.peerSet.peerMap
+			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
+				break handler
+			}else{
+				lp.peerSet.peerLastRequestTimeMap[peer]=time.Now().Unix()
+			}
+			lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				lp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
@@ -351,6 +358,16 @@ handler:
 			}
 
 		case syncHashRequestCode:
+			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok {
+				fmt.Println("peer:",peer.peerStrID,"shard:",peer.Node.Shard,",timeSinceLastTime:",time.Now().Unix()-lastTime)
+			}else{
+				fmt.Println("peer:",peer.peerStrID,"shard:",peer.Node.Shard,",timeSinceLastTime: firstTime")
+			}
+
+			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
+				break handler
+			}
+			lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			var query HeaderHashSyncQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
@@ -377,6 +394,10 @@ handler:
 			}
 
 		case downloadHeadersRequestCode:
+			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
+				break handler
+			}
+			lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			var query DownloadHeaderQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {

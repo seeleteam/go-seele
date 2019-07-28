@@ -6,11 +6,10 @@
 package light
 
 import (
+	"github.com/seeleteam/go-seele/common"
 	"math/big"
 	"math/rand"
 	"sync"
-
-	"github.com/seeleteam/go-seele/common"
 )
 
 type peerFilter struct {
@@ -19,12 +18,14 @@ type peerFilter struct {
 
 type peerSet struct {
 	peerMap map[common.Address]*peer
+	peerLastRequestTimeMap map[*peer]int64
 	lock    sync.RWMutex
 }
 
 func newPeerSet() *peerSet {
 	ps := &peerSet{
 		peerMap: make(map[common.Address]*peer),
+		peerLastRequestTimeMap: make(map[*peer]int64),
 		lock:    sync.RWMutex{},
 	}
 
