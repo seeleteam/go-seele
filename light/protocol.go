@@ -283,6 +283,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	if lp.bServerMode {
 
 		magic := rand2.Uint32()
+		lp.log.Debug("handle new Peer sendAnnounce,peer:%s",newPeer.peerStrID)
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			lp.log.Debug("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
@@ -333,12 +334,13 @@ handler:
 				break handler
 			}
 			//peer.protocolManager.peerSet.peerMap
-			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
-				break handler
-			}else{
-				lp.peerSet.peerLastRequestTimeMap[peer]=time.Now().Unix()
-			}
+			//if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
+			//	break handler
+			//}else{
+			//	lp.peerSet.peerLastRequestTimeMap[peer]=time.Now().Unix()
+			//}
 			lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
+			lp.log.Debug("handleMsg announceRequestCode sendAnnounce,peer:%s",peer.peerStrID)
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				lp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
