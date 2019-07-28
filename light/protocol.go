@@ -367,6 +367,7 @@ handler:
 			}
 
 			if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
+				lp.log.Debug("syncHashRequestCode too many, not respond,peer:%s",peer.peerStrID)
 				break handler
 			}
 			lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
