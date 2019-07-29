@@ -66,6 +66,7 @@ type GenesisInfo struct {
 	Balance *big.Int `json:"balance"`
 }
 
+// NewGenesisInfo mainchain genesis block info constructor
 func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
 	consensus types.ConsensusType, validator []common.Address) *GenesisInfo {
 
@@ -87,6 +88,21 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
 		balance = big.NewInt(0)
 	}
+	return &GenesisInfo{
+		Accounts:        accounts,
+		Difficult:       difficult,
+		ShardNumber:     shard,
+		CreateTimestamp: timestamp,
+		Consensus:       consensus,
+		Validators:      validator,
+		Masteraccount:   masteraccount,
+		Balance:         balance,
+	}
+}
+
+//NewGenesisInfoSubchain subchain genesis block constructor
+func NewGenesisInfoSubchain(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
+	consensus types.ConsensusType, validator []common.Address, masteraccount common.Address, balance *big.Int) *GenesisInfo {
 	return &GenesisInfo{
 		Accounts:        accounts,
 		Difficult:       difficult,
@@ -219,7 +235,7 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	if _, err := statedb.Commit(batch); err != nil {
 		return errors.NewStackedError(err, "failed to commit batch into statedb")
 	}
-	
+
 	if err := batch.Commit(); err != nil {
 		return errors.NewStackedError(err, "failed to commit batch into database")
 	}
@@ -236,9 +252,9 @@ func getStateDB(info *GenesisInfo) *state.Statedb {
 
 	if info.ShardNumber == 1 {
 		info.Masteraccount, _ = common.HexToAddress("0xd9dd0a837a3eb6f6a605a5929555b36ced68fdd1")
-		info.Balance = big.NewInt(17500000000000000)	
+		info.Balance = big.NewInt(17500000000000000)
 		statedb.CreateAccount(info.Masteraccount)
-		statedb.SetBalance(info.Masteraccount, info.Balance)		
+		statedb.SetBalance(info.Masteraccount, info.Balance)
 	} else if info.ShardNumber == 2 {
 		info.Masteraccount, _ = common.HexToAddress("0xc71265f11acdacffe270c4f45dceff31747b6ac1")
 		info.Balance = big.NewInt(17500000000000000)
