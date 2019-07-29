@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"math/rand"
 	"sync"
-
 	"github.com/seeleteam/go-seele/common"
 )
 
@@ -18,14 +17,16 @@ type peerFilter struct {
 }
 
 type peerSet struct {
-	peerMap map[common.Address]*peer
-	lock    sync.RWMutex
+	peerMap                 map[common.Address]*peer
+	peerLastAnnounceTimeMap map[*peer]int64
+	lock                    sync.RWMutex
 }
 
 func newPeerSet() *peerSet {
 	ps := &peerSet{
-		peerMap: make(map[common.Address]*peer),
-		lock:    sync.RWMutex{},
+		peerMap:                 make(map[common.Address]*peer),
+		peerLastAnnounceTimeMap: make(map[*peer]int64),
+		lock:                    sync.RWMutex{},
 	}
 
 	return ps

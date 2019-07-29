@@ -53,8 +53,8 @@ type blockHeadersQuery struct {
 type blocksQuery struct {
 	Magic  uint32      // Magic number for request
 	Hash   common.Hash // Block hash from which to retrieve (excludes Height)
-	Number uint64      // Block hash from which to retrieve (excludes Hash)
-	Amount uint64      // Maximum number of headers to retrieve
+	Number uint64      // Block number from which to retrieve (excludes Hash)
+	Amount uint64      // Maximum number of blocks to retrieve
 }
 
 // newBlockHash is the network packet for the block announcements.

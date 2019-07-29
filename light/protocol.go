@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	errReadChain = errors.New("Load message from chain err")
+	errReadChain = errors.New("load message from chain err")
 )
 
 // BlockChain define some interfaces related to underlying blockchain
@@ -283,6 +283,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	if lp.bServerMode {
 
 		magic := rand2.Uint32()
+		lp.log.Debug("handle new Peer sendAnnounce,peer:%s",newPeer.peerStrID)
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			lp.log.Debug("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
@@ -325,13 +326,14 @@ handler:
 		bNeedDeliverOdr := false
 		switch msg.Code {
 		case announceRequestCode:
+			lp.log.Debug("get announceRequestCode msg from %s,",peer.peerStrID )
 			var query AnnounceQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				lp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
 				break handler
 			}
-
+			lp.log.Debug("handleMsg announceRequestCode sendAnnounce,peer:%s",peer.peerStrID)
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				lp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler

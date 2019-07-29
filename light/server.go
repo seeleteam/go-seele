@@ -79,6 +79,7 @@ func (pm *LightProtocol) chainHeaderChanged(e event.Event) {
 	pm.chainHeaderChangeCh <- newBlock.HeaderHash
 }
 
+// as light node server, when this node's chain header has changed, broadcast it to all light node client peers
 func (pm *LightProtocol) blockLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
@@ -92,12 +93,17 @@ needQuit:
 			peers := pm.peerSet.getPeers()
 			for _, p := range peers {
 				if p != nil {
+					if lastTime, ok := pm.peerSet.peerLastAnnounceTimeMap[p]; ok && (time.Now().Unix()-lastTime < 60 ) {
+						pm.log.Debug("blockLoop sendAnnounce cancelled,magic:%d,peer:%s",magic,p.peerStrID)
+						continue
+					}
+					pm.peerSet.peerLastAnnounceTimeMap[p] = time.Now().Unix()
+					pm.log.Debug("blockLoop sendAnnounce,magic:%d,peer:%s",magic,p.peerStrID)
 					err := p.sendAnnounce(magic, uint64(0), uint64(0))
 					if err != nil {
 						pm.log.Debug("blockLoop sendAnnounce err=%s", err)
 					}
 				}
-
 			}
 
 			pm.log.Debug("blockLoop head changed. ")
