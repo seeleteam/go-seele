@@ -333,13 +333,6 @@ handler:
 				lp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
 				break handler
 			}
-			//peer.protocolManager.peerSet.peerMap
-			//if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60*5 ) {
-			//	break handler
-			//}else{
-			//	lp.peerSet.peerLastRequestTimeMap[peer]=time.Now().Unix()
-			//}
-			//lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			lp.log.Debug("handleMsg announceRequestCode sendAnnounce,peer:%s",peer.peerStrID)
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				lp.log.Error("failed to sendAnnounce, quit! %s", err)
@@ -360,17 +353,6 @@ handler:
 			}
 
 		case syncHashRequestCode:
-			//if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok {
-			//	fmt.Println("peer:",peer.peerStrID,"shard:",peer.Node.Shard,",timeSinceLastTime:",time.Now().Unix()-lastTime)
-			//}else{
-			//	fmt.Println("peer:",peer.peerStrID,"shard:",peer.Node.Shard,",timeSinceLastTime: firstTime")
-			//}
-
-			//if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60 ) {
-			//	lp.log.Debug("syncHashRequestCode too many, not respond,peer:%s",peer.peerStrID)
-			//	//break handler
-			//}
-			//lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			var query HeaderHashSyncQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
@@ -397,11 +379,6 @@ handler:
 			}
 
 		case downloadHeadersRequestCode:
-			//if lastTime, ok := lp.peerSet.peerLastRequestTimeMap[peer]; ok && (time.Now().Unix()-lastTime < 60 ) {
-			//	lp.log.Debug("downloadHeadersRequestCode too many, not respond,peer:%s",peer.peerStrID)
-			//	//break handler
-			//}
-			//lp.peerSet.peerLastRequestTimeMap[peer] = time.Now().Unix()
 			var query DownloadHeaderQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
