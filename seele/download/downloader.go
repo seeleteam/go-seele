@@ -325,7 +325,7 @@ func (d *Downloader) findCommonAncestorHeight(conn *peerConn, height uint64) (ui
 		}
 
 		// Get peer block headers
-		headers, err := d.getPeerBlockHaders(conn, localTop, fetchCount)
+		headers, err := d.getPeerBlockHeaders(conn, localTop, fetchCount)
 		if err != nil {
 			return 0, err
 		}
@@ -376,7 +376,7 @@ func getFetchCount(maxFetchAncestry, cmpCount uint64) uint64 {
 	return fetchCount
 }
 
-func (d *Downloader) getPeerBlockHaders(conn *peerConn, localTop, fetchCount uint64) ([]*types.BlockHeader, error) {
+func (d *Downloader) getPeerBlockHeaders(conn *peerConn, localTop, fetchCount uint64) ([]*types.BlockHeader, error) {
 	magic := rand2.Uint32()
 	go conn.peer.RequestHeadersByHashOrNumber(magic, common.EmptyHash, localTop, int(fetchCount), true)
 

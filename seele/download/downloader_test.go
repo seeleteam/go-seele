@@ -356,7 +356,7 @@ func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
 	pc1 := newPeerConn(testPeer1, "masterPeer", nil)
 	pc1.peer = testPeer1
 	go func() {
-		headers, err := dl.getPeerBlockHaders(pc1, 0, 1)
+		headers, err := dl.getPeerBlockHeaders(pc1, 0, 1)
 		assert.Equal(t, err, nil)
 		assert.Equal(t, len(headers), 1)
 		assert.Equal(t, headers[0].PreviousBlockHash, common.StringToHash("PreviousBlockHash"))
@@ -377,7 +377,7 @@ func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
 	pc2 := newPeerConn(testPeer2, "masterPeer", nil)
 	pc2.peer = testPeer2
 	go func() {
-		headers, err := dl.getPeerBlockHaders(pc2, 0, 1)
+		headers, err := dl.getPeerBlockHeaders(pc2, 0, 1)
 		assert.Equal(t, err, errInvalidAncestor)
 		assert.Equal(t, len(headers), 0)
 	}()
@@ -394,7 +394,7 @@ func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
 	pc3 := newPeerConn(testPeer3, "masterPeer", nil)
 	pc3.peer = testPeer3
 	go func() {
-		headers, err := dl.getPeerBlockHaders(pc3, 0, 1)
+		headers, err := dl.getPeerBlockHeaders(pc3, 0, 1)
 		assert.Equal(t, err, errPeerQuit)
 		assert.Equal(t, len(headers), 0)
 	}()
@@ -406,7 +406,7 @@ func Test_Downloader_GetPeerBlockHaders(t *testing.T) {
 	pc4 := newPeerConn(testPeer4, "masterPeer", nil)
 	pc4.peer = testPeer4
 	go func() {
-		headers, err := dl.getPeerBlockHaders(pc4, 0, 1)
+		headers, err := dl.getPeerBlockHeaders(pc4, 0, 1)
 		assert.Equal(t, err, errReceivedQuitMsg)
 		assert.Equal(t, len(headers), 0)
 	}()
