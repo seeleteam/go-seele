@@ -165,5 +165,5 @@ func processContract(statedb *state.Statedb, bcStore store.BlockchainStore, tx *
 		BlockHeader: header,
 		BcStore:     bcStore,
 	}
-	return svm.Process(ctx)
+	return svm.Process(ctx, header.Height)
 }
