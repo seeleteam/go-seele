@@ -139,7 +139,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		}
 
 		for _, tx := range txs {
-			if err := tx.Validate(statedb); err != nil {
+			if err := tx.Validate(statedb, task.header.Height); err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
 				log.Error("failed to validate tx %s, for %s", tx.Hash.Hex(), err)
 				txsSize = txsSize - tx.Size()

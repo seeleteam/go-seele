@@ -56,7 +56,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
 		tx := obj.(*types.Transaction)
-		if err := tx.Validate(state); err != nil {
+		if err := tx.Validate(state, common.ThirdForkHeight); err != nil {
 			return errors.NewStackedError(err, "failed to validate tx")
 		}
 
