@@ -59,6 +59,8 @@ type peer struct {
 	blockNumBegin   uint64        // first block number of blockHashArr
 	blockHashArr    []common.Hash // block hashes that should be identical with remote server peer, and is only useful in client mode.
 	updatedAncestor uint64
+
+	lastAnnounceCodeTime int64
 	log             *log.SeeleLog
 }
 
@@ -78,6 +80,7 @@ func newPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, log *log.SeeleLog,
 		protocolManager: protocolManager,
 		log:             log,
 		updatedAncestor: uint64(0),
+		lastAnnounceCodeTime: int64(0),
 	}
 }
 
