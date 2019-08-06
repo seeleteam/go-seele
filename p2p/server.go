@@ -488,7 +488,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
-			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID")
+			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID:%s",peerNodeID)
 			peer.close()
 			return errors.New("not found nodeID in discovery database")
 		}
