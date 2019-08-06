@@ -11,7 +11,11 @@ import (
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/spf13/cobra"
+<<<<<<< HEAD
   "github.com/seeleteam/go-seele/common"
+=======
+    "github.com/seeleteam/go-seele/common"
+>>>>>>> 8f5c8622706088f68cfc19c5775f96277420d44f
 )
 
 var version bool
@@ -23,6 +27,7 @@ var rootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
+<<<<<<< HEAD
   Run: func(cmd *cobra.Command, args []string) {
       if version {
           fmt.Println("version is: " + common.SeeleNodeVersion)
@@ -30,6 +35,15 @@ var rootCmd = &cobra.Command{
           cmd.Help()
       }
   },
+=======
+    Run: func(cmd *cobra.Command, args []string) {
+        if version {
+            fmt.Println("version is: " + common.SeeleNodeVersion)
+        } else {
+            cmd.Help()
+        }
+    },
+>>>>>>> 8f5c8622706088f68cfc19c5775f96277420d44f
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -42,6 +56,10 @@ func Execute() {
 }
 
 func init() {
+<<<<<<< HEAD
   rootCmd.Flags().BoolVarP(&version, "version", "v", false, "print version")
+=======
+    rootCmd.Flags().BoolVarP(&version, "version", "v", false, "print version")
+>>>>>>> 8f5c8622706088f68cfc19c5775f96277420d44f
 	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("node"))
 }
