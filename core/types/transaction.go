@@ -330,7 +330,7 @@ func (tx *Transaction) ValidateState(statedb stateDB, height uint64) error {
 	}
 
 	if (height >= common.ThirdForkHeight) {
-		if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce <= accountNonce {
+		if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
 			return fmt.Errorf("nonce is too small, account:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.Hex(), tx.Data.AccountNonce, accountNonce)
 		}
 	} else {
