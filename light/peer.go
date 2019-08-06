@@ -315,7 +315,7 @@ func (p *peer) sendAnnounceQuery(magic uint32, begin uint64, end uint64) error {
 	}
 
 	buff := common.SerializePanic(query)
-	p.log.Debug("peer send [announceRequestCode] query with size %d byte", len(buff))
+	p.log.Debug("peer send [announceRequestCode] query with size %d byte,magic:%s, peer:%s", len(buff),magic,p.peerStrID)
 	return p2p.SendMessage(p.rw, announceRequestCode, buff)
 }
 
