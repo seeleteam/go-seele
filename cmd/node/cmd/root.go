@@ -11,8 +11,10 @@ import (
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/spf13/cobra"
+        "github.com/seeleteam/go-seele/common"
 )
 
+var version bool
 // rootCmd represents the base command called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "node",
@@ -21,6 +23,13 @@ var rootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+	if version {
+	    fmt.Println(common.SeeleNodeVersion)
+	  } else {
+	    cmd.Help()
+	  }
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -34,4 +43,6 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("node"))
+	rootCmd.Flags().BoolVarP(&version, "version", "v", false, "print version")
+
 }
