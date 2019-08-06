@@ -25,7 +25,7 @@ var rootCmd = &cobra.Command{
 	//	Run: func(cmd *cobra.Command, args []string) { },
 	Run: func(cmd *cobra.Command, args []string) {
 	if version {
-	    fmt.Println("version is: " + common.SeeleNodeVersion)
+	    fmt.Println(common.SeeleNodeVersion)
 	  } else {
 	    cmd.Help()
 	  }
