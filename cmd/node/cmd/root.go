@@ -42,6 +42,7 @@ func Execute() {
 }
 
 func init() {
-      rootCmd.Flags().BoolVarP(&version, "version", "v", false, "print version")
-      rootCmd.AddCommand(util.GetGenerateKeyPairCmd("node"))
+	rootCmd.AddCommand(util.GetGenerateKeyPairCmd("node"))
+	rootCmd.Flags().BoolVarP(&version, "version", "v", false, "print version")
+
 }
