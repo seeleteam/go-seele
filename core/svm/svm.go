@@ -63,15 +63,25 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 	}
 
 	if err != nil {
-		databaseAccountNonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
-		setNonce := databaseAccountNonce
-		if ctx.Tx.Data.AccountNonce >= databaseAccountNonce {
-			setNonce = ctx.Tx.Data.AccountNonce + 1
+		if height <= common.SmartContractNonceForkHeight {
+			fmt.Println("smart contract OLD logic")
+			ctx.Statedb.RevertToSnapshot(snapshot)
+			receipt.Failed = true
+			receipt.Result = []byte(err.Error())
+
+		} else {
+			fmt.Println("smart contract NEW logic")
+			databaseAccountNonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
+			setNonce := databaseAccountNonce
+			if ctx.Tx.Data.AccountNonce >= databaseAccountNonce {
+				setNonce = ctx.Tx.Data.AccountNonce + 1
+			}
+			ctx.Statedb.RevertToSnapshot(snapshot)
+			ctx.Statedb.SetNonce(ctx.Tx.Data.From, setNonce)
+			receipt.Failed = true
+			receipt.Result = []byte(err.Error())
 		}
-		ctx.Statedb.RevertToSnapshot(snapshot)
-		ctx.Statedb.SetNonce(ctx.Tx.Data.From, setNonce)
-		receipt.Failed = true
-		receipt.Result = []byte(err.Error())
+
 	}
 
 	// include the intrinsic gas
