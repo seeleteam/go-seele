@@ -538,7 +538,7 @@ func (bc *Blockchain) applyRewardAndRegularTxs(statedb *state.Statedb, rewardTx 
 	for i, tx := range regularTxs {
 		txIdx := i + 1
 
-		if err := tx.ValidateState(statedb); err != nil {
+		if err := tx.ValidateState(statedb, blockHeader.Height); err != nil {
 			return nil, errors.NewStackedErrorf(err, "failed to validate tx[%v] against statedb", txIdx)
 		}
 
@@ -564,7 +564,7 @@ func (bc *Blockchain) ApplyTransaction(tx *types.Transaction, txIndex int, coinb
 		BlockHeader: blockHeader,
 		BcStore:     bc.bcStore,
 	}
-	receipt, err := svm.Process(ctx)
+	receipt, err := svm.Process(ctx, blockHeader.Height)
 	if err != nil {
 		return nil, errors.NewStackedError(err, "failed to process tx via svm")
 	}

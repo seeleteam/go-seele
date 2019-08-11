@@ -28,9 +28,9 @@ type Context struct {
 }
 
 // Process the tx
-func Process(ctx *Context) (*types.Receipt, error) {
+func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 	// check the tx against the latest statedb, e.g. balance, nonce.
-	if err := ctx.Tx.ValidateState(ctx.Statedb); err != nil {
+	if err := ctx.Tx.ValidateState(ctx.Statedb, height); err != nil {
 		return nil, errors.NewStackedError(err, "failed to validate tx against statedb")
 	}
 

@@ -312,16 +312,16 @@ func (tx *Transaction) verifySignature() error {
 }
 
 // Validate validates all fields in tx.
-func (tx *Transaction) Validate(statedb stateDB) error {
+func (tx *Transaction) Validate(statedb stateDB, height uint64) error {
 	if err := tx.ValidateWithoutState(true, true); err != nil {
 		return err
 	}
 
-	return tx.ValidateState(statedb)
+	return tx.ValidateState(statedb, height)
 }
 
 // ValidateState validates state dependent fields in tx.
-func (tx *Transaction) ValidateState(statedb stateDB) error {
+func (tx *Transaction) ValidateState(statedb stateDB, height uint64) error {
 	fee := new(big.Int).Mul(tx.Data.GasPrice, new(big.Int).SetUint64(tx.Data.GasLimit))
 	cost := new(big.Int).Add(tx.Data.Amount, fee)
 
@@ -329,8 +329,14 @@ func (tx *Transaction) ValidateState(statedb stateDB) error {
 		return fmt.Errorf("balance is not enough, account:%s, balance:%v, amount:%v, fee:%v, cost:%v", tx.Data.From.Hex(), balance, tx.Data.Amount, fee, cost)
 	}
 
-	if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
-		return fmt.Errorf("nonce is too small, account:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.Hex(), tx.Data.AccountNonce, accountNonce)
+	if (height >= common.ThirdForkHeight) {
+		if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
+			return fmt.Errorf("nonce is too small, account:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.Hex(), tx.Data.AccountNonce, accountNonce)
+		}
+	} else {
+		if accountNonce := statedb.GetNonce(tx.Data.From); tx.Data.AccountNonce < accountNonce {
+			return fmt.Errorf("nonce is too small, account:%s, tx nonce:%d, state db nonce:%d", tx.Data.From.Hex(), tx.Data.AccountNonce, accountNonce)
+		}
 	}
 
 	return nil

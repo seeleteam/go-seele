@@ -34,7 +34,6 @@ type nodeSet struct {
 func NewNodeSet() *nodeSet {
 	rand.Seed(time.Now().UnixNano())
 	ipSet := make(map[uint]map[string]uint)
-
 	for i := uint(1); i <= common.ShardCount; i++ {
 		ipSet[i] = make(map[string]uint)
 	}

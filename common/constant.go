@@ -20,6 +20,9 @@ const (
 
 	// SeeleVersion Version number of Seele protocol
 	SeeleVersion uint = 1
+    
+	// SeeleVersion for simpler display
+	SeeleNodeVersion string = "v1.1.2"
 
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
@@ -38,6 +41,9 @@ const (
 
 	// ForkHeight after this height we change the content of block: hardFork
 	SecondForkHeight = 145000
+
+	// ForkHeight after this height we change the validation of tx: hardFork
+	ThirdForkHeight = 735000
 
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"
