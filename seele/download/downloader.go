@@ -221,6 +221,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 
 	ancestor, err := d.findCommonAncestorHeight(conn, height)
 	if err != nil {
+		conn.peer.DisconnectPeer("peerDownload anormaly")
 		return err
 	}
 

@@ -461,7 +461,7 @@ func (store *blockchainDatabase) batchDeleteIndices(batch database.Batch, blockH
 	for _, tx := range txs {
 		idx, err := store.GetTxIndex(tx.Hash)
 		if err != nil {
-			return err
+			continue
 		}
 
 		if idx.BlockHash.Equal(blockHash) {

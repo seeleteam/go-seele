@@ -341,7 +341,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 
 	currentTd := new(big.Int).Add(previousTd, block.Header.Difficulty)
 	blockIndex := NewBlockIndex(currentBlock.HeaderHash, currentBlock.Header.Height, currentTd)
-	isHead := bc.blockLeaves.IsBestBlockIndex(blockIndex)
+	isHead := true
 	auditor.Audit("succeed to prepare block index")
 
 	/////////////////////////////////////////////////////////////////
