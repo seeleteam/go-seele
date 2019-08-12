@@ -119,6 +119,15 @@ func (store *MemStore) GetBlockTotalDifficulty(hash common.Hash) (*big.Int, erro
 	return block.td, nil
 }
 
+func (store *MemStore) RecoverHeightToBlockMap(block *types.Block) error {
+	store.CanonicalBlocks[block.Header.Height] = block.HeaderHash
+
+	if err := store.AddIndices(block); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (store *MemStore) PutBlock(block *types.Block, td *big.Int, isHead bool) error {
 	storedBlock := store.Blocks[block.HeaderHash]
 	if storedBlock == nil {

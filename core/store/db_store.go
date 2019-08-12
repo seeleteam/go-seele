@@ -229,6 +229,18 @@ func (store *blockchainDatabase) GetBlockTotalDifficulty(hash common.Hash) (*big
 	return td, nil
 }
 
+func (store *blockchainDatabase) RecoverHeightToBlockMap(block *types.Block) error {
+	batch := store.db.NewBatch()
+	// add or update txs/debts indices of this block
+	store.batchAddIndices(batch, block.HeaderHash, block.Transactions, block.Debts)
+	// update height to hash map in the chain
+	hashBytes := block.HeaderHash.Bytes()
+	batch.Put(heightToHashKey(block.Header.Height), hashBytes)
+	return batch.Commit()
+}
+
+
+
 // PutBlock serializes the given block with the specified total difficulty into the blockchain database.
 // isHead indicates if the block is the header block
 func (store *blockchainDatabase) PutBlock(block *types.Block, td *big.Int, isHead bool) error {

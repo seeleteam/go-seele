@@ -152,6 +152,9 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	}
 	bc.currentBlock.Store(currentBlock)
 
+	// recover height-to-block mapping
+	bc.recoverHeightIndices()
+
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
 		return nil, errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", currentHeaderHash)
@@ -758,4 +761,40 @@ func (bc *Blockchain) PutTd(td *big.Int) {
 
 func (bc *Blockchain) GetHeadRollbackEventManager() *event.EventManager {
 	panic("Not Supported")
+}
+
+func (bc *Blockchain) recoverHeightIndices() {
+	curBlock := bc.CurrentBlock()
+	curHeight := curBlock.Header.Height
+	chainHeight := curHeight
+	curHash  := curBlock.Header.Hash()
+	numGetBlockByHeight := 0
+	numGetBlockByHash := 0
+	numIrrecoverable := 0
+	for curHeight > 0 {
+		bc.log.Info("checking blockchain database, height: %d", curHeight)
+		if curBlock, err := bc.bcStore.GetBlockByHeight(curHeight); err != nil {
+			bc.log.Error("height: %d, can't get block by height.", curHeight)
+			if curBlock, err = bc.bcStore.GetBlock(curHash); err != nil {
+				bc.log.Error("height: %d, can't get block by hash %v.", curHeight, curHash)
+				curHash = common.EmptyHash
+				numIrrecoverable++
+			} else {
+				// get block by hash successfully
+				// recover the heightToBlock map
+				bc.log.Info("height: %d, try to recover block by hash %v.", curHeight, curHash)
+				if err := bc.bcStore.RecoverHeightToBlockMap(curBlock); err != nil {
+					bc.log.Error("height: %d, can't recover block by hash %v.", curHeight, curHash)
+				}
+				curHash = curBlock.Header.PreviousBlockHash
+				numGetBlockByHash++
+			}
+		} else {
+			// get block by height successfully
+			curHash = curBlock.Header.PreviousBlockHash
+			numGetBlockByHeight++
+		}
+		curHeight--
+	}
+	bc.log.Info("Blockchain database checked, chainHeight: %d, numGetBlockByHeight: %d, numGetBlockByHash: %d, numIrrecoverable: %d", chainHeight, numGetBlockByHeight, numGetBlockByHash, numIrrecoverable)
 }

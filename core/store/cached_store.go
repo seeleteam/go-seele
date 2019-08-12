@@ -166,6 +166,15 @@ func (store *cachedStore) PutBlock(block *types.Block, td *big.Int, isHead bool)
 	return err
 }
 
+func (store *cachedStore) RecoverHeightToBlockMap(block *types.Block) error {
+	err := store.raw.RecoverHeightToBlockMap(block)
+	if err == nil {
+		store.hashCache.Add(block.Header.Height, block.HeaderHash)
+	}
+
+	return err
+}
+
 // GetBlock retrieves the block for the specified block hash.
 func (store *cachedStore) GetBlock(hash common.Hash) (*types.Block, error) {
 	if block, found := store.blockCache.Get(hash); found {
