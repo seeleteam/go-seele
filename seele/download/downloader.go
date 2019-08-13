@@ -611,12 +611,8 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, er
 	localBlocks := make([]*types.Block, 0)
 		
 	for curHeight > ancestor {
-		// delete blockleaves
-		if localHeight == curHeight {
-			d.chain.RemoveBlockLeaves(localCurBlock.HeaderHash)
-		}
+		
 		hash, err := bcStore.GetBlockHash(curHeight)
-
 		d.log.Debug("reverse curHeight: %d, hash: %v", curHeight, hash)
 		if err != nil {
 			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block hash by height %v", curHeight)
@@ -626,6 +622,9 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, []*types.Block, er
 		if err != nil {
 			return localHeight, localBlocks, errors.NewStackedErrorf(err, "failed to get block by hash %v", hash)
 		}
+
+		// delete blockleaves
+		d.chain.RemoveBlockLeaves(hash)
 
 		// use last block as the temporary chain head
 		err = d.updateHeadInfo(curHeight - 1)
