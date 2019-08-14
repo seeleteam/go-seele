@@ -764,6 +764,7 @@ func (bc *Blockchain) GetHeadRollbackEventManager() *event.EventManager {
 }
 
 func (bc *Blockchain) recoverHeightIndices() {
+	bc.log.Info("checking blockchain database...")
 	curBlock := bc.CurrentBlock()
 	curHeight := curBlock.Header.Height
 	chainHeight := curHeight
@@ -772,7 +773,7 @@ func (bc *Blockchain) recoverHeightIndices() {
 	numGetBlockByHash := 0
 	numIrrecoverable := 0
 	for curHeight > 0 {
-		bc.log.Info("checking blockchain database, height: %d", curHeight)
+		bc.log.Debug("checking blockchain database, height: %d", curHeight)
 		if curBlock, err := bc.bcStore.GetBlockByHeight(curHeight); err != nil {
 			bc.log.Error("height: %d, can't get block by height.", curHeight)
 			if curBlock, err = bc.bcStore.GetBlock(curHash); err != nil {

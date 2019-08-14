@@ -631,7 +631,6 @@ func (d *Downloader) reverseBCstore(ancestor uint64) (uint64, *big.Int, []*types
 		return localHeight, localTD, localBlocks, errTD
 	}
 	for curHeight > ancestor {
-
 		hash, err := bcStore.GetBlockHash(curHeight)
 		d.log.Debug("reverse curHeight: %d, hash: %v", curHeight, hash)
 		if err != nil {

@@ -20,9 +20,10 @@ const (
 
 	// SeeleVersion Version number of Seele protocol
 	SeeleVersion uint = 1
-    
+
 	// SeeleVersion for simpler display
-	SeeleNodeVersion string = "v1.1.3"
+
+	SeeleNodeVersion string = "v1.1.4"
 
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
@@ -54,7 +55,7 @@ const (
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
 
-	// spow miner algorithm 
+	// spow miner algorithm
 	SpowAlgorithm = "spow"
 
 	// BFT mineralgorithm
