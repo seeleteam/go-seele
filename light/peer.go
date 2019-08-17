@@ -149,7 +149,7 @@ func (p *peer) findAncestor() (uint64, error) {
 		}
 		if localBlock.HeaderHash == curHash {
 			if curNum < p.updatedAncestor {
-				p.log.Debug("update Ancestor, from %d to %d", curNum, p.updatedAncestor)
+				p.log.Debug("peer: %v, update Ancestor, from %d to %d", p.peerID.Hex(), curNum, p.updatedAncestor)
 				curNum = p.updatedAncestor
 			}
 			return curNum, nil
