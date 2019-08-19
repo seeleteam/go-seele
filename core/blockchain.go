@@ -153,7 +153,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc.currentBlock.Store(currentBlock)
 
 	// recover height-to-block mapping
-	bc.recoverHeightIndices()
+	// bc.recoverHeightIndices()
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
@@ -490,9 +490,12 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 	}
 
 	//validate debts
-	err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
-	if err != nil {
-		return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+	// fix the issue caused by forking from collapse database
+	if block.Height() > common.HeightRoof || block.Height() < common.HeightFloor {
+		err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
+		if err != nil {
+			return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+		}
 	}
 
 	// update debts

@@ -70,6 +70,10 @@ const (
 	// BlockPackInterval it's an estimate time.
 	BlockPackInterval = 15 * time.Second
 
+	// Height: fix the issue caused by forking from collapse database
+	HeightFloor = uint64(707989)
+	HeightRoof  = uint64(707996)
+
 	WindowsPipeDir = `\\.\pipe\`
 
 	defaultPipeFile = `\seele.ipc`
