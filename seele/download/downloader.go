@@ -589,11 +589,8 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 			currentTD, errTD := bcStore.GetBlockTotalDifficulty(currentBlock.HeaderHash)
 			d.log.Debug("localTD %d currenTD %d\n", localTD, currentTD)
 			d.log.Debug("localHeight(%d)> h.block.Header.Height-1(%d)? %t\n", localHeight, h.block.Header.Height-1, localHeight > h.block.Header.Height-1)
-			if errTD != nil && localTD.Cmp(currentTD) < 0 && localHeight > h.block.Header.Height-1 {
-				fmt.Println("reverse condition improved!")
-			}
-			if errTD != nil || localTD.Cmp(currentTD) > 0 { // should abonded this sync!
-				d.log.Info("abonded sync and start to reverse bcstore to ancestor=%d without saving localblocks", ancestor)
+			if errTD != nil || localTD.Cmp(currentTD) > 0 { // should abandon this sync!
+				d.log.Info("abandon sync and start to reverse bcstore to ancestor=%d without saving localblocks", ancestor)
 				_, _, _, err = d.reverseBCstore(ancestor)
 				if err != nil {
 					d.log.Error("failed to reverse synced blocks err=%s", err)
