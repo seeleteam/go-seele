@@ -132,7 +132,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 		if err != nil {
 			return nil, errors.NewStackedError(err, "failed to get HEAD block hash")
 		}
-	} else { 
+	} else {
 		// start from a specified height
 		curHeight := uint64(startHeight)
 		currentHeaderHash, err = bcStore.GetBlockHash(curHeight)
@@ -490,9 +490,12 @@ func (bc *Blockchain) applyTxs(block *types.Block, root common.Hash) (*state.Sta
 	}
 
 	//validate debts
-	err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
-	if err != nil {
-		return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+	// fix the issue caused by forking from collapse database
+	if block.Height() > common.HeightRoof || block.Height() < common.HeightFloor {
+		err = types.BatchValidateDebt(block.Debts, bc.debtVerifier)
+		if err != nil {
+			return nil, nil, errors.NewStackedError(err, "failed to batch validate debt")
+		}
 	}
 
 	// update debts
@@ -602,7 +605,7 @@ func (bc *Blockchain) ApplyDebtWithoutVerify(statedb *state.Statedb, d *types.De
 	if d.Fee().Sign() < 0 {
 		return types.ErrAmountNegative
 	}
-	
+
 	statedb.AddBalance(d.Data.Account, d.Data.Amount)
 	statedb.AddBalance(coinbase, d.Fee())
 
@@ -768,7 +771,7 @@ func (bc *Blockchain) recoverHeightIndices() {
 	curBlock := bc.CurrentBlock()
 	curHeight := curBlock.Header.Height
 	chainHeight := curHeight
-	curHash  := curBlock.Header.Hash()
+	curHash := curBlock.Header.Hash()
 	numGetBlockByHeight := 0
 	numGetBlockByHash := 0
 	numIrrecoverable := 0
