@@ -104,7 +104,10 @@ func (pool *Pool) SetLogLevel(level logrus.Level) {
 func (pool *Pool) loopCheckingPool() {
 	
 	for {
-		if pool.pendingQueue.count() > 0 {
+		pool.mutex.RLock()
+		pendingQueueCount := pool.pendingQueue.count()
+		pool.mutex.RUnlock()
+		if pendingQueueCount > 0 {
 			time.Sleep(10 * time.Second)
 		} else {
 			pool.removeObjects()

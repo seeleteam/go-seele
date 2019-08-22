@@ -20,9 +20,10 @@ const (
 
 	// SeeleVersion Version number of Seele protocol
 	SeeleVersion uint = 1
-    
+
 	// SeeleVersion for simpler display
-	SeeleNodeVersion string = "v1.1.4"
+
+	SeeleNodeVersion string = "v1.1.5"
 
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
@@ -54,7 +55,7 @@ const (
 	// Sha256Algorithm miner algorithm sha256
 	Sha256Algorithm = "sha256"
 
-	// spow miner algorithm 
+	// spow miner algorithm
 	SpowAlgorithm = "spow"
 
 	// BFT mineralgorithm
@@ -68,6 +69,10 @@ const (
 
 	// BlockPackInterval it's an estimate time.
 	BlockPackInterval = 15 * time.Second
+
+	// Height: fix the issue caused by forking from collapse database
+	HeightFloor = uint64(707989)
+	HeightRoof  = uint64(707996)
 
 	WindowsPipeDir = `\\.\pipe\`
 
