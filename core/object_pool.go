@@ -111,13 +111,13 @@ func (pool *Pool) loopCheckingPool() {
 			time.Sleep(10 * time.Second)
 		} else {
 			pool.removeObjects()
+			pool.mutex.Lock()
 			if len(pool.hashToTxMap) > 0 {
 				for _, poolTx := range pool.hashToTxMap {
-					pool.mutex.Lock()
 					pool.pendingQueue.add(poolTx)
-					pool.mutex.Unlock()
 				}
 			}
+			pool.mutex.Unlock()
 			time.Sleep(5 * time.Second)
 		}
 	}
