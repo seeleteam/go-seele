@@ -12,6 +12,8 @@ import (
 	rpc "github.com/seeleteam/go-seele/rpc"
 )
 
+// RemoteRPCQuest indicate wether this quest if from localhost or not
+
 // startRPC is a helper method to start all the various RPC endpoint during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
@@ -88,6 +90,11 @@ func (n *Node) startTCP(apis []rpc.API) error {
 				// Not closed, just some error; report and continue
 				n.log.Error("failed to accept RPC. err %s", err)
 				continue
+			}
+			n.log.Debug("RPC call from %v", conn)
+			connStr := conn.RemoteAddr().String()
+			if !strings.HasPrefix(connStr, "127.0.0.1") && !strings.HasPrefix(connStr, "localhost") {
+				handler.ChangeMinerRequestStatus()
 			}
 			go handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 		}
