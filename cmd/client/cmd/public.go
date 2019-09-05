@@ -94,7 +94,7 @@ func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, r
 		}
 
 		if namespace == "miner" {
-			if !strings.HasPrefix(addressValue, "127.0.0.1") {
+			if !strings.HasPrefix(addressValue, "127.0.0.1") && !strings.HasPrefix(addressValue, "localhost") {
 				return fmt.Errorf("miner methods only work for 127.0.0.1 (localhost)")
 			}
 		}

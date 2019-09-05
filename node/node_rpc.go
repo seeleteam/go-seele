@@ -91,8 +91,9 @@ func (n *Node) startTCP(apis []rpc.API) error {
 				n.log.Error("failed to accept RPC. err %s", err)
 				continue
 			}
+			n.log.Debug("RPC call from %v", conn)
 			connStr := conn.RemoteAddr().String()
-			if !strings.HasPrefix(connStr, "127.0.0.1") {
+			if !strings.HasPrefix(connStr, "127.0.0.1") && !strings.HasPrefix(connStr, "localhost") {
 				handler.ChangeMinerRequestStatus()
 			}
 			go handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
