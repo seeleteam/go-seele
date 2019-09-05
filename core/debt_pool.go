@@ -6,7 +6,6 @@
 package core
 
 import (
-	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -92,7 +91,7 @@ func (dp *DebtPool) DoMulCheckingDebt() error {
 	tmp := dp.toConfirmedDebts.getList()
 	len := len(tmp)
 	threads := runtime.NumCPU() / 2
-	fmt.Printf("use %d threads to validate debts\n", threads)
+	dp.log.Info("use %d threads to validate debts\n", threads)
 	// single thread for few CPU kernel or few txs to validate.
 	if threads <= 1 || len < threads {
 		for i := 0; i < len; i++ {
