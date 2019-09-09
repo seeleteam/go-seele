@@ -30,6 +30,9 @@ const (
 	// AddressLen length in bytes
 	AddressLen = 20
 
+	// AddressTypeSubChain SubChain Address
+	AddressTypeSubChain = AddressType(3)
+
 	// AddressTypeExternal is the address type for external account.
 	AddressTypeExternal = AddressType(1)
 
@@ -50,6 +53,9 @@ var MaxSystemContractAddress = BytesToAddress([]byte{4, 255})
 
 // Address we use public key as node id
 type Address [AddressLen]byte
+
+// SubChainAddress address used for subchain
+type SubChainAddress [AddressLen]byte
 
 // NewAddress converts a byte slice to a Address
 func NewAddress(b []byte) (Address, error) {
@@ -79,6 +85,20 @@ func PubKeyToAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) A
 	// set address type in the last 4 bits
 	addr[19] &= 0xF0
 	addr[19] |= byte(AddressTypeExternal)
+
+	return addr
+}
+
+func PubKeyToSubChainAddress(pubKey *ecdsa.PublicKey, hashFunc func(interface{}) Hash) Address {
+	buf := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+	hash := hashFunc(buf[1:]).Bytes()
+
+	var addr Address
+	copy(addr[:], hash[12:]) // use last 20 bytes of public key hash
+
+	// set address type in the last 4 bits
+	addr[19] &= 0xF0
+	addr[19] |= byte(AddressTypeSubChain)
 
 	return addr
 }

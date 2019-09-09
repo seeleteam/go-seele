@@ -97,7 +97,12 @@ func Test_Address_Type(t *testing.T) {
 
 	addr := PubKeyToAddress(&privKey.PublicKey, hashFunc)
 	assert.Equal(t, addr.Type(), AddressTypeExternal)
-
+	// subchain address test
+	subchainaddr := PubKeyToSubChainAddress(&privKey.PublicKey, hashFunc)
+	assert.Equal(t, subchainaddr.Type(), AddressTypeSubChain)
+	// subchain hex address test
+	subchainaddr2 := BytesToAddress([]byte{3})
+	assert.Equal(t, subchainaddr2.Type(), AddressTypeSubChain)
 	contractAddr := addr.CreateContractAddress(38, hashFunc)
 	assert.Equal(t, contractAddr.Type(), AddressTypeContract)
 
