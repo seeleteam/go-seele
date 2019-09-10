@@ -23,7 +23,7 @@ const (
 
 	// SeeleVersion for simpler display
 
-	SeeleNodeVersion string = "v1.1.5"
+	SeeleNodeVersion string = "v1.1.7"
 
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
@@ -45,6 +45,8 @@ const (
 
 	// ForkHeight after this height we change the validation of tx: hardFork
 	ThirdForkHeight = 735000
+
+	SmartContractNonceForkHeight = 1100000
 
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"

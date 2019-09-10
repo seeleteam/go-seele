@@ -6,7 +6,6 @@
 package svm
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -56,7 +55,7 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 	} else { // evm
 		receipt, err = processEvmContract(ctx, leftOverGas)
 	}
-	fmt.Println("svm.go-59, receipt.result", receipt.Result)
+	// fmt.Println("svm.go-59, receipt.result", receipt.Result)
 	// account balance is not enough (account.balance < tx.amount)
 	if err == vm.ErrInsufficientBalance {
 		return nil, revertStatedb(ctx.Statedb, snapshot, err)
@@ -64,13 +63,13 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 
 	if err != nil {
 		if height <= common.SmartContractNonceForkHeight {
-			fmt.Println("smart contract OLD logic")
+			// fmt.Println("smart contract OLD logic")
 			ctx.Statedb.RevertToSnapshot(snapshot)
 			receipt.Failed = true
 			receipt.Result = []byte(err.Error())
 
 		} else {
-			fmt.Println("smart contract NEW logic")
+			// fmt.Println("smart contract NEW logic")
 			databaseAccountNonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
 			setNonce := databaseAccountNonce
 			if ctx.Tx.Data.AccountNonce >= databaseAccountNonce {
@@ -180,21 +179,21 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 	caller := vm.AccountRef(ctx.Tx.Data.From)
 	var leftOverGas uint64
 
-	fmt.Println("ctx.Tx.Data.To.IsEmpty()?", ctx.Tx.Data.To.IsEmpty())
+	// fmt.Println("ctx.Tx.Data.To.IsEmpty()?", ctx.Tx.Data.To.IsEmpty())
 	if ctx.Tx.Data.To.IsEmpty() {
 		var createdContractAddr common.Address
-		fmt.Println("processEvmContract.go-168:before create accountNonce ", ctx.Tx.Data.AccountNonce)
+		// fmt.Println("processEvmContract.go-168:before create accountNonce ", ctx.Tx.Data.AccountNonce)
 		receipt.Result, createdContractAddr, leftOverGas, err = e.Create(caller, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 		if !createdContractAddr.IsEmpty() {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
-		fmt.Println("processEvmContract.go-173:after create accountNonce ", ctx.Tx.Data.AccountNonce)
+		// fmt.Println("processEvmContract.go-173:after create accountNonce ", ctx.Tx.Data.AccountNonce)
 	} else {
 		ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = e.Call(caller, ctx.Tx.Data.To, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 	}
 	receipt.UsedGas = gas - leftOverGas
-	fmt.Println("svm.go-183 processEVMContract [after Create] err: ", err)
+	// fmt.Println("svm.go-183 processEVMContract [after Create] err: ", err)
 	return receipt, err
 }
 
