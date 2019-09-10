@@ -26,7 +26,7 @@ func Test_Process_EVM(t *testing.T) {
 	ctx, err := newTestContext(big.NewInt(0))
 	assert.Equal(t, err, nil)
 
-	receipt, err := Process(ctx)
+	receipt, err := Process(ctx, ctx.BlockHeader.Height)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
 	assert.Equal(t, receipt.TxHash, ctx.Tx.CalculateHash())
@@ -60,7 +60,7 @@ func Test_Process_SysContract(t *testing.T) {
 	ctx.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
 	ctx.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 
-	receipt, err := Process(ctx)
+	receipt, err := Process(ctx, ctx.BlockHeader.Height)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, false, receipt.Failed)
 	assert.Equal(t, ctx.Tx.Hash, receipt.TxHash)
@@ -73,7 +73,7 @@ func Test_Process_SysContract(t *testing.T) {
 	ctx1.Tx.Data.AccountNonce++
 	ctx1.Tx.Data.Payload = append([]byte{system.CmdGetDomainNameOwner}, testBytes...) // 0x017365656c652e66616e
 
-	receipt1, err1 := Process(ctx1)
+	receipt1, err1 := Process(ctx1, ctx1.BlockHeader.Height)
 	assert.Equal(t, nil, err1)
 	assert.Equal(t, false, receipt1.Failed)
 	assert.Equal(t, ctx1.Tx.Hash, receipt1.TxHash)
@@ -89,7 +89,7 @@ func Test_Process_SysContract(t *testing.T) {
 
 	fromOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
 	toOriginalBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
-	receipt2, err2 := Process(ctx2)
+	receipt2, err2 := Process(ctx2, ctx2.BlockHeader.Height)
 	fromCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.From)
 	toCurrentBalance := ctx2.Statedb.GetBalance(ctx2.Tx.Data.To)
 	assert.Equal(t, nil, err2)
@@ -109,7 +109,7 @@ func Test_Process_CrossTransfer(t *testing.T) {
 	ctx.Tx.Data.To = *crypto.MustGenerateShardAddress(shardNum)
 	ctx.Tx.Data.Payload = nil
 	ctx.Tx.Hash = ctx.Tx.CalculateHash()
-	receipt, err := Process(ctx)
+	receipt, err := Process(ctx, ctx.BlockHeader.Height)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, receipt.Failed, false)
 	assert.Equal(t, receipt.TxHash, ctx.Tx.CalculateHash())
@@ -135,7 +135,7 @@ func Test_Process_CrossTransfer(t *testing.T) {
 func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	// get the tx total fee
 	ctx, _ := newTestContext(big.NewInt(1))
-	receipt, err := Process(ctx)
+	receipt, err := Process(ctx, ctx.BlockHeader.Height)
 	assert.Equal(t, err, nil)
 	totalFee := receipt.TotalFee
 
@@ -143,7 +143,7 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	ctx1, _ := newTestContext(big.NewInt(1))
 	balanceF1 := big.NewInt(0)
 	ctx1.Statedb.SetBalance(ctx1.Tx.Data.From, balanceF1)
-	receipt1, err1 := Process(ctx1)
+	receipt1, err1 := Process(ctx1, ctx1.BlockHeader.Height)
 	assert.NotNil(t, err1)
 	assert.Empty(t, receipt1)
 
@@ -153,7 +153,7 @@ func Test_Process_ErrInsufficientBalance(t *testing.T) {
 	intrGasFee := new(big.Int).Mul(intrGas, ctx2.Tx.Data.GasPrice)
 	balanceF2 := big.NewInt(0).Sub(big.NewInt(0).SetUint64(totalFee), intrGasFee)
 	ctx2.Statedb.SetBalance(ctx2.Tx.Data.From, balanceF2)
-	receipt2, err2 := Process(ctx2)
+	receipt2, err2 := Process(ctx2, ctx2.BlockHeader.Height)
 	assert.NotNil(t, err2)
 	assert.Empty(t, receipt2)
 
@@ -180,7 +180,7 @@ func Test_Process_ErrOutOfGas(t *testing.T) {
 	ctx, _ := newTestContext(big.NewInt(0))
 	balanceOri := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
 	ctx.Tx.Data.GasLimit = 0
-	receipt, err := Process(ctx)
+	receipt, err := Process(ctx, ctx.BlockHeader.Height)
 	assert.EqualError(t, err, types.ErrIntrinsicGas.Error())
 	assert.Nil(t, receipt)
 	balanceCur := ctx.Statedb.GetBalance(ctx.Tx.Data.From)
@@ -190,7 +190,7 @@ func Test_Process_ErrOutOfGas(t *testing.T) {
 	ctx1, _ := newTestContext(big.NewInt(0))
 	balanceOri1 := ctx1.Statedb.GetBalance(ctx1.Tx.Data.From)
 	ctx1.Tx.Data.GasLimit = ctx1.Tx.IntrinsicGas()
-	receipt1, err1 := Process(ctx1)
+	receipt1, err1 := Process(ctx1, ctx1.BlockHeader.Height)
 	assert.NoError(t, err1)
 	assert.NotNil(t, receipt1)
 	assert.Equal(t, receipt1.Failed, true)
@@ -206,7 +206,7 @@ func Test_Process_ErrOutOfGas(t *testing.T) {
 	ctx3.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
 	ctx3.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 	ctx3.Tx.Data.GasLimit = 0
-	receipt3, err3 := Process(ctx3)
+	receipt3, err3 := Process(ctx3, ctx3.BlockHeader.Height)
 	assert.EqualError(t, err3, types.ErrIntrinsicGas.Error())
 	assert.Nil(t, receipt3)
 	balanceCur3 := ctx3.Statedb.GetBalance(ctx3.Tx.Data.From)
@@ -218,7 +218,7 @@ func Test_Process_ErrOutOfGas(t *testing.T) {
 	ctx4.Tx.Data.Payload = append([]byte{system.CmdCreateDomainName}, testBytes...) // 0x007365656c652e66616e
 	ctx4.Tx.Data.To = system.DomainNameContractAddress                              // 0x0000000000000000000000000000000000000101
 	ctx4.Tx.Data.GasLimit = ctx4.Tx.IntrinsicGas()
-	receipt4, err4 := Process(ctx4)
+	receipt4, err4 := Process(ctx4, ctx4.BlockHeader.Height)
 	assert.NoError(t, err4)
 	assert.NotNil(t, receipt4)
 	assert.Equal(t, receipt4.Failed, true)
@@ -300,13 +300,13 @@ func Benchmark_CreateContract_EVM(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Process(ctx)
+		Process(ctx, ctx.BlockHeader.Height)
 	}
 }
 
 func Benchmark_CallContract_EVM(b *testing.B) {
 	ctx, _ := newTestContext(big.NewInt(0))
-	receipt, _ := Process(ctx)
+	receipt, _ := Process(ctx, ctx.BlockHeader.Height)
 	contractAddr := common.BytesToAddress(receipt.ContractAddress)
 
 	// Call contract tx: SimpleStorage.get(), it returns 5 as initialized in constructor.
@@ -316,6 +316,6 @@ func Benchmark_CallContract_EVM(b *testing.B) {
 	ctx.Tx = callContractTx
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Process(ctx)
+		Process(ctx, ctx.BlockHeader.Height)
 	}
 }
