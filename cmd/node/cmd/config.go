@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
@@ -32,6 +33,16 @@ func GetConfigFromFile(filepath string) (*util.Config, error) {
 
 	err = json.Unmarshal(buff, &config)
 	return &config, err
+}
+
+// Cast cast RPC address to 0.0.0.0
+// miner mehtods already have security-defence setting, 0.0.0.0 is ok (after mainnet matures and becomes stable, we can switch to 127.0.0.1)
+func Cast(conf *node.Config) {
+	endpoint := conf.BasicConfig.RPCAddr
+	pos := strings.LastIndex(endpoint, ":")
+	port := endpoint[pos+1:]
+	endpoint = "0.0.0.0:" + port
+	conf.BasicConfig.RPCAddr = endpoint
 }
 
 // LoadConfigFromFile gets node config from the given file
