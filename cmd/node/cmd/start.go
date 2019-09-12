@@ -49,7 +49,7 @@ var (
 	// profileSize is used to limit when need to collect profiles, set 6GB
 	profileSize = uint64(1024 * 1024 * 1024 * 6)
 
-	maxConns 	= int(0)
+	maxConns       = int(0)
 	maxActiveConns = int(0)
 )
 
@@ -68,7 +68,7 @@ var startCmd = &cobra.Command{
 			fmt.Printf("failed to reading the config file: %s\n", err.Error())
 			return
 		}
-
+		Cast(nCfg)
 		if !comm.LogConfiguration.PrintLog {
 			fmt.Printf("log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
 		}
