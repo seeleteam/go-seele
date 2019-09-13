@@ -128,7 +128,22 @@ func (c *core) handleCheckedMsg(msg *message, src bft.Verifier) error {
 	return errInvalidMessage
 }
 
-func (c *core) handleTimeoutMsg() {}
+func (c *core) handleTimeoutMsg() {
+	if !c.waitingForRoundChange {
+		maxRound := c.roundChangeSet.MaxRound(c.verSet.F() + 1)
+		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
+			c.sendRoundChange(maxRound)
+			return
+		}
+	}
+	lastProposal, _ := c.server.LastProposal()
+	if lastProposal != nil && lastProposal.Height() >= c.current.Sequence().Uint64() {
+		c.log.Info("round change timeout, catch up lastest sequence at height %d", lastProposal.Height())
+		c.startNewRound(common.Big0)
+	} else {
+		c.sendNextRoundChange()
+	}
+}
 
 func (c *core) handleFinalCommitted() error {
 	c.logger.Debug("Received a final committed proposal")
