@@ -16,7 +16,7 @@ type core struct {
 	config  *istanbul.Config
 	address common.Address
 	state   State
-	logger  *log.SeeleLog
+	log  *log.SeeleLog
 
 	backend               istanbul.Backend
 	events                *event.TypeMuxSubscription
@@ -67,19 +67,6 @@ func (c *core) sendCommit() {
 	c.broadcastCommit(subject)
 }
 
-// broadcastCommit broadcast commit out
-func (c *core) broadcastCommit(sub *bft.Subject) {
-	encodedSubject, err := Encode(sub)
-	if err != nil {
-		c.logger.Error("Failed to encode. subject %v。 state %d", sub, c.state)
-		return
-	}
-	c.broadcast(&message{
-		Code: msgCommit,
-		Msg:  encodedSubject,
-	})
-}
-
 func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	// Decode->checkMessage->verifyCommit->acceptCommit->check state and commit
 	var commit *bft.Subject
@@ -96,17 +83,33 @@ func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	c.acceptCommit(msg, src)
 
 	// if we already have enough commit and meanwhile not in committed state-> commit!
-	if c.current.Commits.Size() > 2*c.valSet.F() && c.state.Cmp(StateCommitted) < 0 {
+	if c.current.Commits.Size() > 2*c.verSet.F() && c.state.Cmp(StateCommitted) < 0 {
+		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()
 	}
+
+	return nil
+}
+
+// broadcastCommit broadcast commit out
+func (c *core) broadcastCommit(sub *bft.Subject) {
+	encodedSubject, err := Encode(sub)
+	if err != nil {
+		c.log.Error("Failed to encode. subject %v。 state %d", sub, c.state)
+		return
+	}
+	c.broadcast(&message{
+		Code: msgCommit,
+		Msg:  encodedSubject,
+	})
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
 func (c *core) verifyCommit(commit *bft.Subject, src bft.Verifier) error {
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
-		c.logger.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
+		c.log.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
 		return errInconsistentSubject
 	}
 

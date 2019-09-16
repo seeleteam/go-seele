@@ -29,11 +29,15 @@ const (
 	StateCommitted
 )
 
-func (s *State) Cmp(t State) {
-	if uint64(s) < uint64(t) {
+// Cmp compares s and y and returns:
+//   -1 if s is the previous state of y
+//    0 if s and y are the same state
+//   +1 if s is the next state of y
+func (s State) Cmp(y State) int {
+	if uint64(s) < uint64(y) {
 		return -1
 	}
-	if uint64(s) > uint64(t) {
+	if uint64(s) > uint64(y) {
 		return 1
 	}
 	return 0
@@ -58,4 +62,12 @@ func (m *message) ValidatePayload(b []byte, validateFn func([]byte, []byte) (com
 	}
 	// Still return the message even the err is not nil
 	return err
+}
+
+func (m *message) Decode(val interface{}) error {
+	return rlp.DecodeBytes(m.Msg, val)
+}
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
 }

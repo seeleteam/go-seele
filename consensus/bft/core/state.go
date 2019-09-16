@@ -78,3 +78,20 @@ func (s *roundState) Round() *big.Int {
 
 	return s.round
 }
+
+func (s *roundState) Subject() *bft.Subject {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.Preprepare == nil {
+		return nil
+	}
+
+	return &bft.Subject{
+		View: &bft.View{
+			Round:    new(big.Int).Set(s.round),
+			Sequence: new(big.Int).Set(s.sequence),
+		},
+		Digest: s.Preprepare.Proposal.Hash(),
+	}
+}

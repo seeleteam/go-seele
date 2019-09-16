@@ -19,3 +19,14 @@ func (ms *messageSet) Size() int {
 	defer ms.messagesMu.Unlock()
 	return len(ms.messages)
 }
+
+func (ms *messageSet) Add(msg *message) error {
+	ms.messagesMu.Lock()
+	defer ms.messagesMu.Unlock()
+
+	if err := ms.verify(msg); err != nil {
+		return err
+	}
+
+	return ms.addVerifiedMessage(msg)
+}

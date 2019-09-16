@@ -10,6 +10,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/log"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 )
@@ -177,5 +178,24 @@ func (c *core) catchUpRound(view *bft.View) {
 func (c *core) stopFuturePreprepareTimer() {
 	if c.futurePreprepareTimer != nil {
 		c.futurePreprepareTimer.Stop()
+	}
+}
+
+func (c *core) commit() {
+	c.setState(StateCommitted)
+
+	proposal := c.current.Proposal()
+	if proposal != nil {
+		committedSeals := make([][]byte, c.current.Commits.Size())
+		for i, v := range c.current.Commits.Values() {
+			committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+			copy(committedSeals[i][:], v.CommittedSeal[:])
+		}
+
+		if err := c.backend.Commit(proposal, committedSeals); err != nil {
+			c.current.UnlockHash() //Unlock block when insertion fails
+			c.sendNextRoundChange()
+			return
+		}
 	}
 }
