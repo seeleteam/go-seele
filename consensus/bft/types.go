@@ -1,3 +1,7 @@
+/*
+types.go : types.go + events.go
+*/
+
 package bft
 
 import (

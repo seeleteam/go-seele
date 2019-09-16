@@ -13,6 +13,11 @@ const (
 	msgAll
 )
 
+type Engine interface {
+	Start() error
+	Stop() error
+}
+
 type message struct {
 	Code          uint64
 	Msg           []byte

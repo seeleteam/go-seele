@@ -52,6 +52,31 @@ type core struct {
 	consensusTimer metrics.Timer
 }
 
+func NewCore(server bft.Server, config *bft.BFTConfig) Engine {
+	c := &core{
+		config:             config,
+		address:            server.Address(),
+		state:              StateAcceptRequest,
+		handlerWg:          new(sync.WaitGroup),
+		log:                log.GetLogger("bft_core"),
+		server:             server,
+		backlogs:           make(map[common.Address]*prque.Prque),
+		backlogsMu:         new(sync.Mutex),
+		pendingRequests:    prque.New(),
+		pendingRequestsMu:  new(sync.Mutex),
+		consensusTimestamp: time.Time{},
+		roundMeter:         metrics.GetOrRegisterMeter("consensus/bft/core/round", nil),
+		sequenceMeter:      metrics.GetOrRegisterMeter("consensus/bft/core/sequence", nil),
+		consensusTimer:     metrics.GetOrRegisterTimer("consensus/bft/core/consensus", nil),
+	}
+	c.verifyFn = c.checkValidatorSignatore
+	return c
+}
+
+func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	return bft.CheckValidatorSignature(c.valSet, data, sig)
+}
+
 func (c *core) broadcast(msg *message) {
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {

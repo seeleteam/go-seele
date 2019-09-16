@@ -8,6 +8,19 @@ import (
 	"github.com/seeleteam/go-seele/consensus/bft"
 )
 
+/*
+Round change flow
+•	There are three conditions that would trigger ROUND CHANGE:
+		o	Round change timer expires.
+		o	Invalid PREPREPARE message.
+		o	Block insertion fails.
+•	When a validator notices that one of the above conditions applies, it broadcasts a ROUND CHANGE message along with the proposed round number and waits for ROUND CHANGE messages from other validators. The proposed round number is selected based on following condition:
+		o	If the validator has received ROUND CHANGE messages from its peers, it picks the largest round number which has F + 1 of ROUND CHANGE messages.
+		o	Otherwise, it picks 1 + current round number as the proposed round number.
+•	Whenever a validator receives F + 1 of ROUND CHANGE messages on the same proposed round number, it compares the received one with its own. If the received is larger, the validator broadcasts ROUND CHANGE message again with the received number.
+•	Upon receiving 2F + 1 of ROUND CHANGE messages on the same proposed round number, the validator exits the round change loop, calculates the new proposer, and then enters NEW ROUND state.
+•	Another condition that a validator jumps out of round change loop is when it receives verified block(s) through peer synchronization.
+*/
 type roundChangeSet struct {
 	validatorSet bft.VerifierSet
 	roundChanges map[uint64]*messageSet
@@ -153,4 +166,4 @@ func (rcs *roundChangeSet) Clear(round *big.Int) {
 			delete(rcs.roundChanges, k)
 		}
 	}
-}K)
+}

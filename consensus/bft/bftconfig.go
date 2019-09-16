@@ -8,8 +8,8 @@ package bft
 type ProposerPolicy uint64
 
 const (
-	RoundRobin ProposerPolicy = iota
-	Sticky                    // with sticky property
+	RoundRobin ProposerPolicy = iota // in a round robin setting, proposer will change in very block and round change.
+	Sticky                           // with sticky property, propose will change only when a round change happens.
 )
 
 type BFTConfig struct {
