@@ -92,3 +92,65 @@ func (c *core) sendNextRoundChange() {
 	cv := c.currentView()
 	c.sendRoundChange(new(big.Int).Add(cv.Round, common.Big1))
 }
+
+func (c *core) handleRoundChange(msg *message, src bft.Verifier) error {
+	// Docode->
+	var rc *bft.Subject
+	if err := msg.Decode(&rc); err != nil {
+		return err
+	}
+	cv := c.currentView()
+	roundView := rc.View
+
+	num, err := c.roundChangeSet.Add(roundView.Round, msg)
+	if err != nil {
+		c.log.Warn("failed to add round change msg %v from %v with err %s", msg, src, err)
+		return err
+	}
+
+	// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
+	// If our round number is smaller than the certificate's round number, we would
+	// try to catch up the round number.
+	if c.waitingForRoundChange && num == int(c.valSet.F()+1) {
+		if cv.Round.Cmp(roundView.Round) < 0 {
+			c.sendRoundChange(roundView.Round)
+		}
+		return nil
+	} else if num == int(2*c.valSet.F()+1) && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
+		// We've received 2f+1 ROUND CHANGE messages, start a new round immediately.
+		c.startNewRound(roundView.Round)
+		return nil
+	} else if cv.Round.Cmp(roundView.Round) < 0 {
+		// Only gossip the message with current round to other validators.
+		return errIgnored
+	}
+	return nil
+}
+
+// Add adds the round and message into round change set
+func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
+	rcs.mu.Lock()
+	defer rcs.mu.Unlock()
+
+	round := r.Uint64()
+	if rcs.roundChanges[round] == nil {
+		rcs.roundChanges[round] = newMessageSet(rcs.validatorSet)
+	}
+	err := rcs.roundChanges[round].Add(msg)
+	if err != nil {
+		return 0, err
+	}
+	return rcs.roundChanges[round].Size(), nil
+}
+
+// Clear deletes the messages with smaller round
+func (rcs *roundChangeSet) Clear(round *big.Int) {
+	rcs.mu.Lock()
+	defer rcs.mu.Unlock()
+
+	for k, rms := range rcs.roundChanges {
+		if len(rms.Values()) == 0 || k < round.Uint64() {
+			delete(rcs.roundChanges, k)
+		}
+	}
+}K)
