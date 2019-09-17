@@ -48,6 +48,13 @@ func (s *roundState) LockHash() {
 	}
 }
 
+func (s *roundState) UnlockHash() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lockedHash = common.Hash{}
+}
+
 func (s *roundState) Sequence() *big.Int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -105,4 +112,25 @@ func (s *roundState) Proposal() bft.Proposal {
 	}
 
 	return nil
+}
+
+func (s *roundState) GetPrepareOrCommitSize() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := s.Prepares.Size() + s.Commits.Size()
+
+	// find duplicate one
+	for _, m := range s.Prepares.Values() {
+		if s.Commits.Get(m.Address) != nil {
+			result--
+		}
+	}
+	return result
+}
+
+func (s *roundState) SetPreprepare(preprepare *bft.Preprepare) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Preprepare = preprepare
 }

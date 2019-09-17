@@ -51,19 +51,20 @@ type core struct {
 
 */
 
-func (c *core) sendCommitPrevious(view *bft.View, digest common.Hash) {
-	subject := &bft.Subject{
-		View:   view,
-		Digest: digest,
-	}
-	c.broadcastCommit(subject)
-}
-
 // sendCommit send commits
 func (c *core) sendCommit() {
 	// get the subject
 	subject := c.current.Subject()
 	// broadcast subject
+	c.broadcastCommit(subject)
+}
+
+// sendOldCommit send commit for old block
+func (c *core) sendOldCommit(view *bft.View, digest common.Hash) {
+	subject := &bft.Subject{
+		View:   view,
+		Digest: digest,
+	}
 	c.broadcastCommit(subject)
 }
 
@@ -92,6 +93,17 @@ func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	return nil
 }
 
+// verifyCommit verifies if the received COMMIT message is equivalent to our subject
+func (c *core) verifyCommit(commit *bft.Subject, src bft.Verifier) error {
+	sub := c.current.Subject()
+	if !reflect.DeepEqual(commit, sub) {
+		c.log.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
+		return errInconsistentSubject
+	}
+
+	return nil
+}
+
 // broadcastCommit broadcast commit out
 func (c *core) broadcastCommit(sub *bft.Subject) {
 	encodedSubject, err := Encode(sub)
@@ -105,30 +117,10 @@ func (c *core) broadcastCommit(sub *bft.Subject) {
 	})
 }
 
-// verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *bft.Subject, src bft.Verifier) error {
-	sub := c.current.Subject()
-	if !reflect.DeepEqual(commit, sub) {
-		c.log.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
-		return errInconsistentSubject
-	}
-
-	return nil
-}
-
 func (c *core) acceptCommit(msg *message, src bft.Verifier) error {
 	if err := c.current.Commits.Add(msg); err != nil {
 		c.log.Error("failed to accept commit message: %v with error: %s", msg, err)
 		return err
 	}
 	return nil
-}
-
-// sendOldCommit send commit for old block
-func (c *core) sendOldCommit(view *bft.View, digest common.Hash) {
-	subject := &bft.Subject{
-		View:   view,
-		Digest: digest,
-	}
-	c.broadcastCommit(subject)
 }

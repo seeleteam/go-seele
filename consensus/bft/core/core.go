@@ -53,6 +53,8 @@ type core struct {
 	consensusTimer metrics.Timer
 }
 
+type timeoutEvent struct{}
+
 // NewCore initiate a new core
 func NewCore(server bft.Server, config *bft.BFTConfig) Engine {
 	c := &core{
@@ -210,7 +212,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 	c.newRoundChangeTimer()
-	c.log.Info("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.verSet.GetProposer(), "valSet", c.verSet.List(), "size", c.verSet.Size(), "isProposer", c.isProposer())
+	c.log.Info("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.verSet.GetProposer(), "verSet", c.verSet.List(), "size", c.verSet.Size(), "isProposer", c.isProposer())
 }
 
 func (c *core) newRoundChangeTimer() {
@@ -239,7 +241,7 @@ func (c *core) catchUpRound(view *bft.View) {
 	c.roundChangeSet.Clear(view.Round) // TODO
 	c.newRoundChangeTimer()
 
-	c.log.Debug("Catch up round. new_round %d. new_seq %d. new_proposer %s", view.Round, view.Sequence, c.valSet)
+	c.log.Debug("Catch up round. new_round %d. new_seq %d. new_proposer %s", view.Round, view.Sequence, c.verSet)
 }
 
 func (c *core) stopFuturePreprepareTimer() {
@@ -266,7 +268,7 @@ func (c *core) commit() {
 			copy(committedSeals[i][:], v.CommittedSeal[:])
 		}
 
-		if err := c.backend.Commit(proposal, committedSeals); err != nil {
+		if err := c.server.Commit(proposal, committedSeals); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
 			c.sendNextRoundChange()
 			return
@@ -276,4 +278,12 @@ func (c *core) commit() {
 
 func (c *core) Address() common.Address {
 	return c.address
+}
+
+func (c *core) isProposer() bool {
+	v := c.verSet
+	if v == nil {
+		return false
+	}
+	return v.IsProposer(c.server.Address())
 }

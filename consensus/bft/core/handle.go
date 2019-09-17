@@ -26,7 +26,7 @@ func (c *core) subscribeEvents() {
 		backlogEvent{},
 	)
 	c.timeoutSub = c.server.EventMux().Subscribe(
-		timeoutSub{},
+		timeoutEvent{},
 	)
 	c.finalCommittedSub = c.server.EventMux().Subscribe(
 		bft.FinalCommittedEvent{}, //TODO
@@ -124,7 +124,7 @@ func (c *core) handleCheckedMsg(msg *message, src bft.Verifier) error {
 	case msgCommit:
 		return backlog(c.handleCommit(msg, src)) //TODO
 	case msgRoundChange:
-		return backlog(c.handleRounChange(msg, src)) //TODO
+		return backlog(c.handleRoundChange(msg, src)) //TODO
 	default:
 		c.log.Error("invalid message: msg %v address %s from %v", msg, c.address, src)
 	}
@@ -149,7 +149,7 @@ func (c *core) handleTimeoutMsg() {
 }
 
 func (c *core) handleFinalCommitted() error {
-	c.logger.Debug("Received a final committed proposal")
+	c.log.Debug("Received a final committed proposal")
 	c.startNewRound(common.Big0)
 	return nil
 }

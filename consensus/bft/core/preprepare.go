@@ -16,7 +16,7 @@ send /
 func (c *core) sendPreprepare(request *bft.Request) {
 	// sequence is the proposal height and this node is the proposer
 	// initiate the preprepare message and encode it
-	if c.current.Sequence().Uint64 == request.Proposal.Height() && c.isProposer() {
+	if c.current.Sequence().Uint64() == request.Proposal.Height() && c.isProposer() {
 		curView := c.currentView()
 		preprepare, err := Encode(&bft.Preprepare{
 			View:     curView,
@@ -74,10 +74,10 @@ func (c *core) handlePreprepare(msg *message, src bft.Verifier) error {
 		// it is a future block, and re-handle it after duration
 		if err == consensus.ErrBlockCreateTimeOld {
 			c.stopFuturePreprepareTimer() // stop timer
-			c.futurePreprepareTimer = timer.AfterFunc(duration, func() {
+			c.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				c.sendEvent(backlogEvent{
 					src: src,
-					msg, msg,
+					msg: msg,
 				})
 			})
 		} else {

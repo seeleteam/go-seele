@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/seeleteam/go-seele/consensus/bft"
-	"github.com/seeleteam/go-seele/consensus/istanbul"
 )
 
 // sendPrepare : encode -> broadcast
@@ -16,8 +15,8 @@ func (c *core) sendPrepare() {
 		return
 	}
 	c.broadcast(&message{
-		Code, msgPrepare,
-		Msg, encodedSubject,
+		Code: msgPrepare,
+		Msg:  encodedSubject,
 	})
 }
 
@@ -29,14 +28,14 @@ func (c *core) handlePrepare(msg *message, src bft.Verifier) error {
 		return errFailedDecodePrepare
 	}
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
-		return nil
+		return err
 	}
 	if err := c.verifyPrepare(prepare, src); err != nil {
-		return nil
+		return err
 	}
 	c.acceptPrepare(msg, src)
 
-	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareOrCommitSize() > 2*c.valSet.F()) &&
+	if ((c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash()) || c.current.GetPrepareOrCommitSize() > 2*c.verSet.F()) &&
 		c.state.Cmp(StatePrepared) < 0 {
 		c.current.LockHash()
 		c.setState(StatePrepared)
@@ -46,20 +45,20 @@ func (c *core) handlePrepare(msg *message, src bft.Verifier) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *istanbul.Subject, src istanbul.Validator) error {
+func (c *core) verifyPrepare(prepare *bft.Subject, src bft.Verifier) error {
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(prepare, sub) {
-		c.logger.Warn("Inconsistent subjects between PREPARE and proposal. from %s. state %d. expected %v. got %v",
+		c.log.Warn("Inconsistent subjects between PREPARE and proposal. from %s. state %d. expected %v. got %v",
 			src, c.state, sub, prepare)
 		return errInconsistentSubject
 	}
 
 	return nil
 }
-func (c *core) acceptPrepare(msg *message, src istanbul.Validator) error {
+func (c *core) acceptPrepare(msg *message, src bft.Verifier) error {
 	// Add the PREPARE message to current round state
 	if err := c.current.Prepares.Add(msg); err != nil {
-		c.logger.Error("Failed to add PREPARE message to round state. from %s. state %d. msg %v. err %s",
+		c.log.Error("Failed to add PREPARE message to round state. from %s. state %d. msg %v. err %s",
 			src, c.state, msg, err)
 		return err
 	}

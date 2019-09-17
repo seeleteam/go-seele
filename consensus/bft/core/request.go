@@ -9,7 +9,23 @@ request.go (part of core package)
 
 */
 
-func (c *core) handleRequest() {}
+func (c *core) handleRequest(request *bft.Request) error {
+	if err := c.checkRequestMsg(request); err != nil {
+		if err == errInvalidMessage {
+			c.log.Warn("invalid request")
+			return err
+		}
+		c.log.Warn("unexpected request, err %s, height %d, ")
+		return err
+	}
+	c.log.Debug("handleRequest height %d, hash %s", request.Proposal.Height(), request.Proposal.Hash())
+	c.current.pendingRequest = request
+	if c.state == StateAcceptRequest { // state is ready
+		c.sendPreprepare(request)
+	}
+	return nil
+}
+
 func (c *core) processPendingRequests() {
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
@@ -20,16 +36,16 @@ func (c *core) processPendingRequests() {
 		msg, priority := c.pendingRequests.Pop()
 		req, ok := msg.(*bft.Request)
 		if !ok {
-			c.logger.Warn("Malformed request, skip. msg %v", m)
+			c.log.Warn("Malformed request, skip. msg %v", msg)
 			continue
 		}
 
-		err := c.checkRequestMsg(r)
+		err := c.checkRequestMsg(req)
 		if err != nil {
 			// this is a future message, need to push back
 			if err == errFutureMessage {
 				c.log.Info("future request with height %d hash %s", req.Proposal.Height(), req.Proposal.Hash())
-				c.pendingRequests.Psh(msg, priority)
+				c.pendingRequests.Push(msg, priority)
 				break
 			}
 			c.log.Info("check request with error %s, height %d hash %s", err, req.Proposal.Height(), req.Proposal.Hash())
@@ -42,5 +58,26 @@ func (c *core) processPendingRequests() {
 	}
 
 }
-func (c *core) checkRequestMsg() {}
-func (c *core) storeRequestMsg() {}
+
+// checkRequestMsg check request: invalid / future / old
+func (c *core) checkRequestMsg(request *bft.Request) error {
+	if request == nil || request.Proposal == nil {
+		return errInvalidMessage
+	}
+	if c.current.sequence.Uint64() > request.Proposal.Height() {
+		return errOldMessage
+	} else if c.current.sequence.Uint64() < request.Proposal.Height() {
+		return errFutureMessage
+	} else {
+		return nil
+	}
+}
+
+func (c *core) storeRequestMsg(request *bft.Request) {
+	c.log.Debug("Store future request. height %d. hash %s. state %d", request.Proposal.Height(), request.Proposal.Hash(), c.state)
+
+	c.pendingRequestsMu.Lock()
+	defer c.pendingRequestsMu.Unlock()
+
+	c.pendingRequests.Push(request, float32(-request.Proposal.Height()))
+}
