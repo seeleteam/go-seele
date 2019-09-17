@@ -52,3 +52,5 @@ type VerifierSet interface {
 	// Get proposer policy
 	Policy() ProposerPolicy
 }
+
+type ProposalSelector func(VerifierSet, common.Address, uint64) Verifier
