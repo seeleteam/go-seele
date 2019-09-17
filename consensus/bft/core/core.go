@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"math"
 	"math/big"
 	"sync"
@@ -69,26 +70,64 @@ func NewCore(server bft.Server, config *bft.BFTConfig) Engine {
 		sequenceMeter:      metrics.GetOrRegisterMeter("consensus/bft/core/sequence", nil),
 		consensusTimer:     metrics.GetOrRegisterTimer("consensus/bft/core/consensus", nil),
 	}
-	c.verifyFn = c.checkValidatorSignatore
+	c.verifyFn = c.checkValidatorSignature
 	return c
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return bft.CheckValidatorSignature(c.valSet, data, sig)
+	return bft.CheckValidatorSignature(c.verSet, data, sig)
 }
 
 func (c *core) broadcast(msg *message) {
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
-		c.logger.Error("Failed to finalize message. msg %v. err %s. state %d", msg, err, c.state)
+		c.log.Error("Failed to finalize message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
 
 	// Broadcast payload
-	if err = c.backend.Broadcast(c.valSet, payload); err != nil {
-		c.logger.Error("Failed to broadcast message. msg %v. err %s. state %d", msg, err, c.state)
+	if err = c.server.Broadcast(c.verSet, payload); err != nil {
+		c.log.Error("Failed to broadcast message. msg %v. err %s. state %d", msg, err, c.state)
 		return
 	}
+}
+
+func (c *core) finalizeMessage(msg *message) ([]byte, error) {
+	var err error
+	msg.Address = c.Address()
+	msg.CommittedSeal = []byte{}
+	if msg.Code == msgCommit && c.current.Proposal() != nil {
+		seal := PrepareCommittedSeal(c.current.Proposal().Hash())
+		msg.CommittedSeal, err = c.server.Sign(seal)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	data, err := msg.PayloadNoSig()
+	if err != nil {
+		return nil, err
+	}
+
+	msg.Signature, err = c.server.Sign(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to payload
+	payload, err := msg.Payload()
+	if err != nil {
+		return nil, err
+	}
+
+}
+
+// PrepareCommittedSeal returns a committed seal for the given hash
+func PrepareCommittedSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(msgCommit)})
+	return buf.Bytes()
 }
 
 func (c *core) currentView() *bft.View {
@@ -223,4 +262,8 @@ func (c *core) commit() {
 			return
 		}
 	}
+}
+
+func (c *core) Address() common.Address {
+	return c.address
 }

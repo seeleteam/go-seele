@@ -95,3 +95,14 @@ func (s *roundState) Subject() *bft.Subject {
 		Digest: s.Preprepare.Proposal.Hash(),
 	}
 }
+
+func (s *roundState) Proposal() bft.Proposal {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.Preprepare != nil {
+		return s.Preprepare.Proposal
+	}
+
+	return nil
+}

@@ -5,15 +5,14 @@ types.go : types.go + events.go
 package bft
 
 import (
+	"fmt"
+	"io"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 )
-
-type Subject struct {
-	View   *View
-	Digest common.Hash
-}
 
 // View includes a round number and a sequence number.
 // Sequence is the block number we'd like to commit.
@@ -26,6 +25,39 @@ type View struct {
 	Sequence *big.Int
 }
 
+func (v *View) Cmp(y *View) int {
+	if v.Sequence.Cmp(y.Sequence) != 0 {
+		return v.Sequence.Cmp(y.Sequence)
+	}
+	if v.Round.Cmp(y.Round) != 0 {
+		return v.Round.Cmp(y.Round)
+	}
+	return 0
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (v *View) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{v.Round, v.Sequence})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (v *View) DecodeRLP(s *rlp.Stream) error {
+	var view struct {
+		Round    *big.Int
+		Sequence *big.Int
+	}
+
+	if err := s.Decode(&view); err != nil {
+		return err
+	}
+	v.Round, v.Sequence = view.Round, view.Sequence
+	return nil
+}
+
+func (v *View) String() string {
+	return fmt.Sprintf("{Round: %d, Sequence: %d}", v.Round.Uint64(), v.Sequence.Uint64())
+}
+
 type Request struct {
 	Proposal Proposal
 }
@@ -33,6 +65,26 @@ type Request struct {
 type Preprepare struct {
 	View     *View
 	Proposal Proposal
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (b *Preprepare) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.View, b.Proposal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
+	var preprepare struct {
+		View     *View
+		Proposal *types.Block
+	}
+
+	if err := s.Decode(&preprepare); err != nil {
+		return err
+	}
+	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+
+	return nil
 }
 
 type Proposal interface {
@@ -52,4 +104,32 @@ type MessageEvent struct {
 }
 
 type FinalCommittedEvent struct {
+}
+
+type Subject struct {
+	View   *View
+	Digest common.Hash
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (b *Subject) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (b *Subject) DecodeRLP(s *rlp.Stream) error {
+	var subject struct {
+		View   *View
+		Digest common.Hash
+	}
+
+	if err := s.Decode(&subject); err != nil {
+		return err
+	}
+	b.View, b.Digest = subject.View, subject.Digest
+	return nil
+}
+
+func (b *Subject) String() string {
+	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }

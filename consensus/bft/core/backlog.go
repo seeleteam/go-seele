@@ -1,6 +1,11 @@
 package core
 
-import "gopkg.in/karalabe/cookiejar.v2/collections/prque"
+import (
+	"github.com/seeleteam/go-seele/consensus/bft"
+	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+)
+
+/*backlog: previous commit and */
 
 var (
 	// msgPriority is defined for calculating processing priority to speedup consensus
@@ -14,24 +19,15 @@ var (
 	}
 )
 
-// checkMessage checks the message state
-// return errInvalidMessage if the message is invalid
-// return errFutureMessage if the message view is larger than current view
-// return errOldMessage if the message view is smaller than current view
+type backlogEvent struct {
+	src bft.Verifier
+	msg *message
+}
+
 func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
 		return errInvalidMessage
 	}
-
-	if msgCode == msgRoundChange {
-		if view.Sequence.Cmp(c.currentView().Sequence) > 0 {
-			return errFutureMessage
-		} else if view.Cmp(c.currentView()) < 0 {
-			return errOldMessage
-		}
-		return nil
-	}
-
 	if view.Cmp(c.currentView()) > 0 {
 		return errFutureMessage
 	}
@@ -39,7 +35,6 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view.Cmp(c.currentView()) < 0 {
 		return errOldMessage
 	}
-
 	if c.waitingForRoundChange {
 		return errFutureMessage
 	}
@@ -52,37 +47,30 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 		}
 		return nil
 	}
-
-	// For states(StatePreprepared, StatePrepared, StateCommitted),
-	// can accept all message types if processing with same view
 	return nil
 }
 
-func (c *core) storeBacklog(msg *message, src bft.Validator) {
+func (c *core) storeBacklog(msg *message, src bft.Verifier) {
 	if src.Address() == c.Address() {
-		c.logger.Warn("Backlog from self. from %s. state %d", src, c.state)
+		c.log.Warn("backlog from self from %s, state %d", src, c.state)
 		return
 	}
-
-	c.logger.Debug("Store future message")
-
+	c.log.Debug("store future message")
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
-
-	c.logger.Debug("Retrieving backlog queue. for %s. backlogs_size %d", src.Address(), len(c.backlogs))
+	c.log.Debug("retrieveing backlog queue for %s, backlog_size %d", src.Address(), len(c.backlogs))
 	backlog := c.backlogs[src.Address()]
 	if backlog == nil {
 		backlog = prque.New()
 	}
 	switch msg.Code {
-	case msgPreprepare:
+	case msgPreprepare: // preprepare message
 		var p *bft.Preprepare
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
-		// for msgRoundChange, msgPrepare and msgCommit cases
-	default:
+	default: // msgRoundChange, msgPrepare and msgCommit cases
 		var p *bft.Subject
 		err := msg.Decode(&p)
 		if err == nil {
@@ -100,7 +88,7 @@ func (c *core) processBacklog() {
 		if backlog == nil {
 			continue
 		}
-		_, src := c.valSet.GetByAddress(srcAddress)
+		_, src := c.verSet.GetByAddress(srcAddress)
 		if src == nil {
 			// validator is not available
 			delete(c.backlogs, srcAddress)
@@ -131,23 +119,23 @@ func (c *core) processBacklog() {
 				}
 			}
 			if view == nil {
-				c.logger.Debug("Nil view. msg %v", msg)
+				c.log.Debug("Nil view. msg %v", msg)
 				continue
 			}
 			// Push back if it's a future message
 			err := c.checkMessage(msg.Code, view)
 			if err != nil {
 				if err == errFutureMessage {
-					c.logger.Debug("Stop processing backlog. msg %v", msg)
+					c.log.Debug("Stop processing backlog. msg %v", msg)
 					backlog.Push(msg, prio)
 					isFuture = true
 					break
 				}
 
-				c.logger.Debug("Skip the backlog event. msg %v. err %s", msg, err)
+				c.log.Debug("Skip the backlog event. msg %v. err %s", msg, err)
 				continue
 			}
-			c.logger.Debug("Post backlog event. msg %v", msg)
+			c.log.Debug("Post backlog event. msg %v", msg)
 
 			go c.sendEvent(backlogEvent{
 				src: src,
