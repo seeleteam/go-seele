@@ -69,6 +69,10 @@ func (m *message) ValidatePayload(b []byte, validateFn func([]byte, []byte) (com
 	return err
 }
 
+func (m *message) Payload() ([]byte, error) {
+	return rlp.EncodeToBytes(m)
+}
+
 func (m *message) Decode(val interface{}) error {
 	return rlp.DecodeBytes(m.Msg, val)
 }

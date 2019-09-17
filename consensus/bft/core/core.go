@@ -53,6 +53,7 @@ type core struct {
 	consensusTimer metrics.Timer
 }
 
+// NewCore initiate a new core
 func NewCore(server bft.Server, config *bft.BFTConfig) Engine {
 	c := &core{
 		config:             config,
@@ -119,6 +120,8 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return payload, nil
 
 }
 
@@ -242,6 +245,13 @@ func (c *core) catchUpRound(view *bft.View) {
 func (c *core) stopFuturePreprepareTimer() {
 	if c.futurePreprepareTimer != nil {
 		c.futurePreprepareTimer.Stop()
+	}
+}
+
+func (c *core) stopTimer() {
+	c.stopFuturePreprepareTimer()
+	if c.roundChangeTimer != nil {
+		c.roundChangeTimer.Stop()
 	}
 }
 

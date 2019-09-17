@@ -14,6 +14,9 @@ func (c *core) Start() error {
 
 func (c *core) Stop() error {
 	c.stopTimer()
+	c.unsubscribeEvents()
+	c.handlerWg.Wait()
+	return nil
 }
 
 func (c *core) subscribeEvents() {
