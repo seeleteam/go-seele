@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rlp"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
@@ -478,13 +477,6 @@ func (s *server) updateBlock(parent *types.BlockHeader, block *types.Block) (*ty
 	return block.WithSeal(header), nil
 }
 
-// Sign implements istanbul.Backend.Sign
-func (s *server) Sign(data []byte) ([]byte, error) {
-	hashData := crypto.Keccak256([]byte(data))
-	sign, err := crypto.Sign(s.privateKey, hashData)
-	return sign.Sig, err
-}
-
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
 func writeSeal(h *types.BlockHeader, seal []byte) error {
@@ -507,6 +499,30 @@ func writeSeal(h *types.BlockHeader, seal []byte) error {
 	return nil
 }
 
-func (s *server) EventMux() *event.TypeMux {
-	return s.bftEventMux
+func writeCommittedSeals(h *types.BlockHeader, committedSeals [][]byte) error {
+	if len(committedSeals) == 0 {
+		return errInvalidCommittedSeals
+	}
+
+	for _, seal := range committedSeals {
+		if len(seal) != types.IstanbulExtraSeal { // TODO change types
+			return errInvalidCommittedSeals
+		}
+	}
+
+	istanbulExtra, err := types.ExtractIstanbulExtra(h) // TODO change types
+	if err != nil {
+		return err
+	}
+
+	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(istanbulExtra.CommittedSeal, committedSeals) // TODO change types
+
+	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	if err != nil {
+		return err
+	}
+
+	h.ExtraData = append(h.ExtraData[:types.IstanbulExtraVanity], payload...) // TODO change types
+	return nil
 }

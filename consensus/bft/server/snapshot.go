@@ -174,7 +174,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			snap.Tally = make(map[common.Address]Tally)
 		}
 		// Resolve the authorization key and check against verifiers
-		verifier, err := ecrecover(header)
+		verifier, err := extractAccount(header)
 		if err != nil {
 			return nil, err
 		}
