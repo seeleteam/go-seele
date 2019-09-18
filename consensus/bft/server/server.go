@@ -22,7 +22,7 @@ type server struct {
 	privateKey   *ecdsa.PrivateKey
 	address      common.Address
 	core         bftCore.Engine
-	logger       *log.SeeleLog
+	log          *log.SeeleLog
 	db           database.Database
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block

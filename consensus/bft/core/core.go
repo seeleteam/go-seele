@@ -287,3 +287,10 @@ func (c *core) isProposer() bool {
 	}
 	return v.IsProposer(c.server.Address())
 }
+
+func PrepareCommitedSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(msgCommit)})
+	return buf.Bytes()
+}
