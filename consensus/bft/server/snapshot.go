@@ -44,7 +44,7 @@ type Snapshot struct {
 	Hash   common.Hash              // Block hash where the snapshot was created
 	Votes  []*Vote                  // List of votes cast in chronological order
 	Tally  map[common.Address]Tally // Current vote tally to avoid recalculating
-	ValSet bft.VerifierSet          // Set of authorized verifiers at this moment
+	VerSet bft.VerifierSet          // Set of authorized verifiers at this moment
 }
 
 // newSnapshot create a new snapshot with the specified startup parameters. This
@@ -55,7 +55,7 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, verSet bft.Verif
 		Epoch:  epoch,
 		Height: number,
 		Hash:   hash,
-		ValSet: verSet,
+		VerSet: verSet,
 		Tally:  make(map[common.Address]Tally),
 	}
 	return snap
@@ -91,7 +91,7 @@ func (s *Snapshot) copy() *Snapshot {
 		Epoch:  s.Epoch,
 		Height: s.Height,
 		Hash:   s.Hash,
-		ValSet: s.ValSet.Copy(),
+		VerSet: s.VerSet.Copy(),
 		Votes:  make([]*Vote, len(s.Votes)),
 		Tally:  make(map[common.Address]Tally),
 	}
@@ -106,7 +106,7 @@ func (s *Snapshot) copy() *Snapshot {
 
 // checkVote return whether it's a valid vote
 func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
-	_, verifier := s.ValSet.GetByAddress(address)
+	_, verifier := s.VerSet.GetByAddress(address)
 	return (verifier != nil && !authorize) || (verifier == nil && authorize)
 }
 
@@ -178,7 +178,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, v := snap.ValSet.GetByAddress(verifier); v == nil {
+		if _, v := snap.VerSet.GetByAddress(verifier); v == nil {
 			return nil, errUnauthorized
 		}
 
@@ -212,11 +212,11 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			})
 		}
 		// If the vote passed, update the list of verifiers
-		if tally := snap.Tally[header.Creator]; tally.Votes > snap.ValSet.Size()/2 {
+		if tally := snap.Tally[header.Creator]; tally.Votes > snap.VerSet.Size()/2 {
 			if tally.Authorize {
-				snap.ValSet.AddValidator(header.Creator)
+				snap.VerSet.AddValidator(header.Creator)
 			} else {
-				snap.ValSet.RemoveValidator(header.Creator)
+				snap.VerSet.RemoveValidator(header.Creator)
 
 				// Discard any previous votes the deauthorized verifier cast
 				for i := 0; i < len(snap.Votes); i++ {
@@ -249,8 +249,8 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 
 // verifiers retrieves the list of authorized verifiers in ascending order.
 func (s *Snapshot) verifiers() []common.Address {
-	verifiers := make([]common.Address, 0, s.ValSet.Size())
-	for _, verifier := range s.ValSet.List() {
+	verifiers := make([]common.Address, 0, s.VerSet.Size())
+	for _, verifier := range s.VerSet.List() {
 		verifiers = append(verifiers, verifier.Address())
 	}
 	for i := 0; i < len(verifiers); i++ {
@@ -283,7 +283,7 @@ func (s *Snapshot) toJSONStruct() *snapshotJSON {
 		Votes:      s.Votes,
 		Tally:      s.Tally,
 		Validators: s.verifiers(),
-		Policy:     s.ValSet.Policy(),
+		Policy:     s.VerSet.Policy(),
 	}
 }
 
@@ -299,7 +299,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally
-	s.ValSet = verifier.NewSet(j.Validators, j.Policy)
+	s.VerSet = verifier.NewSet(j.Validators, j.Policy)
 	return nil
 }
 

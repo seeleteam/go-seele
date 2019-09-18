@@ -63,11 +63,11 @@ func NewServer(config *BFT.BFTConfig, privateKey *ecdsa.PrivateKey, db database.
 		db:             db,
 		commitCh:       make(chan *types.Block, 1),
 		recents:        recents,
-		condidates:     make(map[common.Address]bool),
+		candidates:     make(map[common.Address]bool),
 		coreStarted:    false,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
 	}
-	server.core = bftCore.New(server, server.config)
+	server.core = bftCore.NewCore(server, server.config)
 
 }

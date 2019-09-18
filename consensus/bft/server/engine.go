@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"errors"
 	"math/big"
+	"math/rand"
 	"time"
 
+	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/rlp"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/bft"
 	bftCore "github.com/seeleteam/go-seele/consensus/bft/core"
+	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -87,16 +91,118 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	if parent == nil {
 		return consensus.ErrBlockInvalidParentHash
 	}
-
+	// voting snapshot
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, nil)
 	if err != nil {
 		return err
 	}
 
+	//get valid candidate list
+	s.candidatesLock.RLock()
+	var addrs []common.Address
+	var auths []bool
+	for addr, auth := range s.candidates {
+		if snap.checkVote(addr, auth) {
+			addrs = append(addrs, addr)
+			auths = append(auths, auth)
+		}
+	}
+	s.candidatesLock.RUnlock()
 
+	// pick one candidate randomly
+	if len(addrs) > 0 {
+		index := rand.Intn(len(addrs))
+		header.Creator = addrs[index]
+		if auths[index] {
+			copy(header.Witness[:], nonceAuthVote) // TODO implment copy method
+		} else {
+			copy(header.Witness[:], nonceDropVote) // TODO implment copy method
+		}
+	}
 
-	???????
+	// add verifiers in snapshot to extraData's verifiers section
+	extra, err := prepareExtra(header, snap.verifiers) // TODO implement prepareExtra
+	if err != nil {
+		return err
+	}
+	header.ExtraData = extra
 
+	// set timeStamp at header
+	header.CreateTimestamp = new(big.Int).Add(parent.CreateTimestamp, new(big.Int).SetUint64(s.config.BlockPeriod))
+	// but if creatTimestamp is smaller than current. set to current!
+	if header.CreateTimestamp.Int64() < time.Now().Unix() {
+		header.CreateTimestamp = big.NewInt(time.Now().Unix())
+	}
+
+	// finish all process
+	return nil
+}
+
+func (s *server) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}, results chan<- *types.Block) error {
+	block, err := s.SealResult(chain, block, stop)
+	results <- block
+	return err
+}
+
+// Seal generates a new block for the given input block with the local miner's
+// seal place on top.
+func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+	// update the block header timestamp and signature and propose the block to core engine
+	header := block.Header
+	number := header.Height
+
+	// Bail out if we're unauthorized to sign a block
+	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, nil)
+	if err != nil {
+		return nil, err
+	}
+	if _, v := snap.VerSet.GetByAddress(s.address); v == nil {
+		return nil, errUnauthorized
+	}
+
+	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
+	if parent == nil {
+		return nil, consensus.ErrBlockInvalidParentHash
+	}
+	block, err = s.updateBlock(parent, block) // TODO implement
+	if err != nil {
+		return nil, err
+	}
+
+	// wait for the timestamp of header, use this to adjust the block period
+	delay := time.Unix(block.Header.CreateTimestamp.Int64(), 0).Sub(now())
+	select {
+	case <-time.After(delay):
+	case <-stop:
+		return nil, nil
+	}
+
+	// get the proposed block hash and clear it if the seal() is completed.
+	s.sealMu.Lock()
+	s.proposedBlockHash = block.Hash()
+	clear := func() {
+		s.proposedBlockHash = common.Hash{}
+		s.sealMu.Unlock()
+	}
+	defer clear()
+
+	// post block into Istanbul engine
+	go s.EventMux().Post(bft.RequestEvent{
+		Proposal: block,
+	})
+
+	for {
+		select {
+		case result := <-s.commitCh:
+			// if the block hash and the hash from channel are the same,
+			// return the result. Otherwise, keep waiting the next hash.
+			if block.Hash() == result.Hash() {
+				return result, nil
+			}
+		case <-stop:
+			return nil, nil
+		}
+	}
 }
 
 func (s *server) VerifyHeader(chain consensus.ChainReader, header *types.BlockHeader) error {
@@ -255,7 +361,7 @@ func sigHash(header *types.BlockHeader) (hash common.Hash) {
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
-func (s *server) snapshot(chain consensus.ChainReader, height uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
+func (sb *server) snapshot(chain consensus.ChainReader, height uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
 		headers []*types.BlockHeader
@@ -263,14 +369,14 @@ func (s *server) snapshot(chain consensus.ChainReader, height uint64, hash commo
 	)
 	for snap == nil {
 		// If an in-memory snapshot was found, use that
-		if s, ok := s.recents.Get(hash); ok {
+		if s, ok := sb.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if height%checkpointInterval == 0 {
-			if s, err := loadSnapshot(s.config.Epoch, s.db, hash); err == nil {
-				s.log.Debug("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
+			if s, err := loadSnapshot(sb.config.Epoch, sb.db, hash); err == nil {
+				sb.log.Debug("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
 				snap = s
 				break
 			}
@@ -278,18 +384,18 @@ func (s *server) snapshot(chain consensus.ChainReader, height uint64, hash commo
 		// If we're at block zero, make a snapshot
 		if height == 0 {
 			genesis := chain.GetHeaderByHeight(0)
-			if err := s.VerifyHeader(chain, genesis); err != nil {
+			if err := sb.VerifyHeader(chain, genesis); err != nil {
 				return nil, err
 			}
 			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
 			if err != nil {
 				return nil, err
 			}
-			snap = newSnapshot(s.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, s.config.ProposerPolicy))
-			if err := snap.store(s.db); err != nil {
+			snap = newSnapshot(sb.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, sb.config.ProposerPolicy))
+			if err := snap.store(sb.db); err != nil {
 				return nil, err
 			}
-			s.log.Debug("Stored genesis voting snapshot to disk")
+			sb.log.Debug("Stored genesis voting snapshot to disk")
 			break
 		}
 		// No snapshot for this header, gather the header and move backward
@@ -319,14 +425,88 @@ func (s *server) snapshot(chain consensus.ChainReader, height uint64, hash commo
 	if err != nil {
 		return nil, err
 	}
-	s.recents.Add(snap.Hash, snap)
+	sb.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Height%checkpointInterval == 0 && len(headers) > 0 {
-		if err = snap.store(s.db); err != nil {
+		if err = snap.store(sb.db); err != nil {
 			return nil, err
 		}
-		s.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
+		sb.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
 	return snap, err
+}
+
+// prepareExtra returns a extra-data of the given header and validators
+func prepareExtra(header *types.BlockHeader, vals []common.Address) ([]byte, error) {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.ExtraData) < types.IstanbulExtraVanity { //here we use IstanbulExtraVanity (32-bit fixed length)
+		header.ExtraData = append(header.ExtraData, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity-len(header.ExtraData))...)
+	}
+	buf.Write(header.ExtraData[:types.IstanbulExtraVanity])
+
+	ist := &types.IstanbulExtra{ // we share the IstanbulExtra struct
+		Validators:    vals,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(buf.Bytes(), payload...), nil
+}
+
+// update timestamp and signature of the block based on its number of transactions
+func (s *server) updateBlock(parent *types.BlockHeader, block *types.Block) (*types.Block, error) {
+	header := block.Header
+	// sign the hash
+	seal, err := s.Sign(sigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	err = writeSeal(header, seal)
+	if err != nil {
+		return nil, err
+	}
+
+	return block.WithSeal(header), nil
+}
+
+// Sign implements istanbul.Backend.Sign
+func (s *server) Sign(data []byte) ([]byte, error) {
+	hashData := crypto.Keccak256([]byte(data))
+	sign, err := crypto.Sign(s.privateKey, hashData)
+	return sign.Sig, err
+}
+
+// writeSeal writes the extra-data field of the given header with the given seals.
+// suggest to rename to writeSeal.
+func writeSeal(h *types.BlockHeader, seal []byte) error {
+	if len(seal)%types.IstanbulExtraSeal != 0 {
+		return errInvalidSignature
+	}
+
+	istanbulExtra, err := types.ExtractIstanbulExtra(h)
+	if err != nil {
+		return err
+	}
+
+	istanbulExtra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	if err != nil {
+		return err
+	}
+
+	h.ExtraData = append(h.ExtraData[:types.IstanbulExtraVanity], payload...)
+	return nil
+}
+
+func (s *server) EventMux() *event.TypeMux {
+	return s.bftEventMux
 }
