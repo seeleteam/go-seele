@@ -22,8 +22,8 @@ import (
 const (
 	checkpointInterval = 1024 // Height of blocks after which to save the vote snapshot to the database
 	inmemorySnapshots  = 128  // Height of recent vote snapshots to keep in memory
-	inmemoryPeers      = 40
-	inmemoryMessages   = 1024
+	inmemoryPeers      = 40   // peers of recent kept in memory
+	inmemoryMessages   = 1024 // messages of recent kept in memory
 )
 
 var (
@@ -120,7 +120,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 
 	// add verifiers in snapshot to extraData's verifiers section
-	extra, err := prepareExtra(header, snap.verifiers()) // TODO implement prepareExtra
+	extra, err := prepareExtra(header, snap.verifiers())
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (s *server) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	return err
 }
 
-// Seal generates a new block for the given input block with the local miner's
+// SealResult generates a new block for the given input block with the local miner's
 // seal place on top.
 func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	// update the block header timestamp and signature and propose the block to core engine
@@ -155,6 +155,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	if err != nil {
 		return nil, err
 	}
+	// check whether self is authoried or not
 	if _, v := snap.VerSet.GetByAddress(s.address); v == nil {
 		return nil, errUnauthorized
 	}
@@ -163,7 +164,9 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	if parent == nil {
 		return nil, consensus.ErrBlockInvalidParentHash
 	}
-	block, err = s.updateBlock(parent, block) // TODO implement
+
+	//update block with signature and timestamp
+	block, err = s.updateBlock(parent, block) //
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +174,8 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// wait for the timestamp of header, use this to adjust the block period
 	delay := time.Unix(block.Header.CreateTimestamp.Int64(), 0).Sub(now())
 	select {
-	case <-time.After(delay):
-	case <-stop:
+	case <-time.After(delay): // wait for delay
+	case <-stop: // stop is signaled
 		return nil, nil
 	}
 
@@ -195,6 +198,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 		case result := <-s.commitCh:
 			// if the block hash and the hash from channel are the same,
 			// return the result. Otherwise, keep waiting the next hash.
+			// MORE TEST Here (ensure logic is right here)
 			if block.Hash() == result.Hash() {
 				return result, nil
 			}
@@ -209,7 +213,7 @@ func (s *server) VerifyHeader(chain consensus.ChainReader, header *types.BlockHe
 }
 
 // verifyHeader
-// consensus-createTime- extraData-the block is not voting on add or remove one verifier-difficulty
+// verify 1.consensus- 2.createTime- 3.extraData- 4.the block is not voting on add or remove one verifier-difficulty
 func (s *server) verifyHeader(chain consensus.ChainReader, header *types.BlockHeader, parents []*types.BlockHeader) error {
 	if header.Consensus != types.BftConsensus {
 		return errBFTConsensus
@@ -289,7 +293,7 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			return errInvalidSignature
 		}
 		if verifiers.RemoveVerifier(addr) { //TODO
-			validSealCount += 1
+			validSealCount++
 		} else {
 			return errInvalidCommittedSeals
 		}
@@ -336,7 +340,7 @@ func extractAccount(header *types.BlockHeader) (common.Address, error) {
 	if addr, ok := recentAddresses.Get(hash); ok {
 		return addr.(common.Address), nil
 	}
-	bftExtra, err := types.ExtractBftExtra(header) // TODO!!!! redifine ExtractBftExtra
+	bftExtra, err := types.ExtractBftExtra(header) //
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -462,7 +466,7 @@ func prepareExtra(header *types.BlockHeader, vers []common.Address) ([]byte, err
 	return append(buf.Bytes(), payload...), nil
 }
 
-// update timestamp and signature of the block based on its number of transactions
+// updateBlock update timestamp and signature of the block based on its number of transactions
 func (s *server) updateBlock(parent *types.BlockHeader, block *types.Block) (*types.Block, error) {
 	header := block.Header
 	// sign the hash

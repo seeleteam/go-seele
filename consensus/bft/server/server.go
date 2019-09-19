@@ -288,7 +288,7 @@ func (s *server) LastProposal() (bft.Proposal, common.Address) {
 	var proposer common.Address
 	if block.Height() > 0 {
 		var err error
-		proposer, err := s.Creator(block.Header)
+		proposer, err = s.Creator(block.Header)
 		if err != nil {
 			s.log.Error("failed to get block creator(proposer) with err", err)
 			return nil, common.Address{}
