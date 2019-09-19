@@ -39,6 +39,17 @@ type Istanbul interface {
 	Stop() error
 }
 
+// BFT is a consensus engine to avoid byzantine failure
+type Bft interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+}
+
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {
 	// Enqueue add a block into fetcher queue
