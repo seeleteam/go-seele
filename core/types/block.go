@@ -38,6 +38,7 @@ type ConsensusType uint
 const (
 	PowConsensus ConsensusType = iota
 	IstanbulConsensus
+	BftConsensus
 )
 
 // BlockHeader represents the header of a block in the blockchain.
@@ -55,10 +56,10 @@ type BlockHeader struct {
 	// in pow consensus, witness is the nonce that proof whether the block is validate;
 	// in spow consensus, witness and secondWitness are the nonce pair
 	// in BFT consensus, witness is used to vote for validator candidates and Creator is the candidate address.
-	Witness   []byte
+	Witness       []byte
 	SecondWitness []byte
-	Consensus ConsensusType
-	ExtraData []byte // ExtraData stores the extra info of block header.
+	Consensus     ConsensusType
+	ExtraData     []byte // ExtraData stores the extra info of block header.
 }
 
 // Clone returns a clone of the block header.
