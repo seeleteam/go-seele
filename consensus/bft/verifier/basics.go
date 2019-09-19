@@ -71,9 +71,9 @@ func (verSet *basicSet) GetByIndex(i uint64) bft.Verifier {
 }
 
 func (verSet *basicSet) GetByAddress(addr common.Address) (int, bft.Verifier) {
-	for i, val := range verSet.List() {
-		if addr == val.Address() {
-			return i, val
+	for i, ver := range verSet.List() {
+		if addr == ver.Address() {
+			return i, ver
 		}
 	}
 	return -1, nil

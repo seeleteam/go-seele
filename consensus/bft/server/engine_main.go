@@ -12,7 +12,7 @@ func (s *server) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "bft",
 		Version:   "1.0",
-		Service:   &API{chain: chain, bft: b}, // TODO
+		Service:   &API{chain: chain, bft: s}, // TODO
 		Public:    true,
 	}}
 }

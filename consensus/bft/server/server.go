@@ -134,7 +134,7 @@ func (s *server) Address() common.Address {
 
 // Verifiers returns the Verifier set
 func (s *server) Verifiers(proposal bft.Proposal) bft.VerifierSet {
-	return s.getValidators(proposal.Height(), proposal.Hash())
+	return s.getVerifiers(proposal.Height(), proposal.Hash())
 }
 
 // EventMux returns the event mux in backend
@@ -162,14 +162,14 @@ func (s *server) Gossip(verSet bft.VerifierSet, payload []byte) error {
 	targets := make(map[common.Address]bool)
 	for _, ver := range verSet.List() {
 		if ver.Address() != s.Address() { // exclude self
-			targets[ver.Address()] == true
+			targets[ver.Address()] = true
 		}
 	}
 
 	// send out message to all targets
 	if s.broadcaster != nil && len(targets) > 0 {
 		peers := s.broadcaster.FindPeers(targets)
-		for add, p := range peers {
+		for addr, p := range peers {
 			ms, ok := s.recentMessages.Get(addr)
 			var m *lru.ARCCache
 			if ok {
@@ -192,7 +192,7 @@ func (s *server) Gossip(verSet bft.VerifierSet, payload []byte) error {
 // Commit delivers an approved proposal to backend.
 // The delivered proposal will be put into blockchain.
 func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
-	// check if the proposal is a valid block
+	// 1. check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.log.Error("Invalid proposal: %v", proposal)
@@ -200,24 +200,24 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 	}
 	h := block.Header
 
-	//append seals into extraData
-	errSeal := writeCommittedSeals(h, seals) //TODO implement writeCommittedSeals
+	//2. append seals into extraData
+	errSeal := writeCommittedSeals(h, seals) //
 	if errSeal != nil {
 		return errSeal
 	}
 
-	//then update block header
-	block = block.WithSeal()
+	//3. then update block header
+	block = block.WithSeal(h)
 	s.log.Info("Committed.address %s hash %s number %d", s.Address().String(), proposal.Hash().String(), proposal.Height())
 
-	// - if the proposed and committed blocks are the same, send the proposed hash
+	// 4-1 if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	if s.proposedBlockHash == block.Hash() {
 		s.commitCh <- block
 		return nil
 	}
 
-	// - otherwise, we try to insert the block.
+	// 4-2 otherwise, we try to insert the block.
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped.
 	// -- otherwise, a error will be returned and a round change event will be fired.
@@ -294,6 +294,7 @@ func (s *server) LastProposal() (bft.Proposal, common.Address) {
 			return nil, common.Address{}
 		}
 	}
+	return block, proposer
 }
 
 // HasPropsal checks if the combination of the given hash and height matches any existing blocks
@@ -313,12 +314,12 @@ func (s *server) GetProposer(height uint64) common.Address {
 // ParentVerifiers returns the Verifier set of the given proposal's parent block
 func (s *server) ParentVerifiers(proposal bft.Proposal) bft.VerifierSet {
 	if block, ok := proposal.(*types.Block); ok {
-		return s.getValidators(block.Height-1, block.ParentHash())
+		return s.getVerifiers(block.Height()-1, block.ParentHash())
 	}
 	return verifier.NewVerifierSet(nil, s.config.ProposerPolicy)
 }
 
-func (s *server) getValidators(height uint64, hash common.Hash) bft.VerifierSet {
+func (s *server) getVerifiers(height uint64, hash common.Hash) bft.VerifierSet {
 	snap, err := s.snapshot(s.chain, height, hash, nil)
 	if err != nil {
 		return verifier.NewVerifierSet(nil, s.config.ProposerPolicy)
