@@ -64,6 +64,12 @@ const (
 	// BFT data folder
 	BFTDataFolder = "bftdata"
 
+	// BFT mineralgorithm
+	BFTSuchainEngine = "bft_subchain"
+
+	// BFT data folder
+	BFTSuchainDataFolder = "bft_suchain_data"
+
 	// EVMStackLimit increase evm stack limit to 8192
 	EVMStackLimit = 8192
 

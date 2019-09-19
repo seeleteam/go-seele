@@ -49,7 +49,7 @@ var (
 	// profileSize is used to limit when need to collect profiles, set 6GB
 	profileSize = uint64(1024 * 1024 * 1024 * 6)
 
-	maxConns 	= int(0)
+	maxConns       = int(0)
 	maxActiveConns = int(0)
 )
 
@@ -91,6 +91,8 @@ var startCmd = &cobra.Command{
 		var engine consensus.Engine
 		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
 			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
+		} else if nCfg.BasicConfig.MinerAlgorithm == common.BFTSuchainEngine {
+			engine, err = factory.GetBFTSubchainEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
 		} else {
 			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm, nCfg.BasicConfig.DataSetDir)
 		}

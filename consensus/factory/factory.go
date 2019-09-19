@@ -13,6 +13,8 @@ import (
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"
+	"github.com/seeleteam/go-seele/consensus/bft"
+	"github.com/seeleteam/go-seele/consensus/bft/server"
 	"github.com/seeleteam/go-seele/consensus/ethash"
 	"github.com/seeleteam/go-seele/consensus/istanbul"
 	"github.com/seeleteam/go-seele/consensus/istanbul/backend"
@@ -55,4 +57,15 @@ func MustGetConsensusEngine(minerAlgorithm string) consensus.Engine {
 	}
 
 	return engine
+}
+
+// subchain bft engine entrance
+func GetBFTSubchainEngine(privateKey *ecdsa.PrivateKey, folder string) (consensus.Engine, error) {
+	path := filepath.Join(folder, common.BFTDataFolder)
+	db, err := leveldb.NewLevelDB(path)
+	if err != nil {
+		return nil, errors.NewStackedError(err, "create bft folder failed")
+	}
+
+	return server.NewServer(bft.DefaultConfig, privateKey, db), nil
 }
