@@ -14,7 +14,7 @@ import (
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/consensus/bft"
 	bftCore "github.com/seeleteam/go-seele/consensus/bft/core"
-	"github.com/seeleteam/go-seele/consensus/istanbul/validator"
+	"github.com/seeleteam/go-seele/consensus/bft/verifier"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 )
@@ -217,7 +217,7 @@ func (s *server) verifyHeader(chain consensus.ChainReader, header *types.BlockHe
 	if header.CreateTimestamp.Cmp(big.NewInt(now().Unix())) > 0 {
 		return consensus.ErrBlockCreateTimeOld
 	}
-	if _, err := types.ExtractIstanbulExtra(header); err != nil {
+	if _, err := types.ExtractBftExtra(header); err != nil {
 		return errInvalidExtraDataFormat
 	}
 	if header.Height != 0 && !bytes.Equal(header.Witness[:], nonceAuthVote) && !bytes.Equal(header.Witness[:], nonceDropVote) {
@@ -271,7 +271,7 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 	if err != nil {
 		return err
 	}
-	extra, err := types.ExtractIstanbulExtra(header)
+	extra, err := types.ExtractBftExtra(header)
 	if err != nil {
 		return err
 	}
@@ -336,7 +336,7 @@ func extractAccount(header *types.BlockHeader) (common.Address, error) {
 	if addr, ok := recentAddresses.Get(hash); ok {
 		return addr.(common.Address), nil
 	}
-	bftExtra, err := types.ExtractIstanbulExtra(header) // TODO!!!! redifine ExtractIstanbulExtra
+	bftExtra, err := types.ExtractBftExtra(header) // TODO!!!! redifine ExtractBftExtra
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -388,11 +388,11 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			if err := ser.VerifyHeader(chain, genesis); err != nil {
 				return nil, err
 			}
-			istanbulExtra, err := types.ExtractIstanbulExtra(genesis)
+			bftExtra, err := types.ExtractBftExtra(genesis)
 			if err != nil {
 				return nil, err
 			}
-			snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), validator.NewSet(istanbulExtra.Validators, ser.config.ProposerPolicy))
+			snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
 			if err := snap.store(ser.db); err != nil {
 				return nil, err
 			}
@@ -439,22 +439,22 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 }
 
 // prepareExtra returns a extra-data of the given header and validators
-func prepareExtra(header *types.BlockHeader, vals []common.Address) ([]byte, error) {
+func prepareExtra(header *types.BlockHeader, vers []common.Address) ([]byte, error) {
 	var buf bytes.Buffer
 
-	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
-	if len(header.ExtraData) < types.IstanbulExtraVanity { //here we use IstanbulExtraVanity (32-bit fixed length)
-		header.ExtraData = append(header.ExtraData, bytes.Repeat([]byte{0x00}, types.IstanbulExtraVanity-len(header.ExtraData))...)
+	// compensate the lack bytes if header.Extra is not enough BftExtraVanity bytes.
+	if len(header.ExtraData) < types.BftExtraVanity { //here we use BftExtraVanity (32-bit fixed length)
+		header.ExtraData = append(header.ExtraData, bytes.Repeat([]byte{0x00}, types.BftExtraVanity-len(header.ExtraData))...)
 	}
-	buf.Write(header.ExtraData[:types.IstanbulExtraVanity])
+	buf.Write(header.ExtraData[:types.BftExtraVanity])
 
-	ist := &types.IstanbulExtra{ // we share the IstanbulExtra struct
-		Validators:    vals,
+	bfte := &types.BftExtra{ // we share the BftExtra struct
+		Verifiers:     vers,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
 	}
 
-	payload, err := rlp.EncodeToBytes(&ist)
+	payload, err := rlp.EncodeToBytes(&bfte)
 	if err != nil {
 		return nil, err
 	}
@@ -482,22 +482,22 @@ func (s *server) updateBlock(parent *types.BlockHeader, block *types.Block) (*ty
 // writeSeal writes the extra-data field of the given header with the given seals.
 // suggest to rename to writeSeal.
 func writeSeal(h *types.BlockHeader, seal []byte) error {
-	if len(seal)%types.IstanbulExtraSeal != 0 {
+	if len(seal)%types.BftExtraSeal != 0 {
 		return errInvalidSignature
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
+	bftExtra, err := types.ExtractBftExtra(h)
 	if err != nil {
 		return err
 	}
 
-	istanbulExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	bftExtra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&bftExtra)
 	if err != nil {
 		return err
 	}
 
-	h.ExtraData = append(h.ExtraData[:types.IstanbulExtraVanity], payload...)
+	h.ExtraData = append(h.ExtraData[:types.BftExtraVanity], payload...)
 	return nil
 }
 
@@ -507,24 +507,24 @@ func writeCommittedSeals(h *types.BlockHeader, committedSeals [][]byte) error {
 	}
 
 	for _, seal := range committedSeals {
-		if len(seal) != types.IstanbulExtraSeal { // TODO change types
+		if len(seal) != types.BftExtraSeal { // TODO change types
 			return errInvalidCommittedSeals
 		}
 	}
 
-	istanbulExtra, err := types.ExtractIstanbulExtra(h) // TODO change types
+	bftExtra, err := types.ExtractBftExtra(h) // TODO change types
 	if err != nil {
 		return err
 	}
 
-	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(istanbulExtra.CommittedSeal, committedSeals) // TODO change types
+	bftExtra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(bftExtra.CommittedSeal, committedSeals) // TODO change types
 
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	payload, err := rlp.EncodeToBytes(&bftExtra)
 	if err != nil {
 		return err
 	}
 
-	h.ExtraData = append(h.ExtraData[:types.IstanbulExtraVanity], payload...) // TODO change types
+	h.ExtraData = append(h.ExtraData[:types.BftExtraVanity], payload...) // TODO change types
 	return nil
 }

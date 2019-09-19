@@ -23,7 +23,7 @@ const (
 // Vote represents a single vote that an authorized verifier made to modify the
 // list of authorizations.
 type Vote struct {
-	Validator common.Address `json:"verifier"`  // Authorized verifier that cast this vote
+	Verifier  common.Address `json:"verifier"`  // Authorized verifier that cast this vote
 	Block     uint64         `json:"block"`     // Block number the vote was cast in (expire old votes)
 	Address   common.Address `json:"address"`   // Account being voted on to change its authorization
 	Authorize bool           `json:"authorize"` // Whether to authorize or deauthorize the voted account
@@ -184,7 +184,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 
 		// Header authorized, discard any previous votes from the verifier
 		for i, vote := range snap.Votes {
-			if vote.Validator == verifier && vote.Address == header.Creator {
+			if vote.Verifier == verifier && vote.Address == header.Creator {
 				// Uncast the vote from the cached tally
 				snap.uncast(vote.Address, vote.Authorize)
 
@@ -205,7 +205,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		}
 		if snap.cast(header.Creator, authorize) {
 			snap.Votes = append(snap.Votes, &Vote{
-				Validator: verifier,
+				Verifier:  verifier,
 				Block:     number,
 				Address:   header.Creator,
 				Authorize: authorize,
@@ -214,13 +214,13 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		// If the vote passed, update the list of verifiers
 		if tally := snap.Tally[header.Creator]; tally.Votes > snap.VerSet.Size()/2 {
 			if tally.Authorize {
-				snap.VerSet.AddValidator(header.Creator)
+				snap.VerSet.AddVerifier(header.Creator)
 			} else {
-				snap.VerSet.RemoveValidator(header.Creator)
+				snap.VerSet.RemoveVerifier(header.Creator)
 
 				// Discard any previous votes the deauthorized verifier cast
 				for i := 0; i < len(snap.Votes); i++ {
-					if snap.Votes[i].Validator == header.Creator {
+					if snap.Votes[i].Verifier == header.Creator {
 						// Uncast the vote from the cached tally
 						snap.uncast(snap.Votes[i].Address, snap.Votes[i].Authorize)
 
@@ -271,19 +271,19 @@ type snapshotJSON struct {
 	Tally  map[common.Address]Tally `json:"tally"`
 
 	// for verifier set
-	Validators []common.Address   `json:"verifiers"`
-	Policy     bft.ProposerPolicy `json:"policy"`
+	Verifiers []common.Address   `json:"verifiers"`
+	Policy    bft.ProposerPolicy `json:"policy"`
 }
 
 func (s *Snapshot) toJSONStruct() *snapshotJSON {
 	return &snapshotJSON{
-		Epoch:      s.Epoch,
-		Number:     s.Height,
-		Hash:       s.Hash,
-		Votes:      s.Votes,
-		Tally:      s.Tally,
-		Validators: s.verifiers(),
-		Policy:     s.VerSet.Policy(),
+		Epoch:     s.Epoch,
+		Number:    s.Height,
+		Hash:      s.Hash,
+		Votes:     s.Votes,
+		Tally:     s.Tally,
+		Verifiers: s.verifiers(),
+		Policy:    s.VerSet.Policy(),
 	}
 }
 
@@ -299,7 +299,7 @@ func (s *Snapshot) UnmarshalJSON(b []byte) error {
 	s.Hash = j.Hash
 	s.Votes = j.Votes
 	s.Tally = j.Tally
-	s.VerSet = verifier.NewSet(j.Validators, j.Policy)
+	s.VerSet = verifier.NewVerifierSet(j.Verifiers, j.Policy)
 	return nil
 }
 
