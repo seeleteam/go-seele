@@ -30,6 +30,17 @@ func (e *methodNotFoundError) Error() string {
 	return fmt.Sprintf("The method %s%s%s does not exist/is not available", e.service, serviceMethodSeparator, e.method)
 }
 
+type methodNotAllowedError struct {
+	service string
+	method  string
+}
+
+func (e *methodNotAllowedError) ErrorCode() int { return -32599 }
+
+func (e *methodNotAllowedError) Error() string {
+	return fmt.Sprintf("The method %s%s%s only works for 127.0.0.1 (localhost)", e.service, serviceMethodSeparator, e.method)
+}
+
 // received message isn't a valid request
 type invalidRequestError struct{ message string }
 
