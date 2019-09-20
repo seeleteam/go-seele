@@ -196,7 +196,7 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.log.Error("Invalid proposal: %v", proposal)
-		return errInvalidProposal
+		return errProposalInvalid
 	}
 	h := block.Header
 
@@ -235,7 +235,7 @@ func (s *server) Verify(proposal bft.Proposal) (time.Duration, error) {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.log.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
+		return 0, errProposalInvalid
 	}
 
 	// 2. check block body

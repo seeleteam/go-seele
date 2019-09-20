@@ -26,24 +26,24 @@ type backlogEvent struct {
 
 func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
-		return errInvalidMessage
+		return errInvalidMsg
 	}
 	if view.Cmp(c.currentView()) > 0 {
-		return errFutureMessage
+		return errMsgFromFuture
 	}
 
 	if view.Cmp(c.currentView()) < 0 {
-		return errOldMessage
+		return errOldMsg
 	}
 	if c.waitingForRoundChange {
-		return errFutureMessage
+		return errMsgFromFuture
 	}
 
 	// StateAcceptRequest only accepts msgPreprepare
 	// other messages are future messages
 	if c.state == StateAcceptRequest {
 		if msgCode > msgPreprepare {
-			return errFutureMessage
+			return errMsgFromFuture
 		}
 		return nil
 	}
@@ -125,7 +125,7 @@ func (c *core) processBacklog() {
 			// Push back if it's a future message
 			err := c.checkMessage(msg.Code, view)
 			if err != nil {
-				if err == errFutureMessage {
+				if err == errMsgFromFuture {
 					c.log.Debug("Stop processing backlog. msg %v", msg)
 					backlog.Push(msg, prio)
 					isFuture = true

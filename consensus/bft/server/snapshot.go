@@ -157,11 +157,11 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 	// Sanity check that the headers can be applied
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Height != headers[i].Height+1 {
-			return nil, errInvalidVotingChain
+			return nil, errVotingChainInvalid
 		}
 	}
 	if headers[0].Height != s.Height+1 {
-		return nil, errInvalidVotingChain
+		return nil, errVotingChainInvalid
 	}
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
@@ -201,7 +201,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		case bytes.Compare(header.Witness[:], nonceDropVote) == 0:
 			authorize = false
 		default:
-			return nil, errInvalidVote
+			return nil, errVoteInvalid
 		}
 		if snap.cast(header.Creator, authorize) {
 			snap.Votes = append(snap.Votes, &Vote{

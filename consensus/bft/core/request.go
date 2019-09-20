@@ -11,7 +11,7 @@ request.go (part of core package)
 
 func (c *core) handleRequest(request *bft.Request) error {
 	if err := c.checkRequestMsg(request); err != nil {
-		if err == errInvalidMessage {
+		if err == errInvalidMsg {
 			c.log.Warn("invalid request")
 			return err
 		}
@@ -43,7 +43,7 @@ func (c *core) processPendingRequests() {
 		err := c.checkRequestMsg(req)
 		if err != nil {
 			// this is a future message, need to push back
-			if err == errFutureMessage {
+			if err == errMsgFromFuture {
 				c.log.Info("future request with height %d hash %s", req.Proposal.Height(), req.Proposal.Hash())
 				c.pendingRequests.Push(msg, priority)
 				break
@@ -62,12 +62,12 @@ func (c *core) processPendingRequests() {
 // checkRequestMsg check request: invalid / future / old
 func (c *core) checkRequestMsg(request *bft.Request) error {
 	if request == nil || request.Proposal == nil {
-		return errInvalidMessage
+		return errInvalidMsg
 	}
 	if c.current.sequence.Uint64() > request.Proposal.Height() {
-		return errOldMessage
+		return errOldMsg
 	} else if c.current.sequence.Uint64() < request.Proposal.Height() {
-		return errFutureMessage
+		return errMsgFromFuture
 	} else {
 		return nil
 	}

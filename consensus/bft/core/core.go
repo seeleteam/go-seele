@@ -158,7 +158,7 @@ func (c *core) startNewRound(round *big.Int) {
 	//get last proposer and proposal
 	lastProposal, lastProposer := c.server.LastProposal()
 	if c.current == nil { // there is no previous proposal
-		c.log.Info("initiate round")
+		c.log.Info("initiating round")
 	} else if lastProposal.Height() >= c.current.Sequence().Uint64() { // current sequence is smaller than last proposal
 		heightdiff := new(big.Int).Sub(new(big.Int).SetUint64(lastProposal.Height()), c.current.Sequence())
 		c.sequenceMeter.Mark(new(big.Int).Add(heightdiff, common.Big1).Int64())
@@ -213,6 +213,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 	c.newRoundChangeTimer()
+	//FIXME c.log.Info : New round%!(EXTRA string=new_round, *big.Int=0, string=new_seq, *big.Int=1, string=new_proposer, <nil>, string=verSet, []bft.Verifier=[], string=size, int=0, string=isProposer, bool=true)  caller="core.go:216" module=bft_core
 	c.log.Info("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.verSet.GetProposer(), "verSet", c.verSet.List(), "size", c.verSet.Size(), "isProposer", c.isProposer())
 }
 

@@ -57,7 +57,7 @@ func (c *core) handleEvents() {
 					Proposal: e.Proposal,
 				}
 				err := c.handleRequest(req)
-				if err == errFutureMessage {
+				if err == errMsgFromFuture {
 					c.storeRequestMsg(req)
 				}
 			case bft.MessageEvent:
@@ -102,7 +102,7 @@ func (c *core) handleMsg(payload []byte) error {
 	_, src := c.verSet.GetByAddress(msg.Address)
 	if src == nil {
 		c.log.Error("invalid address in messageg %v", msg)
-		return ErrUnauthorizedAddress
+		return ErrAddressUnauthorized
 	}
 	return c.handleCheckedMsg(msg, src)
 }
@@ -110,7 +110,7 @@ func (c *core) handleMsg(payload []byte) error {
 func (c *core) handleCheckedMsg(msg *message, src bft.Verifier) error {
 	// record the message if it is a future message
 	backlog := func(err error) error {
-		if err == errFutureMessage {
+		if err == errMsgFromFuture {
 			c.storeBacklog(msg, src)
 		}
 		return err
@@ -128,7 +128,7 @@ func (c *core) handleCheckedMsg(msg *message, src bft.Verifier) error {
 	default:
 		c.log.Error("invalid message: msg %v address %s from %v", msg, c.address, src)
 	}
-	return errInvalidMessage
+	return errInvalidMsg
 }
 
 func (c *core) handleTimeoutMsg() {

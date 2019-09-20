@@ -41,13 +41,13 @@ func (c *core) handlePreprepare(msg *message, src bft.Verifier) error {
 	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
-		return errFailedDecodePreprepare
+		return errDecodePreprepare
 	}
 
 	// we need to check the message: ensure we have the same view with the preprepare message
 	// if not (namely, it is old message), see if we need to broadcast Commit.
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
-		if err == errOldMessage {
+		if err == errOldMsg {
 			// get all verifiers for this proposal
 			verSet := c.server.ParentVerifiers(preprepare.Proposal).Copy()
 			previousProposer := c.server.GetProposer(preprepare.Proposal.Height() - 1)
@@ -65,7 +65,7 @@ func (c *core) handlePreprepare(msg *message, src bft.Verifier) error {
 	// only proposer will broadcast preprepare message
 	if !c.verSet.IsProposer(src.Address()) {
 		c.log.Warn("igonore preprepare message since it is not the proposer")
-		return errNotFromProposer
+		return errNotProposer
 	}
 
 	// verify the proposal we received

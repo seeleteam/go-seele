@@ -27,7 +27,7 @@ func (s *server) Start(chain consensus.ChainReader, currentBlock func() *types.B
 	defer s.coreMu.Unlock()
 	// check engine status, if already started, just return error.
 	if s.coreStarted {
-		return bft.ErrStartedEngine
+		return bft.ErrEngineStarted
 	}
 
 	// clear previous data
@@ -54,7 +54,7 @@ func (s *server) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
-		return bft.ErrStoppedEngine
+		return bft.ErrEngineStopped
 	}
 	if err := s.core.Stop(); err != nil {
 		return err

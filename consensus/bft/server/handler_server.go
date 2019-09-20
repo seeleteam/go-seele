@@ -44,7 +44,7 @@ func (s *server) HandleMsg(addr common.Address, message interface{}) (bool, erro
 	if msg.Code == bftMsg {
 		// if core is not started
 		if !s.coreStarted {
-			return true, bft.ErrStoppedEngine
+			return true, bft.ErrEngineStopped
 		}
 		var data []byte
 		if err := common.Deserialize(msg.Payload, &data); err != nil {
@@ -89,7 +89,7 @@ func (s *server) NewChainHead() error {
 	defer s.coreMu.RUnlock()
 
 	if !s.coreStarted {
-		return bft.ErrStoppedEngine
+		return bft.ErrEngineStopped
 	}
 
 	go s.bftEventMux.Post(bft.FinalCommittedEvent{})

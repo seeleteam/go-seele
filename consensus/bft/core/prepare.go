@@ -25,7 +25,7 @@ func (c *core) handlePrepare(msg *message, src bft.Verifier) error {
 	// Decode PREPARE message
 	var prepare *bft.Subject
 	if err := msg.Decode(&prepare); err != nil {
-		return errFailedDecodePrepare
+		return errDecodePrepare
 	}
 	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
 		return err
@@ -50,7 +50,7 @@ func (c *core) verifyPrepare(prepare *bft.Subject, src bft.Verifier) error {
 	if !reflect.DeepEqual(prepare, sub) {
 		c.log.Warn("Inconsistent subjects between PREPARE and proposal. from %s. state %d. expected %v. got %v",
 			src, c.state, sub, prepare)
-		return errInconsistentSubject
+		return errInconsistentSubjects
 	}
 
 	return nil

@@ -73,7 +73,7 @@ func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	var commit *bft.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
-		return errFailedDecodeCommit
+		return errDecodeCommit
 	}
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
 		return nil
@@ -98,7 +98,7 @@ func (c *core) verifyCommit(commit *bft.Subject, src bft.Verifier) error {
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(commit, sub) {
 		c.log.Warn("Inconsistent subjects between commit and proposal. expected %v. got %v.", sub, commit)
-		return errInconsistentSubject
+		return errInconsistentSubjects
 	}
 
 	return nil

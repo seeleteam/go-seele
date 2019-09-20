@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"time"
@@ -27,42 +28,43 @@ const (
 )
 
 var (
-	// errInvalidProposal is returned when a prposal is malformed.
-	errInvalidProposal = errors.New("invalid proposal")
-	// errInvalidSignature is returned when given signature is not signed by given
-	// address.
-	errInvalidSignature = errors.New("invalid signature")
-	// errUnknownBlock is returned when the list of verifiers is requested for a block
-	// that is not part of the local blockchain.
-	errUnknownBlock = errors.New("unknown block")
+	// errInconsistentValidatorSet is returned if the verifier set is inconsistent
+	errProposalInvalididatorSet = errors.New("non empty uncle hash")
+	// errTimestampInvalid is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
+	errTimestampInvalid = errors.New("invalid timestamp")
+	// errVotingChainInvalid is returned if an authorization list is attempted to
+	// be modified via out-of-range or non-contiguous headers.
+	errVotingChainInvalid = errors.New("invalid voting chain")
 	// errUnauthorized is returned if a header is signed by a non authorized entity.
 	errUnauthorized = errors.New("unauthorized")
-	// errInvalidDifficulty is returned if the difficulty of a block is not 1
-	errInvalidDifficulty = errors.New("invalid difficulty")
-	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
-	errInvalidExtraDataFormat = errors.New("invalid extra data format")
+	// errDifficultyInvalid is returned if the difficulty of a block is not 1
+	errDifficultyInvalid = errors.New("invalid difficulty")
+	// errExtraDataFormatInvalid is returned when the extra data format is incorrect
+	errExtraDataFormatInvalid = errors.New("invalid extra data format")
 	// errBFTConsensus is returned if a block's consensus mismatch BFT
 	errBFTConsensus = errors.New("mismatch BFT Consensus")
-	// errInvalidNonce is returned if a block's nonce is invalid
-	errInvalidNonce = errors.New("invalid nonce")
-	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
-	errInvalidUncleHash = errors.New("non empty uncle hash")
-	// errInconsistentValidatorSet is returned if the verifier set is inconsistent
-	errInconsistentValidatorSet = errors.New("non empty uncle hash")
-	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
-	errInvalidTimestamp = errors.New("invalid timestamp")
-	// errInvalidVotingChain is returned if an authorization list is attempted to
-	// be modified via out-of-range or non-contiguous headers.
-	errInvalidVotingChain = errors.New("invalid voting chain")
-	// errInvalidVote is returned if a nonce value is something else that the two
+	// errVoteInvalid is returned if a nonce value is something else that the two
 	// allowed constants of 0x00..0 or 0xff..f.
-	errInvalidVote = errors.New("vote nonce not 0x00..0 or 0xff..f")
-	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent verifiers.
-	errInvalidCommittedSeals = errors.New("invalid committed seals")
+	errVoteInvalid = errors.New("vote nonce not 0x00..0 or 0xff..f")
+	// errCommittedSealsInvalid is returned if the committed seal is not signed by any of parent verifiers.
+	errCommittedSealsInvalid = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transcations hashes")
+	// errProposalInvalid is returned when a prposal is malformed.
+	errProposalInvalid = errors.New("invalid proposal")
+	// errInvalidSignature is returned when given signature is not signed by given
+	// address.
+	errInvalidSignature = errors.New("invalid signature")
+	// errBlockUnknown is returned when the list of verifiers is requested for a block
+	// that is not part of the local blockchain.
+	errBlockUnknown = errors.New("unknown block")
+	// errNonceInvalid is returned if a block's nonce is invalid
+	errNonceInvalid = errors.New("invalid nonce")
+	// errInvalidUncleHash is returned if a block contains an non-empty uncle list.
+	errInvalidUncleHash = errors.New("non empty uncle hash")
+	
 )
 
 var (
@@ -215,20 +217,21 @@ func (s *server) VerifyHeader(chain consensus.ChainReader, header *types.BlockHe
 // verifyHeader
 // verify 1.consensus- 2.createTime- 3.extraData- 4.the block is not voting on add or remove one verifier-difficulty
 func (s *server) verifyHeader(chain consensus.ChainReader, header *types.BlockHeader, parents []*types.BlockHeader) error {
-	if header.Consensus != types.BftConsensus {
-		return errBFTConsensus
-	}
+	// if header.Consensus != types.BftConsensus {
+	// 	return errBFTConsensus
+	// }
+	fmt.Println(header)
 	if header.CreateTimestamp.Cmp(big.NewInt(now().Unix())) > 0 {
 		return consensus.ErrBlockCreateTimeOld
 	}
 	if _, err := types.ExtractBftExtra(header); err != nil {
-		return errInvalidExtraDataFormat
+		return errExtraDataFormatInvalid
 	}
 	if header.Height != 0 && !bytes.Equal(header.Witness[:], nonceAuthVote) && !bytes.Equal(header.Witness[:], nonceDropVote) {
-		return errInvalidNonce
+		return errNonceInvalid
 	}
 	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
+		return errDifficultyInvalid
 	}
 	return s.verifyCascadingFields(chain, header, parents)
 }
@@ -247,7 +250,7 @@ func (s *server) verifyCascadingFields(chain consensus.ChainReader, header *type
 		parent = chain.GetHeaderByHash(header.PreviousBlockHash)
 	}
 	if parent.CreateTimestamp.Uint64()+s.config.BlockPeriod > header.CreateTimestamp.Uint64() {
-		return errInvalidTimestamp
+		return errTimestampInvalid
 	}
 	// verify verify extraData. Verifiers in snapshot and extraData should be the same
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, parents) //TODO implement snapshot() in snapshot.go
@@ -295,12 +298,12 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 		if verifiers.RemoveVerifier(addr) { //TODO
 			validSealCount++
 		} else {
-			return errInvalidCommittedSeals
+			return errCommittedSealsInvalid
 		}
 	}
 	// 2. The length of validSeal should be larger than number of faulty node + 1
 	if validSealCount <= 2*snap.VerSet.F() {
-		return errInvalidCommittedSeals
+		return errCommittedSealsInvalid
 	}
 	return nil
 }
@@ -308,7 +311,7 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 func (s *server) verifySigner(chain consensus.ChainReader, header *types.BlockHeader, parents []*types.BlockHeader) error {
 	number := header.Height
 	if number == 0 {
-		return errUnknownBlock
+		return errBlockUnknown
 	}
 	// Retrieve the snapshot needed to verify this header and cache it
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, parents)
@@ -507,12 +510,12 @@ func writeSeal(h *types.BlockHeader, seal []byte) error {
 
 func writeCommittedSeals(h *types.BlockHeader, committedSeals [][]byte) error {
 	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
+		return errCommittedSealsInvalid
 	}
 
 	for _, seal := range committedSeals {
 		if len(seal) != types.BftExtraSeal { // TODO change types
-			return errInvalidCommittedSeals
+			return errCommittedSealsInvalid
 		}
 	}
 

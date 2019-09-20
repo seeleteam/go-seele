@@ -135,7 +135,7 @@ func (c *core) handleRoundChange(msg *message, src bft.Verifier) error {
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other verifiers.
-		return errIgnored
+		return errMsgIgnored
 	}
 	return nil
 }
