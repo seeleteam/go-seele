@@ -30,8 +30,8 @@ func (c *core) processPendingRequests() {
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
 
-	// TODO since future request will push back and this is infinity loop
-	// we may need a indicator to help to enter this loop in order to loop idly
+	// TODO since future request will push back and this is an infinity loop
+	// we may need an indicator to help to enter this loop in order not to loop idly
 	for !(c.pendingRequests.Empty()) {
 		msg, priority := c.pendingRequests.Pop()
 		req, ok := msg.(*bft.Request)

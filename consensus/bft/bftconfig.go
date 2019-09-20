@@ -13,15 +13,15 @@ const (
 )
 
 type BFTConfig struct {
-	RequestTimeout uint64         `toml:",omitempty"` // The timeout for each Istanbul round in milliseconds.
+	RequestTimeout uint64         `toml:",omitempty"` // The timeout for each Bft round in milliseconds.
 	BlockPeriod    uint64         `toml:",omitempty"` // Default minimum difference between two consecutive block's timestamps in second
 	ProposerPolicy ProposerPolicy `toml:",omitempty"` // The policy for proposer selection
 	Epoch          uint64         `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
 }
 
 var DefaultConfig = &BFTConfig{
-	RequestTimeout: 10000,
-	BlockPeriod:    1,
+	RequestTimeout: 10000,      // milliseconds
+	BlockPeriod:    1,          //second
 	ProposerPolicy: RoundRobin, // we use RoundRobin policy (others are Random/RoundRobin/LesatBusy/StickySession/cookies/ByReqeust)
-	Epoch:          30000,
+	Epoch:          30000,      //blocks
 }

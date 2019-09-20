@@ -68,7 +68,7 @@ func (c *core) handleEvents() {
 				if err := c.handleCheckedMsg(e.msg, e.src); err == nil {
 					p, err := e.msg.Payload()
 					if err != nil {
-						c.log.Warn("failed to get message payload with err", err)
+						c.log.Warn("failed to get message payload with err %v", err)
 						continue
 					}
 					c.server.Gossip(c.verSet, p)

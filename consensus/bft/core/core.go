@@ -155,10 +155,11 @@ func (c *core) setState(state State) {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 func (c *core) startNewRound(round *big.Int) {
 	rounChanged := false
+	//get last proposer and proposal
 	lastProposal, lastProposer := c.server.LastProposal()
-	if c.current == nil {
+	if c.current == nil { // there is no previous proposal
 		c.log.Info("initiate round")
-	} else if lastProposal.Height() >= c.current.Sequence().Uint64() {
+	} else if lastProposal.Height() >= c.current.Sequence().Uint64() { // current sequence is smaller than last proposal
 		heightdiff := new(big.Int).Sub(new(big.Int).SetUint64(lastProposal.Height()), c.current.Sequence())
 		c.sequenceMeter.Mark(new(big.Int).Add(heightdiff, common.Big1).Int64())
 		if !c.consensusTimestamp.IsZero() {
