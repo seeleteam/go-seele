@@ -59,7 +59,7 @@ func MustGetConsensusEngine(minerAlgorithm string) consensus.Engine {
 	return engine
 }
 
-// subchain bft engine entrance
+// subchain bft engine engine
 func GetBFTSubchainEngine(privateKey *ecdsa.PrivateKey, folder string) (consensus.Engine, error) {
 	path := filepath.Join(folder, common.BFTDataFolder)
 	db, err := leveldb.NewLevelDB(path)

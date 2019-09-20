@@ -58,6 +58,9 @@ const (
 	// spow miner algorithm
 	SpowAlgorithm = "spow"
 
+	// spow miner algorithm
+	BFTSubAlgorithm = "bft_sub"
+
 	// BFT mineralgorithm
 	BFTEngine = "bft"
 
