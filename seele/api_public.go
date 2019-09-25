@@ -199,3 +199,14 @@ func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 
 	return block, nil
 }
+
+// GetShardNum gets the account shard number .
+// if the address is valid, return the corresponding shard number, otherwise return 0
+func (api *PublicSeeleAPI) GetShardNum(account common.Address) (uint, error) {
+	err:=account.Validate()
+	if err==nil {
+		return account.Shard(),nil
+	}else{
+		return 0,err
+	}
+}
