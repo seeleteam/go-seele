@@ -13,11 +13,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"sort"
 	"sync"
 	"time"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -30,21 +30,21 @@ import (
 
 const (
 	// Maximum number of peers that can be connected for each shard
-	maxConnsPerShard = 30
+	maxConnsPerShard = 40
 
 	// Maximum number of peers that node actively connects to.
-	maxActiveConnsPerShard = 24
+	maxActiveConnsPerShard = 25
 
 	defaultDialTimeout = 15 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
-	connWriteTimeout = 30 * time.Second
+	connWriteTimeout = 15 * time.Second
 
 	// Maximum time allowed for reading a complete message.
-	frameReadTimeout = 30 * time.Second
+	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 8 * time.Second
+	checkConnsNumInterval = 15 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -153,7 +153,6 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		genesisHash:          hash,
 		maxConnections:       maxConnsPerShard * common.ShardCount,
 		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
-
 	}
 }
 
@@ -181,12 +180,12 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 
 	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
-	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
+	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.Config.StaticNodes, shard)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 	// add static nodes to srv node set;
-	for _, node:= range srv.StaticNodes {
-		if !node.ID.IsEmpty()  {
+	for _, node := range srv.Config.StaticNodes {
+		if !node.ID.IsEmpty() {
 			srv.nodeSet.tryAdd(node)
 		}
 
@@ -262,7 +261,9 @@ func (srv *Server) connectNode(node *discovery.Node) {
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
 		srv.log.Debug("failed to add new node. err=%s", err)
+		return
 	}
+	return
 }
 
 func (srv *Server) deleteNode(node *discovery.Node) {
@@ -350,34 +351,46 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
-	for _,node := range srv.StaticNodes {
+	var nodeID [maxConnsPerShard]*discovery.Node
+	index := 0
+	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
+		} else {
+			nodeID[index] = node
+			index++
 		}
-		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
-			srv.connectNode(node)
-		}
+
 	}
+	srv.nodeSet.lock.RLock()
+	for i := 0; i < index; i++ {
+		if _, ok := srv.nodeSet.nodeMap[nodeID[i].ID]; ok {
+			srv.connectNode(nodeID[i])
+
+		}
+
+	}
+	srv.nodeSet.lock.RUnlock()
 	var node *discovery.Node
 	i := 0
-	for i < 30 {
+	for i < maxConnsPerShard {
 		node = srv.nodeSet.randSelect()
 		if node == nil {
 			return
 		}
-		
+
 		// get the number of connected peers per shard
 		peers := srv.peerSet.getPeers()
 		srv.peerNumLock.Lock()
 		numOfPeerPerShard := make(map[uint]uint)
 		j := uint(1)
-		for j <= common.ShardCount { 	
+		for j <= common.ShardCount {
 			numOfPeerPerShard[j] = uint(0)
 			j++
-		} 
+		}
 		for _, p := range peers {
 			if p != nil {
-				numOfPeerPerShard[p.Node.Shard]++ 
+				numOfPeerPerShard[p.Node.Shard]++
 			}
 		}
 
@@ -391,7 +404,6 @@ func (srv *Server) doSelectNodeToConnect() {
 		i++
 	}
 	
-
 	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
 }
@@ -575,7 +587,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err := binary.Read(rand.Reader, binary.BigEndian, &nounceCnt); err != nil {
 			return nil, 0, err
 		}
-		
+
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err

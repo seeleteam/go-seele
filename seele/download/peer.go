@@ -18,7 +18,7 @@ import (
 )
 
 // MsgWaitTimeout this timeout should not be happened, but we need to handle it in case of such errors.
-const MsgWaitTimeout = time.Second * 120
+const MsgWaitTimeout = time.Second * 25
 
 var (
 	errReceivedQuitMsg = errors.New("Received quit msg")
