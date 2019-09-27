@@ -93,6 +93,11 @@ func rpcActionEx(namespace string, method string, argsFactory callArgsFactory, r
 			return cli.ShowCommandHelp(c, c.Command.Name)
 		}
 
+		if namespace == "miner" {
+			if !strings.HasPrefix(addressValue, "127.0.0.1") && !strings.HasPrefix(addressValue, "localhost") {
+				return fmt.Errorf("miner methods only work for 127.0.0.1 (localhost)")
+			}
+		}
 		client, err := rpc.DialTCP(context.Background(), addressValue)
 		if err != nil {
 			return err

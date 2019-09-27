@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
@@ -21,6 +20,7 @@ var (
 	contractHexAddr string
 	input           string
 	methodName      string
+	fee 	uint64
 )
 
 func init() {
@@ -28,6 +28,8 @@ func init() {
 	callCmd.Flags().StringVarP(&methodName, "method", "m", "", "call function method name")
 	callCmd.Flags().StringVarP(&contractHexAddr, "contractAddr", "c", "", "the contract address")
 	callCmd.Flags().StringVarP(&account, "account", "a", "", "invoking the address of calling the smart contract(Default is random and has 1 seele)")
+	callCmd.Flags().Uint64VarP(&fee, "fee", "f",100000000 , "call function fee")
+
 	rootCmd.AddCommand(callCmd)
 }
 
@@ -74,7 +76,7 @@ func callContract(contractHexAddr string) {
 	}
 
 	// Create a call message transaction
-	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(1), math.MaxUint64, DefaultNonce, msg)
+	callContractTx, err := types.NewMessageTransaction(from, contractAddr, big.NewInt(0), big.NewInt(1), fee, statedb.GetNonce(from)+1, msg)
 	if err != nil {
 		fmt.Println("failed to create message tx,", err.Error())
 		return

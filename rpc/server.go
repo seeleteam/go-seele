@@ -44,9 +44,10 @@ const (
 // NewServer will create a new server instance with no registered handlers.
 func NewServer() *Server {
 	server := &Server{
-		services: make(serviceRegistry),
-		codecs:   set.New(),
-		run:      1,
+		services:          make(serviceRegistry),
+		codecs:            set.New(),
+		run:               1,
+		minerRemoteRequst: false,
 	}
 
 	// register a default service which will provide meta information about the RPC service such as the services and
@@ -365,6 +366,12 @@ func (s *Server) execBatch(ctx context.Context, codec ServerCodec, requests []*s
 	}
 }
 
+func (s *Server) ChangeMinerRequestStatus() {
+	s.codecsMu.Lock()
+	s.minerRemoteRequst = true
+	s.codecsMu.Unlock()
+}
+
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
@@ -396,7 +403,13 @@ func (s *Server) readRequest(codec ServerCodec) ([]*serverRequest, bool, Error) 
 			}
 			continue
 		}
-
+		if r.service == "miner" && s.minerRemoteRequst == true {
+			s.codecsMu.Lock()
+			s.minerRemoteRequst = false
+			s.codecsMu.Unlock()
+			requests[i] = &serverRequest{id: r.id, err: &methodNotAllowedError{r.service, r.method}}
+			continue
+		}
 		if svc, ok = s.services[r.service]; !ok { // rpc method isn't available
 			requests[i] = &serverRequest{id: r.id, err: &methodNotFoundError{r.service, r.method}}
 			continue

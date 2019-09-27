@@ -341,12 +341,16 @@ handler:
 
 		case announceCode:
 			var query AnnounceBody
+			if time.Now().Unix()-peer.lastAnnounceCodeTime < 60 {
+				lp.log.Warn("peer lastAnnounceCode less than 60s, peer:%s",peer.peerStrID)
+				break handler
+			}
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				lp.log.Error("failed to deserialize Announce, quit! %s", err)
 				break handler
 			}
-
+			lp.log.Debug("handle msg announce code, peer:%s",peer.peerStrID)
 			if err := peer.handleAnnounce(&query); err != nil {
 				lp.log.Error("failed to handleAnnounce, quit! %s", err)
 				break handler
