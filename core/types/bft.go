@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -13,8 +14,8 @@ var (
 	// to identify whether the block is from Bft consensus engine
 	BftWitness = common.MustHexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365").Bytes()
 
-	BftExtraVanity = 32 // Fixed number of extra-data bytes reserved for validator vanity
-	BftExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
+	BftExtraVanity = 32 // Fixed number of extra-data bytes reserved for verifier vanity
+	BftExtraSeal   = 65 // Fixed number of extra-data bytes reserved for verifier seal
 
 	// ErrInvalidBftHeaderExtra is returned if the length of extra-data is less than 32 bytes
 	ErrInvalidBftHeaderExtra = errors.New("invalid istanbul header extra-data")
@@ -39,22 +40,22 @@ func (bftExtra *BftExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the bft fields from a RLP stream.
 func (bftExtra *BftExtra) DecodeRLP(s *rlp.Stream) error {
 	var bftBlockExtra struct {
-		Validators    []common.Address
+		Verifiers     []common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
 	}
 	if err := s.Decode(&bftBlockExtra); err != nil {
 		return err
 	}
-	bftBlockExtra.Validators, bftBlockExtra.Seal, bftBlockExtra.CommittedSeal = bftBlockExtra.Validators, bftBlockExtra.Seal, bftBlockExtra.CommittedSeal
+	bftExtra.Verifiers, bftExtra.Seal, bftExtra.CommittedSeal = bftBlockExtra.Verifiers, bftBlockExtra.Seal, bftBlockExtra.CommittedSeal
 	return nil
 }
 
-// ExtractBftExtra extracts all values of the BftExtra from the header. It returns an
-// error if the length of the given extra-data is less than 32 bytes or the extra-data can not
-// be decoded.
+// ExtractBftExtra extracts all values of the BftExtra from the header. !!!
+// It returns an error if the length of the given extra-data is less than 32 bytes or the extra-data can not be decoded.
 func ExtractBftExtra(h *BlockHeader) (*BftExtra, error) {
 	if len(h.ExtraData) < BftExtraVanity {
+		fmt.Printf("header extra data len %d is smaller than BftExtraVanity %d\n", len(h.ExtraData), BftExtraVanity)
 		return nil, ErrInvalidBftHeaderExtra
 	}
 
