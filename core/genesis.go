@@ -56,7 +56,7 @@ type GenesisInfo struct {
 	// Consensus consensus type
 	Consensus types.ConsensusType `json:"consensus"`
 
-	// Validators istanbul consensus validators
+	// Validators Bft consensus validators
 	Validators []common.Address `json:"validators"`
 
 	// master account
@@ -68,7 +68,7 @@ type GenesisInfo struct {
 
 // NewGenesisInfo mainchain genesis block info constructor
 func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
-	consensus types.ConsensusType, validator []common.Address) *GenesisInfo {
+	consensus types.ConsensusType, validators []common.Address) *GenesisInfo {
 
 	var masteraccount common.Address
 	var balance *big.Int
@@ -94,7 +94,7 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 		ShardNumber:     shard,
 		CreateTimestamp: timestamp,
 		Consensus:       consensus,
-		Validators:      validator,
+		Validators:      validators,
 		Masteraccount:   masteraccount,
 		Balance:         balance,
 	}
@@ -143,13 +143,16 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 	}
 
 	extraData := []byte{}
-	if info.Consensus == types.IstanbulConsensus {
+	if info.Consensus == types.IstanbulConsensus || info.Consensus == types.BftConsensus {
 		extraData = generateConsensusInfo(info.Validators)
+		fmt.Printf("consensus is %d extraData initiated with %v", types.BftConsensus, info.Validators)
 	}
 
 	shard := common.SerializePanic(shardInfo{
 		ShardNumber: info.ShardNumber,
 	})
+
+	fmt.Println("[subchain] the genesis consensus algorithm", info.Consensus)
 
 	return &Genesis{
 		header: &types.BlockHeader{
