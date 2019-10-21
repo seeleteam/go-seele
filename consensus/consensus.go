@@ -28,21 +28,10 @@ type Engine interface {
 	SetThreads(thread int)
 }
 
-// Istanbul is a consensus engine to avoid byzantine failure
-type Istanbul interface {
-	Engine
-
-	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
-
-	// Stop stops the engine
-	Stop() error
-}
-
 // BFT is a consensus engine to avoid byzantine failure
+// All methods will be implemented in server/engine.go
 type Bft interface {
 	Engine
-
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
