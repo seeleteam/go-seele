@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/seeleteam/go-seele/common"
@@ -115,6 +116,7 @@ func (c *core) broadcastCommit(sub *bft.Subject) {
 		Code: msgCommit,
 		Msg:  encodedSubject,
 	})
+	fmt.Println("broadcastCommit->broadcast->Post")
 }
 
 func (c *core) acceptCommit(msg *message, src bft.Verifier) error {

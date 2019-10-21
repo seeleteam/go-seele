@@ -153,6 +153,7 @@ func (c *core) setState(state State) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
+// startNewRound start a new round.
 func (c *core) startNewRound(round *big.Int) {
 	rounChanged := false
 	//get last proposer and proposal
@@ -167,7 +168,7 @@ func (c *core) startNewRound(round *big.Int) {
 			c.consensusTimestamp = time.Time{}
 		}
 		c.log.Info("catch up latest proposal with height %d hash %s", lastProposal.Height(), lastProposal.Hash())
-	} else if lastProposal.Height() == c.current.Sequence().Uint64()-1 {
+	} else if lastProposal.Height() == c.current.Sequence().Uint64()-1 { // consective
 		if round.Cmp(common.Big0) == 0 {
 			// same req and round -> don't need to start new round
 			return
@@ -213,8 +214,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 	c.newRoundChangeTimer()
-	//FIXME c.log.Info : New round%!(EXTRA string=new_round, *big.Int=0, string=new_seq, *big.Int=1, string=new_proposer, <nil>, string=verSet, []bft.Verifier=[], string=size, int=0, string=isProposer, bool=true)  caller="core.go:216" module=bft_core
-	c.log.Info("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.verSet.GetProposer(), "verSet", c.verSet.List(), "size", c.verSet.Size(), "isProposer", c.isProposer())
+	c.log.Info("new_round %d, new_seq %d, new_proposer %v, verSet %v, size %d, isProposer %t", newView.Round, newView.Sequence, c.verSet.GetProposer(), c.verSet.List(), c.verSet.Size(), c.isProposer())
 }
 
 func (c *core) newRoundChangeTimer() {
@@ -288,11 +288,4 @@ func (c *core) isProposer() bool {
 		return false
 	}
 	return v.IsProposer(c.server.Address())
-}
-
-func PrepareCommitedSeal(hash common.Hash) []byte {
-	var buf bytes.Buffer
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(msgCommit)})
-	return buf.Bytes()
 }

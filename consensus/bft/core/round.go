@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -98,6 +99,8 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Code: msgRoundChange,
 		Msg:  payload,
 	})
+	fmt.Println("roundChange->broadcast->Post")
+
 }
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1

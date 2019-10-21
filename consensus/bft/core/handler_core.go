@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
 )
@@ -52,7 +54,7 @@ func (c *core) handleEvents() {
 				return
 			}
 			switch e := event.Data.(type) {
-			case bft.RequestEvent:
+			case bft.RequestEvent: // proposal handle
 				req := &bft.Request{
 					Proposal: e.Proposal,
 				}
@@ -60,7 +62,7 @@ func (c *core) handleEvents() {
 				if err == errMsgFromFuture {
 					c.storeRequestMsg(req)
 				}
-			case bft.MessageEvent:
+			case bft.MessageEvent: // prepare, commit all other msgs
 				if err := c.handleMsg(e.Payload); err == nil {
 					c.server.Gossip(c.verSet, e.Payload)
 				}
@@ -92,6 +94,7 @@ func (c *core) handleEvents() {
 }
 func (c *core) sendEvent(event interface{}) {
 	c.server.EventMux().Post(event)
+	fmt.Println("Post in sendEvent")
 }
 func (c *core) handleMsg(payload []byte) error {
 	msg := new(message)

@@ -1,6 +1,7 @@
 package verifier
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -156,9 +157,12 @@ func (verSet *basicSet) AddVerifier(address common.Address) bool {
 	return true
 }
 
+// RemoveVerifier remove address from verifiers
 func (verSet *basicSet) RemoveVerifier(address common.Address) bool {
 	verSet.verifierMu.Lock()
 	defer verSet.verifierMu.Unlock()
+
+	fmt.Println("To remove", address, "from verifiers set", verSet.verifiers)
 
 	for i, v := range verSet.verifiers {
 		if v.Address() == address {

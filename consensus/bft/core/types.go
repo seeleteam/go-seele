@@ -14,7 +14,9 @@ const (
 )
 
 type Engine interface {
+	// begein to handle the roundchange/subscribeEvent/handleEvent
 	Start() error
+	// Stop the engine
 	Stop() error
 }
 

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/seeleteam/go-seele/consensus/bft"
@@ -18,6 +19,8 @@ func (c *core) sendPrepare() {
 		Code: msgPrepare,
 		Msg:  encodedSubject,
 	})
+	fmt.Println("sendPrepare->broadcast->Post")
+
 }
 
 // handlePrepare: Decode->checkMessage->verify->accept->change state & send commit

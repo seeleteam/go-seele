@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"sync"
 	"time"
 
@@ -105,7 +106,7 @@ type Server interface {
 }
 */
 
-// NeServer new a server for bft backend.
+// NeServer new a server for bft backend. This server as the engine as in the POW Algorithm
 func NewServer(config *BFT.BFTConfig, privateKey *ecdsa.PrivateKey, db database.Database) consensus.Bft {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
@@ -151,6 +152,7 @@ func (s *server) Broadcast(verSet bft.VerifierSet, payload []byte) error {
 		Payload: payload,
 	}
 	go s.bftEventMux.Post(msg)
+	fmt.Println("Post in Broadcast")
 	return nil
 }
 
@@ -214,6 +216,8 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	if s.proposedBlockHash == block.Hash() {
 		s.commitCh <- block
+		fmt.Println("sending a block to commit channel")
+		s.log.Info("server commitCh enchannel with block %+v\n", block)
 		return nil
 	}
 
@@ -290,7 +294,7 @@ func (s *server) LastProposal() (bft.Proposal, common.Address) {
 		var err error
 		proposer, err = s.Creator(block.Header)
 		if err != nil {
-			s.log.Error("failed to get block creator(proposer) with err", err)
+			s.log.Error("failed to get block creator(proposer) with err")
 			return nil, common.Address{}
 		}
 	}

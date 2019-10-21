@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/seeleteam/go-seele/consensus"
@@ -31,6 +32,8 @@ func (c *core) sendPreprepare(request *bft.Request) {
 			Code: msgPreprepare,
 			Msg:  preprepare,
 		})
+		fmt.Println("sendPreprepare->broadcast->Post")
+
 	}
 }
 

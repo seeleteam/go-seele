@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
@@ -73,6 +74,7 @@ func (s *server) HandleMsg(addr common.Address, message interface{}) (bool, erro
 		go s.bftEventMux.Post(bft.MessageEvent{ // post all
 			Payload: data,
 		})
+		fmt.Println("Post in HandleMsg")
 
 		return true, nil
 	}
@@ -93,5 +95,6 @@ func (s *server) NewChainHead() error {
 	}
 
 	go s.bftEventMux.Post(bft.FinalCommittedEvent{})
+	fmt.Println("Post in NewChainHead")
 	return nil
 }
