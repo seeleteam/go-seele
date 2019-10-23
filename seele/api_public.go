@@ -83,7 +83,7 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 		MinerStatus:        status,
 		Version:            common.SeeleNodeVersion,
 		BlockAge:           new(big.Int).Sub(big.NewInt(time.Now().Unix()), block.Header.CreateTimestamp),
-		Peers:              peers,
+		PeerCnt:            peers,
 	}, nil
 }
 
