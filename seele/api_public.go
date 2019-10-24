@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/seeleteam/go-seele/accounts/abi"
 	api2 "github.com/seeleteam/go-seele/api"
@@ -68,7 +69,12 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	} else {
 		status = "Stopped"
 	}
-
+	p1 := api.s.seeleProtocol.peerSet.getPeerCountByShard(1)
+	p2 := api.s.seeleProtocol.peerSet.getPeerCountByShard(2)
+	p3 := api.s.seeleProtocol.peerSet.getPeerCountByShard(3)
+	p4 := api.s.seeleProtocol.peerSet.getPeerCountByShard(4)
+	p0 := p1 + p2 + p3 + p4
+	peers := fmt.Sprintf("%d (%d %d %d %d)", p0, p1, p2, p3, p4)
 	return api2.GetMinerInfo{
 		Coinbase:           api.s.miner.GetCoinbase(),
 		CurrentBlockHeight: block.Header.Height,
@@ -76,6 +82,8 @@ func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 		Shard:              common.LocalShardNumber,
 		MinerStatus:        status,
 		Version:            common.SeeleNodeVersion,
+		BlockAge:           new(big.Int).Sub(big.NewInt(time.Now().Unix()), block.Header.CreateTimestamp),
+		PeerCnt:            peers,
 	}, nil
 }
 
