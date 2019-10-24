@@ -351,37 +351,14 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
-<<<<<<< HEAD
-	var nodeID [maxConnsPerShard]*discovery.Node
-	index := 0
-=======
->>>>>>> 194cf8e532749e7ca256aaa62bf11817d128569d
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
 		} else {
-<<<<<<< HEAD
-			nodeID[index] = node
-			index++
-		}
-
-	}
-	srv.nodeSet.lock.RLock()
-	for i := 0; i < index; i++ {
-		if _, ok := srv.nodeSet.nodeMap[nodeID[i].ID]; ok {
-			srv.connectNode(nodeID[i])
-
-=======
 			srv.connectNode(node)
->>>>>>> 194cf8e532749e7ca256aaa62bf11817d128569d
 		}
 
 	}
-<<<<<<< HEAD
-	srv.nodeSet.lock.RUnlock()
-=======
-
->>>>>>> 194cf8e532749e7ca256aaa62bf11817d128569d
 	var node *discovery.Node
 	i := 0
 	for i < maxConnsPerShard {
