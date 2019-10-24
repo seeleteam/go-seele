@@ -549,7 +549,10 @@ func opExtCodeHash(pc *uint64, interpreter *EVMInterpreter, contract *Contract, 
 }
 
 func opGasprice(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	stack.push(interpreter.intPool.get().Set(interpreter.evm.GasPrice))
+	if interpreter.evm.GasPrice != nil {
+
+		stack.push(interpreter.intPool.get().Set(interpreter.evm.GasPrice))
+	}
 	return nil, nil
 }
 
