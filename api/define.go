@@ -66,9 +66,9 @@ type GetMinerInfo struct {
 	HeaderHash         common.Hash
 	Shard              uint
 	MinerStatus        string
-  Version            string
-  BlockAge           *big.Int
-  Peers              string
+	Version            string
+	BlockAge           *big.Int
+	PeerCnt             string
 }
 
 // GetBalanceResponse response param for GetBalance api
