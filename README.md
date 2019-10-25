@@ -1,7 +1,7 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-|        Features        |      Description                                                                               |
+|        Features        |      Descriptions                                                                               |
 |:-----------------------|------------------------------------------------------------------------------------------------|
 | **Sharding**           | 4 shards, transactions within the same shard and between different shards are supported<br/> higher transaction fee for cross-shard transaction                                  |
 | **Smart Contracts**    | smart contracts are supported within the same shard                                          |
@@ -36,7 +36,7 @@ Building the Seele project requires both a Go (version 1.7 or later) compiler an
 - Clone the go-seele repository to the GOPATH directory:
 
 ```
-go get -u -v github.com/seeleteam/go-seele/... 
+go get -u -v github.com/seeleteam/go-seele/...
 ```
 
 - Once successfully cloned source code:
@@ -84,6 +84,3 @@ Here are some guidelines before you start:
 # License
 
 [go-seele/LICENSE](https://github.com/seeleteam/go-seele/blob/master/LICENSE)
-
-
-

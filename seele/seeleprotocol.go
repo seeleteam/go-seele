@@ -175,7 +175,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
-	
+
 	for _, p := range peers {
 		pHead, pTd := p.Head()
 
@@ -195,7 +195,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 
 			// three step
 			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
-			
+
 			continue
 		}
 
@@ -411,7 +411,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 }
 
 func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
-	if p := s.peerSet.peerMap[address]; p != nil {
+	if p := s.peerSet.Find(address); p != nil {
 		return p.Info()
 	}
 	return nil
