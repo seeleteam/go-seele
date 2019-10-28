@@ -183,7 +183,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		if localTD.Cmp(pTd) >= 0 {
 			// two step
 			memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
-			continue
+			return //no need to continue because peers are selected to be the best peers
 		}
 		err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
 		if err != nil {

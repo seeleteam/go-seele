@@ -16,6 +16,7 @@ import (
 	"math/big"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,7 +45,7 @@ const (
 	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 15 * time.Second
+	checkConnsNumInterval = 5 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -56,7 +57,7 @@ const (
 
 	// maxConnectionsPerIp represents max connections that node from one ip can connect to.
 	// Reject connections if  ipSet[ip] > maxConnectionsPerIp.
-	maxConnsPerShardPerIp = uint(maxConnsPerShard/2)
+	maxConnsPerShardPerIp = uint(maxConnsPerShard / 2)
 )
 
 // Config is the Configuration of p2p
@@ -232,9 +233,9 @@ func (srv *Server) addNode(node *discovery.Node) {
 		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
 		return
 	}
-
-	srv.log.Debug("got discovery a new node event, node info:%s", node)
 	srv.connectNode(node)
+	srv.log.Debug("got discovery a new node event, node info:%s", node)
+
 }
 
 func (srv *Server) connectNode(node *discovery.Node) {
@@ -328,11 +329,19 @@ func (srv *Server) run() {
 	srv.log.Info("p2p start running...")
 
 	checkTicker := time.NewTicker(checkConnsNumInterval)
+	checkTicker1 := time.NewTicker(12*checkConnsNumInterval + 3)
+
 running:
 	for {
 		select {
-		case <-checkTicker.C:
+		case <-checkTicker1.C:
 			go srv.doSelectNodeToConnect()
+		case <-checkTicker.C:
+			if srv.nodeSet.getSelfShardNodeNum() < 2 {
+				srv.log.Warn("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
+				go srv.doSelectLocalNodeToConnect()
+			}
+
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
@@ -359,41 +368,46 @@ func (srv *Server) doSelectNodeToConnect() {
 		}
 	}
 
-	var node *discovery.Node
-	i := 0
-	for i < maxConnsPerShard {
-		node = srv.nodeSet.randSelect()
-		if node == nil {
-			return
-		}
+	selectNodeSet := srv.nodeSet.randSelect()
 
-		// get the number of connected peers per shard
-		peers := srv.peerSet.getPeers()
-		srv.peerNumLock.Lock()
-		numOfPeerPerShard := make(map[uint]uint)
-		j := uint(1)
-		for j <= common.ShardCount {
-			numOfPeerPerShard[j] = uint(0)
-			j++
+	if selectNodeSet == nil {
+		return
+	}
+	for i := 0; i < len(selectNodeSet); i++ {
+
+		if selectNodeSet[i] != nil {
+			srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s ,%d", selectNodeSet[i].IP.String(), selectNodeSet[i].UDPPort)
+			srv.connectNode(selectNodeSet[i])
 		}
-		for _, p := range peers {
-			if p != nil {
-				numOfPeerPerShard[p.Node.Shard]++
+	}
+
+}
+
+func (srv *Server) doSelectLocalNodeToConnect() {
+
+	for _, node := range srv.StaticNodes {
+		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+			continue
+		} else {
+			srv.connectNode(node)
+		}
+	}
+
+	selectNodeSet := srv.nodeSet.randSelect()
+
+	if selectNodeSet == nil {
+		return
+	}
+	for i := 0; i < len(selectNodeSet); i++ {
+		node := selectNodeSet[i]
+		if node != nil {
+			if node.Shard == common.LocalShardNumber {
+				srv.log.Info("p2p.server doSelectLocalNodeToConnect. Node=%s ,%d", selectNodeSet[i].IP.String(), selectNodeSet[i].UDPPort)
+				srv.connectNode(selectNodeSet[i])
 			}
 		}
-
-		// select nodes in unconnected shards
-		if numOfPeerPerShard[node.Shard] < minNumOfPeerPerShard {
-			srv.peerNumLock.Unlock()
-			break
-		}
-		srv.peerNumLock.Unlock()
-
-		i++
 	}
-	
-	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
-	srv.connectNode(node)
+
 }
 
 func (srv *Server) startListening() error {
@@ -453,8 +467,12 @@ func (srv *Server) listenLoop() {
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
+
 			}
 
+			if err != nil && strings.Contains(err.Error(), "too many incomming") {
+				return
+			}
 			slots <- struct{}{}
 		}()
 	}
@@ -488,7 +506,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
-			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID:%s",peerNodeID)
+			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID:%s", peerNodeID)
 			peer.close()
 			return errors.New("not found nodeID in discovery database")
 		}

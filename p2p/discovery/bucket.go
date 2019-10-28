@@ -48,10 +48,12 @@ func (b *bucket) addNode(node *Node) {
 
 		if len(b.peers) < bucketSize {
 			b.peers = append(b.peers, node)
-		} else {
-			copy(b.peers[:], b.peers[1:])
-			b.peers[len(b.peers)-1] = node
 		}
+		// else {
+		//	b.log.Error("REMOVE ONE AND ADD ONE")
+		//	copy(b.peers[:], b.peers[1:])
+		//	b.peers[len(b.peers)-1] = node
+		//}
 	}
 }
 
