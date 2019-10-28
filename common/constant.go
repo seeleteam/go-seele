@@ -68,7 +68,7 @@ const (
 	BFTDataFolder = "bftdata"
 
 	// BFT mineralgorithm
-	BFTSuchainEngine = "bft_subchain"
+	BFTSubchainEngine = "bft_subchain"
 
 	// BFT data folder
 	BFTSuchainDataFolder = "bft_suchain_data"

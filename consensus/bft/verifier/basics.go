@@ -71,15 +71,7 @@ func (verSet *basicSet) GetByIndex(i uint64) bft.Verifier {
 	return nil
 }
 
-func (verSet *basicSet) GetByAddress(addr common.Address) (int, bft.Verifier) {
-	for i, ver := range verSet.List() {
-		if addr == ver.Address() {
-			return i, ver
-		}
-	}
-	return -1, nil
-}
-
+// proposer methods
 func (verSet *basicSet) GetProposer() bft.Verifier {
 	return verSet.proposer
 }
@@ -89,7 +81,7 @@ func (verSet *basicSet) IsProposer(address common.Address) bool {
 	return reflect.DeepEqual(verSet.GetProposer(), val)
 }
 
-////// proposer policy   ///////
+////// proposer-related policy   ///////
 func roundRobinProposer(verSet bft.VerifierSet, proposer common.Address, round uint64) bft.Verifier {
 	if verSet.Size() == 0 {
 		return nil
@@ -118,6 +110,10 @@ func stickyProposer(verSet bft.VerifierSet, proposer common.Address, round uint6
 	return verSet.GetByIndex(pick)
 }
 
+func (verSet *basicSet) Policy() bft.ProposerPolicy {
+	return verSet.policy
+}
+
 func (verSet *basicSet) CalcProposer(lastProposer common.Address, round uint64) {
 	verSet.verifierMu.RLock()
 	defer verSet.verifierMu.RUnlock()
@@ -142,6 +138,7 @@ func (verSet *basicSet) List() []bft.Verifier {
 	return verSet.verifiers
 }
 
+// verifier-related methods
 func (verSet *basicSet) AddVerifier(address common.Address) bool {
 	verSet.verifierMu.Lock()
 	defer verSet.verifierMu.Unlock()
@@ -172,6 +169,14 @@ func (verSet *basicSet) RemoveVerifier(address common.Address) bool {
 	}
 	return false
 }
+func (verSet *basicSet) GetByAddress(addr common.Address) (int, bft.Verifier) {
+	for i, ver := range verSet.List() {
+		if addr == ver.Address() {
+			return i, ver
+		}
+	}
+	return -1, nil
+}
 
 func (verSet *basicSet) Copy() bft.VerifierSet {
 	verSet.verifierMu.RLock()
@@ -184,10 +189,7 @@ func (verSet *basicSet) Copy() bft.VerifierSet {
 	return NewVerifierSet(addresses, verSet.policy)
 }
 
+// failure tolerate
 func (verSet *basicSet) F() int {
 	return int(math.Ceil(float64(verSet.Size())/3)) - 1
-}
-
-func (verSet *basicSet) Policy() bft.ProposerPolicy {
-	return verSet.policy
 }

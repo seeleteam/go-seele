@@ -86,7 +86,7 @@ func (s *server) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	s.broadcaster = broadcaster
 }
 
-func (s *server) NewChainHead() error {
+func (s *server) HandleNewChainHead() error {
 	s.coreMu.RLock()
 	defer s.coreMu.RUnlock()
 
@@ -95,6 +95,5 @@ func (s *server) NewChainHead() error {
 	}
 
 	go s.bftEventMux.Post(bft.FinalCommittedEvent{})
-	fmt.Println("Post in NewChainHead")
 	return nil
 }
