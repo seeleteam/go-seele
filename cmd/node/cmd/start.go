@@ -68,7 +68,7 @@ var startCmd = &cobra.Command{
 			fmt.Printf("failed to reading the config file: %s\n", err.Error())
 			return
 		}
-
+		Cast(nCfg)
 		if !comm.LogConfiguration.PrintLog {
 			fmt.Printf("log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
 		}

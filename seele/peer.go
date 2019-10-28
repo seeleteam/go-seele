@@ -263,7 +263,7 @@ func (p *peer) RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num
 	}
 	buff := common.SerializePanic(query)
 
-	p.log.Debug("peer send [downloader.GetBlocksMsg] query with size %d byte", len(buff))
+	p.log.Debug("peer send [downloader.GetBlocksMsg] query with size %d byte,peer:%s", len(buff),p.peerStrID)
 	return p2p.SendMessage(p.rw, downloader.GetBlocksMsg, buff)
 }
 

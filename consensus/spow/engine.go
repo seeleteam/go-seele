@@ -34,6 +34,7 @@ var (
 	// Hadamard's bound for the absolute determinant of an 𝑛×𝑛 0-1 matrix is {(n + 1)^[(n+1)/2]} / 2^n
 	maxDet30x30 = new(big.Int).Mul(big.NewInt(2), new(big.Int).Exp(big.NewInt(10), big.NewInt(13), big.NewInt(0)))
 	matrixDim   = int(30)
+	RestTime    = 50 * time.Millisecond
 )
 
 type HashItem struct {
@@ -366,6 +367,7 @@ func handleResults(block *types.Block, result chan<- *types.Block, abort <-chan 
 // logAbort logs the info that nonce finding is aborted
 func logAbort(log *log.SeeleLog) {
 	log.Info("nonce finding aborted")
+	time.Sleep(RestTime)
 }
 
 // ValidateHeader validates the specified header and returns error if validation failed.

@@ -419,10 +419,10 @@ func (d *Downloader) RegisterPeer(peerID string, peer Peer) {
 	newConn := newPeerConn(peer, peerID, d.log)
 	d.peers[peerID] = newConn
 
-	if d.syncStatus == statusFetching {
-		d.sessionWG.Add(1)
-		go d.peerDownload(newConn, d.tm)
-	}
+	//if d.syncStatus == statusFetching {
+	//	d.sessionWG.Add(1)
+	//	go d.peerDownload(newConn, d.tm)
+	//}
 }
 
 // UnRegisterPeer remove peer from download routine
