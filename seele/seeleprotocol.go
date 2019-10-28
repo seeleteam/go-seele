@@ -300,6 +300,10 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	peers := p.peerSet.getPeerByShard(shardId)
 	for _, peer := range peers {
+		if peer.knownTxs.Contains(tx.Hash){
+			p.log.Debug("seeleprotocol handleNewTx: peer: %s already contains tx %s", peer.peerStrID, tx.Hash.String())
+			continue
+		}
 		if err := peer.sendTransaction(tx); err != nil {
 			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
 		}
