@@ -127,13 +127,16 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		if err := istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
-			panic(fmt.Sprintf("failed to start istanbul engine: %v", err))
+	// If the consensus engine is BFT
+	if bft, ok := miner.engine.(consensus.Bft); ok {
+		if err := bft.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
+			panic(fmt.Sprintf("failed to start bft engine: %v", err))
+		} else {
+			fmt.Println("starting BFT engine")
 		}
 	}
 
-	// try to prepare the first block
+	// try to prepare and mine the first block, if fails, node should terminate
 	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
@@ -156,9 +159,9 @@ func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
 
-	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		if err := istanbul.Stop(); err != nil {
-			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
+	if bft, ok := miner.engine.(consensus.Bft); ok {
+		if err := bft.Stop(); err != nil {
+			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
 		}
 	}
 }
@@ -262,7 +265,7 @@ func newHeaderByParent(parent *types.Block, coinbase common.Address, timestamp i
 
 // prepareNewBlock prepares a new block to be mined
 func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
-	miner.log.Debug("starting mining the new block")
+	miner.log.Info("starting mining the new block")
 
 	timestamp := time.Now().Unix()
 	parent, stateDB, err := miner.seele.BlockChain().GetCurrentInfo()
@@ -281,6 +284,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 		time.Sleep(wait)
 	}
 
+	miner.log.Info("newHeaderByParent with parent %v", parent)
 	header := newHeaderByParent(parent, miner.coinbase, timestamp)
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
 
