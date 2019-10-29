@@ -357,8 +357,8 @@ func (srv *Server) doSelectNodeToConnect() {
 		} else {
 			srv.connectNode(node)
 		}
-	}
 
+	}
 	var node *discovery.Node
 	i := 0
 	for i < maxConnsPerShard {
