@@ -24,7 +24,6 @@ import (
 	"github.com/seeleteam/go-seele/monitor"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
-	"github.com/seeleteam/go-seele/seele/lightclients"
 	"github.com/spf13/cobra"
 )
 
@@ -32,10 +31,6 @@ var (
 	seeleSubchainNodeConfigFile string
 	subchainMetricsEnableFlag   bool
 	subchainAccountsConfig      string
-	startSubchainHeight         int
-
-	// default is full node
-	subchainLightNode bool
 
 	//subchainpprofPort http server port
 	subchainpprofPort uint64
@@ -76,6 +71,7 @@ var substartCmd = &cobra.Command{
 
 		// Create seele subchain service and register the services
 		slog := log.GetLogger("seele_subchain")
+
 		lightLog := log.GetLogger("seele_subchain-light")
 		serviceContext := seele.ServiceContext{
 			DataDir: nCfg.BasicConfig.DataDir,
@@ -107,7 +103,7 @@ var substartCmd = &cobra.Command{
 		if comm.LogConfiguration.IsDebug {
 			go monitorPC()
 		}
-		// subchian won't have the sharding. Do not need ligthchain
+		// subchain will maintain a light node mode
 		if subchainLightNode {
 			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleSubchainNode.GetShardNumber(), engine)
 			if err != nil {
@@ -127,14 +123,17 @@ var substartCmd = &cobra.Command{
 			}
 		} else {
 			// light client manager
-			manager, err := lightclients.NewLightClientManager(seeleSubchainNode.GetShardNumber(), ctx, nCfg, engine)
+
+			// FIXME : subchain won't need manager
+			// manager, err := lightclients.NewLightClientManager(seeleSubchainNode.GetShardNumber(), ctx, nCfg, engine)
 			if err != nil {
 				fmt.Printf("create light client manager failed. %s", err)
 				return
 			}
 
 			// fullnode mode
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, manager, startSubchainHeight)
+			// FIXME NewSeeleService without manager.
+			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, nil, startSubchainHeight)
 			if err != nil {
 				fmt.Println(err.Error())
 				return
@@ -142,6 +141,7 @@ var substartCmd = &cobra.Command{
 
 			seeleService.Miner().SetThreads(threads)
 
+			// FIXME
 			lightServerService, err := light.NewServiceServer(seeleService, nCfg, lightLog, seeleSubchainNode.GetShardNumber())
 			if err != nil {
 				fmt.Println("Create light server err. ", err.Error())
@@ -155,7 +155,8 @@ var substartCmd = &cobra.Command{
 				return
 			}
 
-			services := manager.GetServices()
+			// services := manager.GetServices()
+			var services []node.Service
 			services = append(services, seeleService, monitorService, lightServerService)
 			for _, service := range services {
 				if err := seeleSubchainNode.Register(service); err != nil {
@@ -210,17 +211,12 @@ var substartCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(substartCmd)
 
-	// substartCmd.Flags().StringVarP(&seeleSubchainNodeConfigFile, "subchain_config", "", "", "seele node subchainConfig file (required)")
-	// substartCmd.MustMarkFlagRequired("subchain_config")
-
 	substartCmd.Flags().StringVarP(&seeleSubchainNodeConfigFile, "subconfig", "s", "", "seele node config file (required)")
 	substartCmd.MustMarkFlagRequired("subconfig")
 
 	substartCmd.Flags().BoolVarP(&subchainMetricsEnableFlag, "subchain_metrics", "d", false, "start metrics")
 	substartCmd.Flags().StringVarP(&subchainAccountsConfig, "subchain_accounts", "", "", "init accounts info")
-	substartCmd.Flags().BoolVarP(&subchainLightNode, "subchain_light", "", false, "whether start with light mode")
 	substartCmd.Flags().Uint64VarP(&subchainpprofPort, "subchain_port", "", 0, "which port pprof http server listen to")
-	// substartCmd.Flags().IntVarP(&startSubchainHeight, "subchain_startHeight", "", -1, "the block height to start from")
 	substartCmd.Flags().IntVarP(&subchainMaxConns, "subchain_maxConns", "", 0, "node max connections")
 	substartCmd.Flags().IntVarP(&subchainMaxActiveConns, "subchain_maxActiveConns", "", 0, "node max active connections")
 }
