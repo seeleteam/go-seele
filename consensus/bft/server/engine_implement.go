@@ -182,7 +182,7 @@ func (s *server) verifyHeader(chain consensus.ChainReader, header *types.BlockHe
 // verifyHeaderCommon verify some fields of Header
 func (s *server) verifyHeaderCommon(header *types.BlockHeader, parents []*types.BlockHeader) error {
 	if header.Consensus != types.BftConsensus {
-		fmt.Printf("header.Consensus (%d) != types.BftConsensus (%d)\n", header.Consensus, types.BftConsensus)
+		fmt.Printf("verifyHeaderCommon[185] header.Consensus (%d) != types.BftConsensus (%d)\n", header.Consensus, types.BftConsensus)
 		return errBFTConsensus
 	}
 	if header.CreateTimestamp.Cmp(big.NewInt(now().Unix())) > 0 {

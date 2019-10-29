@@ -19,8 +19,8 @@ func NewVerifierSet(addrs []common.Address, policy bft.ProposerPolicy) bft.Verif
 	return newBasicSet(addrs, policy)
 }
 
+// ExtractVerifiers get all verifiers address from extraData
 func ExtractVerifiers(extraData []byte) []common.Address {
-	// get all verifiers address
 	addrs := make([]common.Address, (len(extraData) / common.AddressLen))
 	for i := 0; i < len(addrs); i++ {
 		copy(addrs[i][:], extraData[i*common.AddressLen:])
@@ -28,6 +28,7 @@ func ExtractVerifiers(extraData []byte) []common.Address {
 	return addrs
 }
 
+// ValidateExtraData : only allows extraData = n * verifierLen
 func ValidExtraData(extraData []byte) bool {
 	return len(extraData)%common.AddressLen == 0
 }
