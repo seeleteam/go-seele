@@ -8,10 +8,10 @@ package lightclients
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"math/big"
+	"path/filepath"
 
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/consensus"

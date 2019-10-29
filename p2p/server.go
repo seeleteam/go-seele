@@ -13,11 +13,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
 	"sort"
 	"sync"
 	"time"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
@@ -56,7 +56,7 @@ const (
 
 	// maxConnectionsPerIp represents max connections that node from one ip can connect to.
 	// Reject connections if  ipSet[ip] > maxConnectionsPerIp.
-	maxConnsPerShardPerIp = uint(maxConnsPerShard/2)
+	maxConnsPerShardPerIp = uint(maxConnsPerShard / 2)
 )
 
 // Config is the Configuration of p2p
@@ -153,7 +153,6 @@ func NewServer(genesis core.GenesisInfo, config Config, protocols []Protocol) *S
 		genesisHash:          hash,
 		maxConnections:       maxConnsPerShard * common.ShardCount,
 		maxActiveConnections: maxActiveConnsPerShard * common.ShardCount,
-
 	}
 }
 
@@ -180,13 +179,14 @@ func (srv *Server) Start(nodeDir string, shard uint) (err error) {
 	srv.log.Debug("Starting P2P networking...")
 	srv.SelfNode = discovery.NewNodeWithAddr(*address, addr, shard)
 
-	srv.log.Info("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
+	srv.log.Debug("p2p.Server.Start: MyNodeID [%s]", srv.SelfNode)
 	srv.kadDB = discovery.StartService(nodeDir, *address, addr, srv.StaticNodes, shard)
+	// fmt.Println("staticnodes", srv.StaticNodes)
 	srv.kadDB.SetHookForNewNode(srv.addNode)
 	srv.kadDB.SetHookForDeleteNode(srv.deleteNode)
 	// add static nodes to srv node set;
-	for _, node:= range srv.StaticNodes {
-		if !node.ID.IsEmpty()  {
+	for _, node := range srv.StaticNodes {
+		if !node.ID.IsEmpty() {
 			srv.nodeSet.tryAdd(node)
 		}
 
@@ -350,11 +350,11 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
-	for _,node := range srv.StaticNodes {
+	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
 		}
-		if _,ok := srv.nodeSet.nodeMap[node.ID];ok {
+		if _, ok := srv.nodeSet.nodeMap[node.ID]; ok {
 			srv.connectNode(node)
 		}
 	}
@@ -365,19 +365,19 @@ func (srv *Server) doSelectNodeToConnect() {
 		if node == nil {
 			return
 		}
-		
+
 		// get the number of connected peers per shard
 		peers := srv.peerSet.getPeers()
 		srv.peerNumLock.Lock()
 		numOfPeerPerShard := make(map[uint]uint)
 		j := uint(1)
-		for j <= common.ShardCount { 	
+		for j <= common.ShardCount {
 			numOfPeerPerShard[j] = uint(0)
 			j++
-		} 
+		}
 		for _, p := range peers {
 			if p != nil {
-				numOfPeerPerShard[p.Node.Shard]++ 
+				numOfPeerPerShard[p.Node.Shard]++
 			}
 		}
 
@@ -390,7 +390,6 @@ func (srv *Server) doSelectNodeToConnect() {
 
 		i++
 	}
-	
 
 	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
 	srv.connectNode(node)
@@ -575,7 +574,7 @@ func (srv *Server) doHandShake(caps []Cap, peer *Peer, flags int, dialDest *disc
 		if err := binary.Read(rand.Reader, binary.BigEndian, &nounceCnt); err != nil {
 			return nil, 0, err
 		}
-		
+
 		wrapMsg, err := srv.packWrapHSMsg(handshakeMsg, dialDest.ID[0:], nounceCnt)
 		if err != nil {
 			return nil, 0, err
