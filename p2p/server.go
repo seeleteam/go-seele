@@ -366,7 +366,6 @@ func (srv *Server) doSelectNodeToConnect() {
 		} else {
 			srv.connectNode(node)
 		}
-	}
 
 	selectNodeSet := srv.nodeSet.randSelect()
 
