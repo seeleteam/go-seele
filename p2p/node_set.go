@@ -7,10 +7,11 @@ package p2p
 
 import (
 	"fmt"
-	"github.com/seeleteam/go-seele/log"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/seeleteam/go-seele/log"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/p2p/discovery"
@@ -26,8 +27,8 @@ type nodeItem struct {
 type nodeSet struct {
 	lock    sync.RWMutex
 	nodeMap map[common.Address]*nodeItem
-	ipSet 	map[uint]map[string]uint
-	log 	*log.SeeleLog
+	ipSet   map[uint]map[string]uint
+	log     *log.SeeleLog
 }
 
 // NewNodeSet creates new nodeSet
@@ -41,10 +42,19 @@ func NewNodeSet() *nodeSet {
 		nodeMap: make(map[common.Address]*nodeItem),
 		lock:    sync.RWMutex{},
 		ipSet:   ipSet,
-		log : log.GetLogger("p2p"),
+		log:     log.GetLogger("p2p"),
 	}
 }
 
+func (set *nodeSet) getSelfShardNodeNum() int {
+	count := 0
+	for _, item := range set.nodeMap {
+		if item.node.Shard == common.LocalShardNumber && item.bConnected {
+			count++
+		}
+	}
+	return count
+}
 func (set *nodeSet) setNodeStatus(p *discovery.Node, bConnected bool) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
@@ -67,7 +77,7 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 	}
 	// Ignore node if nodes from same ip reach max limit
 	if set.ipSet != nil {
-		nodeCnt,_ := set.ipSet[p.Shard][p.IP.String()]
+		nodeCnt, _ := set.ipSet[p.Shard][p.IP.String()]
 		if nodeCnt > maxConnsPerShardPerIp {
 			set.log.Warn("tryAdd a new node. Reached connection limit for single IP, node:%v", p.String())
 			return
@@ -78,11 +88,11 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 		bConnected: false,
 	}
 	set.nodeMap[p.ID] = item
-	if _,ok := set.ipSet[p.Shard][p.IP.String()]; ok {
+	if _, ok := set.ipSet[p.Shard][p.IP.String()]; ok {
 		set.ipSet[p.Shard][p.IP.String()]++
-	}else{
+	} else {
 		set.ipSet[p.Shard][p.IP.String()] = 1
-	}  // add ip count
+	} // add ip count
 }
 
 func (set *nodeSet) delete(p *discovery.Node) {
@@ -90,20 +100,22 @@ func (set *nodeSet) delete(p *discovery.Node) {
 	defer set.lock.Unlock()
 
 	delete(set.nodeMap, p.ID)
-	if _,ok := set.ipSet[p.Shard][p.IP.String()]; ok{
+	if _, ok := set.ipSet[p.Shard][p.IP.String()]; ok {
 		set.ipSet[p.Shard][p.IP.String()]-- //update ip count
-	}else{
+	} else {
 		fmt.Println("no IP found to delete")
 	}
 
 }
 
 // randSelect select one node randomly from nodeMap which is not connected yet
-func (set *nodeSet) randSelect() *discovery.Node {
+func (set *nodeSet) randSelect() []*discovery.Node {
 	set.lock.RLock()
 	defer set.lock.RUnlock()
 
 	var nodeL []*discovery.Node
+	var retNodes []*discovery.Node
+	nodeCount := make([]int, common.ShardCount)
 	for _, v := range set.nodeMap {
 		if v.bConnected {
 			continue
@@ -117,5 +129,16 @@ func (set *nodeSet) randSelect() *discovery.Node {
 	}
 
 	perm := rand.Perm(len(nodeL))
-	return nodeL[perm[0]]
+	k := 0
+	for i := 0; i < len(nodeL); i++ {
+		if nodeCount[nodeL[perm[i]].Shard-1] < 1 {
+			nodeCount[nodeL[perm[i]].Shard-1]++
+			retNodes = append(retNodes, nodeL[perm[i]])
+			k++
+		}
+		if k >= common.ShardCount {
+			break
+		}
+	}
+	return retNodes
 }
