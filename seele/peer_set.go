@@ -34,7 +34,7 @@ func newPeerSet() *peerSet {
 func (p *peerSet) bestPeer(shard uint) *peer {
 	var bestPeer *peer
 	var bestHash common.Hash
-	bestTd := big.NewInt(0)	
+	bestTd := big.NewInt(0)
 
 	peers := p.getPeerByShard(shard)
 	for _, peer := range peers {
@@ -49,7 +49,7 @@ func (p *peerSet) bestPeer(shard uint) *peer {
 
 func (p *peerSet) bestPeers(shard uint) []*peer {
 	var bestPeers []*peer
-	
+
 	peers := p.getPeerByShard(shard)
 
 	peersMap := make(map[common.Address]bool)
@@ -65,10 +65,10 @@ func (p *peerSet) bestPeers(shard uint) []*peer {
 		for _, peer := range peers {
 			if peersMap[peer.peerID] == true {
 				continue
-			}			
+			}
 			if _, td := peer.Head(); bestPeer == nil || td.Cmp(bestTd) > 0 {
 				bestPeer, bestTd = peer, td
-			} 
+			}
 		}
 		bestPeers = append(bestPeers, bestPeer)
 		peersMap[bestPeer.peerID] = true
@@ -103,8 +103,7 @@ func (p *peerSet) Add(pe *peer) {
 	address := pe.Node.ID
 	result := p.peerMap[address]
 	if result != nil {
-		delete(p.peerMap, address)
-		delete(p.shardPeers[result.Node.Shard], address)
+		return
 	}
 
 	p.peerMap[address] = pe
