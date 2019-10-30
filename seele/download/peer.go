@@ -63,9 +63,9 @@ func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh chan struct{})
 	p.lockForWaiting.Lock()
 	p.waitingMsgMap[msgCode] = rcvCh
 	p.lockForWaiting.Unlock()
+	timeout := time.NewTimer(MsgWaitTimeout)
 
 Again:
-	timeout := time.NewTimer(MsgWaitTimeout)
 	select {
 	case <-p.quitCh:
 		err = errPeerQuit
