@@ -81,10 +81,19 @@ type ChainReader interface {
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
-	// NewChainHead handles a new head block comes
-	NewChainHead() error
+	// HandleNewChainHead handles a new head block comes
+	HandleNewChainHead() error
 	// HandleMsg handles a message from peer
 	HandleMsg(address common.Address, msg interface{}) (bool, error)
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
+}
+
+type Istanbul interface {
+	Engine
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
 }

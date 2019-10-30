@@ -235,9 +235,9 @@ out:
 					miner.log.Error("failed to save the block, for %s", ret.Error())
 					break
 				}
-
+				// this will be used for BFT
 				if h, ok := miner.engine.(consensus.Handler); ok {
-					h.NewChainHead()
+					h.HandleNewChainHead()
 				}
 
 				miner.log.Info("saved mined block successfully")

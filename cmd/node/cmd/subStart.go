@@ -1,8 +1,3 @@
-/**
-*  @file
-*  @copyright defined in go-seele/LICENSE
- */
-
 package cmd
 
 import (
@@ -13,15 +8,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/consensus"
-	"github.com/seeleteam/go-seele/consensus/factory"
-	"github.com/seeleteam/go-seele/light"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/metrics"
 	miner2 "github.com/seeleteam/go-seele/miner"
 	"github.com/seeleteam/go-seele/monitor"
+	"github.com/seeleteam/go-seele/seele/lightclients"
+
+	"github.com/seeleteam/go-seele/light"
+
+	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/consensus/factory"
+
+	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/seele"
 	"github.com/spf13/cobra"
@@ -29,194 +28,157 @@ import (
 
 var (
 	seeleSubchainNodeConfigFile string
-	subchainMetricsEnableFlag   bool
-	subchainAccountsConfig      string
-
-	//subchainpprofPort http server port
-	subchainpprofPort uint64
-
-	// subchainProfileSize is used to limit when need to collect profiles, set 6GB
-	subchainProfileSize = uint64(1024 * 1024 * 1024 * 6)
-
-	subchainMaxConns       = int(0)
-	subchainMaxActiveConns = int(0)
+	accountConfig               string
+	voteNode                    bool
+	subpprofPort                uint64
+	subMaxConns                 = int(0)
+	subMaxActiveConns           = int(0)
+	vote                        string
 )
 
-// substartCmd represents the subchain start command
 var substartCmd = &cobra.Command{
 	Use:   "substart",
 	Short: "start the subchain node of seele",
-	Long: `usage example:
-		node.exe substart -sc cmd\node.json
-		start a subChain node.`,
-
+	Long: `useage example:
+		   node.exe substart -s subchain_node.json [flags]`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var wg sync.WaitGroup
-		nCfg, err := LoadConfigFromFile(seeleSubchainNodeConfigFile, subchainAccountsConfig)
+		subCfg, err := LoadConfigFromFile(seeleSubchainNodeConfigFile, accountConfig)
 		if err != nil {
-			fmt.Printf("failed to reading the subchain config file: %s\n", err.Error())
+			fmt.Printf("failed to loading the subchain config file:%+v\n", err.Error())
 			return
 		}
-
 		if !comm.LogConfiguration.PrintLog {
-			fmt.Printf("log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
+			fmt.Printf("subchain log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
 		}
-		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
+		fmt.Printf("subchain data folder: %s\n", subCfg.BasicConfig.DataDir)
 
-		seeleSubchainNode, err := node.New(nCfg)
+		// New node with config/services/log + checkConfig setup(mainly shard)
+		seeleSubNode, err := node.New(subCfg, true) //
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 
-		// Create seele subchain service and register the services
-		slog := log.GetLogger("seele_subchain")
-
-		lightLog := log.GetLogger("seele_subchain-light")
-		serviceContext := seele.ServiceContext{
-			DataDir: nCfg.BasicConfig.DataDir,
+		// start engine
+		sclog := log.GetLogger("seeleSubChain")
+		subserviceContext := seele.ServiceContext{
+			DataDir: subCfg.BasicConfig.DataDir,
 		}
-		ctx := context.WithValue(context.Background(), "ServiceContext", serviceContext)
-
+		sctxt := context.WithValue(context.Background(), "SubChainServiceContext", subserviceContext)
 		var engine consensus.Engine
-		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
-			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
+		if subCfg.BasicConfig.MinerAlgorithm == common.BFTSubchainEngine {
+			engine, err = factory.GetBFTSubchainEngine(subCfg.SeeleConfig.CoinbasePrivateKey, subCfg.BasicConfig.DataDir) // SeeleConfig->coinbase privateKey
 		} else {
-			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm, nCfg.BasicConfig.DataSetDir)
+			engine, err = factory.GetConsensusEngine(subCfg.BasicConfig.MinerAlgorithm, subCfg.BasicConfig.DataSetDir)
 		}
-
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
+		// debug mode
+		if comm.LogConfiguration.IsDebug {
+			go monitorPC()
+		}
+
 		// start pprof http server
-		if subchainpprofPort > 0 {
+		if subpprofPort > 0 {
 			go func() {
-				if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", subchainpprofPort), nil); err != nil {
-					fmt.Println("Failed to start pprof http server,", err)
+				if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", subpprofPort), nil); err != nil {
+					fmt.Println("Failed to start subpprof http server,", err)
 					return
 				}
 			}()
 		}
 
-		if comm.LogConfiguration.IsDebug {
-			go monitorPC()
+		//services
+		manager, err := lightclients.NewLightClientManager(seeleSubNode.GetShardNumber(), sctxt, subCfg, engine)
+		if err != nil {
+			fmt.Printf("create light client manager failed. %s", err)
+			return
 		}
-		// subchain will maintain a light node mode
-		if subchainLightNode {
-			lightService, err := light.NewServiceClient(ctx, nCfg, lightLog, common.LightChainDir, seeleSubchainNode.GetShardNumber(), engine)
-			if err != nil {
-				fmt.Println("Create light service error.", err.Error())
-				return
-			}
+		subservice, err := seele.NewSeeleSubService(sctxt, subCfg, sclog, engine)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 
-			if err := seeleSubchainNode.Register(lightService); err != nil {
+		lightServerSubServie, err := light.NewServiceServer(subservice, subCfg, nil, seeleSubNode.GetShardNumber())
+		if err != nil {
+			fmt.Println("Create light server err. ", err.Error())
+			return
+		}
+
+		monitorSubService, err := monitor.NewMonitorService(subservice, seeleSubNode, subCfg, sclog, "Test SubChain Mointor")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		services := manager.GetServices()
+		services = append(services, subservice, monitorSubService, lightServerSubServie)
+		for _, service := range services {
+			if err := seeleSubNode.Register(service); err != nil {
 				fmt.Println(err.Error())
 				return
 			}
+		}
 
-			err = seeleSubchainNode.Start()
-			if err != nil {
-				fmt.Printf("got error when start node: %s\n", err)
+		// node start: services and RPC
+		err = seeleSubNode.Start()
+
+		if subMaxConns > 0 {
+			subservice.P2PServer().SetMaxConnections(subMaxConns)
+		}
+		if subMaxActiveConns > 0 {
+			subservice.P2PServer().SetMaxActiveConnections(subMaxActiveConns)
+		}
+		if err != nil {
+			fmt.Printf("got error when start subchain node: %s\n", err)
+			return
+		}
+
+		// Start miner
+		voteState := strings.ToLower(vote)
+		if voteState == "start" {
+			err = subservice.Miner().Start()
+			if err != nil && err != miner2.ErrMinerIsRunning {
+				fmt.Println("failed to start the miner : ", err)
 				return
 			}
+		} else if voteState == "stop" {
+			subservice.Miner().Stop()
 		} else {
-			// light client manager
-
-			// FIXME : subchain won't need manager
-			// manager, err := lightclients.NewLightClientManager(seeleSubchainNode.GetShardNumber(), ctx, nCfg, engine)
-			if err != nil {
-				fmt.Printf("create light client manager failed. %s", err)
-				return
-			}
-
-			// fullnode mode
-			// FIXME NewSeeleService without manager.
-			seeleService, err := seele.NewSeeleService(ctx, nCfg, slog, engine, nil, startSubchainHeight)
-			if err != nil {
-				fmt.Println(err.Error())
-				return
-			}
-
-			seeleService.Miner().SetThreads(threads)
-
-			// FIXME
-			lightServerService, err := light.NewServiceServer(seeleService, nCfg, lightLog, seeleSubchainNode.GetShardNumber())
-			if err != nil {
-				fmt.Println("Create light server err. ", err.Error())
-				return
-			}
-
-			// monitor service
-			monitorService, err := monitor.NewMonitorService(seeleService, seeleSubchainNode, nCfg, slog, "Test monitor")
-			if err != nil {
-				fmt.Println(err.Error())
-				return
-			}
-
-			// services := manager.GetServices()
-			var services []node.Service
-			services = append(services, seeleService, monitorService, lightServerService)
-			for _, service := range services {
-				if err := seeleSubchainNode.Register(service); err != nil {
-					fmt.Println(err.Error())
-					return
-				}
-			}
-
-			err = seeleSubchainNode.Start()
-			if subchainMaxConns > 0 {
-				seeleService.P2PServer().SetMaxConnections(subchainMaxConns)
-			}
-			if subchainMaxActiveConns > 0 {
-				seeleService.P2PServer().SetMaxActiveConnections(subchainMaxActiveConns)
-			}
-			if err != nil {
-				fmt.Printf("got error when start node: %s\n", err)
-				return
-			}
-
-			minerInfo := strings.ToLower(miner)
-			if minerInfo == "start" {
-				err = seeleService.Miner().Start()
-				if err != nil && err != miner2.ErrMinerIsRunning {
-					fmt.Println("failed to start the miner : ", err)
-					return
-				}
-			} else if minerInfo == "stop" {
-				seeleService.Miner().Stop()
-			} else {
-				fmt.Println("invalid miner command, must be start or stop")
-				return
-			}
+			fmt.Println("invalid miner command, must be start or stop")
+			return
 		}
 
-		if subchainMetricsEnableFlag {
+		if metricsEnableFlag {
 			metrics.StartMetricsWithConfig(
-				nCfg.MetricsConfig,
-				slog,
-				nCfg.BasicConfig.Name,
-				nCfg.BasicConfig.Version,
-				nCfg.P2PConfig.NetworkID,
-				nCfg.SeeleConfig.Coinbase,
+				subCfg.MetricsConfig,
+				sclog,
+				subCfg.BasicConfig.Name,
+				subCfg.BasicConfig.Version,
+				subCfg.P2PConfig.NetworkID,
+				subCfg.SeeleConfig.Coinbase,
 			)
 		}
 
 		wg.Add(1)
 		wg.Wait()
+
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(substartCmd)
-
-	substartCmd.Flags().StringVarP(&seeleSubchainNodeConfigFile, "subconfig", "s", "", "seele node config file (required)")
+	// func (f *FlagSet) StringVarP(p *string, name, shorthand string, value string, usage string)
+	substartCmd.Flags().StringVarP(&seeleSubchainNodeConfigFile, "subconfig", "s", "", "seele subchain config file(required)")
 	substartCmd.MustMarkFlagRequired("subconfig")
-
-	substartCmd.Flags().BoolVarP(&subchainMetricsEnableFlag, "subchain_metrics", "d", false, "start metrics")
-	substartCmd.Flags().StringVarP(&subchainAccountsConfig, "subchain_accounts", "", "", "init accounts info")
-	substartCmd.Flags().Uint64VarP(&subchainpprofPort, "subchain_port", "", 0, "which port pprof http server listen to")
-	substartCmd.Flags().IntVarP(&subchainMaxConns, "subchain_maxConns", "", 0, "node max connections")
-	substartCmd.Flags().IntVarP(&subchainMaxActiveConns, "subchain_maxActiveConns", "", 0, "node max active connections")
+	substartCmd.Flags().StringVarP(&accountConfig, "account", "", "", "init account info")
+	substartCmd.Flags().BoolVarP(&voteNode, "vote", "v", false, "whether start with voting mode [start/stop], default \"stop\"")
+	substartCmd.Flags().Uint64VarP(&subpprofPort, "port", "", 0, "which port pprof http server listen to")
+	substartCmd.Flags().IntVarP(&subMaxConns, "maxConns", "", 0, "subchain node max connections")
+	substartCmd.Flags().IntVarP(&subMaxActiveConns, "maxActiveConns", "", 0, "subchain node max active connections")
 }

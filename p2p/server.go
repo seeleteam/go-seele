@@ -30,21 +30,21 @@ import (
 
 const (
 	// Maximum number of peers that can be connected for each shard
-	maxConnsPerShard = 30
+	maxConnsPerShard = 40
 
 	// Maximum number of peers that node actively connects to.
-	maxActiveConnsPerShard = 24
+	maxActiveConnsPerShard = 25
 
 	defaultDialTimeout = 15 * time.Second
 
 	// Maximum amount of time allowed for writing some bytes, not a complete message, because the message length is very highly variable.
-	connWriteTimeout = 30 * time.Second
+	connWriteTimeout = 15 * time.Second
 
 	// Maximum time allowed for reading a complete message.
-	frameReadTimeout = 30 * time.Second
+	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 8 * time.Second
+	checkConnsNumInterval = 15 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -262,7 +262,9 @@ func (srv *Server) connectNode(node *discovery.Node) {
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
 		srv.log.Debug("failed to add new node. err=%s", err)
+		return
 	}
+	return
 }
 
 func (srv *Server) deleteNode(node *discovery.Node) {
@@ -353,14 +355,14 @@ func (srv *Server) doSelectNodeToConnect() {
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
-		}
-		if _, ok := srv.nodeSet.nodeMap[node.ID]; ok {
+		} else {
 			srv.connectNode(node)
 		}
 	}
+
 	var node *discovery.Node
 	i := 0
-	for i < 30 {
+	for i < maxConnsPerShard {
 		node = srv.nodeSet.randSelect()
 		if node == nil {
 			return
@@ -487,7 +489,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
 		if !ok {
-			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID")
+			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID:%s", peerNodeID)
 			peer.close()
 			return errors.New("not found nodeID in discovery database")
 		}

@@ -68,13 +68,13 @@ var startCmd = &cobra.Command{
 			fmt.Printf("failed to reading the config file: %s\n", err.Error())
 			return
 		}
-
+		Cast(nCfg)
 		if !comm.LogConfiguration.PrintLog {
 			fmt.Printf("log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
 		}
 		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
 
-		seeleNode, err := node.New(nCfg)
+		seeleNode, err := node.New(nCfg, false)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -91,7 +91,7 @@ var startCmd = &cobra.Command{
 		var engine consensus.Engine
 		if nCfg.BasicConfig.MinerAlgorithm == common.BFTEngine {
 			engine, err = factory.GetBFTEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
-		} else if nCfg.BasicConfig.MinerAlgorithm == common.BFTSuchainEngine {
+		} else if nCfg.BasicConfig.MinerAlgorithm == common.BFTSubchainEngine {
 			engine, err = factory.GetBFTSubchainEngine(nCfg.SeeleConfig.CoinbasePrivateKey, nCfg.BasicConfig.DataDir)
 		} else {
 			engine, err = factory.GetConsensusEngine(nCfg.BasicConfig.MinerAlgorithm, nCfg.BasicConfig.DataSetDir)
@@ -235,7 +235,7 @@ func init() {
 func monitorPC() {
 	var info runtime.MemStats
 	heapDir := filepath.Join(common.GetTempFolder(), "heapProfile")
-	err := os.MkdirAll(heapDir, os.ModePerm)
+	err := os.MkdirAll(heapDir, os.ModePerm) //os.ModePerm == 0777
 	if err != nil {
 		fmt.Printf("failed to create folder %s: %s\n", heapDir, err)
 		return
@@ -252,7 +252,7 @@ func monitorPC() {
 	for {
 		select {
 		case <-ticker.C:
-			runtime.ReadMemStats(&info)
+			runtime.ReadMemStats(&info) //since ReadMemStats is up to date, we need to a heap file (most recently completed garbage collection cycle)
 			if info.Alloc > profileSize {
 				heapFile := filepath.Join(heapDir, fmt.Sprint("heap-", time.Now().Format("2006-01-02-15-04-05")))
 				f, err := os.Create(heapFile)
@@ -267,7 +267,7 @@ func monitorPC() {
 				}
 
 				profileFile := filepath.Join(profileDir, fmt.Sprint("cpu-", time.Now().Format("2006-01-02-15-04-05")))
-				cpuf, err := os.Create(profileFile)
+				cpuf, err := os.Create(profileFile) // if not exist, create with permision 0666(r&w)
 				if err != nil {
 					fmt.Println("monitor create cpu file err:", err)
 					return
