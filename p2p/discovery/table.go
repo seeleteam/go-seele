@@ -79,7 +79,7 @@ func (t *Table) findConnectedNodes(target common.Hash) []*Node {
 	return result.entries
 }
 
-func (t *Table) addNode(node *Node) {
+func (t *Table) addNode(node *Node) bool {
 	if isShardValid(node.Shard) {
 		if node.Shard != t.selfNode.Shard {
 			t.shardBuckets[node.Shard].addNode(node)
@@ -89,10 +89,12 @@ func (t *Table) addNode(node *Node) {
 
 			t.buckets[dis].addNode(node)
 		}
+		// the node is in the buckets
+		return true
 	} else {
 		t.log.Debug("get invalid shard, shard count is %d, getting shard number is %d", common.ShardCount, node.Shard)
 	}
-
+	return false
 }
 
 // getPeersCount obtain all peers count

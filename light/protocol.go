@@ -8,19 +8,19 @@ package light
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	rand2 "math/rand"
 	"sync"
 	"time"
-	"math/big"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/p2p"
-	"github.com/seeleteam/go-seele/event"
 )
 
 const (
@@ -48,7 +48,7 @@ type BlockChain interface {
 	GetHeadRollbackEventManager() *event.EventManager
 	CurrentHeader() *types.BlockHeader
 	WriteHeader(*types.BlockHeader) error
-	PutCurrentHeader(*types.BlockHeader) 
+	PutCurrentHeader(*types.BlockHeader)
 	PutTd(*big.Int)
 }
 
@@ -221,7 +221,7 @@ func (lp *LightProtocol) synchronise(peers []*peer) {
 	for _, p := range peers {
 		_, pTd := p.Head()
 
-	// if total difficulty is not smaller than remote peer td, then do not need synchronise.
+		// if total difficulty is not smaller than remote peer td, then do not need synchronise.
 		if localTD.Cmp(pTd) >= 0 {
 			continue
 		}
@@ -283,7 +283,7 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 	if lp.bServerMode {
 
 		magic := rand2.Uint32()
-		lp.log.Debug("handle new Peer sendAnnounce,peer:%s",newPeer.peerStrID)
+		lp.log.Debug("handle new Peer sendAnnounce,peer:%s", newPeer.peerStrID)
 		if err := newPeer.sendAnnounce(magic, 0, 0); err != nil {
 			lp.log.Debug("sendAnnounce err. %s", err)
 			newPeer.Disconnect(DiscAnnounceErr)
@@ -298,7 +298,8 @@ func (lp *LightProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) 
 }
 
 func (lp *LightProtocol) handleGetPeer(address common.Address) interface{} {
-	if p := lp.peerSet.peerMap[address]; p != nil {
+
+	if p := lp.peerSet.Find(address); p != nil {
 		return p.Info()
 	}
 
@@ -326,14 +327,14 @@ handler:
 		bNeedDeliverOdr := false
 		switch msg.Code {
 		case announceRequestCode:
-			lp.log.Debug("get announceRequestCode msg from %s,",peer.peerStrID )
+			lp.log.Debug("get announceRequestCode msg from %s,", peer.peerStrID)
 			var query AnnounceQuery
 			err := common.Deserialize(msg.Payload, &query)
 			if err != nil {
 				lp.log.Error("failed to deserialize AnnounceQuery, quit! %s", err)
 				break handler
 			}
-			lp.log.Debug("handleMsg announceRequestCode sendAnnounce,peer:%s",peer.peerStrID)
+			lp.log.Debug("handleMsg announceRequestCode sendAnnounce,peer:%s", peer.peerStrID)
 			if err := peer.sendAnnounce(query.Magic, query.Begin, query.End); err != nil {
 				lp.log.Error("failed to sendAnnounce, quit! %s", err)
 				break handler
@@ -342,7 +343,7 @@ handler:
 		case announceCode:
 			var query AnnounceBody
 			if time.Now().Unix()-peer.lastAnnounceCodeTime < 60 {
-				lp.log.Warn("peer lastAnnounceCode less than 60s, peer:%s",peer.peerStrID)
+				lp.log.Warn("peer lastAnnounceCode less than 60s, peer:%s", peer.peerStrID)
 				break handler
 			}
 			err := common.Deserialize(msg.Payload, &query)
@@ -350,7 +351,7 @@ handler:
 				lp.log.Error("failed to deserialize Announce, quit! %s", err)
 				break handler
 			}
-			lp.log.Debug("handle msg announce code, peer:%s",peer.peerStrID)
+			lp.log.Debug("handle msg announce code, peer:%s", peer.peerStrID)
 			if err := peer.handleAnnounce(&query); err != nil {
 				lp.log.Error("failed to handleAnnounce, quit! %s", err)
 				break handler

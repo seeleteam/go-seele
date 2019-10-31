@@ -175,7 +175,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
 		return
 	}
-	
+
 	for _, p := range peers {
 		pHead, pTd := p.Head()
 
@@ -183,7 +183,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		if localTD.Cmp(pTd) >= 0 {
 			// two step
 			memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
-			continue
+			return //no need to continue because peers are selected to be the best peers
 		}
 		err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
 		if err != nil {
@@ -195,7 +195,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 
 			// three step
 			memory.Print(sp.log, "SeeleProtocol synchronise downloader error", now, true)
-			
+
 			continue
 		}
 
@@ -300,6 +300,10 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	peers := p.peerSet.getPeerByShard(shardId)
 	for _, peer := range peers {
+		if peer.knownTxs.Contains(tx.Hash){
+			p.log.Debug("seeleprotocol handleNewTx: peer: %s already contains tx %s", peer.peerStrID, tx.Hash.String())
+			continue
+		}
 		if err := peer.sendTransaction(tx); err != nil {
 			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
 		}
@@ -411,7 +415,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 }
 
 func (s *SeeleProtocol) handleGetPeer(address common.Address) interface{} {
-	if p := s.peerSet.peerMap[address]; p != nil {
+	if p := s.peerSet.Find(address); p != nil {
 		return p.Info()
 	}
 	return nil

@@ -26,13 +26,13 @@ const (
 	responseTimeout = 20 * time.Second
 
 	pingpongConcurrentNumber = 5
-	pingpongInterval         = 30 * time.Second // sleep between ping pong, must big than response time out
+	pingpongInterval         = 25 * time.Second // sleep between ping pong, must big than response time out
 
 	discoveryConcurrentNumber = 5
-	discoveryInterval         = 35 * time.Second // sleep between discovery, must big than response time out
+	discoveryInterval         = 25 * time.Second // sleep between discovery, must big than response time out
 
 	// a node will be delete after n continuous time out.
-	timeoutCountForDeleteNode = 8
+	timeoutCountForDeleteNode = 16
 )
 
 type udp struct {
@@ -483,14 +483,17 @@ func (u *udp) addNode(n *Node, notifyConnect bool) {
 	}
 
 	count := u.db.size()
-	u.table.addNode(n)
-	u.db.add(n, notifyConnect)
 
-	newCount := u.db.size()
-	if count != newCount {
-		u.log.Info("add node %s, total nodes:%d", n, newCount)
-	} else {
-		u.log.Debug("got add node event, but it is already exist. total nodes didn't change:%d", newCount)
+	status := u.table.addNode(n)
+	if status {
+		u.db.add(n, notifyConnect)
+
+		newCount := u.db.size()
+		if count != newCount {
+			u.log.Info("add node %s, total nodes:%d", n, newCount)
+		} else {
+			u.log.Debug("got add node event, but it is already exist. total nodes didn't change:%d", newCount)
+		}
 	}
 }
 

@@ -196,10 +196,7 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 	// fmt.Println("svm.go-183 processEVMContract [after Create] err: ", err)
 	return receipt, err
 }
-
-func handleFee(ctx *Context, receipt *types.Receipt, snapshot int, e error) (*types.Receipt, error) {
-	if e != nil {return nil, e}
-  // Calculating the total fee
+func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
 	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
 	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)
