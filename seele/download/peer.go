@@ -7,7 +7,6 @@ package downloader
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -95,7 +94,8 @@ Again:
 			ret = reqMsg.Blocks
 		}
 	case <-timeout.C:
-		err = fmt.Errorf("Download.peerconn wait for msg %s timeout.magic= %d ip= %s", CodeToStr(msgCode), magic, p.peerID)
+		//err = fmt.Errorf("Download.peerconn wait for msg %s timeout.magic= %d ip= %s", CodeToStr(msgCode), magic, p.peerID)
+		err = errReceivedQuitMsg
 	}
 
 	p.lockForWaiting.Lock()
