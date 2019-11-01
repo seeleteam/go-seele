@@ -47,6 +47,8 @@ func NewNodeSet() *nodeSet {
 }
 
 func (set *nodeSet) getSelfShardNodeNum() int {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
 	count := 0
 	for _, item := range set.nodeMap {
 		if item.node.Shard == common.LocalShardNumber && item.bConnected {
