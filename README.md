@@ -1,7 +1,7 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-|        Features        |      Descriptions                                                                               |
+|        Features        |      Description                                                                               |
 |:-----------------------|------------------------------------------------------------------------------------------------|
 | **Sharding**           | 4 shards, transactions within the same shard and between different shards are supported<br/> higher transaction fee for cross-shard transaction                                  |
 | **Smart Contracts**    | smart contracts are supported within the same shard                                          |
