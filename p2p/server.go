@@ -45,7 +45,7 @@ const (
 	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 5 * time.Second
+	checkConnsNumInterval = 7 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -228,11 +228,14 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-	srv.nodeSet.tryAdd(node)
+
+
 	if srv.PeerCount() > srv.maxActiveConnections {
 		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
 		return
 	}
+	
+	srv.nodeSet.tryAdd(node)
 	srv.connectNode(node)
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
 
@@ -360,6 +363,9 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	if !srv.nodeSet.ifNeedAddNodes() {
+		return
+	}
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
@@ -383,14 +389,13 @@ func (srv *Server) doSelectNodeToConnect() {
 }
 
 func (srv *Server) doSelectLocalNodeToConnect() {
-
-	for _, node := range srv.StaticNodes {
-		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
-			continue
-		} else {
-			srv.connectNode(node)
-		}
-	}
+	//for _, node := range srv.StaticNodes {
+	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+	//		continue
+	//	} else {
+	//		srv.connectNode(node)
+	//	}
+	//}
 
 	selectNodeSet := srv.nodeSet.randSelect()
 
@@ -406,7 +411,6 @@ func (srv *Server) doSelectLocalNodeToConnect() {
 			}
 		}
 	}
-
 }
 
 func (srv *Server) startListening() error {
