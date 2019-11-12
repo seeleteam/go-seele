@@ -51,8 +51,8 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 
 		event.DebtsInsertedEventManager.Fire(obj.(*types.Debt))
 	}
-
-	pool := NewPool(DebtPoolCapacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd)
+	cachedTxs := NewCachedTxs(0)
+	pool := NewPool(DebtPoolCapacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd, cachedTxs)
 
 	debtPool := &DebtPool{
 		Pool:             pool,

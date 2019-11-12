@@ -70,7 +70,10 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 		event.TransactionInsertedEventManager.Fire(obj.(*types.Transaction))
 	}
 
-	pool := NewPool(config.Capacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd)
+	cachedTxs := NewCachedTxs(CachedCapacity)
+	cachedTxs.init(chain)
+
+	pool := NewPool(config.Capacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd, cachedTxs)
 
 	return &TransactionPool{pool}
 }
@@ -81,7 +84,15 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	if tx == nil {
 		return nil
 	}
+	if pool.cachedTxs.has(tx.Hash) {
+		pool.cachedTxs.log.Error("DUPLICATE Txs %s Was blocked", tx.Hash)
+		return errDuplicateTx
+	} else { //since there is no way to gurantee we can cached all tx, there maybe are more txs than capacity
+		pool.cachedTxs.add(tx)
+	}
 
+	// be noted: soft forking reverseBCstore will directly use pool.addObjectArray which will call pool.addObject(tx)
+	// so cachedTxs check won't have any effect to reinject txs
 	return pool.addObject(tx)
 }
 
@@ -103,6 +114,7 @@ func (pool *TransactionPool) GetTransaction(txHash common.Hash) *types.Transacti
 // RemoveTransaction removes transaction of specified transaction hash from pool
 func (pool *TransactionPool) RemoveTransaction(txHash common.Hash) {
 	pool.removeOject(txHash)
+	pool.cachedTxs.remove(txHash)
 }
 
 // GetProcessableTransactions retrieves processable transactions from pool.
