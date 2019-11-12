@@ -228,13 +228,17 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-
-
-	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
-		return
+	numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
+	if numPeersDelete > 0 {
+		for i := 0; i < numPeersDelete; i++ {
+			if srv.PeerCount() > srv.maxActiveConnections {
+				srv.deletePeerRand()
+				//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
+				//return
+			}
+		}
 	}
-	
+
 	srv.nodeSet.tryAdd(node)
 	srv.connectNode(node)
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
@@ -327,6 +331,24 @@ func (srv *Server) deletePeer(id common.Address) {
 	}
 }
 
+func (srv *Server) deletePeerRand() {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
+	p := srv.peerSet.getRandPeer()
+
+	if p != nil {
+		srv.nodeSet.setNodeStatus(p.Node, false)
+		srv.peerSet.delete(p)
+		p.notifyProtocolsDeletePeer()
+		srv.log.Debug("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
+
+		metricsDeletePeerMeter.Mark(1)
+		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+	} else {
+		srv.log.Info("server.run delPeerChan received. peer not match")
+	}
+}
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
