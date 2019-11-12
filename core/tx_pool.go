@@ -85,7 +85,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 		return nil
 	}
 	if pool.cachedTxs.has(tx.Hash) {
-		pool.cachedTxs.log.Error("DUPLICATE Txs %s Was blocked", tx.Hash)
+		pool.cachedTxs.log.Warn("Txs %s already exist, blocked it", tx.Hash)
 		return errDuplicateTx
 	} else { //since there is no way to gurantee we can cached all tx, there maybe are more txs than capacity
 		pool.cachedTxs.add(tx)

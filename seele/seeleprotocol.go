@@ -300,7 +300,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	peers := p.peerSet.getPeerByShard(shardId)
 	for _, peer := range peers {
-		if peer.knownTxs.Contains(tx.Hash){
+		if peer.knownTxs.Contains(tx.Hash) {
 			p.log.Debug("seeleprotocol handleNewTx: peer: %s already contains tx %s", peer.peerStrID, tx.Hash.String())
 			continue
 		}
@@ -622,7 +622,7 @@ handler:
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
-				p.chain.WriteBlock(&block)
+				p.chain.WriteBlock(&block, p.txPool.Pool)
 			}
 
 			// exit

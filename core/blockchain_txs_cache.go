@@ -77,7 +77,7 @@ func (c *CachedTxs) getTxsInOneBlock(chain blockchain, h uint64) (int, int, erro
 	}
 	txs := curBlock.Transactions
 	for i, tx := range txs {
-		if i == 0 { // for 1st tx is reward tx, need to check the duplicate
+		if i == 0 { // for 1st tx is reward tx, no need to check the duplicate
 			continue
 		}
 		txCount++
