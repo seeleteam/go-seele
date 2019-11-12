@@ -290,7 +290,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	}
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
-	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
+	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}
