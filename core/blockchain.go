@@ -153,7 +153,7 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	bc.currentBlock.Store(currentBlock)
 
 	// recover height-to-block mapping
-	// bc.recoverHeightIndices()
+	bc.recoverHeightIndices()
 
 	td, err := bcStore.GetBlockTotalDifficulty(currentHeaderHash)
 	if err != nil {
