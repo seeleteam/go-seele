@@ -195,6 +195,12 @@ func (s *server) verifyHeaderCommon(header *types.BlockHeader, parents []*types.
 		return errNonceInvalid
 	}
 	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		if header.Difficulty == nil {
+			s.log.Error("header.Difficulty is empty")
+		}
+		if header.Difficulty.Cmp(defaultDifficulty) != 0 {
+			s.log.Error("header.Difficulty %d is not deafultDifficulty %d", header.Difficulty, defaultDifficulty)
+		}
 		return errDifficultyInvalid
 	}
 	return nil
@@ -386,7 +392,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
 			// format of extra data is invalid !!!
 			if err := ser.VerifyHeader(chain, genesis); err != nil {
-				fmt.Println("failed to verify header when [snapshot]")
+				fmt.Println("failed to verify header when [snapshot] with err", err)
 				return nil, err
 			}
 			bftExtra, err := types.ExtractBftExtra(genesis)

@@ -39,14 +39,20 @@ type LightClientsManager struct {
 
 // NewLightClientManager create a new LightClientManager instance.
 func NewLightClientManager(targetShard uint, context context.Context, config *node.Config, engine consensus.Engine) (*LightClientsManager, error) {
-	clients := make([]*light.ServiceClient, common.ShardCount+1)
-	backends := make([]*light.LightBackend, common.ShardCount+1)
-	confirmedTxs := make([]*lru.Cache, common.ShardCount+1)
-	packedDebts := make([]*lru.Cache, common.ShardCount+1)
+	var shard int
+	if config.BasicConfig.Subchain {
+		shard = common.ShardCountSubchain
+	} else {
+		shard = common.ShardCount
+	}
+	clients := make([]*light.ServiceClient, shard+1)
+	backends := make([]*light.LightBackend, shard+1)
+	confirmedTxs := make([]*lru.Cache, shard+1)
+	packedDebts := make([]*lru.Cache, shard+1)
 
 	copyConf := config.Clone()
 	var err error
-	for i := 1; i <= common.ShardCount; i++ {
+	for i := 1; i <= shard; i++ { // for subchain, shard = 1, there wont be any initated master account and balance
 		if i == int(targetShard) {
 			continue
 		}

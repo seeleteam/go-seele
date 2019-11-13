@@ -1,0 +1,51 @@
+{
+  "basic":{
+    "name": "seele subchain node1",
+    "version": "1.0",
+    "dataDir": "node1_subchain",
+    "address": "0.0.0.0:8027",
+    "subchain": true,
+    "coinbase": "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
+    "algorithm": "bft_subchain"
+  },
+  "p2p": {
+    "privateKey": "0xf65e40c6809643b25ce4df33153da2f3338876f181f83d2281c6ac4a987b1479",
+    "staticNodes": [],
+    "address": "0.0.0.0:8057",
+    "networkID": "seele"
+  },
+  "log": {
+    "isDebug": false,
+    "printLog": true
+  },
+  "httpServer": {
+    "address": "0.0.0.0:8037",
+    "crossorigins": [
+      "*"
+    ],
+    "whiteHost": [
+      "*"
+    ]
+  },
+  "wsserver": {
+    "address": "0.0.0.0:8047",
+    "crossorigins": [
+      "*"
+    ]
+  },
+  "ipcconfig": {
+    "name": "seele1.ipc"
+  },
+  "metrics": {
+    "address": "0.0.0.0:8087",
+    "duration": 10,
+    "database": "influxdb",
+    "username": "test",
+    "password": "test123"
+  },
+  "genesis": {
+    "difficult":5200000,
+    "shard":1,
+    "timestamp":1554099618
+  }
+}

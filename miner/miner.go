@@ -87,6 +87,29 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	return miner
 }
 
+// NewMiner constructs and returns a miner instance
+func NewMinerSubchain(addr common.Address, seele SeeleBackend, engine consensus.Engine) *Miner {
+	miner := &Miner{
+		coinbase:             addr,
+		canStart:             1,
+		stopped:              0,
+		stopper:              0,
+		seele:                seele,
+		wg:                   sync.WaitGroup{},
+		recv:                 make(chan *types.Block, 1),
+		log:                  log.GetLogger("miner"),
+		isFirstDownloader:    1,
+		isFirstBlockPrepared: 0,
+		engine:               engine,
+	}
+
+	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
+	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
+	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
+
+	return miner
+}
+
 func (miner *Miner) GetEngine() consensus.Engine {
 	return miner.engine
 }

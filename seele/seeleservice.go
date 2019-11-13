@@ -97,8 +97,14 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 		debtVerifier: verifier,
 	}
 
+	// var serviceContext ServiceContext
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
-	fmt.Printf("start to initiate service with conf %+v", conf)
+	// if conf.BasicConfig.Subchain {
+	// 	serviceContext = ctx.Value("SubchainServiceContext").(ServiceContext)
+	// } else {
+	// 	serviceContext = ctx.Value("ServiceContext").(ServiceContext)
+	// }
+	// fmt.Printf("start to initiate service with conf %+v", conf)
 
 	// Initialize blockchain DB.
 	if err = s.initBlockchainDB(&serviceContext); err != nil {
@@ -120,52 +126,9 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier, engine)
 
 	// initialize and validate genesis
-	fmt.Printf("[subchain] newSeeleService engine %+v", engine)
+	// fmt.Printf("[subchain] newSeeleService engine %+v", engine)
+	// !! FIXME : conf is not right when pass into
 	if err = s.initGenesisAndChain(&serviceContext, conf, startHeight); err != nil {
-		return nil, err
-	}
-
-	if err = s.initPool(conf); err != nil {
-		return nil, err
-	}
-
-	if s.seeleProtocol, err = NewSeeleProtocol(s, log); err != nil {
-		s.Stop()
-		log.Error("failed to create seeleProtocol in NewSeeleService, %s", err)
-		return nil, err
-	}
-
-	return s, nil
-}
-
-// NewSeeleSubService serve as subchain service
-func NewSeeleSubService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine) (s *SeeleService, err error) {
-	s = &SeeleService{
-		log:        log,
-		networkID:  conf.P2PConfig.NetworkID,
-		netVersion: conf.BasicConfig.Version,
-	}
-
-	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
-	fmt.Printf("start to initiate subchain service with conf %+v", conf)
-
-	// Initialize blockchain DB.
-	if err = s.initBlockchainDB(&serviceContext); err != nil {
-		return nil, err
-	}
-
-	leveldb.StartMetrics(s.chainDB, "subchaindb", log)
-
-	// Initialize account state info DB.
-	if err = s.initAccountStateDB(&serviceContext); err != nil {
-		return nil, err
-	}
-
-	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, nil, engine)
-
-	// initialize and validate genesis
-	fmt.Printf("[subchain] newSeeleService engine %+v", engine)
-	if err = s.initGenesisAndChain(&serviceContext, conf, -1); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +185,7 @@ func (s *SeeleService) initDebtManagerDB(serviceContext *ServiceContext) (err er
 
 func (s *SeeleService) initGenesisAndChain(serviceContext *ServiceContext, conf *node.Config, startHeight int) (err error) {
 	bcStore := store.NewCachedStore(store.NewBlockchainDatabase(s.chainDB))
-	fmt.Println("[subchain] initGenesisAndChain engine", conf.SeeleConfig.GenesisConfig.Consensus)
+	fmt.Printf("starting to getGenesis with GenesisConfig %+v", conf.SeeleConfig.GenesisConfig)
 	genesis := core.GetGenesis(&conf.SeeleConfig.GenesisConfig)
 
 	if err = genesis.InitializeAndValidate(bcStore, s.accountStateDB); err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -143,16 +144,27 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 	}
 
 	extraData := []byte{}
-	if info.Consensus == types.IstanbulConsensus || info.Consensus == types.BftConsensus {
+	if info.Consensus == types.IstanbulConsensus {
 		extraData = generateConsensusInfo(info.Validators)
-		fmt.Printf("consensus is %d extraData initiated with %v", types.BftConsensus, info.Validators)
+		fmt.Printf("consensus is %d extraData initiated with %v", types.IstanbulConsensus, info.Validators)
+	}
+
+	if info.Consensus == types.BftConsensus { // 2 : Bft
+		vers, verErr := initateValidators()
+		fmt.Println("initiate validators")
+		if verErr != nil { // if there is no verifier, need to add verifier(s) later to use bft
+			panic("Can not initate bft validators")
+		}
+		info.Validators = vers
+		extraData = getGenesisExtraData(info.Validators)
+		fmt.Printf("consensus is %d extraData initiated with %v\n", types.BftConsensus, info.Validators)
 	}
 
 	shard := common.SerializePanic(shardInfo{
 		ShardNumber: info.ShardNumber,
 	})
 
-	fmt.Println("[subchain] the genesis consensus algorithm", info.Consensus)
+	fmt.Println("the genesis consensus algorithm", info.Consensus)
 
 	return &Genesis{
 		header: &types.BlockHeader{
@@ -169,6 +181,35 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 		},
 		info: info,
 	}
+}
+
+// initateValidators: input: deposit smart contract; payload: bytecode used to call smart contract to get validators list
+// output: validators list and err
+// the inqury will be a transaction, so need some balance to make this inqury
+// SO FAR, in orer to test, we won't put any parameters
+// func (genesis *Genesis) initateValidators(add common.Address, payload []byte) error {
+func initateValidators() ([]common.Address, error) {
+	vers := []common.Address{
+		common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")),
+	}
+	return vers, nil
+}
+
+// getGenesisExtraData convert verifiers addresses into ExtraData
+func getGenesisExtraData(vers []common.Address) []byte {
+	var genesisExtraData []byte
+	genesisExtraData = append(genesisExtraData, bytes.Repeat([]byte{0x00}, types.BftExtraVanity)...)
+	bft := &types.BftExtra{
+		Verifiers:     vers,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+	}
+	bftPayload, err := rlp.EncodeToBytes(&bft)
+	if err != nil {
+		panic("failed to encode bft extra")
+	}
+	genesisExtraData = append(genesisExtraData, bftPayload...)
+	return genesisExtraData
 }
 
 func generateConsensusInfo(addrs []common.Address) []byte {
@@ -197,6 +238,7 @@ func (genesis *Genesis) GetShardNumber() uint {
 
 // InitializeAndValidate writes the genesis block in the blockchain store if unavailable.
 // Otherwise, check if the existing genesis block is valid in the blockchain store.
+// here if consensus is subchain consensus, we will get the validators from inquerying subchain registeration smart contract which has stored the validators
 func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, accountStateDB database.Database) error {
 	storedGenesisHash, err := bcStore.GetBlockHash(genesisBlockHeight)
 
@@ -285,6 +327,11 @@ func getStateDB(info *GenesisInfo) *state.Statedb {
 		}
 	}
 
+	return statedb
+}
+
+func createSubStateDB(info *GenesisInfo) *state.Statedb {
+	statedb := state.NewEmptyStatedb(nil)
 	return statedb
 }
 

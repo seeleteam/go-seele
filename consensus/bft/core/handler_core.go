@@ -153,6 +153,6 @@ func (c *core) handleTimeoutMsg() {
 
 func (c *core) handleFinalCommitted() error {
 	c.log.Debug("Received a final committed proposal")
-	c.startNewRound(common.Big0)
+	c.startNewRound(common.Big0) // after handle final commiement, then start a new round
 	return nil
 }

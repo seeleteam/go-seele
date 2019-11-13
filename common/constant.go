@@ -27,6 +27,9 @@ const (
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
 
+	// only one shard in subchain
+	ShardCountSubchain = 1
+
 	// MetricsRefreshTime is the time of metrics sleep 1 minute
 	MetricsRefreshTime = time.Minute
 

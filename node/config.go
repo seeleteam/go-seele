@@ -55,6 +55,9 @@ type BasicConfig struct {
 	// The version of the node
 	Version string `json:"version"`
 
+	//
+	Subchain bool `json:"subchain"`
+
 	// The file system path of the node, used to store data
 	DataDir string `json:"dataDir"`
 
@@ -69,6 +72,7 @@ type BasicConfig struct {
 
 	// privatekey for coinbase, used in bft consensus
 	PrivateKey string `json:"privateKey"`
+	// PrivateKey *ecdsa.PrivateKey `json:"-"`
 
 	// MinerAlgorithm miner algorithm
 	MinerAlgorithm string `json:"algorithm"`

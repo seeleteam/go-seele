@@ -8,6 +8,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -60,7 +61,10 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	if err != nil {
 		return nil, err
 	}
-
+	if cmdConfig.BasicConfig.MinerAlgorithm == common.BFTSubchainEngine {
+		cmdConfig.GenesisConfig.Consensus = 2
+		fmt.Println("change consensus to ", cmdConfig.GenesisConfig.Consensus)
+	}
 	config := CopyConfig(cmdConfig)
 	convertIPCServerPath(cmdConfig, config)
 
@@ -87,6 +91,7 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	comm.LogConfiguration.DataDir = config.BasicConfig.DataDir
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	config.BasicConfig.DataSetDir = filepath.Join(common.GetTempFolder(), config.BasicConfig.DataDir)
+	// fmt.Printf("loadConfigFile %+v", config.BasicConfig.MinerAlgorithm)
 	return config, nil
 }
 

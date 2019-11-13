@@ -46,7 +46,7 @@ func (s *MonitorService) Protocols() []p2p.Protocol { return nil }
 func (s *MonitorService) Start(srvr *p2p.Server) error {
 	s.p2pServer = srvr
 
-	s.log.Info("monitor rpc service start")
+	s.log.Info("monitor rpc service started")
 
 	return nil
 }

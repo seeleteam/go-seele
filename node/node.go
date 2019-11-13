@@ -67,7 +67,7 @@ type Node struct {
 }
 
 // New creates a new P2P node.
-func New(conf *Config, isSub bool) (*Node, error) {
+func New(conf *Config) (*Node, error) {
 	confCopy := *conf
 	conf = &confCopy
 	nlog := log.GetLogger("node")
@@ -78,7 +78,7 @@ func New(conf *Config, isSub bool) (*Node, error) {
 		log:      nlog,
 	}
 	var err error
-	if isSub {
+	if conf.BasicConfig.Subchain {
 		err = node.checkSubChainConfig()
 	} else {
 		err = node.checkConfig()

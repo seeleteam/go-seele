@@ -36,9 +36,9 @@ var (
 type ConsensusType uint
 
 const (
-	PowConsensus ConsensusType = iota
-	IstanbulConsensus
-	BftConsensus
+	PowConsensus      ConsensusType = iota
+	IstanbulConsensus               = PowConsensus + 1
+	BftConsensus                    = 2
 )
 
 // BlockHeader represents the header of a block in the blockchain.
