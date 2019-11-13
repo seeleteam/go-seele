@@ -85,7 +85,7 @@ func (c *CachedTxs) getTxsInOneBlock(chain blockchain, h uint64) (int, int, erro
 			c.add(tx)
 		} else {
 			duplicateTxCount++
-			c.log.Error("[CachedTxs] found a duplicate tx %s", tx.Hash)
+			c.log.Debug("[CachedTxs] found a duplicate tx %s", tx.Hash)
 			continue
 		}
 	}

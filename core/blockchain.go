@@ -336,7 +336,7 @@ func (bc *Blockchain) doWriteBlock(block *types.Block, pool *Pool) error {
 			continue
 		}
 		if !pool.cachedTxs.has(tx.Hash) {
-			bc.log.Warn("[CachedTxs] add tx %+v from synced block", tx.Hash)
+			bc.log.Debug("[CachedTxs] add tx %+v from synced block", tx.Hash)
 			pool.cachedTxs.add(tx)
 		}
 	}
