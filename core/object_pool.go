@@ -119,6 +119,7 @@ func (pool *Pool) loopCheckingPool() {
 			if len(pool.hashToTxMap) > 0 {
 				for _, poolTx := range pool.hashToTxMap {
 					pool.pendingQueue.add(poolTx)
+					pool.afterAdd(poolTx.poolObject)
 				}
 			}
 			pool.mutex.Unlock()
