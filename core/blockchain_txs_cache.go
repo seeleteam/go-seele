@@ -1,7 +1,9 @@
 package core
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
@@ -9,10 +11,11 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
-var errTxCacheFull = errors.New("too many cached tx in cachedTxs")
-var errDuplicateTx = errors.New("duplicate tx")
+var errTxCacheFull = errors.New("CachedTxs reaches max")
+var errDuplicateTx = errors.New("Tx already exists")
 
 const CachedBlocks = uint64(24000)
+const PercentDelete = 20 // once CachedTxs reach max, 1/PercentDelete of capacity will be randomly deleted
 
 type CachedTxs struct {
 	capacity uint64
@@ -37,11 +40,12 @@ func (c *CachedTxs) init(chain blockchain) error {
 	c.log.Info("Initating cached txs within recent %d blocks", CachedBlocks)
 	curBlockHash, err := chain.GetStore().GetHeadBlockHash()
 	if err != nil {
-		c.log.Error("failed to get store")
+		c.log.Error("failed to get blockhash form store when cache block txs")
 		return err
 	}
 	curBlock, err := chain.GetStore().GetBlock(curBlockHash)
 	if err != nil {
+		c.log.Error("failed to get block from store when cache block txs")
 		return err
 	}
 	duplicateTxCount := 0
@@ -62,8 +66,7 @@ func (c *CachedTxs) init(chain blockchain) error {
 		txCount += tc
 		start++
 	}
-
-	c.log.Info("[CachedTxs] Cached %d txs, %d duplicate found", txCount, duplicateTxCount)
+	c.log.Warn("[CachedTxs] Cached %d txs, %d existed Txs found", txCount, duplicateTxCount)
 	return nil
 }
 
@@ -100,19 +103,20 @@ func (c *CachedTxs) count() int {
 	return len(c.content)
 }
 
-func (c *CachedTxs) add(tx *types.Transaction) error {
+func (c *CachedTxs) add(tx *types.Transaction) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if uint64(len(c.content)) >= c.capacity {
-		return errTxCacheFull
+		c.log.Error("Try to randomly remove txs, for %s", errTxCacheFull)
+		c.randomDeletes()
+		// c.log.Error("after remove, CachedTxs size %d", len(c.content))
 	}
 	if c.content[tx.Hash] != nil {
-		return errDuplicateTx
+		c.log.Debug("Block tx, %s", errDuplicateTx)
 	}
 	c.content[tx.Hash] = tx
 	// fmt.Printf("[CachedTxs] add tx %+v", tx.Hash)
 	c.log.Debug("[CachedTxs] add tx %+v", tx.Hash)
-	return nil
 }
 
 func (c *CachedTxs) remove(hash common.Hash) {
@@ -140,14 +144,31 @@ func (c *CachedTxs) getCachedTxs() []*types.Transaction {
 	return list
 }
 
-func (c *CachedTxs) addTxArray(txs []*types.Transaction) int {
-	count := 0
-	for _, tx := range txs {
-		if err := c.add(tx); err != nil {
-			c.log.Debug("add object failed, %s", err)
-		} else {
-			count++
-		}
+// randomDeletes randomly delete 1/PercentDelete of map
+// random delete make sure the p2p network still have strongest protection from duplicate txs as possible with relasing RAM pressure.
+// Furthermore, even in the extreme case : the node own duplicate txs in pool, the node may not the node successfully mined the block.
+// At Last, the normal tx, we still have duplicate check in our pool.
+func (c *CachedTxs) randomDeletes() {
+	rand.Seed(time.Now().UnixNano())
+	deleteSize := (int)(len(c.content) / PercentDelete)
+	for i := 0; i < deleteSize; i++ {
+		k, _ := c.selRand()
+		delete(c.content, k)
+		i++
 	}
-	return count
+}
+
+func (c *CachedTxs) selRand() (k common.Hash, v *types.Transaction) {
+	i := rand.Intn(len(c.content)) //24000 * 500
+	// since perm or use shuffle will consume either more RAM or more time.
+	// Here just use rand.Intn and then iterate the map to delete it.
+
+	for k := range c.content {
+		if i == 0 {
+			return k, c.content[k]
+		}
+		i--
+	}
+	return k, c.content[k]
+	panic("never")
 }

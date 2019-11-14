@@ -24,6 +24,7 @@ var (
 	errObjectPoolFull   = errors.New("object pool is full")
 	errObjectNonceUsed  = errors.New("object nonce already been used")
 )
+
 var CachedCapacity = CachedBlocks * 500
 
 type blockchain interface {
