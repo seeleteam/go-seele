@@ -79,7 +79,7 @@ Again:
 				goto Again
 			}
 			if reqMsg.Magic != magic {
-				p.log.Info("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg=%s, magic=%d, pid=%s", CodeToStr(msgCode), magic, p.peerID)
+				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg=%s, magic=%d, pid=%s", CodeToStr(msgCode), magic, p.peerID)
 				goto Again
 			}
 			ret = reqMsg.Headers
@@ -89,13 +89,13 @@ Again:
 				goto Again
 			}
 			if reqMsg.Magic != magic {
-				p.log.Info("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
+				p.log.Debug("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
 				goto Again
 			}
 			ret = reqMsg.Blocks
 		}
 	case <-timeout.C:
-		p.log.Info("Downloader.waitMsg  timeout msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
+		p.log.Debug("Downloader.waitMsg  timeout msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
 		//err = fmt.Errorf("Download.peerconn wait for msg %s timeout.magic= %d ip= %s", CodeToStr(msgCode), magic, p.peerID)
 		err = errReceivedQuitMsg
 	}
