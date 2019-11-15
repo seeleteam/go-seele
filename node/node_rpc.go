@@ -8,7 +8,6 @@ package node
 import (
 	"net"
 	"strings"
-	"sync"
 
 	rpc "github.com/seeleteam/go-seele/rpc"
 )
@@ -74,14 +73,11 @@ func (n *Node) startTCP(apis []rpc.API) error {
 	if listener, err = net.Listen("tcp", endpoint); err != nil {
 		return err
 	}
-	var pend sync.WaitGroup
-	defer pend.Done()
-	pend.Add(1)
+
 	go func() {
 		n.log.Info("RPC opened at address %s", endpoint)
 
 		for {
-		
 			conn, err := listener.Accept()
 			if err != nil {
 				// Terminate if the listener was closed
@@ -95,12 +91,11 @@ func (n *Node) startTCP(apis []rpc.API) error {
 				n.log.Error("failed to accept RPC. err %s", err)
 				continue
 			}
-
+			n.log.Debug("RPC call from %v", conn)
 			connStr := conn.RemoteAddr().String()
 			if !strings.HasPrefix(connStr, "127.0.0.1") && !strings.HasPrefix(connStr, "localhost") {
 				handler.ChangeMinerRequestStatus()
 			}
-			pend.Add(1)
 			go handler.ServeCodec(rpc.NewJSONCodec(conn), rpc.OptionMethodInvocation|rpc.OptionSubscriptions)
 		}
 	}()
