@@ -25,6 +25,8 @@ var (
 	errObjectNonceUsed  = errors.New("object nonce already been used")
 )
 
+var CachedCapacity = CachedBlocks * 500
+
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
@@ -73,11 +75,12 @@ type Pool struct {
 	canRemove          canRemoveFunc
 	objectValidation   objectValidationFunc
 	afterAdd           afterAddFunc
+	cachedTxs          *CachedTxs
 }
 
 // NewPool creates and returns a transaction pool.
 func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
-	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc) *Pool {
+	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc, cachedTxs *CachedTxs) *Pool {
 	pool := &Pool{
 		capacity:           capacity,
 		chain:              chain,
@@ -89,7 +92,10 @@ func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlo
 		canRemove:          canRemove,
 		objectValidation:   objectValidation,
 		afterAdd:           afterAdd,
+		// cachedTxs:          NewCachedTxs(CachedCapacity),
+		cachedTxs: cachedTxs,
 	}
+	// pool.cachedTxs.init(chain)
 
 	go pool.loopCheckingPool()
 
@@ -102,7 +108,6 @@ func (pool *Pool) SetLogLevel(level logrus.Level) {
 
 // check the pool frequently, remove finalized and old txs, reinject the txs not on the chain yet
 func (pool *Pool) loopCheckingPool() {
-	
 	for {
 		pool.mutex.RLock()
 		pendingQueueCount := pool.pendingQueue.count()
@@ -123,7 +128,6 @@ func (pool *Pool) loopCheckingPool() {
 		}
 	}
 }
-
 
 // HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
 func (pool *Pool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {

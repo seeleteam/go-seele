@@ -642,7 +642,7 @@ handler:
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
-				p.chain.WriteBlock(&block)
+				p.chain.WriteBlock(&block, p.txPool.Pool)
 			}
 
 			// exit

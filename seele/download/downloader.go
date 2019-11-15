@@ -574,7 +574,8 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 		// writeblock
-		err := d.chain.WriteBlock(h.block)
+		txPool := d.seele.TxPool().Pool
+		err := d.chain.WriteBlock(h.block, txPool)
 
 		if err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
@@ -595,7 +596,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 				}
 				for _, localBlock := range localBlocks {
 					d.log.Info("write back local blocks: %d", localBlock.Header.Height)
-					if err = d.chain.WriteBlock(localBlock); err != nil {
+					if err = d.chain.WriteBlock(localBlock, txPool); err != nil {
 						d.log.Error("failed to write localBlock back err=%s, height: %d", err, localBlock.Header.Height)
 						break
 					}
