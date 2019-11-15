@@ -149,9 +149,23 @@ func (sp *SeeleProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
-			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber))
+			block := sp.chain.CurrentBlock()
+			head := block.HeaderHash
+			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
+			if err != nil {
+				sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
+				return
+			}
+			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber, localTD))
 		case <-forceSync.C:
-			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber))
+			block := sp.chain.CurrentBlock()
+			head := block.HeaderHash
+			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
+			if err != nil {
+				sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
+				return
+			}
+			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber, localTD))
 		case <-sp.quitCh:
 			return
 		}
@@ -167,25 +181,25 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		return
 	}
 
-	block := sp.chain.CurrentBlock()
-	localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
-	if err != nil {
-		sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s], Hash: %v", err, block.HeaderHash)
-		// one step
-		memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
-		return
-	}
+	//block := sp.chain.CurrentBlock()
+	//localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(block.HeaderHash)
+	//if err != nil {
+	//	sp.log.Error("sp.synchronise GetBlockTotalDifficulty err.[%s], Hash: %v", err, block.HeaderHash)
+	//	// one step
+	//	memory.Print(sp.log, "SeeleProtocol synchronise GetBlockTotalDifficulty error", now, true)
+	//	return
+	//}
 
 	for _, p := range peers {
-		pHead, pTd := p.Head()
+		pHead, _ := p.Head()
 
 		// if total difficulty is not smaller than remote peer td, then do not need synchronise.
-		if localTD.Cmp(pTd) >= 0 {
-			// two step
-			memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
-			return //no need to continue because peers are selected to be the best peers
-		}
-		err = sp.downloader.Synchronise(p.peerStrID, pHead, pTd, localTD)
+		//if localTD.Cmp(pTd) >= 0 {
+		// two step
+		//	memory.Print(sp.log, "SeeleProtocol synchronise difficulty is bigger than remote", now, true)
+		//	return //no need to continue because peers are selected to be the best peers
+		//}
+		err := sp.downloader.Synchronise(p.peerStrID, pHead)
 		if err != nil {
 			if err == downloader.ErrIsSynchronising {
 				sp.log.Debug("exit synchronise as it is already running.")
@@ -210,6 +224,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 }
 
 func (sp *SeeleProtocol) broadcastChainHead() {
+
 	now := time.Now()
 	// entrance
 	memory.Print(sp.log, "SeeleProtocol broadcastChainHead entrance", now, false)
@@ -228,17 +243,20 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	}
 
 	peers := sp.peerSet.getAllPeers()
+
 	for _, peer := range peers {
 		if peer != nil {
-			err := peer.sendHeadStatus(status)
-			if err != nil {
-				sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
-			} else {
-				sp.log.Debug("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
-			}
+			//err := peer.sendHeadStatus(status)
+			sp.wg.Add(1)
+			go peer.sendHeadStatus(status)
+			//if err != nil {
+			//	sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
+			//} else {
+			//	sp.log.Debug("send chain head info err=%s, id=%s, ip=%s, localTD=%d", err, peer.peerStrID, peer.Peer.RemoteAddr(), localTD)
+			//}
 		}
 	}
-
+	sp.wg.Wait()
 	// exit
 	memory.Print(sp.log, "SeeleProtocol broadcastChainHead exit", now, true)
 }
@@ -300,10 +318,11 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 	shardId := tx.Data.From.Shard()
 	peers := p.peerSet.getPeerByShard(shardId)
 	for _, peer := range peers {
-		if peer.knownTxs.Contains(tx.Hash){
+		if peer.knownTxs.Contains(tx.Hash) {
 			p.log.Debug("seeleprotocol handleNewTx: peer: %s already contains tx %s", peer.peerStrID, tx.Hash.String())
 			continue
 		}
+
 		if err := peer.sendTransaction(tx); err != nil {
 			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
 		}
@@ -456,6 +475,7 @@ func (p *SeeleProtocol) handleMsg(peer *peer) {
 handler:
 	for {
 		msg, err := peer.rw.ReadMsg()
+
 		if err != nil {
 			p.log.Debug("get error when read msg from %s, %s", peer.peerStrID, err)
 			break
@@ -793,6 +813,7 @@ handler:
 		default:
 			p.log.Warn("unknown code %d", msg.Code)
 		}
+
 	}
 
 	p.handleDelPeer(peer.Peer)

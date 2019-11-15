@@ -32,7 +32,7 @@ const (
 	downloadHeadersRequestCode  uint16 = 5
 	downloadHeadersResponseCode uint16 = 6
 
-	msgWaitTimeout = time.Second * 120
+	msgWaitTimeout = time.Second * 60
 )
 
 var (
@@ -176,7 +176,7 @@ func (lp *LightProtocol) syncer() {
 	defer lp.wg.Done()
 	lp.wg.Add(1)
 
-	forceSync := time.NewTicker(forceSyncInterval)
+	forceSync := time.NewTicker(forceSyncInterval * 5)
 	for {
 		select {
 		case <-lp.syncCh:
