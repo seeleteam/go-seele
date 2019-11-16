@@ -167,7 +167,7 @@ func (d *Downloader) getSyncInfo(info *SyncInfo) {
 }
 
 // Synchronise try to sync with remote peer.
-func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, localTD *big.Int) error {
+func (d *Downloader) Synchronise(id string, head common.Hash) error {
 	// Make sure only one routine can pass at once
 	d.lock.Lock()
 
@@ -188,7 +188,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	}
 	d.lock.Unlock()
 
-	err := d.doSynchronise(p, head, td, localTD)
+	err := d.doSynchronise(p, head)
 
 	d.lock.Lock()
 	d.syncStatus = statusNone
@@ -199,7 +199,8 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	return err
 }
 
-func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
+//td *big.Int, localTD *big.Int
+func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error) {
 	d.log.Debug("Downloader.doSynchronise start, masterID: %s", d.masterPeer)
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
@@ -238,19 +239,16 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	bMasterStarted := false
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	for _, pConn := range d.peers {
-		_, peerTD := pConn.peer.Head()
-		if localTD.Cmp(peerTD) >= 0 {
-			continue
-		}
-		d.sessionWG.Add(1)
-		if pConn.peerID == d.masterPeer {
-			d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
-			bMasterStarted = true
-		}
-
-		go d.peerDownload(pConn, tm)
+	
+	
+	d.sessionWG.Add(1)
+	if conn.peerID == d.masterPeer {
+		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
+		bMasterStarted = true
 	}
+
+	go d.peerDownload(conn, tm)
+	//}
 	d.lock.Unlock()
 
 	if !bMasterStarted {

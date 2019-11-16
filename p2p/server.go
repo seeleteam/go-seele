@@ -45,7 +45,7 @@ const (
 	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 5 * time.Second
+	checkConnsNumInterval = 7 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -228,11 +228,18 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-	srv.nodeSet.tryAdd(node)
-	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
-		return
+	numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
+	if numPeersDelete > 0 {
+		for i := 0; i < numPeersDelete; i++ {
+			if srv.PeerCount() > srv.maxActiveConnections {
+				srv.deletePeerRand()
+				//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
+				//return
+			}
+		}
 	}
+
+	srv.nodeSet.tryAdd(node)
 	srv.connectNode(node)
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
 
@@ -324,6 +331,24 @@ func (srv *Server) deletePeer(id common.Address) {
 	}
 }
 
+func (srv *Server) deletePeerRand() {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
+	p := srv.peerSet.getRandPeer()
+
+	if p != nil {
+		srv.nodeSet.setNodeStatus(p.Node, false)
+		srv.peerSet.delete(p)
+		p.notifyProtocolsDeletePeer()
+		srv.log.Debug("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
+
+		metricsDeletePeerMeter.Mark(1)
+		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+	} else {
+		srv.log.Info("server.run delPeerChan received. peer not match")
+	}
+}
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
@@ -360,6 +385,9 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	if !srv.nodeSet.ifNeedAddNodes() {
+		return
+	}
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
@@ -383,14 +411,13 @@ func (srv *Server) doSelectNodeToConnect() {
 }
 
 func (srv *Server) doSelectLocalNodeToConnect() {
-
-	for _, node := range srv.StaticNodes {
-		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
-			continue
-		} else {
-			srv.connectNode(node)
-		}
-	}
+	//for _, node := range srv.StaticNodes {
+	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+	//		continue
+	//	} else {
+	//		srv.connectNode(node)
+	//	}
+	//}
 
 	selectNodeSet := srv.nodeSet.randSelect()
 
@@ -406,7 +433,6 @@ func (srv *Server) doSelectLocalNodeToConnect() {
 			}
 		}
 	}
-
 }
 
 func (srv *Server) startListening() error {

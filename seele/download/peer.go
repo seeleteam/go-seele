@@ -63,8 +63,9 @@ func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh chan struct{})
 	p.waitingMsgMap[msgCode] = rcvCh
 	p.lockForWaiting.Unlock()
 	timeout := time.NewTimer(MsgWaitTimeout)
-
+	//timeout := time.Timer(MsgWaitTimeout)
 Again:
+
 	select {
 	case <-p.quitCh:
 		err = errPeerQuit
@@ -94,6 +95,7 @@ Again:
 			ret = reqMsg.Blocks
 		}
 	case <-timeout.C:
+		p.log.Debug("Downloader.waitMsg  timeout msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
 		//err = fmt.Errorf("Download.peerconn wait for msg %s timeout.magic= %d ip= %s", CodeToStr(msgCode), magic, p.peerID)
 		err = errReceivedQuitMsg
 	}
