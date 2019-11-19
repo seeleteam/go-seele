@@ -69,7 +69,8 @@ var substartCmd = &cobra.Command{
 		subserviceContext := seele.ServiceContext{
 			DataDir: subCfg.BasicConfig.DataDir,
 		}
-		sctxt := context.WithValue(context.Background(), "SubchainServiceContext", subserviceContext)
+		// sctxt := context.WithValue(context.Background(), "SubchainServiceContext", subserviceContext)
+		sctxt := context.WithValue(context.Background(), "ServiceContext", subserviceContext)
 
 		// 3. engine
 		var engine consensus.Engine
@@ -103,7 +104,7 @@ var substartCmd = &cobra.Command{
 		//5. services
 		submanager, err := lightclients.NewLightClientManager(seeleSubNode.GetShardNumber(), sctxt, subCfg, engine)
 		if err != nil {
-			fmt.Printf("create light client manager failed. %s", err)
+			fmt.Printf("create light client manager failed. %s\n", err)
 			return
 		}
 		// subservice, err := seele.NewSeeleServiceSubchain(sctxt, subCfg, sclog, engine)
