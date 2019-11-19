@@ -71,13 +71,14 @@ func (c *core) sendOldCommit(view *bft.View, digest common.Hash) {
 
 func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	// Decode->checkMessage->verifyCommit->acceptCommit->check state and commit
+	c.log.Info("bft-2 handleCommit msg")
 	var commit *bft.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		return errDecodeCommit
 	}
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
-		return nil
+		return err
 	}
 	if err := c.verifyCommit(commit, src); err != nil {
 		return err
