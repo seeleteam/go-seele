@@ -18,6 +18,7 @@ import (
 	"github.com/seeleteam/go-seele/cmd/util"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/crypto"
 	"github.com/seeleteam/go-seele/log/comm"
 	"github.com/seeleteam/go-seele/node"
@@ -62,7 +63,7 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 		return nil, err
 	}
 	if cmdConfig.BasicConfig.MinerAlgorithm == common.BFTSubchainEngine {
-		cmdConfig.GenesisConfig.Consensus = 2
+		cmdConfig.GenesisConfig.Consensus = types.BftConsensus
 		fmt.Println("change consensus to ", cmdConfig.GenesisConfig.Consensus)
 	}
 	config := CopyConfig(cmdConfig)
