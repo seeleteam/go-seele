@@ -190,8 +190,11 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 // func (genesis *Genesis) initateValidators(add common.Address, payload []byte) error {
 func initateValidators() ([]common.Address, error) {
 	vers := []common.Address{
-		common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")),
+		common.BytesToAddress(hexutil.MustHexToBytes("0x7460dde5d3da978dd719aa5c6e35b7b8564682d1")),
+		// common.HexToAddress("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1"),
+		// "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
 	}
+	fmt.Printf("initiate validators as %+v\n", vers)
 	return vers, nil
 }
 
@@ -266,6 +269,7 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	}
 
 	if headerHash := genesis.header.Hash(); !headerHash.Equal(storedGenesisHash) {
+		fmt.Printf("headerHash %s != storeGenesisHash %s\n", headerHash, storedGenesisHash)
 		return ErrGenesisHashMismatch
 	}
 
@@ -284,6 +288,8 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	if err := batch.Commit(); err != nil {
 		return errors.NewStackedError(err, "failed to commit batch into database")
 	}
+
+	fmt.Printf("put genesis header.hash %s into bcstore", genesis.header.Hash())
 
 	if err := bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true); err != nil {
 		return errors.NewStackedError(err, "failed to put genesis block header into store")
