@@ -58,7 +58,7 @@ func (ms *messageSet) Values() (result []*message) {
 }
 
 func (ms *messageSet) verify(msg *message) error {
-	if _, v := ms.verSet.GetByAddress(msg.Address); v == nil {
+	if _, v := ms.verSet.GetVerByAddress(msg.Address); v == nil {
 		return bft.ErrAddressUnauthorized
 	}
 	// TODO check view number and sequence number

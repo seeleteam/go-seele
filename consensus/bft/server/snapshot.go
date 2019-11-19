@@ -106,7 +106,7 @@ func (s *Snapshot) copy() *Snapshot {
 
 // checkVote return whether it's a valid vote
 func (s *Snapshot) checkVote(address common.Address, authorize bool) bool {
-	_, verifier := s.VerSet.GetByAddress(address)
+	_, verifier := s.VerSet.GetVerByAddress(address)
 	return (verifier != nil && !authorize) || (verifier == nil && authorize)
 }
 
@@ -178,7 +178,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, v := snap.VerSet.GetByAddress(verifier); v == nil {
+		if _, v := snap.VerSet.GetVerByAddress(verifier); v == nil {
 			return nil, errUnauthorized
 		}
 

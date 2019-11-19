@@ -102,7 +102,7 @@ func (c *core) handleMsg(payload []byte) error {
 		c.log.Error("failed to validate msg payload with err %s", err)
 		return err
 	}
-	_, src := c.verSet.GetByAddress(msg.Address)
+	_, src := c.verSet.GetVerByAddress(msg.Address)
 	if src == nil {
 		c.log.Error("invalid address in messageg %v", msg)
 		return ErrAddressUnauthorized

@@ -198,7 +198,7 @@ func (c *core) startNewRound(round *big.Int) {
 	//clear up
 	c.roundChangeSet = newRoundChangeSet(c.verSet) //
 	// update roundState
-	c.updateRoundState(newView, c.verSet, rounChanged) // TODO implement updateRoundState
+	c.updateRoundState(newView, c.verSet, rounChanged)
 	// calculate new proposer
 	c.verSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	c.waitingForRoundChange = false

@@ -36,7 +36,7 @@ type VerifierSet interface {
 	// Get Verifier by index
 	GetByIndex(i uint64) Verifier
 	// Get Verifier by given address
-	GetByAddress(addr common.Address) (int, Verifier)
+	GetVerByAddress(addr common.Address) (int, Verifier)
 	// Get current proposer
 	GetProposer() Verifier
 	// Check whether the Verifier with given address is a proposer

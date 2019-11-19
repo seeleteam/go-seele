@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	checkpointInterval = 1024 // Height of blocks after which to save the vote snapshot to the database
-	inmemorySnapshots  = 128  // Height of recent vote snapshots to keep in memory
-	inmemoryPeers      = 40   // peers of recent kept in memory
-	inmemoryMessages   = 1024 // messages of recent kept in memory
+	checkInterval     = 1024 // Height of blocks after which to save the vote snapshot to the database
+	inmemorySnapshots = 128  // Height of recent vote snapshots to keep in memory
+	inmemoryPeers     = 40   // peers of recent kept in memory
+	inmemoryMessages  = 1024 // messages of recent kept in memory
 )
 
 var (
@@ -83,28 +83,34 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	number := header.Height
 
 	// Bail out if we're unauthorized to sign a block
+	s.log.Info("SealResult take a snapshot")
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, nil)
-	fmt.Printf("[4-2-1]newBlock SealResult snapshot with err %+v\n", err)
 	if err != nil {
 		return nil, err
 	}
 	// check whether self is authoried or not
-	_, v := snap.VerSet.GetByAddress(s.address)
+	// Test Result return with VerSet:0xc000356640
+	// s.log.Info("check s.address %+v in verset or not?", s.address)
+	// s.log.Info("snap.VerSet %d verifiers, with snap.Verset %+v", snap.VerSet.Size(), snap.VerSet)
+
+	s.log.Info("check server address %+v in verifiers set", s.address)
+	_, v := snap.VerSet.GetVerByAddress(s.address)
+
 	if v == nil {
+		s.log.Error("server address is not in verifers set")
 		return nil, errUnauthorized
 	}
-	fmt.Printf("[4-2-2]newBlock SealResult GetByAddress %+v\n", v)
 
 	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
 	if parent == nil {
 		return nil, consensus.ErrBlockInvalidParentHash
 	}
-	fmt.Printf("[4-2-3]newBlock SealResult GetHeaderByHash %+v\n", parent)
+	s.log.Info("[4-2-3]newBlock SealResult GetHeaderByHash %+v", parent)
 
-	fmt.Printf("[4-2-4]newBlock SealResult updateBlock before %+v\n", block)
+	s.log.Info("[4-2-4]newBlock SealResult updateBlock before %+v", block)
 	//update block with signature and timestamp
 	block, err = s.updateBlock(parent, block) //
-	fmt.Printf("[4-2-4]newBlock SealResult updateBlock after %+v\n", block)
+	s.log.Info("[4-2-4]newBlock SealResult updateBlock after %+v", block)
 
 	if err != nil {
 		return nil, err
@@ -137,16 +143,16 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 		Proposal: block,
 	})
 	fmt.Println("Post in SealResult")
-	// fmt.Printf("s.commitCh %+v\n", s.commitCh)
+	// s.log.Info("s.commitCh %+v\n", s.commitCh)
 	// result := <-s.commitCh
-	// fmt.Printf("result from commit channel result: %+v", result)
+	// s.log.Info("result from commit channel result: %+v", result)
 	// return result, nil
 
 out:
 	for {
 		select {
 		case result := <-s.commitCh:
-			fmt.Printf("commit channel to result\n")
+			s.log.Info("commit channel to result\n")
 			for {
 				if result == nil {
 					break
@@ -161,7 +167,7 @@ out:
 		case <-stop:
 			break out
 		default:
-			fmt.Printf("default\n")
+			s.log.Error("default\n")
 			return nil, errors.New("select enter into default, namely no result and no stop signal")
 		}
 
@@ -224,6 +230,7 @@ func (s *server) verifyBFTCore(chain consensus.ChainReader, header *types.BlockH
 		return errTimestampInvalid
 	}
 	// verify extraData. Verifiers in snapshot and extraData should be the same
+	// s.log.Error("verfify BFTCore, snapshot")
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, parents) //TODO implement snapshot() in snapshot.go
 	if err != nil {
 		return err
@@ -306,7 +313,7 @@ func (s *server) verifySigner(chain consensus.ChainReader, header *types.BlockHe
 	}
 
 	// Signer should be in the validator set of previous block's extraData.
-	if _, v := snap.VerSet.GetByAddress(signer); v == nil {
+	if _, v := snap.VerSet.GetVerByAddress(signer); v == nil {
 		return errUnauthorized
 	}
 	return nil
@@ -364,6 +371,7 @@ func sigHash(header *types.BlockHeader) (hash common.Hash) {
 }
 
 // snapshot retrieves the authorization snapshot at a given point in time.
+// snapshot used to verfify the authentication.
 func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
 	var (
@@ -377,7 +385,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
-		if height%checkpointInterval == 0 {
+		if height%checkInterval == 0 {
 			if s, err := loadSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
 				ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
 				snap = s
@@ -436,13 +444,14 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 	ser.recents.Add(snap.Hash, snap)
 
 	// If we've generated a new checkpoint snapshot, save to disk
-	if snap.Height%checkpointInterval == 0 && len(headers) > 0 {
+	if snap.Height%checkInterval == 0 && len(headers) > 0 {
 		if err = snap.store(ser.db); err != nil {
 			return nil, err
 		}
 		ser.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
-	fmt.Printf("take a snapshot %+v with err %+v\n", snap, err)
+	ser.log.Info("take a snapshot %+v with err %+v", snap, err)
+	// ser.log.Info("snap.VerSet.GetByIndex(0)", snap.VerSet.GetByIndex(0))
 	return snap, err
 }
 

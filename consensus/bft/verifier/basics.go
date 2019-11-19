@@ -42,6 +42,8 @@ func newBasicSet(addrs []common.Address, policy bft.ProposerPolicy) *basicSet {
 	verSet.verifiers = make([]bft.Verifier, len(addrs))
 	for i, addr := range addrs {
 		verSet.verifiers[i] = NewVerifier(addr)
+		// fmt.Printf("[VerSet] add add %+v into verset %+v", addr, verSet.verifiers[i])
+
 	}
 	//sort
 	sort.Sort(verSet.verifiers)
@@ -77,7 +79,7 @@ func (verSet *basicSet) GetProposer() bft.Verifier {
 }
 
 func (verSet *basicSet) IsProposer(address common.Address) bool {
-	_, val := verSet.GetByAddress(address)
+	_, val := verSet.GetVerByAddress(address)
 	return reflect.DeepEqual(verSet.GetProposer(), val)
 }
 
@@ -122,7 +124,7 @@ func (verSet *basicSet) CalcProposer(lastProposer common.Address, round uint64) 
 
 func calcSeed(verSet bft.VerifierSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
-	if idx, val := verSet.GetByAddress(proposer); val != nil {
+	if idx, val := verSet.GetVerByAddress(proposer); val != nil {
 		offset = idx
 	}
 	return uint64(offset) + round
@@ -169,8 +171,15 @@ func (verSet *basicSet) RemoveVerifier(address common.Address) bool {
 	}
 	return false
 }
-func (verSet *basicSet) GetByAddress(addr common.Address) (int, bft.Verifier) {
-	for i, ver := range verSet.List() {
+func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier) {
+	// for i, ver := range verSet.List() {
+	// 	if addr == ver.Address() {
+	// 		return i, ver
+	// 	}
+	// }
+	for i, ver := range verSet.verifiers {
+		fmt.Printf("try to find addr %s same with ver %+v\n", addr, ver.Address())
+		fmt.Printf("type addr %T same with ver %T\n", addr, ver.Address())
 		if addr == ver.Address() {
 			return i, ver
 		}

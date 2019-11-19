@@ -32,7 +32,7 @@ func CheckValidatorSignature(verSet VerifierSet, data []byte, sig []byte) (commo
 	}
 
 	// 2. Check validator
-	if _, val := verSet.GetByAddress(signer); val != nil {
+	if _, val := verSet.GetVerByAddress(signer); val != nil {
 		return val.Address(), nil
 	}
 

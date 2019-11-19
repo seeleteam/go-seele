@@ -88,7 +88,7 @@ func (c *core) processBacklog() {
 		if backlog == nil {
 			continue
 		}
-		_, src := c.verSet.GetByAddress(srcAddress)
+		_, src := c.verSet.GetVerByAddress(srcAddress)
 		if src == nil {
 			// validator is not available
 			delete(c.backlogs, srcAddress)
