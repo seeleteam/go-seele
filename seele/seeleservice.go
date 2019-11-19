@@ -97,14 +97,13 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 		debtVerifier: verifier,
 	}
 
-	// var serviceContext ServiceContext
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)
+
+	// var serviceContext ServiceContext
 	// if conf.BasicConfig.Subchain {
 	// 	serviceContext = ctx.Value("SubchainServiceContext").(ServiceContext)
-	// } else {
-	// 	serviceContext = ctx.Value("ServiceContext").(ServiceContext)
 	// }
-	// fmt.Printf("start to initiate service with conf %+v", conf)
+	fmt.Printf("start to initiate service with conf %+v", conf)
 
 	// Initialize blockchain DB.
 	if err = s.initBlockchainDB(&serviceContext); err != nil {
@@ -124,10 +123,6 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 	}
 
 	s.miner = miner.NewMiner(conf.SeeleConfig.Coinbase, s, s.debtVerifier, engine)
-
-	// initialize and validate genesis
-	// fmt.Printf("[subchain] newSeeleService engine %+v", engine)
-	// !! FIXME : conf is not right when pass into
 	if err = s.initGenesisAndChain(&serviceContext, conf, startHeight); err != nil {
 		return nil, err
 	}
