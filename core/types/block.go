@@ -37,8 +37,8 @@ type ConsensusType uint
 
 const (
 	PowConsensus      ConsensusType = iota
-	IstanbulConsensus               = PowConsensus + 1
-	BftConsensus                    = 2
+	IstanbulConsensus               = 1 << iota
+	BftConsensus                    = 1 << iota
 )
 
 // BlockHeader represents the header of a block in the blockchain.
@@ -86,6 +86,11 @@ func (header *BlockHeader) Hash() common.Hash {
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
 		if istanbulHeader := IstanbulFilteredHeader(header, true); istanbulHeader != nil {
 			return crypto.MustHash(istanbulHeader)
+		}
+	}
+	if header.Consensus == BftConsensus {
+		if bftHeader := BftFilteredHeader(header, true); bftHeader != nil {
+			return crypto.MustHash(bftHeader)
 		}
 	}
 
