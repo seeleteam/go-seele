@@ -84,6 +84,9 @@ func (n *Node) startTCP(apis []rpc.API) error {
 				n.lock.RLock()
 				closed := n.tcpListener == nil
 				n.lock.RUnlock()
+				if conn != nil {
+					conn.Close() // Need to close this fault connect. Still have a chance to accept it later (tested)
+				}
 				if closed {
 					return
 				}

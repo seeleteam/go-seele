@@ -100,14 +100,31 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 func (set *nodeSet) delete(p *discovery.Node) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
-
-	delete(set.nodeMap, p.ID)
-	if _, ok := set.ipSet[p.Shard][p.IP.String()]; ok {
-		set.ipSet[p.Shard][p.IP.String()]-- //update ip count
-	} else {
-		fmt.Println("no IP found to delete")
+	if set.nodeMap[p.ID] !=nil {
+		delete(set.nodeMap, p.ID)
+		if _, ok := set.ipSet[p.Shard][p.IP.String()]; ok {
+			set.ipSet[p.Shard][p.IP.String()]-- //update ip count
+		} else {
+			fmt.Println("no IP found to delete")
+		}
 	}
+}
 
+func (set *nodeSet) ifNeedAddNodes() bool {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	var shardNodeCounts [common.ShardCount]int
+	for _, v := range set.nodeMap {
+		if v.bConnected {
+			shardNodeCounts[v.node.Shard-1]++
+		}
+	}
+	for i := 0; i < common.ShardCount; i++ {
+		if shardNodeCounts[i] < 2 {
+			return true
+		}
+	}
+	return false
 }
 
 // randSelect select one node randomly from nodeMap which is not connected yet
@@ -115,32 +132,29 @@ func (set *nodeSet) randSelect() []*discovery.Node {
 	set.lock.RLock()
 	defer set.lock.RUnlock()
 
-	var nodeL []*discovery.Node
+	var nodeL [common.ShardCount][]*discovery.Node
 	var retNodes []*discovery.Node
-	nodeCount := make([]int, common.ShardCount)
+	var shardNodeCounts [common.ShardCount]int
+
 	for _, v := range set.nodeMap {
 		if v.bConnected {
+			shardNodeCounts[v.node.Shard-1]++
 			continue
 		}
 
-		nodeL = append(nodeL, v.node)
+		nodeL[v.node.Shard-1] = append(nodeL[v.node.Shard-1], v.node)
 	}
 
-	if len(nodeL) == 0 {
-		return nil
+	for i := 0; i < common.ShardCount; i++ {
+		if shardNodeCounts[i] >= maxActiveConnsPerShard/2 {
+			continue
+		}
+		len := len(nodeL[i])
+		if len > 0 {
+			k := rand.Int31n(int32(len))
+			retNodes = append(retNodes, nodeL[i][k])
+		}
 	}
 
-	perm := rand.Perm(len(nodeL))
-	k := 0
-	for i := 0; i < len(nodeL); i++ {
-		if nodeCount[nodeL[perm[i]].Shard-1] < 1 {
-			nodeCount[nodeL[perm[i]].Shard-1]++
-			retNodes = append(retNodes, nodeL[perm[i]])
-			k++
-		}
-		if k >= common.ShardCount {
-			break
-		}
-	}
 	return retNodes
 }
