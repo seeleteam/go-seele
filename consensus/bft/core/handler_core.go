@@ -21,7 +21,9 @@ func (c *core) Stop() error {
 	return nil
 }
 
+// subscribeEvents server substribe events
 func (c *core) subscribeEvents() {
+	c.log.Info("server start to subscribe events [reqeust/msg/backlog]")
 	c.events = c.server.EventMux().Subscribe(
 		bft.RequestEvent{},
 		bft.MessageEvent{},
@@ -34,11 +36,14 @@ func (c *core) subscribeEvents() {
 		bft.FinalCommittedEvent{}, //TODO
 	)
 }
+
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
 	c.timeoutSub.Unsubscribe()
 	c.finalCommittedSub.Unsubscribe()
 }
+
+//  handleEvents server handle the incoming events
 func (c *core) handleEvents() {
 	// reset
 	defer func() {
@@ -53,8 +58,10 @@ func (c *core) handleEvents() {
 			if !ok {
 				return
 			}
+			c.log.Info("[handleEvents] get an event %+v", event)
 			switch e := event.Data.(type) {
 			case bft.RequestEvent: // proposal handle
+				c.log.Info("[handleEvents]-1 request event")
 				req := &bft.Request{
 					Proposal: e.Proposal,
 				}
@@ -63,10 +70,13 @@ func (c *core) handleEvents() {
 					c.storeRequestMsg(req)
 				}
 			case bft.MessageEvent: // prepare, commit all other msgs
+				c.log.Info("[handleEvents]-2 msg event")
 				if err := c.handleMsg(e.Payload); err == nil {
+					c.log.Info("after handleMsg, gossip payload to verifier")
 					c.server.Gossip(c.verSet, e.Payload)
 				}
 			case backlogEvent: // internal event
+				c.log.Info("[handleEvents]-3 backlog event")
 				if err := c.handleCheckedMsg(e.msg, e.src); err == nil {
 					p, err := e.msg.Payload()
 					if err != nil {
@@ -107,6 +117,7 @@ func (c *core) handleMsg(payload []byte) error {
 		c.log.Error("invalid address in messageg %v", msg)
 		return ErrAddressUnauthorized
 	}
+	c.log.Info("[handleEvents]-2 msg %+v is checked successfully", msg.Code)
 	return c.handleCheckedMsg(msg, src)
 }
 
@@ -118,7 +129,7 @@ func (c *core) handleCheckedMsg(msg *message, src bft.Verifier) error {
 		}
 		return err
 	}
-
+	fmt.Printf("msg code types: msgPreprepare %+v msgPrepare %+v, msgCommit %+v, msgRoundChange %+v\n", msgPreprepare, msgPrepare, msgCommit, msgRoundChange)
 	switch msg.Code {
 	case msgPreprepare:
 		return backlog(c.handlePreprepare(msg, src)) //TODO

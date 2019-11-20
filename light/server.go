@@ -93,12 +93,12 @@ needQuit:
 			peers := pm.peerSet.getPeers()
 			for _, p := range peers {
 				if p != nil {
-					if lastTime, ok := pm.peerSet.peerLastAnnounceTimeMap[p]; ok && (time.Now().Unix()-lastTime < 5 ) {
-						pm.log.Debug("blockLoop sendAnnounce cancelled,magic:%d,peer:%s",magic,p.peerStrID)
+					if lastTime, ok := pm.peerSet.peerLastAnnounceTimeMap[p]; ok && (time.Now().Unix()-lastTime < 5) {
+						pm.log.Debug("blockLoop sendAnnounce cancelled,magic:%d,peer:%s", magic, p.peerStrID)
 						continue
 					}
 					pm.peerSet.peerLastAnnounceTimeMap[p] = time.Now().Unix()
-					pm.log.Debug("blockLoop sendAnnounce,magic:%d,peer:%s",magic,p.peerStrID)
+					pm.log.Debug("blockLoop sendAnnounce,magic:%d,peer:%s", magic, p.peerStrID)
 					err := p.sendAnnounce(magic, uint64(0), uint64(0))
 					if err != nil {
 						pm.log.Debug("blockLoop sendAnnounce err=%s", err)

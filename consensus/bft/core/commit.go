@@ -75,23 +75,29 @@ func (c *core) handleCommit(msg *message, src bft.Verifier) error {
 	var commit *bft.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
+		c.log.Error("failed to decode incoming msg to commit msg, err %s", err)
 		return errDecodeCommit
 	}
 	if err := c.checkMessage(msgCommit, commit.View); err != nil {
+		c.log.Error("check commit msg err %s", err)
 		return err
 	}
 	if err := c.verifyCommit(commit, src); err != nil {
+		c.log.Error("verify commit msg err %s", err)
 		return err
 	}
 	c.acceptCommit(msg, src)
 
+	fmt.Printf("commits size %d and state %+v (StateCommitted %d)\n", c.current.Commits.Size(), c.state, StateCommitted)
+
 	// if we already have enough commit and meanwhile not in committed state-> commit!
 	if c.current.Commits.Size() > 2*c.verSet.F() && c.state.Cmp(StateCommitted) < 0 {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
+		c.log.Info("already got enough commits and not in committed state")
 		c.current.LockHash()
 		c.commit()
 	}
-
+	c.log.Info("successfully handle commit msg %+v", msg)
 	return nil
 }
 

@@ -8,6 +8,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
@@ -249,6 +250,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 
 // verifiers retrieves the list of authorized verifiers in ascending order.
 func (s *Snapshot) verifiers() []common.Address {
+	fmt.Printf("snapshot verset %s", s.VerSet.GetByIndex(0))
 	verifiers := make([]common.Address, 0, s.VerSet.Size())
 	for _, verifier := range s.VerSet.List() {
 		verifiers = append(verifiers, verifier.Address())

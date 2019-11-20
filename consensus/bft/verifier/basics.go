@@ -137,6 +137,7 @@ func emptyAddress(addr common.Address) bool {
 func (verSet *basicSet) List() []bft.Verifier {
 	verSet.verifierMu.RLock()
 	defer verSet.verifierMu.RUnlock()
+	fmt.Printf("\n\n verifiers List() %+v\n\n", verSet.verifiers)
 	return verSet.verifiers
 }
 
@@ -177,9 +178,12 @@ func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier)
 	// 		return i, ver
 	// 	}
 	// }
+
+	for j, veri := range verSet.verifiers {
+		fmt.Printf("[%d]th verifier [%s]\n", j, veri.Address())
+	}
+
 	for i, ver := range verSet.verifiers {
-		fmt.Printf("try to find addr %s same with ver %+v\n", addr, ver.Address())
-		fmt.Printf("type addr %T same with ver %T\n", addr, ver.Address())
 		if addr == ver.Address() {
 			return i, ver
 		}

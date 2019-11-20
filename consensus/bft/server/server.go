@@ -200,6 +200,8 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 		s.log.Error("Invalid proposal: %v", proposal)
 		return errProposalInvalid
 	}
+	s.log.Info("\n\nserver commit a block [1] get the proposed block")
+
 	h := block.Header
 
 	//2. append seals into extraData
@@ -207,18 +209,25 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 	if errSeal != nil {
 		return errSeal
 	}
+	s.log.Info("server commit a block [2] writeCommittedSeals")
 
 	//3. then update block header
 	block = block.WithSeal(h)
-	s.log.Info("Committed.address %s hash %s number %d", s.Address().String(), proposal.Hash().String(), proposal.Height())
+	s.log.Info("server commit a block [3] Committer address %s hash %s height %d", s.Address().String(), proposal.Hash().String(), proposal.Height())
 
 	// 4-1 if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
+	s.proposedBlockHash = block.Hash()
+
+	s.log.Info("server commit a block [4] s.proposedBlockHash %s ?= block.Hash() %s\n\n", s.proposedBlockHash, block.Hash())
+
 	if s.proposedBlockHash == block.Hash() {
 		s.commitCh <- block
 		fmt.Println("sending a block to commit channel")
 		s.log.Info("server commitCh enchannel with block %+v\n", block)
 		return nil
+	} else {
+		s.log.Error("the proposed block is not matched, won't send block to commitCh")
 	}
 
 	// 4-2 otherwise, we try to insert the block.

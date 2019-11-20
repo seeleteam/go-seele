@@ -40,6 +40,7 @@ func (c *core) sendPreprepare(request *bft.Request) {
 //
 // Decode -> checkMessage(make usre it is new) -> ensure it is from proposer -> verify proposal received -> accept preprepare
 func (c *core) handlePreprepare(msg *message, src bft.Verifier) error {
+	c.log.Info("bft-0 handlePreprepare msg")
 	// 1. Decode preprepare message first
 	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)

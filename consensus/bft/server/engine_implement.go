@@ -93,26 +93,37 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// s.log.Info("check s.address %+v in verset or not?", s.address)
 	// s.log.Info("snap.VerSet %d verifiers, with snap.Verset %+v", snap.VerSet.Size(), snap.VerSet)
 
-	s.log.Info("check server address %+v in verifiers set", s.address)
+	// after mining height = 1 block, the peer set was empty
+	// size := snap.VerSet.Size()
+	// if size == 0 {
+	// 	s.log.Panic("verifier set is empty!")
+	// }
+	// for i := uint64(0); i < uint64(size); i++ {
+	// 	ver := snap.VerSet.GetByIndex(i)
+	// 	s.log.Error("\n\n\n\ncheck snap verset first: %dth verifier %s\n\n\n", i, ver)
+	// }
+
 	_, v := snap.VerSet.GetVerByAddress(s.address)
 
 	if v == nil {
-		s.log.Error("server address is not in verifers set")
+		s.log.Error("server address is NOT in verifers set")
 		return nil, errUnauthorized
+	} else {
+		s.log.Info("server address %s is in verifiers set", s.address)
 	}
 
 	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
 	if parent == nil {
 		return nil, consensus.ErrBlockInvalidParentHash
 	}
-	s.log.Info("[4-2-3]newBlock SealResult GetHeaderByHash %+v", parent)
+	// s.log.Info("[4-2-3]newBlock SealResult parent %+v", parent)
 
-	s.log.Info("[4-2-4]newBlock SealResult updateBlock before %+v", block)
+	// s.log.Info("[4-2-4]newBlock SealResult updateBlock before %+v", block)
 	//update block with signature and timestamp
 	block, err = s.updateBlock(parent, block) //
-	s.log.Info("[4-2-4]newBlock SealResult updateBlock after %+v", block)
 
 	if err != nil {
+		s.log.Error("update block failed with err %+v", err)
 		return nil, err
 	}
 
@@ -127,6 +138,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// get the proposed block hash and clear it if the seal() is completed.
 	s.sealMu.Lock()
 	s.proposedBlockHash = block.Hash()
+	s.log.Error("assign the block hash %s to proposedBlockHash", block.Hash())
 	clear := func() {
 		s.proposedBlockHash = common.Hash{}
 		s.sealMu.Unlock()
@@ -134,7 +146,6 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	defer clear()
 
 	/*
-
 		!!! there is no commit block into commitCh, so result <- server committed channel there is no result
 	*/
 
@@ -142,11 +153,6 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	go s.EventMux().Post(bft.RequestEvent{
 		Proposal: block,
 	})
-	fmt.Println("Post in SealResult")
-	// s.log.Info("s.commitCh %+v\n", s.commitCh)
-	// result := <-s.commitCh
-	// s.log.Info("result from commit channel result: %+v", result)
-	// return result, nil
 
 out:
 	for {
@@ -161,13 +167,14 @@ out:
 				// return the result. Otherwise, keep waiting the next hash.
 				// MORE TEST Here (ensure logic is right here)
 				if block.Hash() == result.Hash() {
+					s.log.Info("get result back")
 					return result, nil
 				}
 			}
 		case <-stop:
 			break out
 		default:
-			s.log.Error("default\n")
+			s.log.Error("default")
 			return nil, errors.New("select enter into default, namely no result and no stop signal")
 		}
 
@@ -382,6 +389,8 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		// If an in-memory snapshot was found, use that
 		if s, ok := ser.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
+			ser.log.Info("at height: %d, got snap from the RAM %+v", height, snap)
+			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetByIndex(0))
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
@@ -394,26 +403,26 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		}
 		// If we're at block zero, make a snapshot
 		// BUGS when run, FIXME
-		if height == 0 {
-			// fmt.Println("we start from Height = 0")
-			genesis := chain.GetHeaderByHeight(0)
-			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
-			// format of extra data is invalid !!!
-			if err := ser.VerifyHeader(chain, genesis); err != nil {
-				fmt.Println("failed to verify header when [snapshot] with err", err)
-				return nil, err
-			}
-			bftExtra, err := types.ExtractBftExtra(genesis)
-			if err != nil {
-				return nil, err
-			}
-			snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
-			if err := snap.store(ser.db); err != nil {
-				return nil, err
-			}
-			ser.log.Info("Stored genesis voting snapshot to disk")
-			break
+		// if height == 0 {
+		// fmt.Println("we start from Height = 0")
+		genesis := chain.GetHeaderByHeight(0)
+		// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
+		// format of extra data is invalid !!!
+		if err := ser.VerifyHeader(chain, genesis); err != nil {
+			fmt.Println("failed to verify header when [snapshot] with err", err)
+			return nil, err
 		}
+		bftExtra, err := types.ExtractBftExtra(genesis)
+		if err != nil {
+			return nil, err
+		}
+		snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+		if err := snap.store(ser.db); err != nil {
+			return nil, err
+		}
+		ser.log.Info("Stored genesis voting snapshot to disk")
+		break
+		// }
 		// No snapshot for this header, gather the header and move backward
 		var header *types.BlockHeader
 		if len(parents) > 0 {
@@ -524,24 +533,24 @@ func writeCommittedSeals(h *types.BlockHeader, committedSeals [][]byte) error {
 	}
 
 	for _, seal := range committedSeals {
-		if len(seal) != types.BftExtraSeal { // TODO change types
+		if len(seal) != types.BftExtraSeal {
 			return errCommittedSealsInvalid
 		}
 	}
 
-	bftExtra, err := types.ExtractBftExtra(h) // TODO change types
+	bftExtra, err := types.ExtractBftExtra(h)
 	if err != nil {
 		return err
 	}
 
 	bftExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(bftExtra.CommittedSeal, committedSeals) // TODO change types
+	copy(bftExtra.CommittedSeal, committedSeals)
 
 	payload, err := rlp.EncodeToBytes(&bftExtra)
 	if err != nil {
 		return err
 	}
 
-	h.ExtraData = append(h.ExtraData[:types.BftExtraVanity], payload...) // TODO change types
+	h.ExtraData = append(h.ExtraData[:types.BftExtraVanity], payload...)
 	return nil
 }

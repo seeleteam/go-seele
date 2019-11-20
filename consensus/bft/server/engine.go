@@ -102,9 +102,10 @@ func (s *server) Stop() error {
 
 // Prepare prepare a block
 func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader) error {
-
+	s.log.Info("Prepare a block")
 	//1. setup some unused field
-	header.Creator = common.Address{}
+	// header.Creator = common.Address{}
+	header.Creator = s.Address()
 	header.Witness = make([]byte, bft.WitnessSize)
 	header.SecondWitness = make([]byte, bft.WitnessSize)
 	header.Consensus = types.BftConsensus
@@ -150,6 +151,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 
 	// add verifiers in snapshot to extraData's verifiers section
+	s.log.Info("[bft] Prepare a block extra with snap.verifiers %+v", snap.verifiers())
 	extra, err := prepareExtra(header, snap.verifiers())
 	if err != nil {
 		fmt.Println("failed to prepare extra data")

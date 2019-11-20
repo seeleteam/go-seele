@@ -344,6 +344,10 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 
 // commitTask commits the given task to the miner
 func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
-	block := task.generateBlock()
+	miner.log.Warn("\n[bft]-1 commit task")
+	block := task.generateBlock() //
+	miner.log.Info("[bft]-2 generate a block %+v", block)
 	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
+	miner.log.Info("[bft]-3 seal result")
+
 }

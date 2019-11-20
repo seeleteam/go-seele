@@ -74,7 +74,7 @@ var startCmd = &cobra.Command{
 		}
 		fmt.Printf("data folder: %s\n", nCfg.BasicConfig.DataDir)
 
-		seeleNode, err := node.New(nCfg, false)
+		seeleNode, err := node.New(nCfg)
 		if err != nil {
 			fmt.Println(err.Error())
 			return

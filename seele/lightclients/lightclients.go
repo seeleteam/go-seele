@@ -54,6 +54,7 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 	var err error
 	for i := 1; i <= shard; i++ { // for subchain, shard = 1, there wont be any initated master account and balance
 		if i == int(targetShard) {
+			fmt.Println("subchain with shardCount = 1")
 			continue
 		}
 

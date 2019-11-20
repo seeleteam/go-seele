@@ -61,7 +61,7 @@ func NewServiceClient(ctx context.Context, conf *node.Config, log *log.SeeleLog,
 	s.odrBackend = newOdrBackend(bcStore, shard)
 	// initialize and validate genesis
 	genesis := core.GetGenesis(&conf.SeeleConfig.GenesisConfig)
-
+	log.Info("genesis %+v", genesis)
 	err = genesis.InitializeAndValidate(bcStore, s.lightDB)
 	if err != nil {
 		s.lightDB.Close()
