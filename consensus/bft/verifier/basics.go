@@ -1,7 +1,6 @@
 package verifier
 
 import (
-	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -43,13 +42,12 @@ func newBasicSet(addrs []common.Address, policy bft.ProposerPolicy) *basicSet {
 	for i, addr := range addrs {
 		verSet.verifiers[i] = NewVerifier(addr)
 		// fmt.Printf("[VerSet] add add %+v into verset %+v", addr, verSet.verifiers[i])
-
 	}
 	//sort
 	sort.Sort(verSet.verifiers)
-	//
+	// set the first verifier as the proposer
 	if verSet.Size() > 0 {
-		verSet.proposer = verSet.GetByIndex(0)
+		verSet.proposer = verSet.GetVerByIndex(0)
 	}
 	verSet.selector = roundRobinProposer // we use roound robin policy to select proposer
 	if policy == bft.Sticky {
@@ -59,18 +57,41 @@ func newBasicSet(addrs []common.Address, policy bft.ProposerPolicy) *basicSet {
 }
 
 ///////////////help functions//////////////////
+// Size return the size of basicSet
 func (verSet *basicSet) Size() int {
 	verSet.verifierMu.RLock()
 	defer verSet.verifierMu.RUnlock()
 	return len(verSet.verifiers)
 }
-func (verSet *basicSet) GetByIndex(i uint64) bft.Verifier {
+
+// GetVerByIndex get verifier by the index
+func (verSet *basicSet) GetVerByIndex(i uint64) bft.Verifier {
 	verSet.verifierMu.RLock()
 	defer verSet.verifierMu.RUnlock()
 	if i < uint64(verSet.Size()) {
 		return verSet.verifiers[i]
 	}
 	return nil
+}
+
+// GetVerByAddress get verifier by address
+func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier) {
+	// for i, ver := range verSet.List() {
+	// 	if addr == ver.Address() {
+	// 		return i, ver
+	// 	}
+	// }
+
+	// for j, veri := range verSet.verifiers {
+	// 	fmt.Printf("[%d]th verifier [%s]\n", j, veri.Address())
+	// }
+
+	for i, ver := range verSet.verifiers {
+		if addr == ver.Address() {
+			return i, ver
+		}
+	}
+	return -1, nil
 }
 
 // proposer methods
@@ -89,13 +110,13 @@ func roundRobinProposer(verSet bft.VerifierSet, proposer common.Address, round u
 		return nil
 	}
 	seed := uint64(0)
-	if emptyAddress(proposer) {
+	if isEmptyAddress(proposer) {
 		seed = round
 	} else {
 		seed = calcSeed(verSet, proposer, round) + 1
 	}
 	pick := seed % uint64(verSet.Size())
-	return verSet.GetByIndex(pick)
+	return verSet.GetVerByIndex(pick)
 }
 
 func stickyProposer(verSet bft.VerifierSet, proposer common.Address, round uint64) bft.Verifier {
@@ -103,13 +124,13 @@ func stickyProposer(verSet bft.VerifierSet, proposer common.Address, round uint6
 		return nil
 	}
 	seed := uint64(0)
-	if emptyAddress(proposer) {
+	if isEmptyAddress(proposer) {
 		seed = round
 	} else {
 		seed = calcSeed(verSet, proposer, round)
 	}
 	pick := seed % uint64(verSet.Size())
-	return verSet.GetByIndex(pick)
+	return verSet.GetVerByIndex(pick)
 }
 
 func (verSet *basicSet) Policy() bft.ProposerPolicy {
@@ -130,14 +151,13 @@ func calcSeed(verSet bft.VerifierSet, proposer common.Address, round uint64) uin
 	return uint64(offset) + round
 }
 
-func emptyAddress(addr common.Address) bool {
+func isEmptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
 func (verSet *basicSet) List() []bft.Verifier {
 	verSet.verifierMu.RLock()
 	defer verSet.verifierMu.RUnlock()
-	fmt.Printf("\n\n verifiers List() %+v\n\n", verSet.verifiers)
 	return verSet.verifiers
 }
 
@@ -145,14 +165,13 @@ func (verSet *basicSet) List() []bft.Verifier {
 func (verSet *basicSet) AddVerifier(address common.Address) bool {
 	verSet.verifierMu.Lock()
 	defer verSet.verifierMu.Unlock()
+	// check existence
 	for _, v := range verSet.verifiers {
 		if v.Address() == address {
 			return false
 		}
 	}
 	verSet.verifiers = append(verSet.verifiers, NewVerifier(address))
-	// TODO: we may not need to re-sort it again
-	// sort verifier
 	sort.Sort(verSet.verifiers)
 	return true
 }
@@ -162,7 +181,7 @@ func (verSet *basicSet) RemoveVerifier(address common.Address) bool {
 	verSet.verifierMu.Lock()
 	defer verSet.verifierMu.Unlock()
 
-	fmt.Println("To remove", address, "from verifiers set", verSet.verifiers)
+	// fmt.Println("To remove", address, "from verifiers set", verSet.verifiers)
 
 	for i, v := range verSet.verifiers {
 		if v.Address() == address {
@@ -171,24 +190,6 @@ func (verSet *basicSet) RemoveVerifier(address common.Address) bool {
 		}
 	}
 	return false
-}
-func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier) {
-	// for i, ver := range verSet.List() {
-	// 	if addr == ver.Address() {
-	// 		return i, ver
-	// 	}
-	// }
-
-	for j, veri := range verSet.verifiers {
-		fmt.Printf("[%d]th verifier [%s]\n", j, veri.Address())
-	}
-
-	for i, ver := range verSet.verifiers {
-		if addr == ver.Address() {
-			return i, ver
-		}
-	}
-	return -1, nil
 }
 
 func (verSet *basicSet) Copy() bft.VerifierSet {

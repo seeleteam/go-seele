@@ -72,8 +72,8 @@ var (
 	nonceAuthVote = hexutil.MustHexToBytes("0xffffffffffffffff") // Magic nonce number to vote on adding a new verifier
 	nonceDropVote = hexutil.MustHexToBytes("0x0000000000000000") // Magic nonce number to vote on removing a verifier.
 
-	inmemoryAddresses  = 20 // Height of recent addresses from extractAccount
-	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
+	inmemoryAddresses = 20 // Height of recent addresses from extractAccount
+	cachedAddrs, _    = lru.NewARC(inmemoryAddresses)
 )
 
 // SealResult generates a new block for the given input block with the local miner's Seal.
@@ -99,7 +99,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// 	s.log.Panic("verifier set is empty!")
 	// }
 	// for i := uint64(0); i < uint64(size); i++ {
-	// 	ver := snap.VerSet.GetByIndex(i)
+	// 	ver := snap.VerSet.GetVerByIndex(i)
 	// 	s.log.Error("\n\n\n\ncheck snap verset first: %dth verifier %s\n\n\n", i, ver)
 	// }
 
@@ -284,9 +284,6 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			s.log.Error("not a valid address")
 			return errInvalidSignature
 		}
-
-		// FIXME : 0x3e2a551f3e9527d58e4cc987dbde688272a48b11 from verifiers set [0x6d86a0e07f632560297f104bece421336de6e8a1]
-		// Problem: the addr is not among verifiers, RemoveVerifier return error!
 		if verifiers.RemoveVerifier(addr) { //TODO
 			validSealCount++
 		} else {
@@ -345,9 +342,11 @@ func (s *server) VerifySeal(chain consensus.ChainReader, header *types.BlockHead
 func (s *server) Creator(header *types.BlockHeader) (common.Address, error) {
 	return extractAccount(header)
 }
+
+// extractAccount extracts the account address from a signed header.
 func extractAccount(header *types.BlockHeader) (common.Address, error) {
 	hash := header.Hash()
-	if addr, ok := recentAddresses.Get(hash); ok {
+	if addr, ok := cachedAddrs.Get(hash); ok {
 		return addr.(common.Address), nil
 	}
 	bftExtra, err := types.ExtractBftExtra(header) //
@@ -358,7 +357,7 @@ func extractAccount(header *types.BlockHeader) (common.Address, error) {
 	if err != nil {
 		return addr, err
 	}
-	recentAddresses.Add(hash, addr)
+	cachedAddrs.Add(hash, addr)
 	return addr, nil
 }
 
@@ -390,12 +389,12 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		if s, ok := ser.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
 			ser.log.Info("at height: %d, got snap from the RAM %+v", height, snap)
-			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetByIndex(0))
+			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
 		// If an on-disk checkpoint snapshot can be found, use that
 		if height%checkInterval == 0 {
-			if s, err := loadSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
+			if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
 				ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
 				snap = s
 				break
@@ -417,7 +416,8 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			return nil, err
 		}
 		snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
-		if err := snap.store(ser.db); err != nil {
+		// FIXME need to save not so frequently and save to ser.recents
+		if err := snap.save(ser.db); err != nil {
 			return nil, err
 		}
 		ser.log.Info("Stored genesis voting snapshot to disk")
@@ -454,13 +454,13 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Height%checkInterval == 0 && len(headers) > 0 {
-		if err = snap.store(ser.db); err != nil {
+		if err = snap.save(ser.db); err != nil {
 			return nil, err
 		}
 		ser.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
 	ser.log.Info("take a snapshot %+v with err %+v", snap, err)
-	// ser.log.Info("snap.VerSet.GetByIndex(0)", snap.VerSet.GetByIndex(0))
+	// ser.log.Info("snap.VerSet.GetVerByIndex(0)", snap.VerSet.GetVerByIndex(0))
 	return snap, err
 }
 

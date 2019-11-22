@@ -36,21 +36,7 @@ func newRoundChangeSet(verSet bft.VerifierSet) *roundChangeSet {
 	}
 }
 
-// updateRoundState updates round state by checking if locking block is necessary
-func (c *core) updateRoundState(view *bft.View, verifierSet bft.VerifierSet, roundChanged bool) {
-	// Lock only if both roundChange is true and it is locked
-	if roundChanged && c.current != nil {
-		if c.current.IsHashLocked() {
-			c.current = newRoundState(view, verifierSet, c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.server.HasBadProposal)
-		} else {
-			c.current = newRoundState(view, verifierSet, common.Hash{}, nil, c.current.pendingRequest, c.server.HasBadProposal)
-		}
-	} else {
-		c.current = newRoundState(view, verifierSet, common.Hash{}, nil, nil, c.server.HasBadProposal)
-	}
-}
-
-// MaxRound returns the max round which the number of messages is equal or larger than num
+// MaxRound returns the max round of msgs among which the number of messages is equal or larger than num
 func (rcs *roundChangeSet) MaxRound(num int) *big.Int {
 	rcs.mu.Lock()
 	defer rcs.mu.Unlock()
@@ -66,6 +52,48 @@ func (rcs *roundChangeSet) MaxRound(num int) *big.Int {
 		}
 	}
 	return maxRound
+}
+
+// Add adds the round and message into round change set
+func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
+	rcs.mu.Lock()
+	defer rcs.mu.Unlock()
+
+	round := r.Uint64()
+	if rcs.roundChanges[round] == nil {
+		rcs.roundChanges[round] = newMessageSet(rcs.verifierSet)
+	}
+	err := rcs.roundChanges[round].Add(msg)
+	if err != nil {
+		return 0, err
+	}
+	return rcs.roundChanges[round].Size(), nil
+}
+
+// Clear deletes the messages with smaller round
+func (rcs *roundChangeSet) Clear(round *big.Int) {
+	rcs.mu.Lock()
+	defer rcs.mu.Unlock()
+
+	for k, rms := range rcs.roundChanges {
+		if len(rms.Values()) == 0 || k < round.Uint64() {
+			delete(rcs.roundChanges, k)
+		}
+	}
+}
+
+// updateRoundState updates round state by checking if locking block is necessary
+func (c *core) updateRoundState(view *bft.View, verifierSet bft.VerifierSet, roundChanged bool) {
+	// Lock only if both roundChange is true and it is locked
+	if roundChanged && c.current != nil {
+		if c.current.IsHashLocked() {
+			c.current = newRoundState(view, verifierSet, c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.server.HasBadProposal)
+		} else {
+			c.current = newRoundState(view, verifierSet, common.Hash{}, nil, c.current.pendingRequest, c.server.HasBadProposal)
+		}
+	} else {
+		c.current = newRoundState(view, verifierSet, common.Hash{}, nil, nil, c.server.HasBadProposal)
+	}
 }
 
 // sendRoundChange sends the ROUND CHANGE message with the given round
@@ -141,32 +169,4 @@ func (c *core) handleRoundChange(msg *message, src bft.Verifier) error {
 		return errMsgIgnored
 	}
 	return nil
-}
-
-// Add adds the round and message into round change set
-func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
-	rcs.mu.Lock()
-	defer rcs.mu.Unlock()
-
-	round := r.Uint64()
-	if rcs.roundChanges[round] == nil {
-		rcs.roundChanges[round] = newMessageSet(rcs.verifierSet)
-	}
-	err := rcs.roundChanges[round].Add(msg)
-	if err != nil {
-		return 0, err
-	}
-	return rcs.roundChanges[round].Size(), nil
-}
-
-// Clear deletes the messages with smaller round
-func (rcs *roundChangeSet) Clear(round *big.Int) {
-	rcs.mu.Lock()
-	defer rcs.mu.Unlock()
-
-	for k, rms := range rcs.roundChanges {
-		if len(rms.Values()) == 0 || k < round.Uint64() {
-			delete(rcs.roundChanges, k)
-		}
-	}
 }

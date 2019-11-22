@@ -182,11 +182,12 @@ func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
 
-	if bft, ok := miner.engine.(consensus.Bft); ok {
-		if err := bft.Stop(); err != nil {
-			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
-		}
-	}
+	// if bft, ok := miner.engine.(consensus.Bft); ok {
+	// 	miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
+	// 	if err := bft.Stop(); err != nil {
+	// 		panic(fmt.Sprintf("failed to stop bft engine: %v", err))
+	// 	}
+	// }
 }
 
 func (miner *Miner) stopMining() {
@@ -201,6 +202,12 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
+	if bft, ok := miner.engine.(consensus.Bft); ok {
+		miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
+		if err := bft.Stop(); err != nil {
+			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
+		}
+	}
 	miner.log.Info("Miner is stopped.")
 }
 

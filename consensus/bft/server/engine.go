@@ -63,7 +63,7 @@ func (s *server) Start(chain consensus.ChainReader, currentBlock func() *types.B
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	// check engine status, if already started, just return error.
-	if s.coreStarted {
+	if s.coreStarted { // FIXME, afer download the coreStarted is not chqnge
 		return bft.ErrEngineStarted
 	}
 	// clear previous data
@@ -88,6 +88,7 @@ func (s *server) Start(chain consensus.ChainReader, currentBlock func() *types.B
 
 // Stop implements consensus.Bft.Stop
 func (s *server) Stop() error {
+	s.log.Info("BFT engine is stopping")
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
@@ -96,7 +97,9 @@ func (s *server) Stop() error {
 	if err := s.core.Stop(); err != nil {
 		return err
 	}
+	s.log.Info("BFT engine is stopping engine core")
 	s.coreStarted = false
+	s.log.Info("coreStarted == false? -> %t", s.coreStarted == false)
 	return nil
 }
 

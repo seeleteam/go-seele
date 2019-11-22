@@ -8,7 +8,6 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
@@ -39,8 +38,7 @@ type Tally struct {
 
 // Snapshot is the state of the authorization voting at a given point in time.
 type Snapshot struct {
-	Epoch uint64 // The number of blocks after which to checkpoint and reset the pending votes
-
+	Epoch  uint64                   // The number of blocks after which to checkpoint and reset the pending votes
 	Height uint64                   // Block height where the snapshot was created
 	Hash   common.Hash              // Block hash where the snapshot was created
 	Votes  []*Vote                  // List of votes cast in chronological order
@@ -62,8 +60,8 @@ func newSnapshot(epoch uint64, number uint64, hash common.Hash, verSet bft.Verif
 	return snap
 }
 
-// loadSnapshot loads an existing snapshot from the database.
-func loadSnapshot(epoch uint64, db database.Database, hash common.Hash) (*Snapshot, error) {
+// retrieveSnapshot loads an existing snapshot from the database.
+func retrieveSnapshot(epoch uint64, db database.Database, hash common.Hash) (*Snapshot, error) {
 	blob, err := db.Get(append([]byte(dbKeySnapshotPrefix), hash[:]...))
 	if err != nil {
 		return nil, err
@@ -77,8 +75,8 @@ func loadSnapshot(epoch uint64, db database.Database, hash common.Hash) (*Snapsh
 	return snap, nil
 }
 
-// store inserts the snapshot into the database.
-func (s *Snapshot) store(db database.Database) error {
+// save inserts the snapshot into the database.
+func (s *Snapshot) save(db database.Database) error {
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -156,17 +154,18 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		return s, nil
 	}
 	// Sanity check that the headers can be applied
+	if headers[0].Height != s.Height+1 {
+		return nil, errVotingChainInvalid
+	}
+
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Height != headers[i].Height+1 {
 			return nil, errVotingChainInvalid
 		}
 	}
-	if headers[0].Height != s.Height+1 {
-		return nil, errVotingChainInvalid
-	}
+
 	// Iterate through the headers and create a new snapshot
 	snap := s.copy()
-
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
 		number := header.Height
@@ -175,26 +174,26 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			snap.Tally = make(map[common.Address]Tally)
 		}
 		// Resolve the authorization key and check against verifiers
-		verifier, err := extractAccount(header)
+		signer, err := extractAccount(header)
 		if err != nil {
 			return nil, err
 		}
-		if _, v := snap.VerSet.GetVerByAddress(verifier); v == nil {
+		if _, v := snap.VerSet.GetVerByAddress(signer); v == nil {
 			return nil, errUnauthorized
 		}
 
-		// Header authorized, discard any previous votes from the verifier
+		// Header authorized, discard any previous votes from the signer
 		for i, vote := range snap.Votes {
-			if vote.Verifier == verifier && vote.Address == header.Creator {
+			if vote.Verifier == signer && vote.Address == header.Creator { // FIXME : should be vote.Address != header.Creator !!!
 				// Uncast the vote from the cached tally
 				snap.uncast(vote.Address, vote.Authorize)
 
 				// Uncast the vote from the chronological list
-				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...)
-				break // only one vote allowed
+				snap.Votes = append(snap.Votes[:i], snap.Votes[i+1:]...) // FIXME : need to check should be the other way around?
+				break                                                    // only one vote allowed
 			}
 		}
-		// Tally up the new vote from the verifier
+		// Tally up the new vote from the signer
 		var authorize bool
 		switch {
 		case bytes.Compare(header.Witness[:], nonceAuthVote) == 0:
@@ -206,20 +205,20 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 		}
 		if snap.cast(header.Creator, authorize) {
 			snap.Votes = append(snap.Votes, &Vote{
-				Verifier:  verifier,
+				Verifier:  signer,
 				Block:     number,
 				Address:   header.Creator,
 				Authorize: authorize,
 			})
 		}
 		// If the vote passed, update the list of verifiers
-		if tally := snap.Tally[header.Creator]; tally.Votes > snap.VerSet.Size()/2 {
+		if tally := snap.Tally[header.Creator]; tally.Votes > snap.VerSet.Size()/2 { // need more than half of the verifier to aggree the verifier
 			if tally.Authorize {
 				snap.VerSet.AddVerifier(header.Creator)
 			} else {
 				snap.VerSet.RemoveVerifier(header.Creator)
 
-				// Discard any previous votes the deauthorized verifier cast
+				// Discard any previous votes the deauthorized signer cast
 				for i := 0; i < len(snap.Votes); i++ {
 					if snap.Votes[i].Verifier == header.Creator {
 						// Uncast the vote from the cached tally
@@ -250,7 +249,6 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 
 // verifiers retrieves the list of authorized verifiers in ascending order.
 func (s *Snapshot) verifiers() []common.Address {
-	fmt.Printf("snapshot verset %s", s.VerSet.GetByIndex(0))
 	verifiers := make([]common.Address, 0, s.VerSet.Size())
 	for _, verifier := range s.VerSet.List() {
 		verifiers = append(verifiers, verifier.Address())

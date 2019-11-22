@@ -34,7 +34,7 @@ type VerifierSet interface {
 	// Return the Verifier array
 	List() []Verifier
 	// Get Verifier by index
-	GetByIndex(i uint64) Verifier
+	GetVerByIndex(i uint64) Verifier
 	// Get Verifier by given address
 	GetVerByAddress(addr common.Address) (int, Verifier)
 	// Get current proposer
