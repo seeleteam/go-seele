@@ -191,7 +191,7 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 func initateValidators() ([]common.Address, error) {
 	vers := []common.Address{
 		common.BytesToAddress(hexutil.MustHexToBytes("0x7460dde5d3da978dd719aa5c6e35b7b8564682d1")),
-		common.BytesToAddress(hexutil.MustHexToBytes("0x4458681e0d642b9781fb86721cf5132ed04db041")),
+		// common.BytesToAddress(hexutil.MustHexToBytes("0x4458681e0d642b9781fb86721cf5132ed04db041")),
 		// common.HexToAddress("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1"),
 		// "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
 	}

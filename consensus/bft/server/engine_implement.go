@@ -158,24 +158,28 @@ out:
 	for {
 		select {
 		case result := <-s.commitCh:
-			s.log.Info("commit channel to result\n")
-			for {
-				if result == nil {
-					break
-				}
-				// if the block hash and the hash from channel are the same,
-				// return the result. Otherwise, keep waiting the next hash.
-				// MORE TEST Here (ensure logic is right here)
-				if block.Hash() == result.Hash() {
-					s.log.Info("get result back")
-					return result, nil
-				}
+			s.log.Error("commit channel to result")
+			// for {
+			if result == nil {
+				s.log.Warn("commitCh is empty")
+				break
+				// time.Sleep(1 * time.Second)
+				// goto out
 			}
+			// if the block hash and the hash from channel are the same,
+			// return the result. Otherwise, keep waiting the next hash.
+			// MORE TEST Here (ensure logic is right here)
+			if block.Hash() == result.Hash() {
+				s.log.Info("get result back %s height %d", block.Hash(), block.Height())
+				return result, nil
+			}
+			// }
 		case <-stop:
+			s.log.Info("commit chanel get stop signal")
 			break out
-		default:
-			s.log.Error("default")
-			return nil, errors.New("select enter into default, namely no result and no stop signal")
+			// default:
+			// 	s.log.Error("shoule never reach here")
+			// 	return nil, errors.New("select enter into default, namely no result and no stop signal")
 		}
 
 	}
