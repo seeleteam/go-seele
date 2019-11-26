@@ -324,7 +324,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	}
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
-	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
+	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}
@@ -340,8 +340,9 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 	now := time.Now()
 	// entrance
 	memory.Print(miner.log, "miner saveBlock entrance", now, false)
+	txPool := miner.seele.TxPool().Pool
 
-	ret := miner.seele.BlockChain().WriteBlock(result)
+	ret := miner.seele.BlockChain().WriteBlock(result, txPool)
 
 	// entrance
 	memory.Print(miner.log, "miner saveBlock exit", now, true)

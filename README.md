@@ -1,7 +1,7 @@
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
-|        Features        |      Descriptions                                                                               |
+|        Features        |      Descriptions                                                                              |
 |:-----------------------|------------------------------------------------------------------------------------------------|
 | **Sharding**           | 4 shards, transactions within the same shard and between different shards are supported<br/> higher transaction fee for cross-shard transaction                                  |
 | **Smart Contracts**    | smart contracts are supported within the same shard                                          |
@@ -60,8 +60,8 @@ buildall.bat
 # Run Seele
 A simple version Seele mining tutorial: English-[SeeleMiningTutorial](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-MiningTutorial_Eng), 中文-[Seele挖矿教程中文简版](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-%E4%B8%AD%E6%96%87%E7%AE%80%E7%89%88%E6%8C%96%E7%9F%BF%E6%95%99%E7%A8%8B).
 
-For running a node, please refer to [Get Started](https://seele-seeletech.gitbook.io/wiki/introduction/getting-started-with-seele-seele-documentation).[Older version](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html).
-For more usage details and deeper explanations, please consult the [Seele Wiki](https://seele-seeletech.gitbook.io/wiki/).[Older version](https://github.com/seeleteam/go-seele/wiki).
+For running a node, please refer to [Get Started](https://seeletech.gitbook.io/wiki/developer/getting-started-with-seele)([Older version](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html)).
+For more usage details and deeper explanations, please consult the [Seele Wiki](https://seeletech.gitbook.io/wiki/)([Older version](https://seeleteam.github.io/seele-doc/index.html)).
 
 # Contribution
 

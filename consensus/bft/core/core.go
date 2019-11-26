@@ -95,6 +95,7 @@ func (c *core) broadcast(msg *message) {
 	}
 }
 
+// finalizeMessage prepare the seal with proposal and sign data, return the payload with signature.
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	var err error
 	msg.Address = c.Address()
@@ -135,6 +136,7 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
+// currentView get current view of sequence and round
 func (c *core) currentView() *bft.View {
 	return &bft.View{
 		Sequence: new(big.Int).Set(c.current.Sequence()),

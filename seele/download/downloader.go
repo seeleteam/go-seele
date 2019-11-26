@@ -167,7 +167,7 @@ func (d *Downloader) getSyncInfo(info *SyncInfo) {
 }
 
 // Synchronise try to sync with remote peer.
-func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, localTD *big.Int) error {
+func (d *Downloader) Synchronise(id string, head common.Hash) error {
 	// Make sure only one routine can pass at once
 	d.lock.Lock()
 
@@ -188,7 +188,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	}
 	d.lock.Unlock()
 
-	err := d.doSynchronise(p, head, td, localTD)
+	err := d.doSynchronise(p, head)
 
 	d.lock.Lock()
 	d.syncStatus = statusNone
@@ -199,7 +199,8 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	return err
 }
 
-func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
+//td *big.Int, localTD *big.Int
+func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error) {
 	d.log.Debug("Downloader.doSynchronise start, masterID: %s", d.masterPeer)
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
@@ -238,19 +239,16 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	bMasterStarted := false
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	for _, pConn := range d.peers {
-		_, peerTD := pConn.peer.Head()
-		if localTD.Cmp(peerTD) >= 0 {
-			continue
-		}
-		d.sessionWG.Add(1)
-		if pConn.peerID == d.masterPeer {
-			d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
-			bMasterStarted = true
-		}
-
-		go d.peerDownload(pConn, tm)
+	
+	
+	d.sessionWG.Add(1)
+	if conn.peerID == d.masterPeer {
+		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
+		bMasterStarted = true
 	}
+
+	go d.peerDownload(conn, tm)
+	//}
 	d.lock.Unlock()
 
 	if !bMasterStarted {
@@ -576,7 +574,8 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 		// writeblock
-		err := d.chain.WriteBlock(h.block)
+		txPool := d.seele.TxPool().Pool
+		err := d.chain.WriteBlock(h.block, txPool)
 
 		if err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
@@ -597,7 +596,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 				}
 				for _, localBlock := range localBlocks {
 					d.log.Info("write back local blocks: %d", localBlock.Header.Height)
-					if err = d.chain.WriteBlock(localBlock); err != nil {
+					if err = d.chain.WriteBlock(localBlock, txPool); err != nil {
 						d.log.Error("failed to write localBlock back err=%s, height: %d", err, localBlock.Header.Height)
 						break
 					}

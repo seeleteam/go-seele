@@ -55,7 +55,9 @@ func (api *PublicSeeleAPI) EstimateGas(tx *types.Transaction) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-
+	if receipt.Failed {
+		return 0, errors.New(string(receipt.Result))
+	}
 	return receipt.UsedGas, nil
 }
 
