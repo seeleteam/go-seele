@@ -142,8 +142,8 @@ func (sp *SeeleProtocol) Stop() {
 // syncer try to synchronise with remote peer
 func (sp *SeeleProtocol) syncer() {
 	defer sp.downloader.Terminate()
-	defer sp.wg.Done()
-	sp.wg.Add(1)
+	//defer sp.wg.Done()
+	//sp.wg.Add(1)
 
 	forceSync := time.NewTicker(forceSyncInterval)
 	for {
@@ -154,8 +154,9 @@ func (sp *SeeleProtocol) syncer() {
 			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 			if err != nil {
 				sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
-				return
+				continue
 			}
+			sp.wg.Add(1)
 			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber, localTD))
 		case <-forceSync.C:
 			block := sp.chain.CurrentBlock()
@@ -163,8 +164,9 @@ func (sp *SeeleProtocol) syncer() {
 			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
 			if err != nil {
 				sp.log.Error("broadcastChainHead GetBlockTotalDifficulty err. %s", err)
-				return
+				continue
 			}
+			sp.wg.Add(1)
 			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber, localTD))
 		case <-sp.quitCh:
 			return
@@ -173,6 +175,7 @@ func (sp *SeeleProtocol) syncer() {
 }
 
 func (sp *SeeleProtocol) synchronise(peers []*peer) {
+	defer sp.wg.Done()
 	now := time.Now()
 	// entrance
 	memory.Print(sp.log, "SeeleProtocol synchronise entrance", now, false)
@@ -243,12 +246,12 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	}
 
 	peers := sp.peerSet.getAllPeers()
-
+	wg := new (sync.WaitGroup)
 	for _, peer := range peers {
 		if peer != nil {
 			//err := peer.sendHeadStatus(status)
-			sp.wg.Add(1)
-			go peer.sendHeadStatus(status)
+			wg.Add(1)
+			go peer.sendHeadStatus(status, wg)
 			//if err != nil {
 			//	sp.log.Warn("failed to send chain head info err=%s, id=%s, ip=%s", err, peer.peerStrID, peer.Peer.RemoteAddr())
 			//} else {
@@ -256,7 +259,7 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 			//}
 		}
 	}
-	sp.wg.Wait()
+	wg.Wait()
 	// exit
 	memory.Print(sp.log, "SeeleProtocol broadcastChainHead exit", now, true)
 }
@@ -325,6 +328,7 @@ func (p *SeeleProtocol) handleNewTx(e event.Event) {
 
 		if err := peer.sendTransaction(tx); err != nil {
 			p.log.Warn("failed to send transaction to peer=%s, err=%s", peer.Node.GetUDPAddr(), err)
+			peer.Disconnect(err.Error())
 		}
 	}
 
@@ -428,7 +432,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 		p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
 
 	}
-	go p.syncTransactions(newPeer)
+	//go p.syncTransactions(newPeer)
 	go p.handleMsg(newPeer)
 	return true
 }
