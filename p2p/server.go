@@ -541,7 +541,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}
 
 	go func() {
-		srv.loopWG.Add(1)
+		//srv.loopWG.Add(1)
 		if srv.addPeer(peer) {
 			peer.run()
 			srv.deletePeer(peer.Node.ID)
@@ -549,7 +549,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 			peer.close()
 		}
 
-		srv.loopWG.Done()
+		//srv.loopWG.Done()
 	}()
 
 	return nil
