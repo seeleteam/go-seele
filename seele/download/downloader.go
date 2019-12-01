@@ -241,13 +241,14 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error)
 	d.syncStatus = statusFetching
 	
 	
-	d.sessionWG.Add(1)
+	//d.sessionWG.Add(1)
+	sessionWG := new (sync.WaitGroup)
+	sessionWG.Add(1)
 	if conn.peerID == d.masterPeer {
 		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
 		bMasterStarted = true
 	}
-
-	go d.peerDownload(conn, tm)
+	go d.peerDownload(conn, tm, sessionWG)
 	//}
 	d.lock.Unlock()
 
@@ -258,7 +259,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error)
 	} else {
 		d.log.Debug("Downloader.doSynchronise bMasterStarted = %t.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
 	}
-	d.sessionWG.Wait()
+	sessionWG.Wait()
 
 	d.lock.Lock()
 	d.syncStatus = statusCleaning
@@ -467,8 +468,8 @@ func (d *Downloader) Terminate() {
 }
 
 // peerDownload peer download routine
-func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
-	defer d.sessionWG.Done()
+func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr, sessionWG *sync.WaitGroup) {
+	defer sessionWG.Done()
 
 	d.log.Debug("Downloader.peerDownload start. peerID=%s masterID=%s", conn.peerID, d.masterPeer)
 	isMaster := (conn.peerID == d.masterPeer)
