@@ -153,12 +153,11 @@ func (p *Peer) readLoop(readErr chan<- error) {
 }
 
 func (p *Peer) notifyProtocolsAddPeer() {
-	p.wg.Add(len(p.protocolMap))
+	//p.wg.Add(len(p.protocolMap))
 	p.log.Debug("notifyProtocolsAddPeer called, len(protocolMap)= %d, %s -> %s", len(p.protocolMap), p.LocalAddr(), p.RemoteAddr())
 	for _, proto := range p.protocolMap {
 		go func(proto protocolRW) {
-			defer p.wg.Done()
-
+			//defer p.wg.Done()
 			if proto.AddPeer != nil {
 				p.log.Debug("protocol.AddPeer called. protocol: %s", proto.cap())
 				if !proto.AddPeer(p, &proto) {
@@ -177,11 +176,11 @@ func (p *Peer) notifyProtocolsAddPeer() {
 }
 
 func (p *Peer) notifyProtocolsDeletePeer() {
-	p.wg.Add(len(p.protocolMap))
+	//p.wg.Add(len(p.protocolMap))
 	p.log.Debug("notifyProtocolsDeletePeer called, len(protocolMap)=%d", len(p.protocolMap))
 	for _, proto := range p.protocolMap {
 		go func(proto protocolRW) {
-			defer p.wg.Done()
+			//defer p.wg.Done()
 
 			if proto.DeletePeer != nil {
 				p.log.Debug("protocol.DeletePeer called. protocol:%s", proto.cap())
