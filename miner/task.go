@@ -6,10 +6,14 @@
 package miner
 
 import (
+	"bytes"
+	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -29,6 +33,11 @@ type Task struct {
 
 	coinbase     common.Address
 	debtVerifier types.DebtVerifier
+	// verifierTxs  []*types.Transaction
+	// exitTxs      []*types.Transaction
+	// challengeTxs []*types.Transaction
+	depositVers []common.Address
+	exitVers    []common.Address
 }
 
 // NewTask return Task object
@@ -47,7 +56,10 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
 
 	// choose transactions from the given txs
-	size := task.chooseDebts(seele, statedb, log)
+	var size int
+	if task.header.Consensus != types.BftConsensus { // subchain doese not support debts.
+		size = task.chooseDebts(seele, statedb, log)
+	}
 
 	// the reward tx will always be at the first of the block's transactions
 	reward, err := task.handleMinerRewardTx(statedb)
@@ -67,6 +79,7 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 	}
 
 	task.header.StateHash = root
+	// task.header.SecondWitness =
 
 	// exit
 	memory.Print(log, "task applyTransactionsAndDebts exit", now, true)
@@ -131,6 +144,8 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
+	fmt.Println("add one ver to task.depositVers")
+	task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")))
 
 	txIndex := 1 // the first tx is miner reward
 
@@ -155,6 +170,18 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				txsSize = txsSize - tx.Size()
 				continue
 			}
+			if task.header.Consensus == types.BftConsensus { // for bft, the secondwitness will be used as deposit&exit address holder.
+				if tx.IsVerifierTx() {
+					task.depositVers = append(task.depositVers, tx.FromAccount())
+				}
+				// if tx.IsChallengeTx() {
+				// 	task.challengeTxs = append(task.challengeTxs, tx)
+				// }
+				if tx.IsExitTx() {
+					task.exitVers = append(task.exitVers, tx.ToAccount())
+				}
+				prepareWitness(task.header, task.depositVers, task.exitVers)
+			}
 
 			task.txs = append(task.txs, tx)
 			task.receipts = append(task.receipts, receipt)
@@ -177,4 +204,26 @@ func (task *Task) generateBlock() *types.Block {
 type Result struct {
 	task  *Task
 	block *types.Block // mined block, with good nonce
+}
+
+// prepareWitness prepare header witness for deposit(header.Witness) or exit(header.SecondWitness)
+func prepareWitness(header *types.BlockHeader, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
+	var buf bytes.Buffer
+	// compensate the lack bytes if header.Extra is not enough BftExtraVanity bytes.
+
+	// if len(header.SecondWitness) < types.BftExtraVanity { //here we use BftExtraVanity (32-bit fixed length)
+	// 	header.SecondWitness = append(header.SecondWitness, bytes.Repeat([]byte{0x00}, types.BftExtraVanity-len(header.SecondWitness))...)
+	// }
+	// buf.Write(header.SecondWitness[:types.BftExtraVanity])
+
+	updatedVers := &types.SecondWitnessExtra{ // we share the BftExtra struct
+		DepositVers: depositVers,
+		ExitVers:    exitVers,
+	}
+
+	payload, err := rlp.EncodeToBytes(&updatedVers)
+	if err != nil {
+		return nil, err
+	}
+	return append(buf.Bytes(), payload...), nil
 }

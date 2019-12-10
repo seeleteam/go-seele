@@ -284,13 +284,6 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	miner.log.Info("newHeaderByParent with parent %v", parent)
 	header := newHeaderByParent(parent, miner.coinbase, timestamp)
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
-	// vers, errV := miner.getNewVerifiersTx(miner.seele)
-	// if errV != nil {
-	// 	return fmt.Errorf("failed to get new verifier from txs, %s", errV)
-	// }
-	// for _, v := range vers {
-	// 	append(header.SecondWitness[:], v.Bytes())
-	// }
 
 	err = miner.engine.Prepare(miner.seele.BlockChain(), header)
 	if err != nil {
@@ -298,6 +291,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	}
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
+	// here we add the verifierTx, challengeTx and exitTx
 	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
