@@ -146,18 +146,19 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 	return true
 }
 
-// apply creates a new authorization snapshot by applying the given headers to
+// applyHeaders creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
+func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
 	}
-	// Sanity check that the headers can be applied
+	// Sanity (consecutiveness) check that the headers can be applied
 	if headers[0].Height != s.Height+1 {
 		return nil, errVotingChainInvalid
 	}
 
+	// headers' consecutiveness (make sure before applyHeaders, the headers are good in order, otherwise, here will return error)
 	for i := 0; i < len(headers)-1; i++ {
 		if headers[i+1].Height != headers[i].Height+1 {
 			return nil, errVotingChainInvalid
@@ -173,6 +174,7 @@ func (s *Snapshot) apply(headers []*types.BlockHeader) (*Snapshot, error) {
 			snap.Votes = nil
 			snap.Tally = make(map[common.Address]Tally)
 		}
+
 		// Resolve the authorization key and check against verifiers
 		signer, err := extractAccount(header)
 		if err != nil {

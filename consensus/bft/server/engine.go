@@ -122,7 +122,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 	// voting snapshot
 	snap, err := s.snapshot(chain, height-1, header.PreviousBlockHash, nil)
-	s.log.Info("get [height-1]= %d snap %+v", height-1, snap)
+	s.log.Info("get [height-1] = %d snap %+v", height-1, snap)
 	if err != nil {
 		s.log.Error("snapshot return err <-", err)
 		return err
@@ -146,7 +146,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	if len(addrs) > 0 {
 		index := rand.Intn(len(addrs))
 		header.Creator = addrs[index]
-		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote or put nonceDropVote
+		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote otherwise put nonceDropVote
 			copy(header.Witness[:], nonceAuthVote)
 		} else {
 			copy(header.Witness[:], nonceDropVote)

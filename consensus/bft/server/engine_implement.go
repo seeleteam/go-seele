@@ -288,7 +288,7 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			s.log.Error("not a valid address")
 			return errInvalidSignature
 		}
-		if verifiers.RemoveVerifier(addr) { //TODO
+		if verifiers.RemoveVerifier(addr) {
 			validSealCount++
 		} else {
 			return errCommittedSealsInvalid
@@ -404,29 +404,45 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				break
 			}
 		}
+
 		// If we're at block zero, make a snapshot
-		// BUGS when run, FIXME
-		// if height == 0 {
-		// fmt.Println("we start from Height = 0")
-		genesis := chain.GetHeaderByHeight(0)
-		// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
-		// format of extra data is invalid !!!
-		if err := ser.VerifyHeader(chain, genesis); err != nil {
-			fmt.Println("failed to verify header when [snapshot] with err", err)
-			return nil, err
+		if height == 0 {
+			genesis := chain.GetHeaderByHeight(0)
+			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
+			if err := ser.VerifyHeader(chain, genesis); err != nil {
+				fmt.Println("failed to verify header when [snapshot] with err", err)
+				return nil, err
+			}
+			bftExtra, err := types.ExtractBftExtra(genesis)
+			if err != nil {
+				return nil, err
+			}
+			snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+			// FIXME need to save not so frequently and save to ser.recents
+			if err := snap.save(ser.db); err != nil {
+				return nil, err
+			}
+			ser.log.Info("Stored genesis voting snapshot to disk")
+			break
+		} else {
+			h := chain.GetHeaderByHeight(height)
+			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
+			if err := ser.VerifyHeader(chain, h); err != nil {
+				fmt.Println("failed to verify header when [snapshot] with err", err)
+				return nil, err
+			}
+			bftExtra, err := types.ExtractBftExtra(h)
+			if err != nil {
+				return nil, err
+			}
+			snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+			// FIXME need to save not so frequently and save to ser.recents
+			if err := snap.save(ser.db); err != nil {
+				return nil, err
+			}
+			ser.log.Info("Stored genesis voting snapshot to disk")
+			break
 		}
-		bftExtra, err := types.ExtractBftExtra(genesis)
-		if err != nil {
-			return nil, err
-		}
-		snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
-		// FIXME need to save not so frequently and save to ser.recents
-		if err := snap.save(ser.db); err != nil {
-			return nil, err
-		}
-		ser.log.Info("Stored genesis voting snapshot to disk")
-		break
-		// }
 		// No snapshot for this header, gather the header and move backward
 		var header *types.BlockHeader
 		if len(parents) > 0 {
@@ -450,7 +466,8 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers)
+	ser.log.Info("before applying headers, snapshot %+v", snap)
+	snap, err := snap.applyHeaders(headers)
 	if err != nil {
 		return nil, err
 	}
@@ -461,10 +478,9 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		if err = snap.save(ser.db); err != nil {
 			return nil, err
 		}
-		ser.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
+		ser.log.Info("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
 	ser.log.Info("take a snapshot %+v with err %+v", snap, err)
-	// ser.log.Info("snap.VerSet.GetVerByIndex(0)", snap.VerSet.GetVerByIndex(0))
 	return snap, err
 }
 

@@ -152,7 +152,7 @@ func (s *server) Broadcast(verSet bft.VerifierSet, payload []byte) error {
 		Payload: payload,
 	}
 	go s.bftEventMux.Post(msg)
-	fmt.Println("Post in Broadcast")
+	// fmt.Println("Post in Broadcast")
 	return nil
 }
 

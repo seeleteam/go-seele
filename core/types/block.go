@@ -127,6 +127,14 @@ func NewBlock(header *BlockHeader, txs []*Transaction, receipts []*Receipt, debt
 		copy(block.Debts, debts)
 	}
 
+	var vers []common.Address
+	for _, tx := range txs {
+		if IsVerifierTx(tx) {
+			vers = append(vers, tx.FromAccount())
+		}
+	}
+	block.Header.SecondWitness = VerifiersFromTxBytes(vers)
+
 	block.Header.ReceiptHash = ReceiptMerkleRootHash(receipts)
 	block.Header.DebtHash = DebtMerkleRootHash(debts)
 	block.Header.TxDebtHash = DebtMerkleRootHash(NewDebts(txs))

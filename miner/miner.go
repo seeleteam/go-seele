@@ -87,29 +87,6 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	return miner
 }
 
-// NewMiner constructs and returns a miner instance
-func NewMinerSubchain(addr common.Address, seele SeeleBackend, engine consensus.Engine) *Miner {
-	miner := &Miner{
-		coinbase:             addr,
-		canStart:             1,
-		stopped:              0,
-		stopper:              0,
-		seele:                seele,
-		wg:                   sync.WaitGroup{},
-		recv:                 make(chan *types.Block, 1),
-		log:                  log.GetLogger("miner"),
-		isFirstDownloader:    1,
-		isFirstBlockPrepared: 0,
-		engine:               engine,
-	}
-
-	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
-	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
-	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
-
-	return miner
-}
-
 func (miner *Miner) GetEngine() consensus.Engine {
 	return miner.engine
 }
@@ -150,16 +127,13 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	// If the consensus engine is BFT
-	if bft, ok := miner.engine.(consensus.Bft); ok {
-		if err := bft.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
-			panic(fmt.Sprintf("failed to start bft engine: %v", err))
-		} else {
-			fmt.Println("starting BFT engine")
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		if err := istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
+			panic(fmt.Sprintf("failed to start istanbul engine: %v", err))
 		}
 	}
 
-	// try to prepare and mine the first block, if fails, node should terminate
+	// try to prepare the first block
 	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
@@ -182,12 +156,11 @@ func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
 
-	// if bft, ok := miner.engine.(consensus.Bft); ok {
-	// 	miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
-	// 	if err := bft.Stop(); err != nil {
-	// 		panic(fmt.Sprintf("failed to stop bft engine: %v", err))
-	// 	}
-	// }
+	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
+		if err := istanbul.Stop(); err != nil {
+			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
+		}
+	}
 }
 
 func (miner *Miner) stopMining() {
@@ -202,12 +175,6 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
-	if bft, ok := miner.engine.(consensus.Bft); ok {
-		miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
-		if err := bft.Stop(); err != nil {
-			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
-		}
-	}
 	miner.log.Info("Miner is stopped.")
 }
 
@@ -317,6 +284,13 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	miner.log.Info("newHeaderByParent with parent %v", parent)
 	header := newHeaderByParent(parent, miner.coinbase, timestamp)
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
+	// vers, errV := miner.getNewVerifiersTx(miner.seele)
+	// if errV != nil {
+	// 	return fmt.Errorf("failed to get new verifier from txs, %s", errV)
+	// }
+	// for _, v := range vers {
+	// 	append(header.SecondWitness[:], v.Bytes())
+	// }
 
 	err = miner.engine.Prepare(miner.seele.BlockChain(), header)
 	if err != nil {
@@ -352,10 +326,6 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 
 // commitTask commits the given task to the miner
 func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
-	miner.log.Warn("[bft]-1 commit task")
-	block := task.generateBlock() //
-	miner.log.Info("[bft]-2 generate a block %+v", block)
+	block := task.generateBlock()
 	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
-	miner.log.Info("[bft]-3 seal result")
-
 }
