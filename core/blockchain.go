@@ -388,13 +388,13 @@ func (bc *Blockchain) doWriteBlock(block *types.Block, pool *Pool) error {
 	if isHead {
 		largerHeight := block.Header.Height + 1
 		if err = DeleteLargerHeightBlocks(bc.bcStore, largerHeight, bc.rp); err != nil {
-			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight)
+			bc.log.Error(errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight).Error())
 		}
 		auditor.Audit("succeed to delete larger height blocks, height = %v", largerHeight)
 
 		previousHash := block.Header.PreviousBlockHash
 		if err = OverwriteStaleBlocks(bc.bcStore, previousHash, bc.rp); err != nil {
-			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash)
+			bc.log.Error(errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash).Error())
 		}
 		auditor.Audit("succeed to overwrite stale blocks, hash = %v", previousHash)
 	}
