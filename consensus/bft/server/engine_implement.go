@@ -84,7 +84,10 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 
 	// Bail out if we're unauthorized to sign a block
 	s.log.Info("SealResult take a snapshot")
+	// var headers []*types.BlockHeader
+	// headers = append(headers, header)
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, nil)
+	// snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +469,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	ser.log.Info("before applying headers, snapshot %+v", snap)
+	ser.log.Info("before applying len=%d headers, snapshot %+v", len(headers), snap)
 	snap, err := snap.applyHeaders(headers)
 	if err != nil {
 		return nil, err

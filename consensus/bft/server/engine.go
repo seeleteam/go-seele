@@ -141,11 +141,34 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 	s.candidatesLock.RUnlock()
 
+	// check the verifier from previous deposit or exit txs:
+	swExtra, err := types.ExtractSWExtra(header)
+	if err != nil {
+		return err
+	}
+
+	// in case one same verifier deposit and exit at the same block,
+	// make usre add before delect
+
+	for _, depVer := range swExtra.DepositVers {
+		if _, contain := ContainVer(addrs, depVer); contain {
+			s.log.Warn("verifier from deposit tx already exit in verifier set")
+			continue
+		}
+		addrs = append(addrs, depVer)
+		auths = append(auths, true)
+	}
+	for _, exitVer := range swExtra.ExitVers {
+		if i, exist := ContainVer(addrs, exitVer); exist {
+			addrs = append(addrs[:i], addrs[i+1:]...)
+			auths = append(auths[:i], auths[i+1:]...)
+		}
+	}
 	// pick one candidate randomly
 	// the block creator will get the reward, here we randomly pickout peer
+	index := rand.Intn(len(addrs))
+	header.Creator = addrs[index]
 	if len(addrs) > 0 {
-		index := rand.Intn(len(addrs))
-		header.Creator = addrs[index]
 		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote otherwise put nonceDropVote
 			copy(header.Witness[:], nonceAuthVote)
 		} else {
@@ -181,4 +204,13 @@ func (s *server) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 func (s *server) VerifyHeader(chain consensus.ChainReader, header *types.BlockHeader) error {
 	return s.verifyHeader(chain, header, nil)
+}
+
+func ContainVer(addres []common.Address, ver common.Address) (int, bool) {
+	for i, addr := range addres {
+		if ver == addr {
+			return i, true
+		}
+	}
+	return -1, false
 }

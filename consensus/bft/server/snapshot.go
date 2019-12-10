@@ -8,7 +8,9 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
 	"github.com/seeleteam/go-seele/consensus/bft/verifier"
@@ -149,6 +151,22 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 // applyHeaders creates a new authorization snapshot by applying the given headers to
 // the original one.
 func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error) {
+	snap := s.copy()
+	// verTests := []common.Address{
+	// 	common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")),
+	// 	common.BytesToAddress(hexutil.MustHexToBytes("0x73fc304ba542b1b999ca359044f71420017b49a1")),
+	// 	// common.HexToAddress("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1"),
+	// 	// "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
+	// }
+	// for _, verTest := range verTests {
+	// 	snap.VerSet.AddVerifier(verTest)
+	// 	fmt.Printf("\n added verTest %s in verset \n", verTest)
+	// }
+	for i, ver := range snap.VerSet.List() {
+		fmt.Printf("snapshot verset %dth verifier %s\n", i, ver)
+	}
+	fmt.Printf("apply header len = %d\n", len(headers))
+
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -166,7 +184,7 @@ func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error)
 	}
 
 	// Iterate through the headers and create a new snapshot
-	snap := s.copy()
+	// snap := s.copy()
 	for _, header := range headers {
 		// Remove any votes on checkpoint blocks
 		number := header.Height
@@ -242,7 +260,20 @@ func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error)
 			}
 			delete(snap.Tally, header.Creator)
 		}
+
+		// here we will check header secondwitness to add or remove verifiers from deposit txs and exit txs (if any)
+		var swExtra *types.SecondWitnessExtra
+		if err := rlp.DecodeBytes(header.SecondWitness, &swExtra); err != nil {
+			return nil, err
+		}
+		for _, depVer := range swExtra.DepositVers {
+			snap.VerSet.AddVerifier(depVer)
+		}
+		for _, exitVer := range swExtra.ExitVers {
+			snap.VerSet.RemoveVerifier(exitVer)
+		}
 	}
+
 	snap.Height += uint64(len(headers))
 	snap.Hash = headers[len(headers)-1].Hash()
 
