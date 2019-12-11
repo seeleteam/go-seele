@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -145,8 +144,19 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
 	fmt.Println("add one ver to task.depositVers")
-	task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")))
+	/*
+		this code section for test the verifier is correctly added into secondwitness
+		// task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")))
+		// if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+		// 	fmt.Println("deposit verifiers", task.depositVers)
+		// 	var err error
+		// 	task.header.SecondWitness, err = task.prepareWitness(task.header, task.depositVers, task.exitVers)
+		// 	if err != nil {
+		// 		log.Error("failed to prepare deposit or exit tx into secondwitness")
+		// 	}
+		// }
 
+	*/
 	txIndex := 1 // the first tx is miner reward
 
 	for size > 0 {
@@ -180,14 +190,20 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				if tx.IsExitTx() {
 					task.exitVers = append(task.exitVers, tx.ToAccount())
 				}
-				prepareWitness(task.header, task.depositVers, task.exitVers)
 			}
 
 			task.txs = append(task.txs, tx)
 			task.receipts = append(task.receipts, receipt)
 			txIndex++
 		}
-
+		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+			log.Info("[%d]deposit verifiers, [%d]exit verifiers", task.depositVers, task.exitVers)
+			var err error
+			task.header.SecondWitness, err = task.prepareWitness(task.header, task.depositVers, task.exitVers)
+			if err != nil {
+				log.Error("failed to prepare deposit or exit tx into secondwitness")
+			}
+		}
 		size -= txsSize
 	}
 
@@ -207,7 +223,7 @@ type Result struct {
 }
 
 // prepareWitness prepare header witness for deposit(header.Witness) or exit(header.SecondWitness)
-func prepareWitness(header *types.BlockHeader, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
+func (task *Task) prepareWitness(header *types.BlockHeader, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
 	var buf bytes.Buffer
 	// compensate the lack bytes if header.Extra is not enough BftExtraVanity bytes.
 
