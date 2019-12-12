@@ -146,6 +146,9 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	//this code section for test the verifier is correctly added into secondwitness
 	/*
 		task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+		task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+	*/
+	/*
 		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
 			fmt.Println("deposit verifiers", task.depositVers)
 			var err error

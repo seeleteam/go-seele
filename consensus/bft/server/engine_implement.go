@@ -452,6 +452,9 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 
 				return nil, err
 			}
+			snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+			// snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(curvers, ser.config.ProposerPolicy))
+			// FIXME need to save not so frequently
 
 			swExtra, err := types.ExtractSecondWitnessExtra(h)
 			if err != nil {
@@ -459,17 +462,17 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				return nil, err
 			}
 			ser.log.Info("swExtra %+v", swExtra)
-			for i, ver := range swExtra.DepositVers {
-				ser.log.Warn("%dth new verifier %+v from secondwitness", i, ver)
+			for i, depver := range swExtra.DepositVers {
+				ser.log.Warn("%dth new verifier %+v from secondwitness", i, depver)
+				snap.VerSet.AddVerifier(depver)
+				ser.log.Debug("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
+			}
+			for k, exver := range swExtra.ExitVers {
+				ser.log.Warn("%dth verifier %+v removed from secondwitness", k, exver)
+				snap.VerSet.RemoveVerifier(exver)
+				ser.log.Debug("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
-			// FIXME verifiers can be added from secondWitness, but need to start the second node
-			// curvers := bftExtra.Verifiers
-			// curvers = append(curvers, swExtra.DepositVers...)
-
-			snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
-			// snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(curvers, ser.config.ProposerPolicy))
-			// FIXME need to save not so frequently
 			if err := snap.save(ser.db); err != nil {
 				return nil, err
 			}
