@@ -18,7 +18,7 @@ var (
 	BftExtraSeal   = 65 // Fixed number of extra-data bytes reserved for verifier seal
 
 	// ErrInvalidBftHeaderExtra is returned if the length of extra-data is less than 32 bytes
-	ErrInvalidBftHeaderExtra = errors.New("invalid istanbul header extra-data")
+	ErrInvalidBftHeaderExtra = errors.New("invalid BFT header extra-data")
 )
 
 // BftExtra will be used as ExtraData in block for bft consensus algorithm

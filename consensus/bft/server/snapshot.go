@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
 	"github.com/seeleteam/go-seele/consensus/bft/verifier"
@@ -262,16 +261,17 @@ func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error)
 		}
 
 		// here we will check header secondwitness to add or remove verifiers from deposit txs and exit txs (if any)
-		var swExtra *types.SecondWitnessExtra
-		if err := rlp.DecodeBytes(header.SecondWitness, &swExtra); err != nil {
-			return nil, err
-		}
-		for _, depVer := range swExtra.DepositVers {
-			snap.VerSet.AddVerifier(depVer)
-		}
-		for _, exitVer := range swExtra.ExitVers {
-			snap.VerSet.RemoveVerifier(exitVer)
-		}
+		// var swExtra *types.SecondWitnessExtra
+		// if err := rlp.DecodeBytes(header.SecondWitness, &swExtra); err != nil {
+		// 	fmt.Printf("failed to add verifiers from witness into snapshot, err", err)
+		// 	return nil, err
+		// }
+		// for _, depVer := range swExtra.DepositVers {
+		// 	snap.VerSet.AddVerifier(depVer)
+		// }
+		// for _, exitVer := range swExtra.ExitVers {
+		// 	snap.VerSet.RemoveVerifier(exitVer)
+		// }
 	}
 
 	snap.Height += uint64(len(headers))

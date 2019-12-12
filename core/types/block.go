@@ -159,7 +159,7 @@ func (block *Block) WithSeal(header *BlockHeader) *Block {
 		HeaderHash:   header.Hash(),
 		Header:       header.Clone(),
 		Transactions: block.Transactions,
-		Debts:        block.Debts,
+		// Debts:        block.Debts,
 	}
 }
 

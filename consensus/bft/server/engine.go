@@ -110,7 +110,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	// header.Creator = common.Address{}
 	header.Creator = s.Address()
 	header.Witness = make([]byte, bft.WitnessSize)
-	header.SecondWitness = make([]byte, bft.WitnessSize)
+	header.SecondWitness = make([]byte, bft.WitnessSize) //
 	header.Consensus = types.BftConsensus
 	header.Difficulty = defaultDifficulty // for bft consensus algorithm, we just set difficulty as the default value
 
@@ -140,35 +140,15 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 		}
 	}
 	s.candidatesLock.RUnlock()
-
-	// check the verifier from previous deposit or exit txs:
-	swExtra, err := types.ExtractSWExtra(header)
-	if err != nil {
-		return err
-	}
-
-	// in case one same verifier deposit and exit at the same block,
-	// make usre add before delect
-
-	for _, depVer := range swExtra.DepositVers {
-		if _, contain := ContainVer(addrs, depVer); contain {
-			s.log.Warn("verifier from deposit tx already exit in verifier set")
-			continue
-		}
-		addrs = append(addrs, depVer)
-		auths = append(auths, true)
-	}
-	for _, exitVer := range swExtra.ExitVers {
-		if i, exist := ContainVer(addrs, exitVer); exist {
-			addrs = append(addrs[:i], addrs[i+1:]...)
-			auths = append(auths[:i], auths[i+1:]...)
-		}
-	}
 	// pick one candidate randomly
 	// the block creator will get the reward, here we randomly pickout peer
-	index := rand.Intn(len(addrs))
-	header.Creator = addrs[index]
-	if len(addrs) > 0 {
+	// if err := s.GetVerifierFromSWExtra(header, addrs, auths); err != nil {
+	// 	return err
+	// }
+
+	if len(addrs) > 0 { // this will be used to gurantee the block prepared by non-ver can not passed
+		index := rand.Intn(len(addrs))
+		header.Creator = addrs[index]
 		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote otherwise put nonceDropVote
 			copy(header.Witness[:], nonceAuthVote)
 		} else {
@@ -176,8 +156,13 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 		}
 	}
 
+	curVer := snap.verifiers()
+	newVer := s.GetCurrentVerifiers(curVer, addrs, auths)
+	curVer = append(curVer, newVer...)
 	// add verifiers in snapshot to extraData's verifiers section
 	s.log.Info("[bft] Prepare a block extra with snap.verifiers %+v", snap.verifiers())
+	s.log.Info("[bft] Prepare a block extra with verifiers %+v", curVer)
+	// extra, err := prepareExtra(header, curVer)
 	extra, err := prepareExtra(header, snap.verifiers())
 	if err != nil {
 		fmt.Println("failed to prepare extra data")
@@ -204,13 +189,4 @@ func (s *server) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 
 func (s *server) VerifyHeader(chain consensus.ChainReader, header *types.BlockHeader) error {
 	return s.verifyHeader(chain, header, nil)
-}
-
-func ContainVer(addres []common.Address, ver common.Address) (int, bool) {
-	for i, addr := range addres {
-		if ver == addr {
-			return i, true
-		}
-	}
-	return -1, false
 }

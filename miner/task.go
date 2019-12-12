@@ -7,7 +7,6 @@ package miner
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -143,19 +142,20 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
-	fmt.Println("add one ver to task.depositVers")
-	/*
-		this code section for test the verifier is correctly added into secondwitness
-		// task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1")))
-		// if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
-		// 	fmt.Println("deposit verifiers", task.depositVers)
-		// 	var err error
-		// 	task.header.SecondWitness, err = task.prepareWitness(task.header, task.depositVers, task.exitVers)
-		// 	if err != nil {
-		// 		log.Error("failed to prepare deposit or exit tx into secondwitness")
-		// 	}
-		// }
 
+	//this code section for test the verifier is correctly added into secondwitness
+	/*
+		task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+			fmt.Println("deposit verifiers", task.depositVers)
+			var err error
+			task.header.SecondWitness, err = task.prepareWitness(task.header, task.depositVers, task.exitVers)
+			if err != nil {
+				log.Error("failed to prepare deposit or exit tx into secondwitness")
+			}
+			log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+
+		}
 	*/
 	txIndex := 1 // the first tx is miner reward
 
@@ -203,6 +203,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			if err != nil {
 				log.Error("failed to prepare deposit or exit tx into secondwitness")
 			}
+			log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
 		}
 		size -= txsSize
 	}
@@ -227,10 +228,10 @@ func (task *Task) prepareWitness(header *types.BlockHeader, depositVers []common
 	var buf bytes.Buffer
 	// compensate the lack bytes if header.Extra is not enough BftExtraVanity bytes.
 
-	// if len(header.SecondWitness) < types.BftExtraVanity { //here we use BftExtraVanity (32-bit fixed length)
-	// 	header.SecondWitness = append(header.SecondWitness, bytes.Repeat([]byte{0x00}, types.BftExtraVanity-len(header.SecondWitness))...)
-	// }
-	// buf.Write(header.SecondWitness[:types.BftExtraVanity])
+	if len(header.SecondWitness) < types.BftExtraVanity { //here we use BftExtraVanity (32-bit fixed length)
+		header.SecondWitness = append(header.SecondWitness, bytes.Repeat([]byte{0x00}, types.BftExtraVanity-len(header.SecondWitness))...)
+	}
+	buf.Write(header.SecondWitness[:types.BftExtraVanity])
 
 	updatedVers := &types.SecondWitnessExtra{ // we share the BftExtra struct
 		DepositVers: depositVers,
