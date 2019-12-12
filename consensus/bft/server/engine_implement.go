@@ -464,12 +464,18 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			ser.log.Info("swExtra %+v", swExtra)
 			for i, depver := range swExtra.DepositVers {
 				ser.log.Warn("%dth new verifier %+v from secondwitness", i, depver)
-				snap.VerSet.AddVerifier(depver)
+				added := snap.VerSet.AddVerifier(depver)
+				if !added {
+					ser.log.Warn("verifier address already exists in verifier list")
+				}
 				ser.log.Debug("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
 			}
 			for k, exver := range swExtra.ExitVers {
 				ser.log.Warn("%dth verifier %+v removed from secondwitness", k, exver)
-				snap.VerSet.RemoveVerifier(exver)
+				deleted := snap.VerSet.RemoveVerifier(exver)
+				if !deleted {
+					ser.log.Error("exit verifier NOT found in verifier list!")
+				}
 				ser.log.Debug("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
