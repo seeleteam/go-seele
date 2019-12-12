@@ -198,13 +198,15 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		}
 		size -= txsSize
 	}
-	log.Info("[%d]deposit verifiers, [%d]exit verifiers", task.depositVers, task.exitVers)
-	var err error
-	task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
-	if err != nil {
-		log.Error("failed to prepare deposit or exit tx into secondwitness")
+	if task.header.Consensus == types.BftConsensus {
+		log.Info("[%d]deposit verifiers, [%d]exit verifiers", task.depositVers, task.exitVers)
+		var err error
+		task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+		if err != nil {
+			log.Error("failed to prepare deposit or exit tx into secondwitness")
+		}
+		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
 	}
-	log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
 
 	// exit
 	memory.Print(log, "task chooseTransactions exit", now, true)
