@@ -33,9 +33,9 @@ type Task struct {
 	debtVerifier types.DebtVerifier
 	// verifierTxs  []*types.Transaction
 	// exitTxs      []*types.Transaction
-	// challengeTxs []*types.Transaction
-	depositVers []common.Address
-	exitVers    []common.Address
+	challengedTxs []*types.Transaction
+	depositVers   []common.Address
+	exitVers      []common.Address
 }
 
 // NewTask return Task object
@@ -184,9 +184,9 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				if tx.IsVerifierTx() {
 					task.depositVers = append(task.depositVers, tx.FromAccount())
 				}
-				// if tx.IsChallengeTx() {
-				// 	task.challengeTxs = append(task.challengeTxs, tx)
-				// }
+				if tx.IsChallengedTx() {
+					task.challengedTxs = append(task.challengedTxs, tx)
+				}
 				if tx.IsExitTx() {
 					task.exitVers = append(task.exitVers, tx.ToAccount())
 				}
@@ -196,17 +196,15 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			task.receipts = append(task.receipts, receipt)
 			txIndex++
 		}
-		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
-			log.Info("[%d]deposit verifiers, [%d]exit verifiers", task.depositVers, task.exitVers)
-			var err error
-			task.header.SecondWitness, err = task.prepareWitness(task.header, task.depositVers, task.exitVers)
-			if err != nil {
-				log.Error("failed to prepare deposit or exit tx into secondwitness")
-			}
-			log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
-		}
 		size -= txsSize
 	}
+	log.Info("[%d]deposit verifiers, [%d]exit verifiers", task.depositVers, task.exitVers)
+	var err error
+	task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+	if err != nil {
+		log.Error("failed to prepare deposit or exit tx into secondwitness")
+	}
+	log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
 
 	// exit
 	memory.Print(log, "task chooseTransactions exit", now, true)
@@ -224,7 +222,8 @@ type Result struct {
 }
 
 // prepareWitness prepare header witness for deposit(header.Witness) or exit(header.SecondWitness)
-func (task *Task) prepareWitness(header *types.BlockHeader, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
+// func (task *Task) prepareWitness(header *types.BlockHeader, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
+func (task *Task) prepareWitness(header *types.BlockHeader, chTxs []*types.Transaction, depositVers []common.Address, exitVers []common.Address) ([]byte, error) {
 	var buf bytes.Buffer
 	// compensate the lack bytes if header.Extra is not enough BftExtraVanity bytes.
 
@@ -234,8 +233,9 @@ func (task *Task) prepareWitness(header *types.BlockHeader, depositVers []common
 	buf.Write(header.SecondWitness[:types.BftExtraVanity])
 
 	updatedVers := &types.SecondWitnessExtra{ // we share the BftExtra struct
-		DepositVers: depositVers,
-		ExitVers:    exitVers,
+		ChallengedTxs: chTxs,
+		DepositVers:   depositVers,
+		ExitVers:      exitVers,
 	}
 
 	payload, err := rlp.EncodeToBytes(&updatedVers)

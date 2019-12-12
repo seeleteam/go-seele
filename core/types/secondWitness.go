@@ -9,8 +9,9 @@ import (
 )
 
 type SecondWitnessExtra struct {
-	DepositVers []common.Address
-	ExitVers    []common.Address
+	ChallengedTxs []*Transaction
+	DepositVers   []common.Address
+	ExitVers      []common.Address
 }
 
 func (swExtra *SecondWitnessExtra) EncodeRLP(w io.Writer) error {
@@ -67,6 +68,9 @@ func ExtractSWExtra(h *BlockHeader) (*SecondWitnessExtra, error) {
 // }
 
 func ExtractSecondWitnessExtra(h *BlockHeader) (*SecondWitnessExtra, error) {
+	if h.Height == 0 {
+		return nil, nil
+	}
 	if len(h.ExtraData) < BftExtraVanity {
 		return nil, ErrInvalidBftHeaderExtra
 	}

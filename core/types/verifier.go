@@ -19,7 +19,7 @@ func (tx *Transaction) IsDepositTx() bool {
 	*/
 	return false
 }
-func (tx *Transaction) IsChallengeTx() bool {
+func (tx *Transaction) IsChallengedTx() bool {
 	/*
 		define Tx to verfier check condition here
 	*/

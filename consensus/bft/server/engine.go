@@ -110,7 +110,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	// header.Creator = common.Address{}
 	header.Creator = s.Address()
 	header.Witness = make([]byte, bft.WitnessSize)
-	header.SecondWitness = make([]byte, bft.WitnessSize) //
+	// header.SecondWitness = make([]byte, bft.WitnessSize)
 	header.Consensus = types.BftConsensus
 	header.Difficulty = defaultDifficulty // for bft consensus algorithm, we just set difficulty as the default value
 
