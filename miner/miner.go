@@ -127,9 +127,9 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		if err := istanbul.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
-			panic(fmt.Sprintf("failed to start istanbul engine: %v", err))
+	if bft, ok := miner.engine.(consensus.Bft); ok {
+		if err := bft.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
+			panic(fmt.Sprintf("failed to start bft engine: %v", err))
 		}
 	}
 
@@ -156,11 +156,11 @@ func (miner *Miner) Stop() {
 	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
 
-	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
-		if err := istanbul.Stop(); err != nil {
-			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
-		}
-	}
+	// if bft, ok := miner.engine.(consensus.Bft); ok {
+	// 	if err := bft.Stop(); err != nil {
+	// 		panic(fmt.Sprintf("failed to stop bft engine: %v", err))
+	// 	}
+	// }
 }
 
 func (miner *Miner) stopMining() {
@@ -175,6 +175,12 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
+	if bft, ok := miner.engine.(consensus.Bft); ok {
+		miner.log.Info("\n\n\n miner engine is bft, will stop bft engine \n\n\n")
+		if err := bft.Stop(); err != nil {
+			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
+		}
+	}
 	miner.log.Info("Miner is stopped.")
 }
 
