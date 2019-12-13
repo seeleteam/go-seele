@@ -462,6 +462,17 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				return nil, err
 			}
 			ser.log.Info("swExtra %+v", swExtra)
+			if len(swExtra.ChallengedTxs) != 0 {
+				ser.log.Warn("successfully challenge relay info on mainchain")
+				checkpoint := uint64(height / checkInterval)
+				reverthash := chain.GetHeaderByHeight(checkpoint).Hash()
+				if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, reverthash); err == nil {
+					ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
+					snap = s
+					break
+				}
+
+			}
 			for i, depver := range swExtra.DepositVers {
 				ser.log.Warn("%dth new verifier %+v from secondwitness", i, depver)
 				added := snap.VerSet.AddVerifier(depver)
