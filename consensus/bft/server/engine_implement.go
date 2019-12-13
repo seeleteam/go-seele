@@ -411,15 +411,16 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if height%checkInterval == 0 { // FIXME double check the Epoch & checkInterval
-			if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
-				ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
-				snap = s
-				break
+		// FIXME If an on-disk checkpoint snapshot can be found, use that
+		/*
+			if height%checkInterval == 0 { // FIXME double check the Epoch & checkInterval
+				if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
+					ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
+					snap = s
+					break
+				}
 			}
-		}
-
+		*/
 		// If we're at block zero, make a snapshot
 		if height == 0 {
 			genesis := chain.GetHeaderByHeight(0)
