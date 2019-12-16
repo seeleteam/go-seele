@@ -8,7 +8,6 @@ package server
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/consensus/bft"
@@ -161,10 +160,11 @@ func (s *Snapshot) applyHeaders(headers []*types.BlockHeader) (*Snapshot, error)
 	// 	snap.VerSet.AddVerifier(verTest)
 	// 	fmt.Printf("\n added verTest %s in verset \n", verTest)
 	// }
-	for i, ver := range snap.VerSet.List() {
-		fmt.Printf("snapshot verset %dth verifier %s\n", i, ver)
-	}
-	fmt.Printf("apply header len = %d\n", len(headers))
+
+	// for i, ver := range snap.VerSet.List() {
+	// 	fmt.Printf("snapshot verset %dth verifier %s\n", i, ver)
+	// }
+	// fmt.Printf("apply header len = %d\n", len(headers))
 
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
