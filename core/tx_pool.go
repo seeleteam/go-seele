@@ -46,7 +46,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 						item.FromAccount().Hex(), item.Nonce(), nonce)
 					return true, false // the true stand for "not timeout"
 				} else if duration > transactionTimeoutDuration {
-					log.Error("remove tx %s because not packed for more than three hours", item.GetHash().Hex())
+					log.Debug("remove tx %s because not packed for more than three hours", item.GetHash().Hex())
 					return true, true
 				}
 			}
@@ -91,7 +91,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	} else { //since there is no way to gurantee we can cached all tx, there maybe are more txs than capacity
 		pool.cachedTxs.add(tx)
 	}
-	pool.cachedTxs.log.Error("added Tx %s", tx.Hash)
+	pool.cachedTxs.log.Debug("added Tx %s", tx.Hash)
 
 	// be noted: soft forking reverseBCstore will directly use pool.addObjectArray which will call pool.addObject(tx)
 	// so cachedTxs check won't have any effect to reinject txs
