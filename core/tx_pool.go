@@ -16,8 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/log"
 )
 
-// const transactionTimeoutDuration = 3 * time.Hour
-const transactionTimeoutDuration = 1 * time.Second
+const transactionTimeoutDuration = 3 * time.Hour
 
 // TransactionPool is a thread-safe container for transactions received from the network or submitted locally.
 // A transaction will be removed from the pool once included in a blockchain or pending time too long (> transactionTimeoutDuration).
