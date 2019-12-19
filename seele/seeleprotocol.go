@@ -252,7 +252,9 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	}
 
 	peers := sp.peerSet.getAllPeers()
+
 	wg := new(sync.WaitGroup)
+
 	for _, peer := range peers {
 		if peer != nil {
 			//err := peer.sendHeadStatus(status)

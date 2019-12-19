@@ -287,7 +287,8 @@ func (p *peer) sendBlocks(magic uint32, blocks []*types.Block) error {
 	return err
 }
 
-func (p *peer) sendHeadStatus(msg *chainHeadStatus) error {
+func (p *peer) sendHeadStatus(msg *chainHeadStatus, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	buff := common.SerializePanic(msg)
 
 	p.log.Debug("peer send [statusChainHeadMsgCode] with size %d byte", len(buff))
