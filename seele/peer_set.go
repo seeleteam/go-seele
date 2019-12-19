@@ -7,6 +7,7 @@ package seele
 
 import (
 	"math/big"
+	rand "math/rand"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -150,4 +151,33 @@ func (p *peerSet) getPeerCountByShard(shard uint) int {
 	defer p.lock.RUnlock()
 
 	return len(p.shardPeers[shard])
+}
+func (p *peerSet) getPropagatePeers() []*peer {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	var value []*peer
+
+	index := 0
+	for i := 1; i < 1+common.ShardCount; i++ {
+		if len(p.shardPeers[i]) > 0 {
+			va := make([]*peer, len(p.shardPeers[i]))
+			index = 0
+			for _, v := range p.shardPeers[i] {
+				va[index] = v
+				index++
+			}
+			per := rand.Perm(len(p.shardPeers[i]))
+			index = 0
+			for k := 0; k < len(p.shardPeers[i]); k++ {
+				value = append(value, va[per[k]])
+				index++
+				if index > maxProgatePeerPerShard {
+					break
+				}
+			}
+		}
+	}
+
+	return value
 }

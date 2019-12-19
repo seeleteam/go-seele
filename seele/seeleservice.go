@@ -24,10 +24,11 @@ import (
 	"github.com/seeleteam/go-seele/node"
 	"github.com/seeleteam/go-seele/p2p"
 	"github.com/seeleteam/go-seele/rpc"
-	"github.com/seeleteam/go-seele/seele/download"
+	downloader "github.com/seeleteam/go-seele/seele/download"
 )
 
 const chainHeaderChangeBuffSize = 100
+const maxProgatePeerPerShard = 7
 
 // SeeleService implements full node service.
 type SeeleService struct {
@@ -84,6 +85,7 @@ func (s *SeeleService) Miner() *miner.Miner { return s.miner }
 func (s *SeeleService) Downloader() *downloader.Downloader {
 	return s.seeleProtocol.Downloader()
 }
+
 // P2PServer get p2pServer
 func (s *SeeleService) P2PServer() *p2p.Server { return s.p2pServer }
 

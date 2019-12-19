@@ -133,6 +133,18 @@ func NewDownloader(chain *core.Blockchain, seele SeeleBackend) *Downloader {
 	return d
 }
 
+func (d *Downloader) IsSyncStatusNone() bool {
+	d.lock.Lock()
+
+	if d.syncStatus != statusNone {
+		d.lock.Unlock()
+		return false
+	} else {
+		d.lock.Unlock()
+		return true
+	}
+}
+
 func (d *Downloader) getReadableStatus() string {
 	var status string
 
@@ -192,7 +204,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash) error {
 
 	d.lock.Lock()
 	d.syncStatus = statusNone
-	d.sessionWG.Wait()
+	//d.sessionWG.Wait()
 	d.cancelCh = nil
 	d.lock.Unlock()
 
@@ -241,13 +253,14 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error)
 	d.syncStatus = statusFetching
 	
 	
-	d.sessionWG.Add(1)
+	//d.sessionWG.Add(1)
+	sessionWG := new (sync.WaitGroup)
+	sessionWG.Add(1)
 	if conn.peerID == d.masterPeer {
 		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
 		bMasterStarted = true
 	}
-
-	go d.peerDownload(conn, tm)
+	go d.peerDownload(conn, tm, sessionWG)
 	//}
 	d.lock.Unlock()
 
@@ -258,7 +271,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error)
 	} else {
 		d.log.Debug("Downloader.doSynchronise bMasterStarted = %t.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
 	}
-	d.sessionWG.Wait()
+	sessionWG.Wait()
 
 	d.lock.Lock()
 	d.syncStatus = statusCleaning
@@ -467,8 +480,8 @@ func (d *Downloader) Terminate() {
 }
 
 // peerDownload peer download routine
-func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
-	defer d.sessionWG.Done()
+func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr, sessionWG *sync.WaitGroup) {
+	defer sessionWG.Done()
 
 	d.log.Debug("Downloader.peerDownload start. peerID=%s masterID=%s", conn.peerID, d.masterPeer)
 	isMaster := (conn.peerID == d.masterPeer)
@@ -574,7 +587,8 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 		// writeblock
-		err := d.chain.WriteBlock(h.block)
+		txPool := d.seele.TxPool().Pool
+		err := d.chain.WriteBlock(h.block, txPool)
 
 		if err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
@@ -595,7 +609,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 				}
 				for _, localBlock := range localBlocks {
 					d.log.Info("write back local blocks: %d", localBlock.Header.Height)
-					if err = d.chain.WriteBlock(localBlock); err != nil {
+					if err = d.chain.WriteBlock(localBlock, txPool); err != nil {
 						d.log.Error("failed to write localBlock back err=%s, height: %d", err, localBlock.Header.Height)
 						break
 					}
