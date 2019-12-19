@@ -149,6 +149,9 @@ func (sp *SeeleProtocol) syncer() {
 	for {
 		select {
 		case <-sp.syncCh:
+			if !sp.downloader.IsSyncStatusNone() {
+				continue
+			}
 			block := sp.chain.CurrentBlock()
 			head := block.HeaderHash
 			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
@@ -159,6 +162,9 @@ func (sp *SeeleProtocol) syncer() {
 			sp.wg.Add(1)
 			go sp.synchronise(sp.peerSet.bestPeers(common.LocalShardNumber, localTD))
 		case <-forceSync.C:
+			if !sp.downloader.IsSyncStatusNone() {
+				continue
+			}
 			block := sp.chain.CurrentBlock()
 			head := block.HeaderHash
 			localTD, err := sp.chain.GetStore().GetBlockTotalDifficulty(head)
@@ -246,7 +252,9 @@ func (sp *SeeleProtocol) broadcastChainHead() {
 	}
 
 	peers := sp.peerSet.getAllPeers()
-	wg := new (sync.WaitGroup)
+
+	wg := new(sync.WaitGroup)
+
 	for _, peer := range peers {
 		if peer != nil {
 			//err := peer.sendHeadStatus(status)
@@ -346,16 +354,20 @@ func (p *SeeleProtocol) propagateDebtMap(debtsMap [][]*types.Debt, filter bool) 
 	// entrance
 	memory.Print(p.log, "SeeleProtocol propagateDebtMap entrance", now, false)
 
-	peers := p.peerSet.getAllPeers()
+	//peers := p.peerSet.getAllPeers()
+	wg := new(sync.WaitGroup)
+	peers := p.peerSet.getPropagatePeers()
 	for _, peer := range peers {
 		if len(debtsMap[peer.Node.Shard]) > 0 {
-			err := peer.sendDebts(debtsMap[peer.Node.Shard], filter)
-			if err != nil {
-				p.log.Warn("failed to send debts to peer=%s, err=%s", peer.Node, err)
-			}
+			wg.Add(1)
+			go peer.sendDebts(debtsMap[peer.Node.Shard], filter)
+			//err := peer.sendDebts(debtsMap[peer.Node.Shard], filter)
+			//if err != nil {
+			//	p.log.Warn("failed to send debts to peer=%s, err=%s", peer.Node, err)
+			//}
 		}
 	}
-
+	wg.Wait()
 	// exit
 	memory.Print(p.log, "SeeleProtocol propagateDebtMap exit", now, true)
 }
@@ -426,7 +438,7 @@ func (p *SeeleProtocol) handleAddPeer(p2pPeer *p2p.Peer, rw p2p.MsgReadWriter) b
 		return false
 	}
 
-	p.log.Info("add peer %s -> %s to SeeleProtocol. nodeid=%s", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr(), newPeer.peerStrID)
+	p.log.Debug("add peer %s -> %s to SeeleProtocol. nodeid=%s", p2pPeer.LocalAddr(), p2pPeer.RemoteAddr(), newPeer.peerStrID)
 	p.peerSet.Add(newPeer)
 	if newPeer.Node.Shard == common.LocalShardNumber {
 		p.downloader.RegisterPeer(newPeer.peerStrID, newPeer)
@@ -569,14 +581,14 @@ handler:
 						p.SendDifferentShardTx(tx, shard)
 						continue
 					} else {
-						if err := p.txPool.AddTransaction(tx); err != nil {
-							continue
-						}
+						p.txPool.AddTransaction(tx)
+						//if err := p.txPool.AddTransaction(tx); err != nil {
+						//	continue
+						//	}
 					}
 				}
 			}()
 
-			//exit
 			memory.Print(p.log, "handleMsg transactionsMsgCode exit", now, true)
 
 		case blockHashMsgCode:
@@ -622,11 +634,11 @@ handler:
 				p.log.Warn("not found request block %s", err.Error())
 				continue
 			}
-
-			err = peer.SendBlock(block)
-			if err != nil {
-				p.log.Warn("failed to send block msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
-			}
+			go peer.SendBlock(block)
+			//err = peer.SendBlock(block)
+			//if err != nil {
+			//p.log.Warn("failed to send block msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
+			//}
 
 			// exit
 			memory.Print(p.log, "handleMsg blockRequestMsgCode exit", now, true)
@@ -646,7 +658,7 @@ handler:
 			peer.knownBlocks.Add(block.HeaderHash, nil)
 			if block.GetShardNumber() == common.LocalShardNumber {
 				// @todo need to make sure WriteBlock handle block fork
-				p.chain.WriteBlock(&block, p.txPool.Pool)
+				go p.chain.WriteBlock(&block, p.txPool.Pool)
 			}
 
 			// exit
@@ -791,7 +803,7 @@ handler:
 			memory.Print(p.log, "handleMsg downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg entrance", now, false)
 
 			p.log.Debug("Received downloader Msg. %s peerid:%s", codeToStr(msg.Code), peer.peerStrID)
-			p.downloader.DeliverMsg(peer.peerStrID, msg)
+			go p.downloader.DeliverMsg(peer.peerStrID, msg)
 
 			// exit
 			memory.Print(p.log, "handleMsg downloader.BlockHeadersMsg, downloader.BlocksPreMsg, downloader.BlocksMsg exit", now, true)

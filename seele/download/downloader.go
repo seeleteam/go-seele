@@ -133,6 +133,18 @@ func NewDownloader(chain *core.Blockchain, seele SeeleBackend) *Downloader {
 	return d
 }
 
+func (d *Downloader) IsSyncStatusNone() bool {
+	d.lock.Lock()
+
+	if d.syncStatus != statusNone {
+		d.lock.Unlock()
+		return false
+	} else {
+		d.lock.Unlock()
+		return true
+	}
+}
+
 func (d *Downloader) getReadableStatus() string {
 	var status string
 
@@ -192,7 +204,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash) error {
 
 	d.lock.Lock()
 	d.syncStatus = statusNone
-	d.sessionWG.Wait()
+	//d.sessionWG.Wait()
 	d.cancelCh = nil
 	d.lock.Unlock()
 

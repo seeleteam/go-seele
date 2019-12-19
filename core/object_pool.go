@@ -57,7 +57,7 @@ func newPooledItem(object poolObject) *poolItem {
 }
 
 type getObjectFromBlockFunc func(block *types.Block) []poolObject
-type canRemoveFunc func(chain blockchain, state *state.Statedb, item *poolItem) bool
+type canRemoveFunc func(chain blockchain, state *state.Statedb, item *poolItem) (bool, bool)
 type objectValidationFunc func(state *state.Statedb, obj poolObject) error
 type afterAddFunc func(obj poolObject)
 
@@ -355,7 +355,11 @@ func (pool *Pool) removeObjects() {
 
 	objMap := pool.getObjectMap()
 	for objHash, poolTx := range objMap {
-		if pool.canRemove(pool.chain, state, poolTx) {
+		objectRemove, cachedTxsRemove := pool.canRemove(pool.chain, state, poolTx)
+		if objectRemove {
+			if cachedTxsRemove {
+				pool.cachedTxs.remove(objHash)
+			}
 			pool.removeOject(objHash)
 		}
 	}

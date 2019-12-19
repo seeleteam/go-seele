@@ -30,8 +30,9 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 	getObjectFromBlock := func(block *types.Block) []poolObject {
 		return txsToObjects(block.GetExcludeRewardTransactions())
 	}
-
-	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
+	// 1st bool: can remove from object pool
+	// 2nd bool: can remove from cachedTxs
+	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) (bool, bool) {
 		nowTimestamp := time.Now()
 		txIndex, _ := chain.GetStore().GetTxIndex(item.GetHash())
 		nonce := state.GetNonce(item.FromAccount())
@@ -43,15 +44,15 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 				if item.Nonce() < nonce {
 					log.Debug("remove tx %s because nonce too low, account %s, tx nonce %d, target nonce %d", item.GetHash().Hex(),
 						item.FromAccount().Hex(), item.Nonce(), nonce)
+					return true, false // the true stand for "not timeout"
 				} else if duration > transactionTimeoutDuration {
 					log.Debug("remove tx %s because not packed for more than three hours", item.GetHash().Hex())
+					return true, true
 				}
 			}
-
-			return true
 		}
 
-		return false
+		return false, false
 	}
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
@@ -90,6 +91,7 @@ func (pool *TransactionPool) AddTransaction(tx *types.Transaction) error {
 	} else { //since there is no way to gurantee we can cached all tx, there maybe are more txs than capacity
 		pool.cachedTxs.add(tx)
 	}
+	pool.cachedTxs.log.Debug("added Tx %s", tx.Hash)
 
 	// be noted: soft forking reverseBCstore will directly use pool.addObjectArray which will call pool.addObject(tx)
 	// so cachedTxs check won't have any effect to reinject txs
