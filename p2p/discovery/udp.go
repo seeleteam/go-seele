@@ -292,7 +292,7 @@ func (u *udp) loopReply() {
 		for el := pendingList.Front(); el != nil; el = el.Next() {
 			p := el.Value.(*pending)
 			duration := p.deadline.Sub(now)
-			if duration < 0 {
+			if duration <= 0 {
 			} else {
 				if duration < minTime {
 					minTime = duration

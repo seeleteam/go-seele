@@ -305,7 +305,7 @@ func (srv *Server) addPeer(p *Peer) bool {
 
 	srv.peerSet.add(p)
 	srv.nodeSet.setNodeStatus(p.Node, true)
-	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
+	srv.log.Debug("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
 	p.notifyProtocolsAddPeer()
 
 	metricsAddPeerMeter.Mark(1)
@@ -363,12 +363,12 @@ running:
 			go srv.doSelectNodeToConnect()
 		case <-checkTicker.C:
 			if srv.nodeSet.getSelfShardNodeNum() < 2 {
-				srv.log.Warn("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
+				srv.log.Debug("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
 				go srv.doSelectLocalNodeToConnect()
 			}
 
 		case <-srv.quit:
-			srv.log.Warn("server got quit signal, run cleanup logic")
+			srv.log.Debug("server got quit signal, run cleanup logic")
 			break running
 		}
 	}
@@ -543,8 +543,10 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	go func() {
 		//srv.loopWG.Add(1)
 		if srv.addPeer(peer) {
+			//srv.log.Error("RUN BEGIN")
 			peer.run()
-			srv.deletePeer(peer.Node.ID)
+			//srv.deletePeer(peer.Node.ID)
+			//srv.log.Error("RUN END")
 		} else {
 			peer.close()
 		}
