@@ -663,7 +663,7 @@ func calDetmLoop(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
 				return det, nonZerosCount
 			}
 			// at this point, even all left are ok, the total is still smaller than target, just stop!
-			if nonZerosCount+(256-i) < nonZeroCountTarget {
+			if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
 				return det, nonZerosCount
 			}
 		}
