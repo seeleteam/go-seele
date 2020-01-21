@@ -24,6 +24,8 @@ type nodeItem struct {
 }
 
 // nodeSet is thread safe collection, contains all active nodes, weather it is connected or not
+const MinConnPerShard = 4
+
 type nodeSet struct {
 	lock    sync.RWMutex
 	nodeMap map[common.Address]*nodeItem
@@ -100,7 +102,7 @@ func (set *nodeSet) tryAdd(p *discovery.Node) {
 func (set *nodeSet) delete(p *discovery.Node) {
 	set.lock.Lock()
 	defer set.lock.Unlock()
-	if set.nodeMap[p.ID] !=nil {
+	if set.nodeMap[p.ID] != nil {
 		delete(set.nodeMap, p.ID)
 		if _, ok := set.ipSet[p.Shard][p.IP.String()]; ok {
 			set.ipSet[p.Shard][p.IP.String()]-- //update ip count
@@ -120,7 +122,7 @@ func (set *nodeSet) ifNeedAddNodes() bool {
 		}
 	}
 	for i := 0; i < common.ShardCount; i++ {
-		if shardNodeCounts[i] < 2 {
+		if shardNodeCounts[i] < MinConnPerShard {
 			return true
 		}
 	}
