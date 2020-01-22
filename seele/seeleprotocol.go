@@ -528,7 +528,8 @@ handler:
 
 				if err := peer.sendTransactionRequest(txHash); err != nil {
 					p.log.Warn("failed to send transaction request msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
-					break handler
+					// break handler
+					break
 				}
 
 			}
@@ -556,7 +557,8 @@ handler:
 			err = peer.sendTransaction(tx)
 			if err != nil {
 				p.log.Warn("failed to send transaction msg to peer=%s, err=%s", peer.RemoteAddr().String(), err.Error())
-				break handler
+				// break handler
+				continue
 			}
 
 			// exit
