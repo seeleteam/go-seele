@@ -644,28 +644,22 @@ func calDetmLoop(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
 	var nonZerosCount = int(0)
 	nonZeroCountTarget := getNonZeroCountTarget(dim)
 	submatrix := mat.NewDense(dim, dim, nil)
-	for i := 0; i < 256-dim; i++ {
+	for i := 1; i < 256-dim; i++ {
 		submatrix = submatCopy(matrix, i, dim)
-
 		det := mat.Det(submatrix)
-		// return first det
-		if i == 0 {
-			ret = det
-		} else {
-			// check number of det whose det is larger than 0
-			detInt := int64(det)
-			detBig := big.NewInt(detInt)
-			if detBig.Cmp(big.NewInt(0)) > 0 {
-				nonZerosCount++
-			}
-			// already meet the requirement, just stop and return
-			if nonZerosCount >= nonZeroCountTarget {
-				return det, nonZerosCount
-			}
-			// at this point, even all left are ok, the total is still smaller than target, just stop!
-			if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
-				return det, nonZerosCount
-			}
+		// check number of det whose det is larger than 0
+		detInt := int64(det)
+		detBig := big.NewInt(detInt)
+		if detBig.Cmp(big.NewInt(0)) > 0 {
+			nonZerosCount++
+		}
+		// already meet the requirement, just stop and return
+		if nonZerosCount >= nonZeroCountTarget {
+			return det, nonZerosCount
+		}
+		// at this point, even all left are ok, the total is still smaller than target, just stop!
+		if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
+			return det, nonZerosCount
 		}
 	}
 	return ret, nonZerosCount
