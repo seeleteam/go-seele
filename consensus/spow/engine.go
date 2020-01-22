@@ -540,7 +540,7 @@ miner:
 				header.Witness = []byte(strconv.FormatUint(nonce-uint64(dim-1), 10))
 				hash = header.Hash()
 			}
-			res, count := calDetmLoop(matrix, dim, log)
+			res, count := calDetmLoopForMining(matrix, dim, target, log)
 			restInt := int64(res)
 			restBig := big.NewInt(restInt)
 
@@ -586,7 +586,7 @@ func (engine *SpowEngine) verifyTarget(header *types.BlockHeader) error {
 		return err
 	}
 	matrix := newMatrix(header, nonceUint64, dim, engine.log)
-	res, count := calDetmLoop(matrix, dim, engine.log)
+	res, count := calDetmLoopForVerification(matrix, dim, engine.log)
 	restInt := int64(res)
 	restBig := big.NewInt(restInt)
 	target := getMiningTarget(header.Difficulty)
@@ -639,7 +639,77 @@ func calDetm(matrix *mat.Dense, dim int, log *log.SeeleLog) float64 {
 
 // matrix is dim x 256
 // calDetmLoop will loop from 0 to 256 - dim
-func calDetmLoop(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
+func calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.SeeleLog) (float64, int) {
+	var ret = float64(0)
+	var nonZerosCount = int(0)
+	nonZeroCountTarget := getNonZeroCountTarget(dim)
+	submatrix := mat.NewDense(dim, dim, nil)
+	// Check if the input matrix has a chance to have a submatrix whose determinant is greater than the target.
+	// (Let's call such submatrix as "great submatrix").
+	// In addition, such great great submatrix must be the 119th non-zero determinant in the input matrix.
+	// The exact position of the 119th non-zero determinant is unknown at the moment,
+	// and its computation is heavy because we have to calculate at least 119 determinants.
+	// Thus, we compute the determinants of last N submatrices.
+	// If there is no great submatrix in them, we just stop.
+	// There is some optimal number to search, which balances the possibility of great submatrix and hashing computation.
+	// For now we set it 20.
+	var targetClearChance bool = false
+	var searchSize int = 20 // =< 106(=256-30-1-119) is preferred
+	lastDets := make([]float64, searchSize)
+	var beginLastInterval int = 256 - dim - searchSize
+	for j := 0; j < searchSize; j++ {
+		i := beginLastInterval + j
+		submatrix = submatCopy(matrix, i, dim)
+		det := mat.Det(submatrix)
+		detInt := int64(det)
+		detBig := big.NewInt(detInt)
+		lastDets[j] = det
+		if detBig.Cmp(target) >= 0 {
+			targetClearChance = true
+		}
+	}
+	if !targetClearChance {
+		return ret, nonZerosCount
+	}
+	for i := 1; i < beginLastInterval; i++ {
+		submatrix = submatCopy(matrix, i, dim)
+		logdet, sign := mat.LogDet(submatrix)
+		// check number of submatrices whose determinant is larger than 0
+		if sign > 0 {
+			nonZerosCount++
+		}
+		// already meet the requirement, just stop and return
+		if nonZerosCount >= nonZeroCountTarget {
+			det := math.Exp(logdet) * sign
+			return det, nonZerosCount
+		}
+		// at this point, even all left are ok, the total is still smaller than target, just stop!
+		if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
+			det := math.Exp(logdet) * sign
+			return det, nonZerosCount
+		}
+	}
+	for i := beginLastInterval; i < 256-dim; i++ {
+		det := lastDets[i-beginLastInterval]
+		// check number of det whose det is larger than 0
+		if det > 0 {
+			nonZerosCount++
+		}
+		// already meet the requirement, just stop and return
+		if nonZerosCount >= nonZeroCountTarget {
+			return det, nonZerosCount
+		}
+		// at this point, even all left are ok, the total is still smaller than target, just stop!
+		if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
+			return det, nonZerosCount
+		}
+	}
+	return ret, nonZerosCount
+}
+
+// matrix is dim x 256
+// calDetmLoop will loop from 0 to 256 - dim
+func calDetmLoopForVerification(matrix *mat.Dense, dim int, log *log.SeeleLog) (float64, int) {
 	var ret = float64(0)
 	var nonZerosCount = int(0)
 	nonZeroCountTarget := getNonZeroCountTarget(dim)
