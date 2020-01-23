@@ -287,20 +287,20 @@ func (srv *Server) checkPeerExist(id common.Address) bool {
 	return peer != nil
 }
 
-func (srv *Server) addPeer(p *Peer) bool {
+func (srv *Server) addPeer(p *Peer) (bool, bool) { //bool, bool: addPeer isAdd, isRun
 	srv.peerLock.Lock()
 	defer srv.peerLock.Unlock()
 
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
-		return false
+		return false, false
 	}
 
 	peer := srv.peerSet.find(p.Node.ID)
 	if peer != nil {
 		srv.log.Debug("peer is already exist %s -> %s, skip %s -> %s", peer.LocalAddr(), peer.RemoteAddr(),
 			p.LocalAddr(), p.RemoteAddr())
-		return false
+		return false, true // find the peer, should not return false, otherwise the up layer will close this peer
 	}
 
 	srv.peerSet.add(p)
@@ -310,7 +310,7 @@ func (srv *Server) addPeer(p *Peer) bool {
 
 	metricsAddPeerMeter.Mark(1)
 	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
-	return true
+	return true, false
 }
 
 func (srv *Server) deletePeer(id common.Address) {
@@ -542,12 +542,14 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	go func() {
 		//srv.loopWG.Add(1)
-		if srv.addPeer(peer) {
+		isAdd, isRun := srv.addPeer(peer)
+		if isAdd && !isRun {
 			//srv.log.Error("RUN BEGIN")
 			peer.run()
 			//srv.deletePeer(peer.Node.ID)
 			//srv.log.Error("RUN END")
-		} else {
+		}
+		if !isAdd {
 			peer.close()
 		}
 
