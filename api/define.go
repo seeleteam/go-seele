@@ -49,7 +49,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "network",
 			Version:   "1.0",
 			Service:   NewPrivateNetworkAPI(apiBackend),
-			Public:    false,
+			Public:    true,
 		},
 		{
 			Namespace: "debug",
@@ -68,7 +68,7 @@ type GetMinerInfo struct {
 	MinerStatus        string
 	Version            string
 	BlockAge           *big.Int
-	PeerCnt             string
+	PeerCnt            string
 }
 
 // GetBalanceResponse response param for GetBalance api
@@ -82,7 +82,7 @@ type GetLogsResponse struct {
 	*types.Log
 	Txhash   common.Hash
 	LogIndex uint
-	Args interface{} `json:"data"`
+	Args     interface{} `json:"data"`
 }
 
 type PoolCore interface {

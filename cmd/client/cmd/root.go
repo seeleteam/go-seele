@@ -69,10 +69,52 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: rpcAction("txpool", "getTransactionByBlockIndex"),
 		},
 		{
+			Name:   "gettxfromaccount",
+			Usage:  "get transaction from one account at specific height",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("txpool", "getTransactionsFrom"),
+		},
+		{
+			Name:   "gettxtoaccount",
+			Usage:  "get transaction to one account at specific height",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("txpool", "getTransactionsTo"),
+		},
+		{
+			Name:   "getaccounttx",
+			Usage:  "get transaction of one account at specific height or blockhash",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("txpool", "getAccountTransactions"),
+		},
+		{
+			Name:   "getblocktx",
+			Usage:  "get transaction by block height or block hash",
+			Flags:  rpcFlags(hashFlag, heightFlag),
+			Action: rpcAction("txpool", "getBlockTransactions"),
+		},
+		{
+			Name:   "getblocktxbyheight",
+			Usage:  "get the transitions at the specific height",
+			Flags:  rpcFlags(heightFlag),
+			Action: rpcAction("txpool", "getBlockTransactionsByHeight"),
+		},
+		{
+			Name:   "getblocktxbyhash",
+			Usage:  "get the transitions at the specific blockhash",
+			Flags:  rpcFlags(hashFlag),
+			Action: rpcAction("txpool", "getBlockTransactionsByHash"),
+		},
+		{
 			Name:   "gettxbyhash",
 			Usage:  "get transaction by transaction hash",
 			Flags:  rpcFlags(hashFlag),
 			Action: rpcAction("txpool", "getTransactionByHash"),
+		},
+		{
+			Name:   "getgasprice",
+			Usage:  "get transaction gas price by transaction hash",
+			Flags:  rpcFlags(hashFlag),
+			Action: rpcAction("txpool", "getGasPrice"),
 		},
 		{
 			Name:   "getreceipt",
@@ -281,6 +323,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Flags:  rpcFlags(),
 				Action: rpcAction("network", "getProtocolVersion"),
 			},
+			{
+				Name:   "islistening",
+				Usage:  "return whether the node is listen or not",
+				Flags:  rpcFlags(),
+				Action: rpcAction("network", "isListening"),
+			},
 		},
 	}
 
@@ -335,6 +383,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Usage:  "get thread number",
 				Flags:  rpcFlags(),
 				Action: rpcAction("miner", "getThreads"),
+			},
+			{
+				Name:   "getwork",
+				Usage:  "get miner current work header",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getCurrentWorkHeader"),
 			},
 		},
 	}

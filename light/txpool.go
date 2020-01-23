@@ -51,7 +51,7 @@ func newTxPool(chain BlockChain, odrBackend *odrBackend, headerChangedEventManag
 		currentHeader:             chain.CurrentHeader(),
 		headerChangedEventManager: headerChangedEventManager,
 		headRollbackEventManager:  headRollbackEventManager,
-		log: log.GetLogger("lightTxPool"),
+		log:                       log.GetLogger("lightTxPool"),
 	}
 
 	headerChangedEventManager.AddAsyncListener(pool.onBlockHeaderChanged)

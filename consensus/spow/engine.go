@@ -727,3 +727,8 @@ func getBinaryArray(hash string) ([]float64, bool) {
 	}
 	return bits, true
 }
+
+// GetMiningTarget get mining target for the specific block
+func (engine *SpowEngine) GetMiningTarget(block *types.Block) *big.Int {
+	return getMiningTarget(block.Header.Difficulty)
+}

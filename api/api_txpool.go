@@ -7,6 +7,8 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
@@ -141,6 +143,208 @@ func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height
 	}
 
 	return api.GetTransactionByBlockHeightAndIndex(height, index)
+}
+
+//GetTransactionsFrom get transaction from one account at specific height or blockhash
+func (api *TransactionPoolAPI) GetTransactionsFrom(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetTransactionsFromByHash(account, blockHash)
+	}
+	return api.GetTransactionsFromByHeight(account, height)
+}
+
+//GetTransactionsTo get transaction to one account at specific height or blockhash
+func (api *TransactionPoolAPI) GetTransactionsTo(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetTransactionsToByHash(account, blockHash)
+	}
+	return api.GetTransactionsToByHeight(account, height)
+}
+
+// GetTransactionsFromByHash get transaction from one account at specific blockhash
+func (api *TransactionPoolAPI) GetTransactionsFromByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.FromAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetTransactionsToByHash get transaction from one account at specific blockhash
+func (api *TransactionPoolAPI) GetTransactionsToByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.ToAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetTransactionsFromByHeight get transaction from one account at specific height
+func (api *TransactionPoolAPI) GetTransactionsFromByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.FromAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+
+		}
+	}
+	return result, nil
+}
+
+// GetTransactionsToByHeight get transaction from one account at specific height
+func (api *TransactionPoolAPI) GetTransactionsToByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.ToAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetAccountTransactions get transaction of one account at specific height or blockhash
+func (api *TransactionPoolAPI) GetAccountTransactions(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetAccountTransactionsByHash(account, blockHash)
+	}
+	return api.GetAccountTransactionsByHeight(account, height)
+}
+
+// GetAccountTransactionsByHash get transaction of one account at specific height
+func (api *TransactionPoolAPI) GetAccountTransactionsByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		if tx.FromAccount() == account || tx.ToAccount() == account {
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", i): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+	return result, nil
+}
+
+// GetAccountTransactionsByHeight get transaction of one account at specific blockhash
+func (api *TransactionPoolAPI) GetAccountTransactionsByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		if tx.FromAccount() == account || tx.ToAccount() == account {
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", i): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+	return result, nil
+}
+
+// GetBlockTransactions get all txs in the block with heigth or blockhash
+func (api *TransactionPoolAPI) GetBlockTransactions(blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockTransactionsByHash(blockHash)
+	}
+
+	return api.GetBlockTransactionsByHeight(height)
+}
+
+// GetBlockTransactionsByHeight returns the transactions in the block with the given height.
+func (api *TransactionPoolAPI) GetBlockTransactionsByHeight(height int64) (result []map[string]interface{}, err error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		output := map[string]interface{}{
+			"transaction" + fmt.Sprintf(" %d", i+1): PrintableOutputTx(tx),
+		}
+		result = append(result, output)
+	}
+	return result, nil
+}
+
+// GetBlockTransactionsByHash returns the transactions in the block with the given height.
+func (api *TransactionPoolAPI) GetBlockTransactionsByHash(blockHash string) (result []map[string]interface{}, err error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		output := map[string]interface{}{
+			"transaction" + fmt.Sprintf(" %d", i+1): PrintableOutputTx(tx),
+		}
+		result = append(result, output)
+	}
+	return result, nil
 }
 
 // GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
@@ -320,4 +524,29 @@ func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common
 	}
 
 	return debt, idx, nil
+}
+
+// GetGasPrice get tx gas price
+func (api *TransactionPoolAPI) GetGasPrice(txHash string) (*big.Int, error) {
+	hashByte, err := hexutil.HexToBytes(txHash)
+	if err != nil {
+		return nil, err
+	}
+	hash := common.BytesToHash(hashByte)
+	tx, idx, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
+	if err != nil {
+		api.s.Log().Info("Failed to get transaction by hash, %v", err.Error())
+		return nil, err
+	}
+	if tx == nil {
+		fmt.Println("transaction status:\"not found\" ")
+		return nil, nil
+	}
+	// var err error
+	if idx == nil {
+		fmt.Println("transaction status:\"in block\" ")
+	} else {
+		fmt.Println("transaction status:\"in pool\"")
+	}
+	return tx.Data.GasPrice, nil
 }

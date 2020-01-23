@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/miner"
 )
 
@@ -82,3 +83,20 @@ func (api *PrivateMinerAPI) SetCoinbase(coinbaseStr string) (bool, error) {
 func (api *PrivateMinerAPI) GetCoinbase() (common.Address, error) {
 	return api.s.miner.GetCoinbase(), nil
 }
+
+// GetTask return the hash of the current block, the seedHash, and the boundary condition to be met (“target”).
+// GetWork get the work needed to done
+func (api *PrivateMinerAPI) GetWork() (task *miner.Task) {
+	return api.s.miner.GetWork()
+}
+
+func (api *PrivateMinerAPI) GetCurrentWorkHeader() (header *types.BlockHeader) {
+	return api.s.miner.GetCurrentWorkHeader()
+}
+
+// web3.eth.submitWork(nonce, powHash, digest, [callback])
+// ETH has a chan for seeled result as commitTask
+// CommitWork commit the sealed work
+// func (api *PrivateMinerAPI) CommitWork() {
+// 	return api.s.miner.CommitWork()
+// }
