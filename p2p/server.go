@@ -811,7 +811,3 @@ func (srv *Server) PeersInfo() []PeerInfo {
 func (srv *Server) IsListening() bool {
 	return srv.listener != nil
 }
-
-// func (srv *Server) GetUdpServer() *discovery.udp {
-// 	return
-// }
