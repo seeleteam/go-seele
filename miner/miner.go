@@ -323,16 +323,19 @@ func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
 }
 
 //GetWork get the current task node will process
-func (miner *Miner) GetWork() (task *Task) {
+func (miner *Miner) GetWork() map[string]interface{} {
 	if miner.current == nil {
 		miner.log.Info("there is no task so far")
-		fmt.Println("node miner current task is nil")
 	}
-	return miner.current
+	task := miner.current
+	return PrintableOutputTask(task)
 }
 
+func (miner *Miner) GetWorkTask() *Task {
+	return miner.current
+}
 func (miner *Miner) GetCurrentWorkHeader() (header *types.BlockHeader) {
-	return miner.GetWork().header
+	return miner.GetWorkTask().header
 }
 
 // func (miner *Miner) CommitWork()()

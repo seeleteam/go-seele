@@ -35,6 +35,9 @@ const (
 	timeoutCountForDeleteNode = 16
 )
 
+type UDP struct {
+	u *udp
+}
 type udp struct {
 	conn           *net.UDPConn
 	self           *Node
@@ -80,6 +83,11 @@ type reply struct {
 	err bool // got error when send msg
 
 	data interface{}
+}
+
+// GetUdp get udp
+func (u *udp) GetUdp() *udp {
+	return u
 }
 
 func newUDP(id common.Address, addr *net.UDPAddr, shard uint) *udp {

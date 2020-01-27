@@ -53,6 +53,7 @@ type SeeleService struct {
 	chainHeaderChangeChannel chan common.Hash
 
 	debtVerifier types.DebtVerifier
+	// udp          *p2p.udp
 }
 
 // ServiceContext is a collection of service configuration inherited from node

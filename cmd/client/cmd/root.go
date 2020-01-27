@@ -70,13 +70,13 @@ func AddCommands(app *cli.App, isFullNode bool) {
 		},
 		{
 			Name:   "gettxfromaccount",
-			Usage:  "get transaction from one account at specific height",
+			Usage:  "get transaction from one account at specific height or blockhash",
 			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
 			Action: rpcAction("txpool", "getTransactionsFrom"),
 		},
 		{
 			Name:   "gettxtoaccount",
-			Usage:  "get transaction to one account at specific height",
+			Usage:  "get transaction to one account at specific height or blockhash",
 			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
 			Action: rpcAction("txpool", "getTransactionsTo"),
 		},
@@ -388,7 +388,8 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Name:   "getwork",
 				Usage:  "get miner current work header",
 				Flags:  rpcFlags(),
-				Action: rpcAction("miner", "getCurrentWorkHeader"),
+				Action: rpcAction("miner", "getWork"),
+				// Action: rpcAction("miner", "getCurrentWorkHeader"),
 			},
 		},
 	}

@@ -86,8 +86,10 @@ func (api *PrivateMinerAPI) GetCoinbase() (common.Address, error) {
 
 // GetTask return the hash of the current block, the seedHash, and the boundary condition to be met (“target”).
 // GetWork get the work needed to done
-func (api *PrivateMinerAPI) GetWork() (task *miner.Task) {
+func (api *PrivateMinerAPI) GetWork() map[string]interface{} {
+	// return api.s.miner.GetWork()
 	return api.s.miner.GetWork()
+
 }
 
 func (api *PrivateMinerAPI) GetCurrentWorkHeader() (header *types.BlockHeader) {
