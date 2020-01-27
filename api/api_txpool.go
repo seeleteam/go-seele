@@ -8,7 +8,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
@@ -527,26 +526,26 @@ func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common
 }
 
 // GetGasPrice get tx gas price
-func (api *TransactionPoolAPI) GetGasPrice(txHash string) (*big.Int, error) {
+func (api *TransactionPoolAPI) GetGasPrice(txHash string) (map[string]interface{}, error) {
 	hashByte, err := hexutil.HexToBytes(txHash)
 	if err != nil {
 		return nil, err
 	}
 	hash := common.BytesToHash(hashByte)
-	tx, idx, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
-	if err != nil {
-		api.s.Log().Info("Failed to get transaction by hash, %v", err.Error())
-		return nil, err
-	}
-	if tx == nil {
-		fmt.Println("transaction status:\"not found\" ")
-		return nil, nil
+	tx, _, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
+	// if err != nil {
+	// 	api.s.Log().Info("Failed to get transaction by hash, %v", err.Error())
+	// 	return nil, err
+	// }
+	if tx == nil || err != nil {
+		resultNotFound := map[string]interface{}{
+			"error": "the transaction not found",
+		}
+		return resultNotFound, nil
 	}
 	// var err error
-	if idx == nil {
-		fmt.Println("transaction status:\"in block\" ")
-	} else {
-		fmt.Println("transaction status:\"in pool\"")
+	gasPrice := map[string]interface{}{
+		"gasPrice": tx.Data.GasPrice,
 	}
-	return tx.Data.GasPrice, nil
+	return gasPrice, nil
 }
