@@ -673,19 +673,19 @@ func calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.
 	}
 	for i := 1; i < beginLastInterval; i++ {
 		submatrix = submatCopy(matrix, i, dim)
-		logdet, sign := mat.LogDet(submatrix)
+		det := mat.Det(submatrix)
 		// check number of submatrices whose determinant is larger than 0
-		if sign > 0 {
+		detInt := int64(det)
+		detBig := big.NewInt(detInt)		
+		if detBig.Cmp(big.NewInt(0)) > 0 {
 			nonZerosCount++
 		}
 		// already meet the requirement, just stop and return
 		if nonZerosCount >= nonZeroCountTarget {
-			det := math.Exp(logdet) * sign
 			return det, nonZerosCount
 		}
 		// at this point, even all left are ok, the total is still smaller than target, just stop!
 		if nonZerosCount+(256-i-dim) < nonZeroCountTarget {
-			det := math.Exp(logdet) * sign
 			return det, nonZerosCount
 		}
 	}
