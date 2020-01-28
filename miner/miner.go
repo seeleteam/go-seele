@@ -344,3 +344,10 @@ func (miner *Miner) GetCurrentWorkHeader() (header *types.BlockHeader) {
 // 	df := miner.seele.BlockChain().CurrentBlock().Header.Difficulty
 // 	return miner.engine.GetMiningTarget(df)
 // }
+
+func (miner *Miner) GetTaskDifficulty() *big.Int {
+	difficulty := miner.current.header.Difficulty
+	target := new(big.Int).Mul(difficulty, big.NewInt(65))
+	return target
+
+}

@@ -101,3 +101,8 @@ func (api *PrivateMinerAPI) GetCurrentWorkHeader() (header *types.BlockHeader) {
 // func (api *PrivateMinerAPI) CommitWork() {
 // 	return api.s.miner.CommitWork()
 // }
+
+func (api *PrivateMinerAPI) GetTarget() string {
+	return api.s.miner.GetTaskDifficulty().String()
+
+}
