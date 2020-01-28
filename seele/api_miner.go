@@ -95,13 +95,6 @@ func (api *PrivateMinerAPI) GetCurrentWorkHeader() (header *types.BlockHeader) {
 	return api.s.miner.GetCurrentWorkHeader()
 }
 
-// web3.eth.submitWork(nonce, powHash, digest, [callback])
-// ETH has a chan for seeled result as commitTask
-// CommitWork commit the sealed work
-// func (api *PrivateMinerAPI) CommitWork() {
-// 	return api.s.miner.CommitWork()
-// }
-
 func (api *PrivateMinerAPI) GetTarget() string {
 	return api.s.miner.GetTaskDifficulty().String()
 
