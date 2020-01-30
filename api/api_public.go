@@ -6,8 +6,10 @@
 package api
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
@@ -259,6 +261,7 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 		"payload":      tx.Data.Payload,
 		"gasPrice":     tx.Data.GasPrice,
 		"gasLimit":     tx.Data.GasLimit,
+		"signature":    tx.Signature,
 	}
 	return transaction
 }
@@ -280,6 +283,193 @@ func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
 	}
 	api.s.Log().Debug("create transaction and add it. transaction hash: %v, time: %d", tx.Hash, time.Now().UnixNano())
 	return true, nil
+}
+
+// GetReceiptByTxHash get receipt by transaction hash
+func (api *PublicSeeleAPI) GetCode(contractAdd common.Address, height int64) (interface{}, error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+
+	receipts, err := api.s.ChainBackend().GetStore().GetReceiptsByBlockHash(block.HeaderHash)
+	if err != nil {
+		return nil, err
+	}
+
+	var txhash common.Hash
+	for _, re := range receipts {
+		if bytes.Equal(re.ContractAddress, contractAdd.Bytes()) {
+			txhash = re.TxHash
+			break
+		}
+	}
+
+	tx, _, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), txhash)
+	if err != nil {
+		api.s.Log().Debug("Failed to get transaction by hash, %v", err.Error())
+		return nil, err
+	}
+
+	if tx == nil {
+		return nil, nil
+	}
+	
+	return tx.Data.Payload, nil
+}
+
+// GetReceiptByTxHash get receipt by transaction hash
+func (api *PublicSeeleAPI) GetReceiptByTxHash(txHash, abiJSON string) (map[string]interface{}, error) {
+	hash, err := common.HexToHash(txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	receipt, err := api.s.GetReceiptByTxHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return printReceiptByABI(api, receipt, abiJSON)
+}
+
+// GetTransactionByBlockIndex returns the transaction in the block with the given block hash/height and index.
+func (api *PublicSeeleAPI) GetTransactionByBlockIndex(hashHex string, height int64, index uint) (map[string]interface{}, error) {
+	if len(hashHex) > 0 {
+		return api.GetTransactionByBlockHashAndIndex(hashHex, index)
+	}
+
+	return api.GetTransactionByBlockHeightAndIndex(height, index)
+}
+
+// GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
+func (api *PublicSeeleAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+
+	txs := block.Transactions
+	if index >= uint(len(txs)) {
+		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
+	}
+
+	return PrintableOutputTx(txs[index]), nil
+}
+
+// GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
+func (api *PublicSeeleAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
+	hash, err := common.HexToHash(hashHex)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	txs := block.Transactions
+	if index >= uint(len(txs)) {
+		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
+	}
+
+	return PrintableOutputTx(txs[index]), nil
+}
+
+// GetBlockTransactionCount returns the count of transactions in the block with the given block hash or height.
+func (api *PublicSeeleAPI) GetBlockTransactionCount(blockHash string, height int64) (int, error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockTransactionCountByHash(blockHash)
+	}
+
+	return api.GetBlockTransactionCountByHeight(height)
+}
+
+// GetBlockDebtCount returns the count of debts in the block with the given block hash or height.
+func (api *PublicSeeleAPI) GetBlockDebtCount(blockHash string, height int64) (int, error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockDebtCountByHash(blockHash)
+	}
+
+	return api.GetBlockDebtCountByHeight(height)
+}
+
+// GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
+func (api *PublicSeeleAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Transactions), nil
+}
+
+// GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
+func (api *PublicSeeleAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return 0, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Transactions), nil
+}
+
+// GetBlockDebtCountByHeight returns the count of debts in the block with the given height.
+func (api *PublicSeeleAPI) GetBlockDebtCountByHeight(height int64) (int, error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Debts), nil
+}
+
+// GetBlockDebtCountByHash returns the count of debts in the block with the given hash.
+func (api *PublicSeeleAPI) GetBlockDebtCountByHash(blockHash string) (int, error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return 0, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(block.Debts), nil
+}
+
+// GetReceiptsByBlockHash get receipts by block hash
+func (api *PublicSeeleAPI) GetReceiptsByBlockHash(blockHash string) (map[string]interface{}, error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	receipts, err := api.s.ChainBackend().GetStore().GetReceiptsByBlockHash(hash)
+	if err != nil {
+		return nil, err
+	}
+
+	outMaps := make([]map[string]interface{}, 0, len(receipts))
+	for _, re := range receipts {
+		outMap, err := PrintableReceipt(re)
+		if err != nil {
+			return nil, err
+		}
+		outMaps = append(outMaps, outMap)
+	}
+
+	return map[string]interface{}{
+		"blockHash": blockHash,
+		"receipts":  outMaps,
+	}, nil
 }
 
 func (api *PublicSeeleAPI) IsSyncing() bool {

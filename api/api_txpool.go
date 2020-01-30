@@ -7,7 +7,6 @@ package api
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
@@ -64,160 +63,6 @@ func PrintableReceipt(re *types.Receipt) (map[string]interface{}, error) {
 	}
 
 	return outMap, nil
-}
-
-// GetBlockTransactionCount returns the count of transactions in the block with the given block hash or height.
-func (api *TransactionPoolAPI) GetBlockTransactionCount(blockHash string, height int64) (int, error) {
-	if len(blockHash) > 0 {
-		return api.GetBlockTransactionCountByHash(blockHash)
-	}
-
-	return api.GetBlockTransactionCountByHeight(height)
-}
-
-// GetBlockDebtCount returns the count of debts in the block with the given block hash or height.
-func (api *TransactionPoolAPI) GetBlockDebtCount(blockHash string, height int64) (int, error) {
-	if len(blockHash) > 0 {
-		return api.GetBlockDebtCountByHash(blockHash)
-	}
-
-	return api.GetBlockDebtCountByHeight(height)
-}
-
-// GetBlockTransactionCountByHeight returns the count of transactions in the block with the given height.
-func (api *TransactionPoolAPI) GetBlockTransactionCountByHeight(height int64) (int, error) {
-	block, err := api.s.GetBlock(common.EmptyHash, height)
-	if err != nil {
-		return 0, err
-	}
-
-	return len(block.Transactions), nil
-}
-
-// GetBlockTransactionCountByHash returns the count of transactions in the block with the given hash.
-func (api *TransactionPoolAPI) GetBlockTransactionCountByHash(blockHash string) (int, error) {
-	hash, err := common.HexToHash(blockHash)
-	if err != nil {
-		return 0, err
-	}
-
-	block, err := api.s.GetBlock(hash, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	return len(block.Transactions), nil
-}
-
-// GetBlockDebtCountByHeight returns the count of debts in the block with the given height.
-func (api *TransactionPoolAPI) GetBlockDebtCountByHeight(height int64) (int, error) {
-	block, err := api.s.GetBlock(common.EmptyHash, height)
-	if err != nil {
-		return 0, err
-	}
-
-	return len(block.Debts), nil
-}
-
-// GetBlockDebtCountByHash returns the count of debts in the block with the given hash.
-func (api *TransactionPoolAPI) GetBlockDebtCountByHash(blockHash string) (int, error) {
-	hash, err := common.HexToHash(blockHash)
-	if err != nil {
-		return 0, err
-	}
-
-	block, err := api.s.GetBlock(hash, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	return len(block.Debts), nil
-}
-
-// GetTransactionByBlockIndex returns the transaction in the block with the given block hash/height and index.
-func (api *TransactionPoolAPI) GetTransactionByBlockIndex(hashHex string, height int64, index uint) (map[string]interface{}, error) {
-	if len(hashHex) > 0 {
-		return api.GetTransactionByBlockHashAndIndex(hashHex, index)
-	}
-
-	return api.GetTransactionByBlockHeightAndIndex(height, index)
-}
-
-// GetTransactionByBlockHeightAndIndex returns the transaction in the block with the given block height and index.
-func (api *TransactionPoolAPI) GetTransactionByBlockHeightAndIndex(height int64, index uint) (map[string]interface{}, error) {
-	block, err := api.s.GetBlock(common.EmptyHash, height)
-	if err != nil {
-		return nil, err
-	}
-
-	txs := block.Transactions
-	if index >= uint(len(txs)) {
-		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
-	}
-
-	return PrintableOutputTx(txs[index]), nil
-}
-
-// GetTransactionByBlockHashAndIndex returns the transaction in the block with the given block hash and index.
-func (api *TransactionPoolAPI) GetTransactionByBlockHashAndIndex(hashHex string, index uint) (map[string]interface{}, error) {
-	hash, err := common.HexToHash(hashHex)
-	if err != nil {
-		return nil, err
-	}
-
-	block, err := api.s.GetBlock(hash, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	txs := block.Transactions
-	if index >= uint(len(txs)) {
-		return nil, errors.New("index out of block transaction list range, the max index is " + strconv.Itoa(len(txs)-1))
-	}
-
-	return PrintableOutputTx(txs[index]), nil
-}
-
-// GetReceiptByTxHash get receipt by transaction hash
-func (api *TransactionPoolAPI) GetReceiptByTxHash(txHash, abiJSON string) (map[string]interface{}, error) {
-	hash, err := common.HexToHash(txHash)
-	if err != nil {
-		return nil, err
-	}
-
-	receipt, err := api.s.GetReceiptByTxHash(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return printReceiptByABI(api, receipt, abiJSON)
-}
-
-// GetReceiptsByBlockHash get receipts by block hash
-func (api *TransactionPoolAPI) GetReceiptsByBlockHash(blockHash string) (map[string]interface{}, error) {
-	hash, err := common.HexToHash(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	receipts, err := api.s.ChainBackend().GetStore().GetReceiptsByBlockHash(hash)
-	if err != nil {
-		return nil, err
-	}
-
-	outMaps := make([]map[string]interface{}, 0, len(receipts))
-	for _, re := range receipts {
-		outMap, err := PrintableReceipt(re)
-		if err != nil {
-			return nil, err
-		}
-		outMaps = append(outMaps, outMap)
-	}
-
-	return map[string]interface{}{
-		"blockHash": blockHash,
-		"receipts":  outMaps,
-	}, nil
 }
 
 // GetTransactionByHash returns the transaction by the given transaction hash.
@@ -320,4 +165,35 @@ func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common
 	}
 
 	return debt, idx, nil
+}
+
+// GetTxPoolContent returns the transactions contained within the transaction pool
+func (api *TransactionPoolAPI) GetTxPoolContent() (map[string][]map[string]interface{}, error) {
+	txPool := api.s.TxPoolBackend()
+	data := txPool.GetTransactions(true, true)
+
+	content := make(map[string][]map[string]interface{})
+	for _, tx := range data {
+		key := tx.Data.From.Hex()
+		content[key] = append(content[key], PrintableOutputTx(tx))
+	}
+
+	return content, nil
+}
+
+// GetTxPoolTxCount returns the number of transaction in the pool
+func (api *TransactionPoolAPI) GetTxPoolTxCount() (uint64, error) {
+	txPool := api.s.TxPoolBackend()
+	return uint64(txPool.GetTxCount()), nil
+}
+
+// GetPendingTransactions returns all pending transactions
+func (api *TransactionPoolAPI) GetPendingTransactions() ([]map[string]interface{}, error) {
+	pendingTxs := api.s.TxPoolBackend().GetTransactions(false, true)
+	transactions := make([]map[string]interface{}, 0)
+	for _, tx := range pendingTxs {
+		transactions = append(transactions, PrintableOutputTx(tx))
+	}
+
+	return transactions, nil
 }

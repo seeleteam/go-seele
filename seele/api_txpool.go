@@ -9,6 +9,7 @@ import (
 	api2 "github.com/seeleteam/go-seele/api"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/hexutil"
+	"github.com/seeleteam/go-seele/core/types"
 )
 
 // TransactionPoolAPI provides an API to access transaction pool information.
@@ -19,6 +20,11 @@ type TransactionPoolAPI struct {
 // NewTransactionPoolAPI creates a new PrivateTransactionPoolAPI object for transaction pool rpc service.
 func NewTransactionPoolAPI(s *SeeleService) *TransactionPoolAPI {
 	return &TransactionPoolAPI{s}
+}
+
+// GetPendingDebts returns all pending debts
+func (api *TransactionPoolAPI) GetPendingDebts() ([]*types.Debt, error) {
+	return api.s.DebtPool().GetDebts(false, true), nil
 }
 
 // GetDebtByHash return the debt info by debt hash

@@ -336,17 +336,9 @@ func (srv *Server) deletePeerRand() {
 	defer srv.peerLock.Unlock()
 
 	p := srv.peerSet.getRandPeer()
-
+	// close connection of peer
 	if p != nil {
-		srv.nodeSet.setNodeStatus(p.Node, false)
-		srv.peerSet.delete(p)
-		p.notifyProtocolsDeletePeer()
-		srv.log.Debug("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
-
-		metricsDeletePeerMeter.Mark(1)
-		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
-	} else {
-		srv.log.Info("server.run delPeerChan received. peer not match")
+		p.Disconnect("delete peer randomly")
 	}
 }
 func (srv *Server) run() {
@@ -546,7 +538,7 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 		if isAdd && !isRun {
 			//srv.log.Error("RUN BEGIN")
 			peer.run()
-			//srv.deletePeer(peer.Node.ID)
+			srv.deletePeer(peer.Node.ID)
 			//srv.log.Error("RUN END")
 		}
 		if !isAdd {

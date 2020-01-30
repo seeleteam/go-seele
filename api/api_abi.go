@@ -18,7 +18,7 @@ type seeleLog struct {
 	Args   []interface{}
 }
 
-func printReceiptByABI(api *TransactionPoolAPI, receipt *types.Receipt, abiJSON string) (map[string]interface{}, error) {
+func printReceiptByABI(api *PublicSeeleAPI, receipt *types.Receipt, abiJSON string) (map[string]interface{}, error) {
 	result, err := PrintableReceipt(receipt)
 	if err != nil {
 		return nil, err
