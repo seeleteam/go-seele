@@ -53,18 +53,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Service:   NewPrivateNetworkAPI(apiBackend),
 			Public:    true,
 		},
-		// {
-		// 	Namespace: "udp",
-		// 	Version:   "1.0",
-		// 	Service:   NewPrivateUdpAPI(apiBackend),
-		// 	Public:    true,
-		// },
-		{
-			Namespace: "debug",
-			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(apiBackend),
-			Public:    false,
-		}}
+	}
 }
 
 // MinerInfo miner simple info

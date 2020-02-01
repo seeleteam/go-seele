@@ -299,7 +299,7 @@ func (s *SeeleService) APIs() (apis []rpc.API) {
 			Namespace: "download",
 			Version:   "1.0",
 			Service:   downloader.NewPrivatedownloaderAPI(s.seeleProtocol.downloader),
-			Public:    false,
+			Public:    true,
 		},
 		{
 			Namespace: "debug",
