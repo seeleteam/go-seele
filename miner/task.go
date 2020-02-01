@@ -178,3 +178,15 @@ type Result struct {
 	task  *Task
 	block *types.Block // mined block, with good nonce
 }
+
+func PrintableOutputTask(task *Task) map[string]interface{} {
+
+	result := map[string]interface{}{
+		"header":   task.header,
+		"txs":      task.txs,
+		"receipts": task.receipts,
+		"debts":    task.debts,
+		"coinbase": task.coinbase,
+	}
+	return result
+}

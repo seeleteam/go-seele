@@ -321,3 +321,33 @@ func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
 	block := task.generateBlock()
 	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
 }
+
+//GetWork get the current task node will process
+func (miner *Miner) GetWork() map[string]interface{} {
+	if miner.current == nil {
+		miner.log.Info("there is no task so far")
+	}
+	task := miner.current
+	return PrintableOutputTask(task)
+}
+
+func (miner *Miner) GetWorkTask() *Task {
+	return miner.current
+}
+func (miner *Miner) GetCurrentWorkHeader() (header *types.BlockHeader) {
+	return miner.GetWorkTask().header
+}
+
+// func (miner *Miner) CommitWork()()
+
+// func (miner *Miner) GetMiningTarget() {
+// 	df := miner.seele.BlockChain().CurrentBlock().Header.Difficulty
+// 	return miner.engine.GetMiningTarget(df)
+// }
+
+func (miner *Miner) GetTaskDifficulty() *big.Int {
+	difficulty := miner.current.header.Difficulty
+	target := new(big.Int).Mul(difficulty, big.NewInt(65))
+	return target
+
+}

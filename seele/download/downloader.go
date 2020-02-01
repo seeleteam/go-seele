@@ -251,10 +251,9 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error)
 	bMasterStarted := false
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	
-	
+
 	//d.sessionWG.Add(1)
-	sessionWG := new (sync.WaitGroup)
+	sessionWG := new(sync.WaitGroup)
 	sessionWG.Add(1)
 	if conn.peerID == d.masterPeer {
 		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)

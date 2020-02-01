@@ -35,7 +35,10 @@ var (
 	maxDet30x30 = new(big.Int).Mul(big.NewInt(2), new(big.Int).Exp(big.NewInt(10), big.NewInt(13), big.NewInt(0)))
 	matrixDim   = int(30)
 	RestTime    = 50 * time.Millisecond
+	// TargetRange = 26 // [256-dim-26, 256-dim]: 26 will cover more than 100% target
 )
+
+var percentage2Range = [10]int{1, 2, 5, 7, 8, 11, 12, 15, 18, 26}
 
 type HashItem struct {
 	//Hash  common.Hash
@@ -51,15 +54,17 @@ type SpowEngine struct {
 	hashPoolDB     database.Database
 	hashPoolDBPath string
 	lock           sync.Mutex
+	percentage     int
 }
 
-func NewSpowEngine(threads int, folder string) *SpowEngine {
+func NewSpowEngine(threads int, folder string, percentage int) *SpowEngine {
 
 	return &SpowEngine{
 		threads:        threads,
 		log:            log.GetLogger("spow_engine"),
 		hashrate:       metrics.NewMeter(),
 		hashPoolDBPath: folder,
+		percentage:     percentage,
 	}
 }
 
@@ -69,6 +74,14 @@ func (engine *SpowEngine) SetThreads(threads int) {
 	} else {
 		engine.threads = threads
 	}
+}
+
+func (engine *SpowEngine) percentage2Range() int { // since we don't have the formula for the fitting function, so far, we just hardcode the number
+	if engine.percentage <= 0 || engine.percentage > 10 {
+		return percentage2Range[len(percentage2Range)-1]
+	}
+	p := engine.percentage
+	return percentage2Range[p-1]
 }
 
 func (engine *SpowEngine) APIs(chain consensus.ChainReader) []rpc.API {
@@ -540,7 +553,7 @@ miner:
 				header.Witness = []byte(strconv.FormatUint(nonce-uint64(dim-1), 10))
 				hash = header.Hash()
 			}
-			res, count := calDetmLoopForMining(matrix, dim, target, log)
+			res, count := engine.calDetmLoopForMining(matrix, dim, target, log)
 			restInt := int64(res)
 			restBig := big.NewInt(restInt)
 
@@ -639,7 +652,7 @@ func calDetm(matrix *mat.Dense, dim int, log *log.SeeleLog) float64 {
 
 // matrix is dim x 256
 // calDetmLoop will loop from 0 to 256 - dim
-func calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.SeeleLog) (float64, int) {
+func (engine *SpowEngine) calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.SeeleLog) (float64, int) {
 	var ret = float64(0)
 	var nonZerosCount = int(0)
 	nonZeroCountTarget := getNonZeroCountTarget(dim)
@@ -654,10 +667,11 @@ func calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.
 	// There is some optimal number to search, which balances the possibility of great submatrix and hashing computation.
 	// For now we set it 20.
 	var targetClearChance bool = false
-	var searchSize int = 20 // =< 106(=256-30-1-119) is preferred
-	lastDets := make([]float64, searchSize)
-	var beginLastInterval int = 256 - dim - searchSize
-	for j := 0; j < searchSize; j++ {
+	TargetRange := engine.percentage2Range()
+	lastDets := make([]float64, TargetRange)
+	engine.log.Debug("targetRange:", TargetRange)
+	var beginLastInterval int = 256 - dim - TargetRange
+	for j := 0; j < TargetRange; j++ {
 		i := beginLastInterval + j
 		submatrix = submatCopy(matrix, i, dim)
 		det := mat.Det(submatrix)
@@ -676,7 +690,7 @@ func calDetmLoopForMining(matrix *mat.Dense, dim int, target *big.Int, log *log.
 		det := mat.Det(submatrix)
 		// check number of submatrices whose determinant is larger than 0
 		detInt := int64(det)
-		detBig := big.NewInt(detInt)		
+		detBig := big.NewInt(detInt)
 		if detBig.Cmp(big.NewInt(0)) > 0 {
 			nonZerosCount++
 		}
@@ -790,4 +804,9 @@ func getBinaryArray(hash string) ([]float64, bool) {
 		bits = append(bits, binmap[c]...)
 	}
 	return bits, true
+}
+
+// GetMiningTarget get mining target for the specific block
+func (engine *SpowEngine) GetMiningTarget(block *types.Block) *big.Int {
+	return getMiningTarget(block.Header.Difficulty)
 }
