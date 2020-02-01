@@ -478,3 +478,204 @@ func (api *PublicSeeleAPI) IsSyncing() bool {
 
 // Always listening
 func (api *PublicSeeleAPI) IsListening() bool { return true }
+
+func (api *PublicSeeleAPI) GetTransactionsFrom(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetTransactionsFromByHash(account, blockHash)
+	}
+	return api.GetTransactionsFromByHeight(account, height)
+}
+
+//GetTransactionsTo get transaction to one account at specific height or blockhash
+func (api *PublicSeeleAPI) GetTransactionsTo(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetTransactionsToByHash(account, blockHash)
+	}
+	return api.GetTransactionsToByHeight(account, height)
+}
+
+// GetTransactionsFromByHash get transaction from one account at specific blockhash
+func (api *PublicSeeleAPI) GetTransactionsFromByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.FromAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetTransactionsToByHash get transaction from one account at specific blockhash
+func (api *PublicSeeleAPI) GetTransactionsToByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.ToAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetTransactionsFromByHeight get transaction from one account at specific height
+func (api *PublicSeeleAPI) GetTransactionsFromByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.FromAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+
+		}
+	}
+	return result, nil
+}
+
+// GetTransactionsToByHeight get transaction from one account at specific height
+func (api *PublicSeeleAPI) GetTransactionsToByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	var txCount = 0
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for _, tx := range txs {
+		if tx.ToAccount() == account {
+			txCount++
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", txCount): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+
+	return result, nil
+}
+
+// GetAccountTransactions get transaction of one account at specific height or blockhash
+func (api *PublicSeeleAPI) GetAccountTransactions(account common.Address, blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetAccountTransactionsByHash(account, blockHash)
+	}
+	return api.GetAccountTransactionsByHeight(account, height)
+}
+
+// GetAccountTransactionsByHash get transaction of one account at specific height
+func (api *PublicSeeleAPI) GetAccountTransactionsByHash(account common.Address, blockHash string) (result []map[string]interface{}, err error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		if tx.FromAccount() == account || tx.ToAccount() == account {
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", i): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+	return result, nil
+}
+
+// GetAccountTransactionsByHeight get transaction of one account at specific blockhash
+func (api *PublicSeeleAPI) GetAccountTransactionsByHeight(account common.Address, height int64) (result []map[string]interface{}, err error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		if tx.FromAccount() == account || tx.ToAccount() == account {
+			output := map[string]interface{}{
+				"transaction" + fmt.Sprintf(" %d", i): PrintableOutputTx(tx),
+			}
+			result = append(result, output)
+		}
+	}
+	return result, nil
+}
+
+// GetBlockTransactions get all txs in the block with heigth or blockhash
+func (api *PublicSeeleAPI) GetBlockTransactions(blockHash string, height int64) (result []map[string]interface{}, err error) {
+	if len(blockHash) > 0 {
+		return api.GetBlockTransactionsByHash(blockHash)
+	}
+
+	return api.GetBlockTransactionsByHeight(height)
+}
+
+// GetBlockTransactionsByHeight returns the transactions in the block with the given height.
+func (api *PublicSeeleAPI) GetBlockTransactionsByHeight(height int64) (result []map[string]interface{}, err error) {
+	block, err := api.s.GetBlock(common.EmptyHash, height)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		output := map[string]interface{}{
+			"transaction" + fmt.Sprintf(" %d", i+1): PrintableOutputTx(tx),
+		}
+		result = append(result, output)
+	}
+	return result, nil
+}
+
+// GetBlockTransactionsByHash returns the transactions in the block with the given height.
+func (api *PublicSeeleAPI) GetBlockTransactionsByHash(blockHash string) (result []map[string]interface{}, err error) {
+	hash, err := common.HexToHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.s.GetBlock(hash, 0)
+	if err != nil {
+		return nil, err
+	}
+	txs := block.Transactions
+	for i, tx := range txs {
+		output := map[string]interface{}{
+			"transaction" + fmt.Sprintf(" %d", i+1): PrintableOutputTx(tx),
+		}
+		result = append(result, output)
+	}
+	return result, nil
+}

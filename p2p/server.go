@@ -798,3 +798,8 @@ func (srv *Server) PeersInfo() []PeerInfo {
 
 	return infos
 }
+
+// IsListening return whether the node is listen or not
+func (srv *Server) IsListening() bool {
+	return srv.listener != nil
+}

@@ -29,6 +29,8 @@ type Backend interface {
 	GetBlockTotalDifficulty(hash common.Hash) (*big.Int, error)
 	GetReceiptByTxHash(txHash common.Hash) (*types.Receipt, error)
 	GetTransaction(pool PoolCore, bcStore store.BlockchainStore, txHash common.Hash) (*types.Transaction, *BlockIndex, error)
+
+	// GetUdpServer() *discovery.udp
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
@@ -63,7 +65,7 @@ type GetMinerInfo struct {
 	MinerStatus        string
 	Version            string
 	BlockAge           *big.Int
-	PeerCnt             string
+	PeerCnt            string
 }
 
 // GetBalanceResponse response param for GetBalance api
@@ -77,7 +79,7 @@ type GetLogsResponse struct {
 	*types.Log
 	Txhash   common.Hash
 	LogIndex uint
-	Args interface{} `json:"data"`
+	Args     interface{} `json:"data"`
 }
 
 type PoolCore interface {
