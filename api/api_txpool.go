@@ -321,3 +321,28 @@ func GetDebt(pool *core.DebtPool, bcStore store.BlockchainStore, debtHash common
 
 	return debt, idx, nil
 }
+
+// GetGasPrice get tx gas price
+func (api *TransactionPoolAPI) GetGasPrice(txHash string) (map[string]interface{}, error) {
+	hashByte, err := hexutil.HexToBytes(txHash)
+	if err != nil {
+		return nil, err
+	}
+	hash := common.BytesToHash(hashByte)
+	tx, _, err := api.s.GetTransaction(api.s.TxPoolBackend(), api.s.ChainBackend().GetStore(), hash)
+	// if err != nil {
+	// 	api.s.Log().Info("Failed to get transaction by hash, %v", err.Error())
+	// 	return nil, err
+	// }
+	if tx == nil || err != nil {
+		resultNotFound := map[string]interface{}{
+			"error": "the transaction not found",
+		}
+		return resultNotFound, nil
+	}
+	// var err error
+	gasPrice := map[string]interface{}{
+		"gasPrice": tx.Data.GasPrice,
+	}
+	return gasPrice, nil
+}
