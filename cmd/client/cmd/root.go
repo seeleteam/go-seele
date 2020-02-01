@@ -67,8 +67,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Usage:  "get transaction by block height or block hash with index of the transaction in the block",
 			Flags:  rpcFlags(hashFlag, heightFlag, indexFlag),
 			Action: rpcAction("seele", "getTransactionByBlockIndex"),
-<<<<<<< HEAD
-=======
 		},
 		{
 			Name:   "gettxfromaccount",
@@ -105,7 +103,6 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Usage:  "get the transitions at the specific blockhash",
 			Flags:  rpcFlags(hashFlag),
 			Action: rpcAction("seele", "getBlockTransactionsByHash"),
->>>>>>> 79cbaca4a5d18037e06590a1cb31ba9bd07ead31
 		},
 		{
 			Name:   "gettxbyhash",
