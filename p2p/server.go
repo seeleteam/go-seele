@@ -352,7 +352,8 @@ running:
 	for {
 		select {
 		case <-checkTicker1.C:
-			go srv.doSelectNodeToConnect()
+			// go srv.doSelectNodeToConnect()
+			go srv.doNodeConnect()
 		case <-checkTicker.C:
 			if srv.nodeSet.getSelfShardNodeNum() < 2 {
 				srv.log.Debug("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
@@ -400,6 +401,17 @@ func (srv *Server) doSelectNodeToConnect() {
 		}
 	}
 
+}
+
+func (srv *Server) doNodeConnect() {
+	connNeeded := srv.nodeSet.ifNeedAddNodesV2()
+	randSelectNnodes := srv.nodeSet.randSelectV2(connNeeded)
+	for i := 0; i < len(randSelectNnodes); i++ {
+		if randSelectNnodes[i] != nil {
+			srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s ,%d", randSelectNnodes[i].IP.String(), randSelectNnodes[i].UDPPort)
+			srv.connectNode(randSelectNnodes[i])
+		}
+	}
 }
 
 func (srv *Server) doSelectLocalNodeToConnect() {

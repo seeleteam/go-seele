@@ -129,6 +129,60 @@ func (set *nodeSet) ifNeedAddNodes() bool {
 	return false
 }
 
+// ifNeedAddNodesV2 return if nodes below MinConnPerShard
+func (set *nodeSet) ifNeedAddNodesV2() [common.ShardCount]int {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	var shardNodeCounts [common.ShardCount]int
+	var connNeeded [common.ShardCount]int
+	for _, v := range set.nodeMap {
+		if v.bConnected {
+			shardNodeCounts[v.node.Shard-1]++
+		}
+	}
+	for i := 0; i < common.ShardCount; i++ {
+		if shardNodeCounts[i] < MinConnPerShard {
+			connNeeded[i] = MinConnPerShard - shardNodeCounts[i]
+		}
+	}
+	return connNeeded
+}
+
+//randSelectV2 select nodes and try to connect to meet MinConnPerShard for all shards
+func (set *nodeSet) randSelectV2(needed [common.ShardCount]int) []*discovery.Node {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	neededCur := needed
+	var nodeL [common.ShardCount][]*discovery.Node
+	var retNodes []*discovery.Node
+	var shardNodeCounts [common.ShardCount]int
+
+	for _, v := range set.nodeMap {
+		if v.bConnected {
+			shardNodeCounts[v.node.Shard-1]++
+			continue
+		}
+
+		nodeL[v.node.Shard-1] = append(nodeL[v.node.Shard-1], v.node)
+	}
+
+	for i := 0; i < common.ShardCount; i++ {
+		if shardNodeCounts[i] >= maxActiveConnsPerShard/2 {
+			continue
+		}
+		len := len(nodeL[i])
+		if len > 0 {
+			if neededCur[i] > 0 {
+				k := rand.Int31n(int32(len))
+				retNodes = append(retNodes, nodeL[i][k])
+				neededCur[i]--
+			}
+		}
+	}
+
+	return retNodes
+}
+
 // randSelect select one node randomly from nodeMap which is not connected yet
 func (set *nodeSet) randSelect() []*discovery.Node {
 	set.lock.RLock()
