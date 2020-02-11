@@ -138,7 +138,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// get the proposed block hash and clear it if the seal() is completed.
 	s.sealMu.Lock()
 	s.proposedBlockHash = block.Hash()
-	s.log.Error("assign the block hash %s to proposedBlockHash", block.Hash())
+	s.log.Info("assign the block hash %s to proposedBlockHash", block.Hash())
 	clear := func() {
 		s.proposedBlockHash = common.Hash{}
 		s.sealMu.Unlock()
@@ -158,7 +158,7 @@ out:
 	for {
 		select {
 		case result := <-s.commitCh:
-			s.log.Error("commit channel to result")
+			s.log.Info("commit channel to result %+v", result)
 			// for {
 			if result == nil {
 				s.log.Warn("commitCh is empty")

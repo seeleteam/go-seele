@@ -34,6 +34,7 @@ type basicSet struct {
 	selector   bft.ProposalSelector
 }
 
+// newBasicSet create verSet with addresses, policy, selector
 func newBasicSet(addrs []common.Address, policy bft.ProposerPolicy) *basicSet {
 	verSet := &basicSet{}
 	verSet.policy = policy
@@ -56,7 +57,6 @@ func newBasicSet(addrs []common.Address, policy bft.ProposerPolicy) *basicSet {
 	return verSet
 }
 
-///////////////help functions//////////////////
 // Size return the size of basicSet
 func (verSet *basicSet) Size() int {
 	verSet.verifierMu.RLock()
@@ -85,7 +85,8 @@ func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier)
 	// for j, veri := range verSet.verifiers {
 	// 	fmt.Printf("[%d]th verifier [%s]\n", j, veri.Address())
 	// }
-
+	verSet.verifierMu.RLock()
+	defer verSet.verifierMu.RUnlock()
 	for i, ver := range verSet.verifiers {
 		if addr == ver.Address() {
 			return i, ver
@@ -96,6 +97,8 @@ func (verSet *basicSet) GetVerByAddress(addr common.Address) (int, bft.Verifier)
 
 // proposer methods
 func (verSet *basicSet) GetProposer() bft.Verifier {
+	verSet.verifierMu.RLock()
+	defer verSet.verifierMu.RUnlock()
 	return verSet.proposer
 }
 

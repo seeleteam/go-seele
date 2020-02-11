@@ -24,7 +24,8 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return *crypto.GetAddress(pubkey), nil
 }
 
-func CheckValidatorSignature(verSet VerifierSet, data []byte, sig []byte) (common.Address, error) {
+// CheckVerifierSignature check the validator in or not in the verset by signature
+func CheckVerifierSignature(verSet VerifierSet, data []byte, sig []byte) (common.Address, error) {
 	// 1. Get signature address
 	signer, err := GetSignatureAddress(data, sig)
 	if err != nil {

@@ -200,7 +200,7 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 		s.log.Error("Invalid proposal: %v", proposal)
 		return errProposalInvalid
 	}
-	s.log.Info("\n\nserver commit a block [1] get the proposed block")
+	s.log.Info("server commit a block [1] get the proposed block")
 
 	h := block.Header
 
@@ -219,7 +219,7 @@ func (s *server) Commit(proposal bft.Proposal, seals [][]byte) error {
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	s.proposedBlockHash = block.Hash()
 
-	s.log.Info("server commit a block [4] s.proposedBlockHash %s ?= block.Hash() %s\n\n", s.proposedBlockHash, block.Hash())
+	s.log.Info("server commit a block [4] s.proposedBlockHash %s ?= block.Hash() %s", s.proposedBlockHash, block.Hash())
 
 	if s.proposedBlockHash == block.Hash() {
 		s.commitCh <- block

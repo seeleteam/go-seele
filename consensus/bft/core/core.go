@@ -73,16 +73,18 @@ func NewCore(server bft.Server, config *bft.BFTConfig) Engine {
 		sequenceMeter:      metrics.GetOrRegisterMeter("consensus/bft/core/sequence", nil),
 		consensusTimer:     metrics.GetOrRegisterTimer("consensus/bft/core/consensus", nil),
 	}
-	c.verifyFn = c.checkValidatorSignature
+	c.verifyFn = c.checkVerifierSignature
 	return c
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return bft.CheckValidatorSignature(c.verSet, data, sig)
+// checkVerifierSignature check verifier's validness (in verSet list)
+func (c *core) checkVerifierSignature(data []byte, sig []byte) (common.Address, error) {
+	return bft.CheckVerifierSignature(c.verSet, data, sig)
 }
 
+//broadcast broadcast finalized msg to verifiers in the verset list
 func (c *core) broadcast(msg *message) {
-	payload, err := c.finalizeMessage(msg)
+	payload, err := c.finalizeMessage(msg) //use msg to prepare commited seal with signature
 	if err != nil {
 		c.log.Error("Failed to finalize message. msg %v. err %s. state %d", msg, err, c.state)
 		return
@@ -95,6 +97,7 @@ func (c *core) broadcast(msg *message) {
 	}
 }
 
+// finalizeMessage prepare the seal with proposal and sign data, return the payload with signature.
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	var err error
 	msg.Address = c.Address()
@@ -111,7 +114,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// here we need server privateKey to sign seal data
 	msg.Signature, err = c.server.Sign(data)
 	if err != nil {
 		return nil, err
@@ -135,6 +138,27 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
+// commit commit core'seal data
+func (c *core) commit() {
+	c.setState(StateCommitted)
+
+	proposal := c.current.Proposal()
+	if proposal != nil {
+		committedSeals := make([][]byte, c.current.Commits.Size())
+		for i, v := range c.current.Commits.Values() {
+			committedSeals[i] = make([]byte, types.BftExtraSeal)
+			copy(committedSeals[i][:], v.CommittedSeal[:])
+		}
+
+		if err := c.server.Commit(proposal, committedSeals); err != nil {
+			c.current.UnlockHash() //Unlock block when insertion fails
+			c.sendNextRoundChange()
+			return
+		}
+	}
+}
+
+// currentView get current view of sequence and round
 func (c *core) currentView() *bft.View {
 	return &bft.View{
 		Sequence: new(big.Int).Set(c.current.Sequence()),
@@ -142,6 +166,7 @@ func (c *core) currentView() *bft.View {
 	}
 }
 
+// setState set core state to input state and execute realted methods.
 func (c *core) setState(state State) {
 	if c.state != state {
 		c.state = state
@@ -256,25 +281,6 @@ func (c *core) stopTimer() {
 	c.stopFuturePreprepareTimer()
 	if c.roundChangeTimer != nil {
 		c.roundChangeTimer.Stop()
-	}
-}
-
-func (c *core) commit() {
-	c.setState(StateCommitted)
-
-	proposal := c.current.Proposal()
-	if proposal != nil {
-		committedSeals := make([][]byte, c.current.Commits.Size())
-		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, types.BftExtraSeal)
-			copy(committedSeals[i][:], v.CommittedSeal[:])
-		}
-
-		if err := c.server.Commit(proposal, committedSeals); err != nil {
-			c.current.UnlockHash() //Unlock block when insertion fails
-			c.sendNextRoundChange()
-			return
-		}
 	}
 }
 
