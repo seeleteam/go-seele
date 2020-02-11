@@ -53,11 +53,11 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 	} else if ctx.Tx.IsCrossShardTx() && !ctx.Tx.Data.To.IsEVMContract() { // cross shard tx
 		return processCrossShardTransaction(ctx, snapshot)
 	} else { // evm
-		receipt, err = processEvmContract(ctx, leftOverGas)
+		receipt, err = processEvmContract(ctx, leftOverGas, height)
 	}
 	// fmt.Println("svm.go-59, receipt.result", receipt.Result)
 	// account balance is not enough (account.balance < tx.amount)
-	if err == vm.ErrInsufficientBalance {
+	if err == vm.ErrInsufficientBalance { // there is no effect to statedb, just revert to previous snapshot
 		return nil, revertStatedb(ctx.Statedb, snapshot, err)
 	}
 
@@ -150,7 +150,7 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int,
 
 	// Transfer amount
 	amount, sender, recipient := ctx.Tx.Data.Amount, ctx.Tx.Data.From, ctx.Tx.Data.To
-	if ctx.Statedb.GetBalance(sender).Cmp(amount) < 0 {
+	if ctx.Statedb.GetBalance(sender).Cmp(amount) < 0 { //balance is not enough
 		return nil, revertStatedb(ctx.Statedb, snapshot, vm.ErrInsufficientBalance)
 	}
 
@@ -168,7 +168,7 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int,
 	return receipt, err
 }
 
-func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
+func processEvmContract(ctx *Context, gas uint64, height uint64) (*types.Receipt, error) {
 	var err error
 	receipt := &types.Receipt{
 		TxHash: ctx.Tx.Hash,
@@ -180,16 +180,32 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 	var leftOverGas uint64
 
 	// fmt.Println("ctx.Tx.Data.To.IsEmpty()?", ctx.Tx.Data.To.IsEmpty())
-	if ctx.Tx.Data.To.IsEmpty() {
+	if ctx.Tx.Data.To.IsEmpty() { // this is smart contract deployment
 		var createdContractAddr common.Address
-		// fmt.Println("processEvmContract.go-168:before create accountNonce ", ctx.Tx.Data.AccountNonce)
 		receipt.Result, createdContractAddr, leftOverGas, err = e.Create(caller, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 		if !createdContractAddr.IsEmpty() {
 			receipt.ContractAddress = createdContractAddr.Bytes()
 		}
-		// fmt.Println("processEvmContract.go-173:after create accountNonce ", ctx.Tx.Data.AccountNonce)
+		// fmt.Println("processEvmContract.go-173: before correcting statedbNonce ", ctx.Statedb.GetNonce(ctx.Tx.Data.From))
+		// Since in the e.Create function, the setNonce in a wrong way (but already set, when user setnonce will be wrong), correct way is to ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+		// nonce := evm.StateDB.GetNonce(caller.Address())
+		// evm.StateDB.SetNonce(caller.Address(), nonce+1)
+
+		if height > common.SmartContractNonceFixHeight {
+			if err == nil {
+				dbnonce := ctx.Statedb.GetNonce(ctx.Tx.Data.From)
+				// fmt.Println("before reset, statedb GetNonce", ctx.Statedb.GetNonce(ctx.Tx.Data.From))
+				if dbnonce < ctx.Tx.Data.AccountNonce+1 { // here only need to compare dbnonce with accountnonce + 1, since dbnonce is already set
+					ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1) // if before setting value is smaller than user setNonce value, then should reset.
+					// fmt.Println("after, SetNonce to Tx.Data.AccountNonce + 1, namely", ctx.Tx.Data.AccountNonce+1)
+				}
+			}
+		}
+
+		// fmt.Println("processEvmContract.go-173:after correcting statedbNonce", ctx.Statedb.GetNonce(ctx.Tx.Data.From))
 	} else {
 		ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+		// fmt.Printf("ToAddress is not empty, setNonce to %d", ctx.Tx.Data.AccountNonce+1)
 		receipt.Result, leftOverGas, err = e.Call(caller, ctx.Tx.Data.To, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 	}
 	receipt.UsedGas = gas - leftOverGas
@@ -198,7 +214,7 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 }
 
 func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
-    // Calculating the total fee
+	// Calculating the total fee
 	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
 	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)

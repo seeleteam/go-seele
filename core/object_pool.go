@@ -22,7 +22,7 @@ import (
 var (
 	errObjectHashExists = errors.New("object hash already exists")
 	errObjectPoolFull   = errors.New("object pool is full")
-	errObjectNonceUsed  = errors.New("object nonce already been used")
+	errObjectNonceUsed  = errors.New("object nonce already been used, please WAIT or manually set a HIGHER nonce")
 )
 
 type blockchain interface {
@@ -102,7 +102,7 @@ func (pool *Pool) SetLogLevel(level logrus.Level) {
 
 // check the pool frequently, remove finalized and old txs, reinject the txs not on the chain yet
 func (pool *Pool) loopCheckingPool() {
-	
+
 	for {
 		pool.mutex.RLock()
 		pendingQueueCount := pool.pendingQueue.count()
@@ -122,7 +122,6 @@ func (pool *Pool) loopCheckingPool() {
 		}
 	}
 }
-
 
 // HandleChainHeaderChanged reinjects txs into pool in case of blockchain forked.
 func (pool *Pool) HandleChainHeaderChanged(newHeader, lastHeader common.Hash) {
