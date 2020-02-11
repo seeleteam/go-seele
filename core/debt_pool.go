@@ -31,14 +31,15 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 	getObjectFromBlock := func(block *types.Block) []poolObject {
 		return debtsToObjects(block.Debts)
 	}
-
-	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) bool {
+	// 1st bool: can remove from object pool
+	// 2nd bool: can remove from cachedTxs
+	canRemove := func(chain blockchain, state *state.Statedb, item *poolItem) (bool, bool) {
 		debtIndex, err := chain.GetStore().GetDebtIndex(item.GetHash())
 		if err != nil || debtIndex == nil {
-			return false
+			return false, false
 		}
 
-		return true
+		return true, false
 	}
 
 	objectValidation := func(state *state.Statedb, obj poolObject) error {
@@ -51,8 +52,8 @@ func NewDebtPool(chain blockchain, verifier types.DebtVerifier) *DebtPool {
 
 		event.DebtsInsertedEventManager.Fire(obj.(*types.Debt))
 	}
-
-	pool := NewPool(DebtPoolCapacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd)
+	cachedTxs := NewCachedTxs(0)
+	pool := NewPool(DebtPoolCapacity, chain, getObjectFromBlock, canRemove, log, objectValidation, afterAdd, cachedTxs)
 
 	debtPool := &DebtPool{
 		Pool:             pool,

@@ -257,9 +257,9 @@ func (bc *Blockchain) GetCurrentInfo() (*types.Block, *state.Statedb, error) {
 }
 
 // WriteBlock writes the specified block to the blockchain store.
-func (bc *Blockchain) WriteBlock(block *types.Block) error {
+func (bc *Blockchain) WriteBlock(block *types.Block, txPool *Pool) error {
 	startWriteBlockTime := time.Now()
-	if err := bc.doWriteBlock(block); err != nil {
+	if err := bc.doWriteBlock(block, txPool); err != nil {
 		return err
 	}
 	markTime := time.Since(startWriteBlockTime)
@@ -272,7 +272,7 @@ func (bc *Blockchain) WriteHeader(*types.BlockHeader) error {
 	return ErrNotSupported
 }
 
-func (bc *Blockchain) doWriteBlock(block *types.Block) error {
+func (bc *Blockchain) doWriteBlock(block *types.Block, pool *Pool) error {
 	bc.lock.Lock()
 	defer bc.lock.Unlock()
 
@@ -331,6 +331,15 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 		Transactions: make([]*types.Transaction, len(block.Transactions)),
 	}
 	copy(currentBlock.Transactions, block.Transactions)
+	for i, tx := range block.Transactions { // for 1st tx is reward tx, no need to check the duplicate
+		if i == 0 {
+			continue
+		}
+		if !pool.cachedTxs.has(tx.Hash) {
+			bc.log.Debug("[CachedTxs] add tx %+v from synced block", tx.Hash)
+			pool.cachedTxs.add(tx)
+		}
+	}
 
 	if block.Debts != nil {
 		currentBlock.Debts = make([]*types.Debt, len(block.Debts))
@@ -379,13 +388,13 @@ func (bc *Blockchain) doWriteBlock(block *types.Block) error {
 	if isHead {
 		largerHeight := block.Header.Height + 1
 		if err = DeleteLargerHeightBlocks(bc.bcStore, largerHeight, bc.rp); err != nil {
-			return errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight)
+			bc.log.Error(errors.NewStackedErrorf(err, "failed to delete larger height blocks, height = %v", largerHeight).Error())
 		}
 		auditor.Audit("succeed to delete larger height blocks, height = %v", largerHeight)
 
 		previousHash := block.Header.PreviousBlockHash
 		if err = OverwriteStaleBlocks(bc.bcStore, previousHash, bc.rp); err != nil {
-			return errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash)
+			bc.log.Error(errors.NewStackedErrorf(err, "failed to overwrite stale blocks, hash = %v", previousHash).Error())
 		}
 		auditor.Audit("succeed to overwrite stale blocks, hash = %v", previousHash)
 	}

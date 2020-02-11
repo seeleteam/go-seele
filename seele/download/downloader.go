@@ -133,6 +133,18 @@ func NewDownloader(chain *core.Blockchain, seele SeeleBackend) *Downloader {
 	return d
 }
 
+func (d *Downloader) IsSyncStatusNone() bool {
+	d.lock.Lock()
+
+	if d.syncStatus != statusNone {
+		d.lock.Unlock()
+		return false
+	} else {
+		d.lock.Unlock()
+		return true
+	}
+}
+
 func (d *Downloader) getReadableStatus() string {
 	var status string
 
@@ -167,7 +179,7 @@ func (d *Downloader) getSyncInfo(info *SyncInfo) {
 }
 
 // Synchronise try to sync with remote peer.
-func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, localTD *big.Int) error {
+func (d *Downloader) Synchronise(id string, head common.Hash) error {
 	// Make sure only one routine can pass at once
 	d.lock.Lock()
 
@@ -188,18 +200,19 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, local
 	}
 	d.lock.Unlock()
 
-	err := d.doSynchronise(p, head, td, localTD)
+	err := d.doSynchronise(p, head)
 
 	d.lock.Lock()
 	d.syncStatus = statusNone
-	d.sessionWG.Wait()
+	//d.sessionWG.Wait()
 	d.cancelCh = nil
 	d.lock.Unlock()
 
 	return err
 }
 
-func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int, localTD *big.Int) (err error) {
+//td *big.Int, localTD *big.Int
+func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash) (err error) {
 	d.log.Debug("Downloader.doSynchronise start, masterID: %s", d.masterPeer)
 	event.BlockDownloaderEventManager.Fire(event.DownloaderStartEvent)
 	defer func() {
@@ -238,19 +251,16 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	bMasterStarted := false
 	d.lock.Lock()
 	d.syncStatus = statusFetching
-	for _, pConn := range d.peers {
-		_, peerTD := pConn.peer.Head()
-		if localTD.Cmp(peerTD) >= 0 {
-			continue
-		}
-		d.sessionWG.Add(1)
-		if pConn.peerID == d.masterPeer {
-			d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
-			bMasterStarted = true
-		}
 
-		go d.peerDownload(pConn, tm)
+	//d.sessionWG.Add(1)
+	sessionWG := new(sync.WaitGroup)
+	sessionWG.Add(1)
+	if conn.peerID == d.masterPeer {
+		d.log.Debug("Downloader.doSynchronise set bMasterStarted = true masterid=%s", d.masterPeer)
+		bMasterStarted = true
 	}
+	go d.peerDownload(conn, tm, sessionWG)
+	//}
 	d.lock.Unlock()
 
 	if !bMasterStarted {
@@ -260,7 +270,7 @@ func (d *Downloader) doSynchronise(conn *peerConn, head common.Hash, td *big.Int
 	} else {
 		d.log.Debug("Downloader.doSynchronise bMasterStarted = %t.  not cancel. masterid=%s", bMasterStarted, d.masterPeer)
 	}
-	d.sessionWG.Wait()
+	sessionWG.Wait()
 
 	d.lock.Lock()
 	d.syncStatus = statusCleaning
@@ -469,8 +479,8 @@ func (d *Downloader) Terminate() {
 }
 
 // peerDownload peer download routine
-func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr) {
-	defer d.sessionWG.Done()
+func (d *Downloader) peerDownload(conn *peerConn, tm *taskMgr, sessionWG *sync.WaitGroup) {
+	defer sessionWG.Done()
 
 	d.log.Debug("Downloader.peerDownload start. peerID=%s masterID=%s", conn.peerID, d.masterPeer)
 	isMaster := (conn.peerID == d.masterPeer)
@@ -576,7 +586,8 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 		// add it for all received block messages
 		d.log.Info("got block message and save it. height=%d, hash=%s, time=%d", h.block.Header.Height, h.block.HeaderHash.Hex(), time.Now().UnixNano())
 		// writeblock
-		err := d.chain.WriteBlock(h.block)
+		txPool := d.seele.TxPool().Pool
+		err := d.chain.WriteBlock(h.block, txPool)
 
 		if err != nil && !errors.IsOrContains(err, core.ErrBlockAlreadyExists) {
 			d.log.Error("failed to write block err=%s", err)
@@ -597,7 +608,7 @@ func (d *Downloader) processBlocks(headInfos []*downloadInfo, ancestor uint64, l
 				}
 				for _, localBlock := range localBlocks {
 					d.log.Info("write back local blocks: %d", localBlock.Header.Height)
-					if err = d.chain.WriteBlock(localBlock); err != nil {
+					if err = d.chain.WriteBlock(localBlock, txPool); err != nil {
 						d.log.Error("failed to write localBlock back err=%s, height: %d", err, localBlock.Header.Height)
 						break
 					}

@@ -25,6 +25,8 @@ var (
 	errObjectNonceUsed  = errors.New("object nonce already been used, please WAIT or manually set a HIGHER nonce")
 )
 
+var CachedCapacity = CachedBlocks * 500
+
 type blockchain interface {
 	GetCurrentState() (*state.Statedb, error)
 	GetStore() store.BlockchainStore
@@ -55,7 +57,7 @@ func newPooledItem(object poolObject) *poolItem {
 }
 
 type getObjectFromBlockFunc func(block *types.Block) []poolObject
-type canRemoveFunc func(chain blockchain, state *state.Statedb, item *poolItem) bool
+type canRemoveFunc func(chain blockchain, state *state.Statedb, item *poolItem) (bool, bool)
 type objectValidationFunc func(state *state.Statedb, obj poolObject) error
 type afterAddFunc func(obj poolObject)
 
@@ -73,11 +75,12 @@ type Pool struct {
 	canRemove          canRemoveFunc
 	objectValidation   objectValidationFunc
 	afterAdd           afterAddFunc
+	cachedTxs          *CachedTxs
 }
 
 // NewPool creates and returns a transaction pool.
 func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlockFunc,
-	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc) *Pool {
+	canRemove canRemoveFunc, log *log.SeeleLog, objectValidation objectValidationFunc, afterAdd afterAddFunc, cachedTxs *CachedTxs) *Pool {
 	pool := &Pool{
 		capacity:           capacity,
 		chain:              chain,
@@ -89,7 +92,10 @@ func NewPool(capacity int, chain blockchain, getObjectFromBlock getObjectFromBlo
 		canRemove:          canRemove,
 		objectValidation:   objectValidation,
 		afterAdd:           afterAdd,
+		// cachedTxs:          NewCachedTxs(CachedCapacity),
+		cachedTxs: cachedTxs,
 	}
+	// pool.cachedTxs.init(chain)
 
 	go pool.loopCheckingPool()
 
@@ -102,7 +108,6 @@ func (pool *Pool) SetLogLevel(level logrus.Level) {
 
 // check the pool frequently, remove finalized and old txs, reinject the txs not on the chain yet
 func (pool *Pool) loopCheckingPool() {
-
 	for {
 		pool.mutex.RLock()
 		pendingQueueCount := pool.pendingQueue.count()
@@ -115,6 +120,7 @@ func (pool *Pool) loopCheckingPool() {
 			if len(pool.hashToTxMap) > 0 {
 				for _, poolTx := range pool.hashToTxMap {
 					pool.pendingQueue.add(poolTx)
+					pool.afterAdd(poolTx.poolObject)
 				}
 			}
 			pool.mutex.Unlock()
@@ -349,7 +355,11 @@ func (pool *Pool) removeObjects() {
 
 	objMap := pool.getObjectMap()
 	for objHash, poolTx := range objMap {
-		if pool.canRemove(pool.chain, state, poolTx) {
+		objectRemove, cachedTxsRemove := pool.canRemove(pool.chain, state, poolTx)
+		if objectRemove {
+			if cachedTxsRemove {
+				pool.cachedTxs.remove(objHash)
+			}
 			pool.removeOject(objHash)
 		}
 	}

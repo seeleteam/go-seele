@@ -16,6 +16,7 @@ import (
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
+	"github.com/seeleteam/go-seele/database"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -40,7 +41,7 @@ func NewTask(header *types.BlockHeader, coinbase common.Address, verifier types.
 }
 
 // applyTransactionsAndDebts TODO need to check more about the transactions, such as gas limit
-func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog) error {
+func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.Statedb, accountStateDB database.Database, log *log.SeeleLog) error {
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
@@ -59,7 +60,8 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 	log.Info("mining block height:%d, reward:%s, transaction number:%d, debt number: %d",
 		task.header.Height, reward, len(task.txs), len(task.debts))
 
-	root, err := statedb.Hash()
+	batch := accountStateDB.NewBatch()
+	root, err := statedb.Commit(batch)
 	if err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func (task *Task) chooseDebts(seele SeeleBackend, statedb *state.Statedb, log *l
 		for _, d := range debts {
 			err := seele.BlockChain().ApplyDebtWithoutVerify(statedb, d, task.coinbase)
 			if err != nil {
-				log.Warn("apply debt error %s", err)
+				log.Debug("apply debt error %s", err)
 				seele.DebtPool().RemoveDebtByHash(d.Hash)
 				continue
 			}
@@ -175,4 +177,16 @@ func (task *Task) generateBlock() *types.Block {
 type Result struct {
 	task  *Task
 	block *types.Block // mined block, with good nonce
+}
+
+func PrintableOutputTask(task *Task) map[string]interface{} {
+
+	result := map[string]interface{}{
+		"header":   task.header,
+		"txs":      task.txs,
+		"receipts": task.receipts,
+		"debts":    task.debts,
+		"coinbase": task.coinbase,
+	}
+	return result
 }

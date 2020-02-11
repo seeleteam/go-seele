@@ -178,11 +178,14 @@ func (store *blockchainDatabase) putBlockInternal(hash common.Hash, header *type
 
 		if err == nil {
 			oldBlock, err := store.GetBlock(oldHash)
-			if err != nil {
+
+			if err != nil && err != errors.ErrNotFound {
 				return err
 			}
 
-			store.batchDeleteIndices(batch, oldHash, oldBlock.Transactions, oldBlock.Debts)
+			if err == nil {
+				store.batchDeleteIndices(batch, oldHash, oldBlock.Transactions, oldBlock.Debts)
+			}
 		}
 
 		// add or update txs/debts indices of new HEAD block

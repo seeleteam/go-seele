@@ -290,7 +290,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	}
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
-	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
+	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}
@@ -306,8 +306,9 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 	now := time.Now()
 	// entrance
 	memory.Print(miner.log, "miner saveBlock entrance", now, false)
+	txPool := miner.seele.TxPool().Pool
 
-	ret := miner.seele.BlockChain().WriteBlock(result)
+	ret := miner.seele.BlockChain().WriteBlock(result, txPool)
 
 	// entrance
 	memory.Print(miner.log, "miner saveBlock exit", now, true)
@@ -319,4 +320,34 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
 	block := task.generateBlock()
 	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
+}
+
+//GetWork get the current task node will process
+func (miner *Miner) GetWork() map[string]interface{} {
+	if miner.current == nil {
+		miner.log.Info("there is no task so far")
+	}
+	task := miner.current
+	return PrintableOutputTask(task)
+}
+
+func (miner *Miner) GetWorkTask() *Task {
+	return miner.current
+}
+func (miner *Miner) GetCurrentWorkHeader() (header *types.BlockHeader) {
+	return miner.GetWorkTask().header
+}
+
+// func (miner *Miner) CommitWork()()
+
+// func (miner *Miner) GetMiningTarget() {
+// 	df := miner.seele.BlockChain().CurrentBlock().Header.Difficulty
+// 	return miner.engine.GetMiningTarget(df)
+// }
+
+func (miner *Miner) GetTaskDifficulty() *big.Int {
+	difficulty := miner.current.header.Difficulty
+	target := new(big.Int).Mul(difficulty, big.NewInt(65))
+	return target
+
 }

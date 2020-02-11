@@ -53,7 +53,7 @@ func init() {
 	rootCmd.AddCommand(statedbCmd)
 
 	statedbCmd.Flags().StringVar(&rootDir, "root", "", "root folder of leveldb")
-	rootCmd.MustMarkFlagRequired("root")
+	rootCmd.MarkFlagRequired("root")
 
 	statedbCmd.Flags().IntVarP(&numGenesisAccounts, "genesisAccounts", "a", 1, "number of accounts in genesis")
 	statedbCmd.Flags().Uint64VarP(&genesisAccountBalance, "genesisAccountBalance", "b", math.MaxUint64, "account balance in genesis")

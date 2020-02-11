@@ -48,25 +48,61 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Name:   "gettxpoolcontent",
 			Usage:  "get transaction pool contents",
 			Flags:  rpcFlags(),
-			Action: rpcAction("debug", "getTxPoolContent"),
+			Action: rpcAction("txpool", "getTxPoolContent"),
 		},
 		{
 			Name:   "gettxpoolcount",
 			Usage:  "get transaction pool transaction count",
 			Flags:  rpcFlags(),
-			Action: rpcAction("debug", "getTxPoolTxCount"),
+			Action: rpcAction("txpool", "getTxPoolTxCount"),
 		},
 		{
 			Name:   "getblocktxcount",
 			Usage:  "get block transaction count by block height or block hash",
 			Flags:  rpcFlags(hashFlag, heightFlag),
-			Action: rpcAction("txpool", "getBlockTransactionCount"),
+			Action: rpcAction("seele", "getBlockTransactionCount"),
 		},
 		{
 			Name:   "gettxinblock",
 			Usage:  "get transaction by block height or block hash with index of the transaction in the block",
 			Flags:  rpcFlags(hashFlag, heightFlag, indexFlag),
-			Action: rpcAction("txpool", "getTransactionByBlockIndex"),
+			Action: rpcAction("seele", "getTransactionByBlockIndex"),
+		},
+		{
+			Name:   "gettxfromaccount",
+			Usage:  "get transaction from one account at specific height or blockhash",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("seele", "getTransactionsFrom"),
+		},
+		{
+			Name:   "gettxtoaccount",
+			Usage:  "get transaction to one account at specific height or blockhash",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("seele", "getTransactionsTo"),
+		},
+		{
+			Name:   "getaccounttx",
+			Usage:  "get transaction of one account at specific height or blockhash",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("seele", "getAccountTransactions"),
+		},
+		{
+			Name:   "getblocktx",
+			Usage:  "get transaction by block height or block hash",
+			Flags:  rpcFlags(hashFlag, heightFlag),
+			Action: rpcAction("seele", "getBlockTransactions"),
+		},
+		{
+			Name:   "getblocktxbyheight",
+			Usage:  "get the transitions at the specific height",
+			Flags:  rpcFlags(heightFlag),
+			Action: rpcAction("seele", "getBlockTransactionsByHeight"),
+		},
+		{
+			Name:   "getblocktxbyhash",
+			Usage:  "get the transitions at the specific blockhash",
+			Flags:  rpcFlags(hashFlag),
+			Action: rpcAction("seele", "getBlockTransactionsByHash"),
 		},
 		{
 			Name:   "gettxbyhash",
@@ -75,16 +111,22 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: rpcAction("txpool", "getTransactionByHash"),
 		},
 		{
+			Name:   "getgasprice",
+			Usage:  "get transaction gas price by transaction hash",
+			Flags:  rpcFlags(hashFlag),
+			Action: rpcAction("txpool", "getGasPrice"),
+		},
+		{
 			Name:   "getreceipt",
 			Usage:  "get receipt by transaction hash",
 			Flags:  rpcFlags(hashFlag, abiFileFlag),
-			Action: rpcAction("txpool", "getReceiptByTxHash"),
+			Action: rpcAction("seele", "getReceiptByTxHash"),
 		},
 		{
 			Name:   "getpendingtxs",
 			Usage:  "get pending transactions",
 			Flags:  rpcFlags(),
-			Action: rpcAction("debug", "getPendingTransactions"),
+			Action: rpcAction("txpool", "getPendingTransactions"),
 		},
 		{
 			Name:  "getshardnum",
@@ -281,6 +323,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Flags:  rpcFlags(),
 				Action: rpcAction("network", "getProtocolVersion"),
 			},
+			{
+				Name:   "islistening",
+				Usage:  "return whether the node is listen or not",
+				Flags:  rpcFlags(),
+				Action: rpcAction("network", "isListening"),
+			},
 		},
 	}
 
@@ -336,6 +384,19 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Flags:  rpcFlags(),
 				Action: rpcAction("miner", "getThreads"),
 			},
+			{
+				Name:   "getwork",
+				Usage:  "get miner current mining task",
+				Flags:  rpcFlags(),
+				Action: rpcAction("miner", "getWork"),
+			},
+			{
+				Name:  "gettarget",
+				Usage: "get current SPOW mining difficulty ",
+				Flags: rpcFlags(),
+				// Action: rpcAction("miner", "getTaskDifficulty"),
+				Action: rpcAction("miner", "getTarget"),
+			},
 		},
 	}
 
@@ -352,7 +413,7 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Name:   "getdebts",
 				Usage:  "get pending debts",
 				Flags:  rpcFlags(),
-				Action: rpcAction("debug", "getPendingDebts"),
+				Action: rpcAction("txpool", "getPendingDebts"),
 			},
 			{
 				Name:   "dumpheap",

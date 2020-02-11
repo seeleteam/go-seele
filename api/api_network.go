@@ -41,3 +41,8 @@ func (n *PrivateNetworkAPI) GetNetworkID() (string, error) {
 func (n *PrivateNetworkAPI) GetProtocolVersion() (uint, error) {
 	return n.s.ProtocolBackend().GetProtocolVersion()
 }
+
+// IsListening return whether the node is listen or not
+func (n *PrivateNetworkAPI) IsListening() bool {
+	return n.s.GetP2pServer().IsListening()
+}

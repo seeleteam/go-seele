@@ -45,7 +45,7 @@ const (
 	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 5 * time.Second
+	checkConnsNumInterval = 7 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -228,11 +228,18 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-	srv.nodeSet.tryAdd(node)
-	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
-		return
+	numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
+	if numPeersDelete > 0 {
+		for i := 0; i < numPeersDelete; i++ {
+			if srv.PeerCount() > srv.maxActiveConnections {
+				srv.deletePeerRand()
+				//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
+				//return
+			}
+		}
 	}
+
+	srv.nodeSet.tryAdd(node)
 	srv.connectNode(node)
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
 
@@ -280,30 +287,30 @@ func (srv *Server) checkPeerExist(id common.Address) bool {
 	return peer != nil
 }
 
-func (srv *Server) addPeer(p *Peer) bool {
+func (srv *Server) addPeer(p *Peer) (bool, bool) { //bool, bool: addPeer isAdd, isRun
 	srv.peerLock.Lock()
 	defer srv.peerLock.Unlock()
 
 	if p.getShardNumber() == discovery.UndefinedShardNumber {
 		srv.log.Warn("got invalid peer with shard 0, peer info %s", p.Node)
-		return false
+		return false, false
 	}
 
 	peer := srv.peerSet.find(p.Node.ID)
 	if peer != nil {
 		srv.log.Debug("peer is already exist %s -> %s, skip %s -> %s", peer.LocalAddr(), peer.RemoteAddr(),
 			p.LocalAddr(), p.RemoteAddr())
-		return false
+		return false, true // find the peer, should not return false, otherwise the up layer will close this peer
 	}
 
 	srv.peerSet.add(p)
 	srv.nodeSet.setNodeStatus(p.Node, true)
-	srv.log.Info("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
+	srv.log.Debug("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
 	p.notifyProtocolsAddPeer()
 
 	metricsAddPeerMeter.Mark(1)
 	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
-	return true
+	return true, false
 }
 
 func (srv *Server) deletePeer(id common.Address) {
@@ -324,6 +331,16 @@ func (srv *Server) deletePeer(id common.Address) {
 	}
 }
 
+func (srv *Server) deletePeerRand() {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
+	p := srv.peerSet.getRandPeer()
+	// close connection of peer
+	if p != nil {
+		p.Disconnect("delete peer randomly")
+	}
+}
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
@@ -338,12 +355,12 @@ running:
 			go srv.doSelectNodeToConnect()
 		case <-checkTicker.C:
 			if srv.nodeSet.getSelfShardNodeNum() < 2 {
-				srv.log.Warn("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
+				srv.log.Debug("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
 				go srv.doSelectLocalNodeToConnect()
 			}
 
 		case <-srv.quit:
-			srv.log.Warn("server got quit signal, run cleanup logic")
+			srv.log.Debug("server got quit signal, run cleanup logic")
 			break running
 		}
 	}
@@ -360,6 +377,9 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	if !srv.nodeSet.ifNeedAddNodes() {
+		return
+	}
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
@@ -383,14 +403,13 @@ func (srv *Server) doSelectNodeToConnect() {
 }
 
 func (srv *Server) doSelectLocalNodeToConnect() {
-
-	for _, node := range srv.StaticNodes {
-		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
-			continue
-		} else {
-			srv.connectNode(node)
-		}
-	}
+	//for _, node := range srv.StaticNodes {
+	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+	//		continue
+	//	} else {
+	//		srv.connectNode(node)
+	//	}
+	//}
 
 	selectNodeSet := srv.nodeSet.randSelect()
 
@@ -406,7 +425,6 @@ func (srv *Server) doSelectLocalNodeToConnect() {
 			}
 		}
 	}
-
 }
 
 func (srv *Server) startListening() error {
@@ -515,15 +533,19 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	}
 
 	go func() {
-		srv.loopWG.Add(1)
-		if srv.addPeer(peer) {
+		//srv.loopWG.Add(1)
+		isAdd, isRun := srv.addPeer(peer)
+		if isAdd && !isRun {
+			//srv.log.Error("RUN BEGIN")
 			peer.run()
 			srv.deletePeer(peer.Node.ID)
-		} else {
+			//srv.log.Error("RUN END")
+		}
+		if !isAdd {
 			peer.close()
 		}
 
-		srv.loopWG.Done()
+		//srv.loopWG.Done()
 	}()
 
 	return nil
@@ -775,4 +797,9 @@ func (srv *Server) PeersInfo() []PeerInfo {
 	sort.Sort(PeerInfos(infos))
 
 	return infos
+}
+
+// IsListening return whether the node is listen or not
+func (srv *Server) IsListening() bool {
+	return srv.listener != nil
 }

@@ -6,6 +6,7 @@
 package p2p
 
 import (
+	"math/rand"
 	"sync"
 
 	"github.com/seeleteam/go-seele/common"
@@ -42,6 +43,24 @@ func (set *peerSet) getPeers() map[common.Address]*Peer {
 	}
 
 	return value
+}
+
+func (set *peerSet) getRandPeer() *Peer {
+	set.lock.RLock()
+	defer set.lock.RUnlock()
+	leN := len(set.peerMap)
+	k := rand.Int31n(int32(leN))
+	count := int32(0)
+	var p *Peer
+	for _, v := range set.peerMap {
+		p = v
+		if count == k {
+			return v
+		}
+		count++
+	}
+
+	return p
 }
 
 func (set *peerSet) add(p *Peer) {

@@ -22,7 +22,7 @@ const (
 	SeeleVersion uint = 1
 
 	// SeeleVersion for simpler display
-	SeeleNodeVersion string = "v1.2.4"
+	SeeleNodeVersion string = "v1.3.0"
 
 	// ShardCount represents the total number of shards.
 	ShardCount = 4
