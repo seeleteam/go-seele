@@ -59,7 +59,16 @@ func checkParameter(publicKey *ecdsa.PublicKey, client *rpc.Client) (*types.Tran
 			return info, fmt.Errorf("failed to get the sender account nonce: %s", err)
 		}
 		info.AccountNonce = nonce
+		fmt.Printf("sendtx without setting nonce, GetAccountNonce %d\n", nonce)
 	} else {
+		// get current nonce
+		dbnonce, nonceErr := util.GetAccountNonce(client, *fromAddr, "", -1)
+		if nonceErr != nil {
+			return info, fmt.Errorf("failed to get the sender account nonce: %s", err)
+		}
+		if nonceValue < dbnonce {
+			return info, fmt.Errorf("Failed to sendtx for setNonce %d is smaller than database nonce %d\n", nonceValue, dbnonce)
+		}
 		info.AccountNonce = nonceValue
 	}
 	fmt.Printf("account: %s, transaction nonce: %d\n", info.From.Hex(), info.AccountNonce)
