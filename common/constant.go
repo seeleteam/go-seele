@@ -48,7 +48,7 @@ const (
 	SmartContractNonceForkHeight = 1100000
 
 	// SmartContractNonceFixHeight fix smart contract nonce bug when user use setNonce
-	SmartContractNonceFixHeight = 0
+	SmartContractNonceFixHeight = 2100000
 
 	// LightChainDir lightchain data directory based on config.DataRoot
 	LightChainDir = "/db/lightchain"
