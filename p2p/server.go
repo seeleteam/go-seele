@@ -34,7 +34,7 @@ const (
 	maxConnsPerShard = 40
 
 	// Maximum number of peers that node actively connects to.
-	maxActiveConnsPerShard = 25
+	maxActiveConnsPerShard = 15
 
 	defaultDialTimeout = 15 * time.Second
 
@@ -48,7 +48,7 @@ const (
 	checkConnsNumInterval = 7 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
-
+	//minLocalShardConn     = 13
 	// In transferring handshake msg, length of extra data
 	extraDataLen = 24
 
@@ -224,23 +224,31 @@ loop:
 	}
 }
 
+//this function is triggered by udp when a new node is discovered
 func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-	numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
-	if numPeersDelete > 0 {
-		for i := 0; i < numPeersDelete; i++ {
-			if srv.PeerCount() > srv.maxActiveConnections {
-				srv.deletePeerRand()
-				//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
-				//return
-			}
-		}
-	}
+	//no need to remove peers randomly when there too many
 
+	//numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
+	//if numPeersDelete > 0 {
+	//for i := 0; i < numPeersDelete; i++ {
+	//if srv.PeerCount() > srv.maxActiveConnections {
+	//	srv.deletePeerRand()
+	//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
+	//return
+	//}
+	//}
+	//}
+
+	//only connect a node when certain condition met otherwise just add to nodeset
 	srv.nodeSet.tryAdd(node)
-	srv.connectNode(node)
+
+	shardID := node.Shard
+	if srv.nodeSet.ifNeedAddNodes(shardID) {
+		srv.connectNode(node)
+	}
 	srv.log.Debug("got discovery a new node event, node info:%s", node)
 
 }
@@ -269,9 +277,10 @@ func (srv *Server) connectNode(node *discovery.Node) {
 	srv.log.Info("connect to a node with %s -> %s", conn.LocalAddr(), conn.RemoteAddr())
 	if err := srv.setupConn(conn, outboundConn, node); err != nil {
 		srv.log.Debug("failed to add new node. err=%s", err)
-		return
+
 	}
 	return
+
 }
 
 func (srv *Server) deleteNode(node *discovery.Node) {
@@ -288,6 +297,7 @@ func (srv *Server) checkPeerExist(id common.Address) bool {
 }
 
 func (srv *Server) addPeer(p *Peer) (bool, bool) { //bool, bool: addPeer isAdd, isRun
+
 	srv.peerLock.Lock()
 	defer srv.peerLock.Unlock()
 
@@ -305,11 +315,12 @@ func (srv *Server) addPeer(p *Peer) (bool, bool) { //bool, bool: addPeer isAdd, 
 
 	srv.peerSet.add(p)
 	srv.nodeSet.setNodeStatus(p.Node, true)
-	srv.log.Debug("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
-	p.notifyProtocolsAddPeer()
 
+	srv.log.Debug("add peer to server, len(peers)=%d. peer %s", srv.PeerCount(), p.Node)
+	go p.notifyProtocolsAddPeer()
 	metricsAddPeerMeter.Mark(1)
 	metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+
 	return true, false
 }
 
@@ -319,6 +330,9 @@ func (srv *Server) deletePeer(id common.Address) {
 
 	p := srv.peerSet.find(id)
 	if p != nil {
+		p.lock.Lock()
+		defer p.lock.Unlock()
+
 		srv.nodeSet.setNodeStatus(p.Node, false)
 		srv.peerSet.delete(p)
 		p.notifyProtocolsDeletePeer()
@@ -344,24 +358,25 @@ func (srv *Server) deletePeerRand() {
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
-
-	checkTicker := time.NewTicker(checkConnsNumInterval)
-	checkTicker1 := time.NewTicker(12*checkConnsNumInterval + 3)
-
-running:
+	ticker := time.NewTicker(5 * checkConnsNumInterval)
+runloop:
 	for {
-		select {
-		case <-checkTicker1.C:
-			go srv.doSelectNodeToConnect()
-		case <-checkTicker.C:
-			if srv.nodeSet.getSelfShardNodeNum() < 2 {
-				srv.log.Debug("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
-				go srv.doSelectLocalNodeToConnect()
-			}
 
+		select {
+
+		case <-ticker.C:
+			//srv.log.Error("connect loop")
+			go srv.doSelectNodeToConnect()
+			if srv.nodeSet.ifNeedAddNodes(common.LocalShardNumber) {
+				continue
+			} else {
+				//if already well connected, rest a little bit to avoid works no big help
+				time.Sleep(60 * time.Second)
+			}
+			goto runloop
 		case <-srv.quit:
 			srv.log.Debug("server got quit signal, run cleanup logic")
-			break running
+			break runloop
 		}
 	}
 
@@ -376,18 +391,21 @@ running:
 
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
+	//no need to connect static node each time, besides most time node.ID.IsEmpty()  true
+	//if !srv.nodeSet.ifNeedAddNodes() {
+	//	return
+	//}
 
-	if !srv.nodeSet.ifNeedAddNodes() {
-		return
-	}
-	for _, node := range srv.StaticNodes {
-		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
-			continue
-		} else {
-			srv.connectNode(node)
-		}
-	}
-	selectNodeSet := srv.nodeSet.randSelect()
+	//for _, node := range srv.StaticNodes {
+	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+	//		continue
+	//	} else {
+	//		srv.connectNode(node)
+	//	}
+	//	}
+
+	// always try to connect peer for each shard
+	selectNodeSet := srv.nodeSet.randSelect(srv)
 
 	if selectNodeSet == nil {
 		return
@@ -395,13 +413,14 @@ func (srv *Server) doSelectNodeToConnect() {
 	for i := 0; i < len(selectNodeSet); i++ {
 
 		if selectNodeSet[i] != nil {
+
 			srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s ,%d", selectNodeSet[i].IP.String(), selectNodeSet[i].UDPPort)
 			srv.connectNode(selectNodeSet[i])
 		}
 	}
-
 }
 
+//no call for this function any more
 func (srv *Server) doSelectLocalNodeToConnect() {
 	//for _, node := range srv.StaticNodes {
 	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
@@ -411,7 +430,7 @@ func (srv *Server) doSelectLocalNodeToConnect() {
 	//	}
 	//}
 
-	selectNodeSet := srv.nodeSet.randSelect()
+	selectNodeSet := srv.nodeSet.randSelect(srv)
 
 	if selectNodeSet == nil {
 		return
@@ -481,6 +500,7 @@ func (srv *Server) listenLoop() {
 		}
 		go func() {
 			srv.log.Info("Accept new connection from, %s -> %s", fd.RemoteAddr(), fd.LocalAddr())
+
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
@@ -490,6 +510,7 @@ func (srv *Server) listenLoop() {
 			if err != nil && strings.Contains(err.Error(), "too many incomming") {
 				return
 			}
+
 			slots <- struct{}{}
 		}()
 	}
@@ -497,7 +518,7 @@ func (srv *Server) listenLoop() {
 
 // setupConn Confirm both side are valid peers, have sub-protocols supported by each other
 // Assume the inbound side is server side; outbound side is client side.
-func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) error {
+func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) (err error) {
 	if flags == inboundConn && srv.PeerCount() > srv.maxConnections {
 		srv.log.Warn("setup connection with peer %s. reached max incoming connection limit, reject!", dialDest)
 		return errors.New("Too many incoming connections")
@@ -505,7 +526,9 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 
 	srv.log.Debug("setup connection with peer %s", dialDest)
 	peer := NewPeer(&connection{fd: fd, log: srv.log}, srv.log, dialDest)
+
 	var caps []Cap
+
 	for _, proto := range srv.Protocols {
 		caps = append(caps, proto.cap())
 	}
@@ -522,11 +545,14 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	peerNodeID := recvMsg.NodeID
 	if flags == inboundConn {
 		peerNode, ok := srv.kadDB.FindByNodeID(peerNodeID)
+
 		if !ok {
 			srv.log.Warn("p2p.setupConn conn handshaked, not found nodeID:%s", peerNodeID)
 			peer.close()
 			return errors.New("not found nodeID in discovery database")
 		}
+		//the connection from a different path, need to dd the node to the list
+		srv.nodeSet.tryAdd(peerNode)
 
 		srv.log.Info("p2p.setupConn peerNodeID found in nodeMap. %s", peerNode.ID.Hex())
 		peer.Node = peerNode
@@ -535,14 +561,23 @@ func (srv *Server) setupConn(fd net.Conn, flags int, dialDest *discovery.Node) e
 	go func() {
 		//srv.loopWG.Add(1)
 		isAdd, isRun := srv.addPeer(peer)
+
 		if isAdd && !isRun {
+
 			//srv.log.Error("RUN BEGIN")
+
 			peer.run()
-			srv.deletePeer(peer.Node.ID)
 			//srv.log.Error("RUN END")
+			srv.deletePeer(peer.Node.ID)
+
+			//peer.Close()
+			//peer = nil
+
 		}
+
 		if !isAdd {
 			peer.close()
+			peer = nil
 		}
 
 		//srv.loopWG.Done()

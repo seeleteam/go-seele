@@ -271,11 +271,13 @@ func (u *udp) readLoop() {
 		n, remoteAddr, err := u.conn.ReadFromUDP(data)
 		if err != nil {
 			u.log.Warn("failed to discover reading from udp %s", err)
+			
 			continue
 		}
 
 		data = data[:n]
 		u.handleMsg(remoteAddr, data)
+
 	}
 }
 
@@ -352,6 +354,8 @@ func (u *udp) discovery() {
 		id, err := crypto.GenerateRandomAddress()
 		if err != nil {
 			u.log.Error(err.Error())
+			//pause a little bit
+			time.Sleep(1*time.Second)
 			continue
 		}
 
