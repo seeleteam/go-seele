@@ -18,6 +18,7 @@ import (
 
 // MsgWaitTimeout this timeout should not be happened, but we need to handle it in case of such errors.
 const MsgWaitTimeout = time.Second * 25
+const maxLoopAllowed = 100
 
 var (
 	errReceivedQuitMsg = errors.New("Received quit msg")
@@ -31,6 +32,7 @@ type Peer interface {
 	RequestBlocksByHashOrNumber(magic uint32, origin common.Hash, num uint64, amount int) error
 	GetPeerRequestInfo() (uint32, common.Hash, uint64, int)
 	DisconnectPeer(reason string)
+	
 }
 
 type peerConn struct {
@@ -64,9 +66,11 @@ func (p *peerConn) waitMsg(magic uint32, msgCode uint16, cancelCh chan struct{})
 	p.lockForWaiting.Unlock()
 	timeout := time.NewTimer(MsgWaitTimeout)
 	//timeout := time.Timer(MsgWaitTimeout)
+	loopCount :=0
 Again:
 
 	select {
+
 	case <-p.quitCh:
 		err = errPeerQuit
 	case <-cancelCh:
@@ -76,22 +80,39 @@ Again:
 		case BlockHeadersMsg:
 			var reqMsg BlockHeadersMsgBody
 			if err := common.Deserialize(msg.Payload, &reqMsg); err != nil {
+				loopCount++
+				if loopCount>maxLoopAllowed {
+					break Again
+				}
 				goto Again
 			}
 			if reqMsg.Magic != magic {
 				p.log.Debug("Downloader.waitMsg  BlockHeadersMsg MAGIC_NOT_MATCH msg=%s, magic=%d, pid=%s", CodeToStr(msgCode), magic, p.peerID)
+				loopCount++
+				if loopCount>maxLoopAllowed {
+					break Again
+				}
 				goto Again
 			}
 			ret = reqMsg.Headers
 		case BlocksMsg:
 			var reqMsg BlocksMsgBody
 			if err := common.Deserialize(msg.Payload, &reqMsg); err != nil {
+				loopCount++
+				if loopCount>maxLoopAllowed {
+					break Again
+				}
 				goto Again
 			}
 			if reqMsg.Magic != magic {
 				p.log.Debug("Downloader.waitMsg  BlocksMsg MAGIC_NOT_MATCH msg=%s pid=%s", CodeToStr(msgCode), p.peerID)
+				loopCount++
+				if loopCount>maxLoopAllowed {
+					break Again
+				}
 				goto Again
 			}
+			
 			ret = reqMsg.Blocks
 		}
 	case <-timeout.C:

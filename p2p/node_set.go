@@ -24,7 +24,7 @@ type nodeItem struct {
 }
 
 // nodeSet is thread safe collection, contains all active nodes, weather it is connected or not
-const MinConnPerShard = 4
+const MinConnPerShard = 13
 
 type nodeSet struct {
 	lock    sync.RWMutex
@@ -112,25 +112,28 @@ func (set *nodeSet) delete(p *discovery.Node) {
 	}
 }
 
-func (set *nodeSet) ifNeedAddNodes() bool {
+//if connected nodes fewer than the threshold return true
+func (set *nodeSet) ifNeedAddNodes(shardid uint) bool {
 	set.lock.RLock()
 	defer set.lock.RUnlock()
-	var shardNodeCounts [common.ShardCount]int
+	//var shardNodeCounts [common.ShardCount]int
+	numNodes := 0
 	for _, v := range set.nodeMap {
-		if v.bConnected {
-			shardNodeCounts[v.node.Shard-1]++
+
+		if v.bConnected && v.node.Shard == shardid {
+			numNodes++
 		}
 	}
-	for i := 0; i < common.ShardCount; i++ {
-		if shardNodeCounts[i] < MinConnPerShard {
-			return true
-		}
+	if numNodes < MinConnPerShard {
+		return true
 	}
+
 	return false
+
 }
 
 // randSelect select one node randomly from nodeMap which is not connected yet
-func (set *nodeSet) randSelect() []*discovery.Node {
+func (set *nodeSet) randSelect(srv *Server) []*discovery.Node {
 	set.lock.RLock()
 	defer set.lock.RUnlock()
 
@@ -139,7 +142,9 @@ func (set *nodeSet) randSelect() []*discovery.Node {
 	var shardNodeCounts [common.ShardCount]int
 
 	for _, v := range set.nodeMap {
-		if v.bConnected {
+		pe := srv.peerSet.find(v.node.ID)
+		if pe != nil && v.bConnected {
+
 			shardNodeCounts[v.node.Shard-1]++
 			continue
 		}
@@ -148,7 +153,7 @@ func (set *nodeSet) randSelect() []*discovery.Node {
 	}
 
 	for i := 0; i < common.ShardCount; i++ {
-		if shardNodeCounts[i] >= maxActiveConnsPerShard/2 {
+		if shardNodeCounts[i] >= maxActiveConnsPerShard {
 			continue
 		}
 		len := len(nodeL[i])
