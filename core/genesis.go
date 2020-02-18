@@ -162,7 +162,8 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 	}
 
 	if info.Consensus == types.BftConsensus { // 2 : Bft
-		vers, verErr := initateValidators(info.Masteraccount)
+		// vers, verErr := initateValidators(info.Masteraccount)
+		vers, verErr := initateValidators(info.Validators)
 
 		if verErr != nil { // if there is no verifier, need to add verifier(s) later to use bft
 			panic("Can not initate bft validators")
@@ -222,7 +223,7 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 // the inqury will be a transaction, so need some balance to make this inqury
 // SO FAR, in orer to test, we won't put any parameters
 // func (genesis *Genesis) initateValidators(add common.Address, payload []byte) error {
-func initateValidators(creator common.Address) ([]common.Address, error) {
+func initateValidators(verifiers []common.Address) ([]common.Address, error) {
 	// vers := []common.Address{
 	// 	common.BytesToAddress(hexutil.MustHexToBytes("0x7460dde5d3da978dd719aa5c6e35b7b8564682d1")), // todo change to read the creator address from config file
 	// 	// common.BytesToAddress(hexutil.MustHexToBytes("0x4458681e0d642b9781fb86721cf5132ed04db041")),
@@ -231,11 +232,14 @@ func initateValidators(creator common.Address) ([]common.Address, error) {
 	// }
 	// fmt.Printf("initiate validators as %+v\n", vers)
 	var vers []common.Address
-	if len(creator) == common.AddressLen {
-		vers = append(vers, creator)
-	} else {
-		return nil, errors.New("failed to initiate validator since creator address length is not right")
+	for _, ver := range verifiers {
+		if len(ver) == common.AddressLen {
+			vers = append(vers, ver)
+		} else {
+			return nil, errors.New("failed to initiate validator since verifer address length is not right")
+		}
 	}
+
 	return vers, nil
 }
 
@@ -248,6 +252,7 @@ func getGenesisExtraData(vers []common.Address) []byte {
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
 	}
+	fmt.Printf("encode the extra genesis data with validator %+v", vers)
 	bftPayload, err := rlp.EncodeToBytes(&bft)
 	if err != nil {
 		panic("failed to encode bft extra")
