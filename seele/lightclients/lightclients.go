@@ -101,6 +101,42 @@ func NewLightClientManager(targetShard uint, context context.Context, config *no
 	}, nil
 }
 
+// NewLightClientManagerSubChain create a new LightClientManager instance.
+func NewLightClientManagerSubChain(targetShard uint, context context.Context, config *node.Config, engine consensus.Engine) (*LightClientsManager, error) {
+	// for subchain, we only need initate the local shard
+	var shard int
+	var err error
+	shard = 1
+
+	copyConf := config.Clone()
+	// copyConf.SeeleConfig.GenesisConfig.Masteraccount = copyConf.SeeleConfig.GenesisConfig.Creator
+	copyConf.SeeleConfig.GenesisConfig.Balance = copyConf.SeeleConfig.GenesisConfig.Supply
+
+	clients := make([]*light.ServiceClient, shard+1)
+	backends := make([]*light.LightBackend, shard+1)
+	confirmedTxs := make([]*lru.Cache, shard)
+	copyConf.SeeleConfig.GenesisConfig.ShardNumber = targetShard
+
+	dbFolder := filepath.Join("db", fmt.Sprintf("lightchainforshard_%d", targetShard))
+	clients[0], err = light.NewServiceClient(context, copyConf, log.GetLogger(fmt.Sprintf("lightclient_%d", targetShard)), dbFolder, targetShard, engine)
+	if err != nil {
+		return nil, err
+	}
+
+	backends[0] = light.NewLightBackend(clients[targetShard])
+
+	// At most, shardCount * 8K (txs+dets) hash values cached.
+	// In case of 8 shards, 64K hash values cached, consuming about 2M memory.
+	confirmedTxs[0] = common.MustNewCache(4096)
+
+	return &LightClientsManager{
+		lightClients:        clients,
+		lightClientsBackend: backends,
+		confirmedTxs:        confirmedTxs,
+		localShard:          targetShard,
+	}, nil
+}
+
 // ValidateDebt validate debt
 // returns packed whether debt is packed
 // returns confirmed whether debt is confirmed

@@ -102,7 +102,7 @@ var substartCmd = &cobra.Command{
 		}
 
 		//5. services
-		submanager, err := lightclients.NewLightClientManager(seeleSubNode.GetShardNumber(), sctxt, subCfg, engine)
+		submanager, err := lightclients.NewLightClientManagerSubChain(seeleSubNode.GetShardNumber(), sctxt, subCfg, engine)
 		if err != nil {
 			fmt.Printf("create light client manager failed. %s\n", err)
 			return

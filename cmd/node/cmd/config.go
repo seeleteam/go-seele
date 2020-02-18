@@ -64,6 +64,8 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	}
 	if cmdConfig.BasicConfig.MinerAlgorithm == common.BFTSubchainEngine {
 		cmdConfig.GenesisConfig.Consensus = types.BftConsensus
+		fmt.Printf("Creator %+v\n", cmdConfig.GenesisConfig.Masteraccount)
+		fmt.Printf("Supply %+v\n", cmdConfig.GenesisConfig.Supply)
 		fmt.Println("change consensus to ", cmdConfig.GenesisConfig.Consensus)
 	}
 	config := CopyConfig(cmdConfig)
@@ -92,7 +94,7 @@ func LoadConfigFromFile(configFile string, accounts string) (*node.Config, error
 	comm.LogConfiguration.DataDir = config.BasicConfig.DataDir
 	config.BasicConfig.DataDir = filepath.Join(common.GetDefaultDataFolder(), config.BasicConfig.DataDir)
 	config.BasicConfig.DataSetDir = filepath.Join(common.GetTempFolder(), config.BasicConfig.DataDir)
-	// fmt.Printf("loadConfigFile %+v", config.BasicConfig.MinerAlgorithm)
+	fmt.Printf("loadConfigFile %+v", config.SeeleConfig.GenesisConfig)
 	return config, nil
 }
 

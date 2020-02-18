@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/common/errors"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/core/state"
 	"github.com/seeleteam/go-seele/core/store"
 	"github.com/seeleteam/go-seele/core/types"
@@ -65,6 +64,8 @@ type GenesisInfo struct {
 
 	// balance of the master account
 	Balance *big.Int `json:"balance"`
+	// subchain max supply
+	Supply *big.Int `json:"supply"`
 }
 
 // NewGenesisInfo mainchain genesis block info constructor
@@ -87,7 +88,7 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 		balance = big.NewInt(17500000000000000)
 	} else {
 		masteraccount, _ = common.HexToAddress("0x0000000000000000000000000000000000000000")
-		balance = big.NewInt(0)
+		balance = big.NewInt(1)
 	}
 	return &GenesisInfo{
 		Accounts:        accounts,
@@ -101,20 +102,23 @@ func NewGenesisInfo(accounts map[common.Address]*big.Int, difficult int64, shard
 	}
 }
 
-//NewGenesisInfoSubchain subchain genesis block constructor
-func NewGenesisInfoSubchain(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
-	consensus types.ConsensusType, validator []common.Address, masteraccount common.Address, balance *big.Int) *GenesisInfo {
-	return &GenesisInfo{
-		Accounts:        accounts,
-		Difficult:       difficult,
-		ShardNumber:     shard,
-		CreateTimestamp: timestamp,
-		Consensus:       consensus,
-		Validators:      validator,
-		Masteraccount:   masteraccount,
-		Balance:         balance,
-	}
-}
+// //NewGenesisInfoSubchain subchain genesis block constructor
+// func NewGenesisInfoSubchain(accounts map[common.Address]*big.Int, difficult int64, shard uint, timestamp *big.Int,
+// 	consensus types.ConsensusType, validator []common.Address, masteraccount common.Address, balance *big.Int, creator common.Address) *GenesisInfo {
+
+// 	masteraccount, _ = common.HexToAddress("0xc6c5c85c585ee33aae502b874afe6cbc3727ebf1")
+// 	balance = big.NewInt(17500000000000000)
+// 	return &GenesisInfo{
+// 		Accounts:        accounts,
+// 		Difficult:       difficult,
+// 		ShardNumber:     shard,
+// 		CreateTimestamp: timestamp,
+// 		Consensus:       consensus,
+// 		Validators:      validator,
+// 		Masteraccount:   masteraccount,
+// 		Balance:         balance,
+// 	}
+// }
 
 // Hash returns GenesisInfo hash
 func (info *GenesisInfo) Hash() common.Hash {
@@ -131,6 +135,13 @@ type shardInfo struct {
 	ShardNumber uint
 }
 
+// genesisExtraVerifyInfo we use header hash to verify genesis block, all other fields not in header can be serialize in this field (e.g. shard)
+type genesisExtraVerifyInfo struct {
+	ShardNumber uint
+	Master      common.Address
+	Supply      *big.Int
+}
+
 // GetGenesis gets the genesis block according to accounts' balance
 func GetGenesis(info *GenesisInfo) *Genesis {
 	if info.Difficult <= 0 {
@@ -142,6 +153,7 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("the genesis consensus algorithm", info.Consensus)
 
 	extraData := []byte{}
 	if info.Consensus == types.IstanbulConsensus {
@@ -150,21 +162,43 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 	}
 
 	if info.Consensus == types.BftConsensus { // 2 : Bft
-		vers, verErr := initateValidators()
-		fmt.Println("initiate validators")
+		vers, verErr := initateValidators(info.Masteraccount)
+
 		if verErr != nil { // if there is no verifier, need to add verifier(s) later to use bft
 			panic("Can not initate bft validators")
 		}
 		info.Validators = vers
 		extraData = getGenesisExtraData(info.Validators)
 		fmt.Printf("consensus is %d extraData initiated with %v\n", types.BftConsensus, info.Validators)
+
 	}
 
-	shard := common.SerializePanic(shardInfo{
+	if info.Consensus == types.BftConsensus {
+		genesisExtraVerifyInfo := common.SerializePanic(genesisExtraVerifyInfo{
+			ShardNumber: info.ShardNumber,
+			Master:      info.Masteraccount,
+			Supply:      info.Supply,
+		})
+		return &Genesis{
+			header: &types.BlockHeader{
+				PreviousBlockHash: common.EmptyHash,
+				Creator:           common.EmptyAddress,
+				StateHash:         stateRootHash,
+				TxHash:            types.MerkleRootHash(nil),
+				Difficulty:        big.NewInt(info.Difficult),
+				Height:            genesisBlockHeight,
+				CreateTimestamp:   info.CreateTimestamp,
+				Consensus:         info.Consensus,
+				Witness:           genesisExtraVerifyInfo,
+				ExtraData:         extraData,
+			},
+			info: info,
+		}
+	}
+
+	shard := common.SerializePanic(shardInfo{ //
 		ShardNumber: info.ShardNumber,
 	})
-
-	fmt.Println("the genesis consensus algorithm", info.Consensus)
 
 	return &Genesis{
 		header: &types.BlockHeader{
@@ -188,14 +222,20 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 // the inqury will be a transaction, so need some balance to make this inqury
 // SO FAR, in orer to test, we won't put any parameters
 // func (genesis *Genesis) initateValidators(add common.Address, payload []byte) error {
-func initateValidators() ([]common.Address, error) {
-	vers := []common.Address{
-		common.BytesToAddress(hexutil.MustHexToBytes("0x7460dde5d3da978dd719aa5c6e35b7b8564682d1")),
-		// common.BytesToAddress(hexutil.MustHexToBytes("0x4458681e0d642b9781fb86721cf5132ed04db041")),
-		// common.HexToAddress("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1"),
-		// "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
+func initateValidators(creator common.Address) ([]common.Address, error) {
+	// vers := []common.Address{
+	// 	common.BytesToAddress(hexutil.MustHexToBytes("0x7460dde5d3da978dd719aa5c6e35b7b8564682d1")), // todo change to read the creator address from config file
+	// 	// common.BytesToAddress(hexutil.MustHexToBytes("0x4458681e0d642b9781fb86721cf5132ed04db041")),
+	// 	// common.HexToAddress("0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1"),
+	// 	// "0xcee66ad4a1909f6b5170dec230c1a69bfc2b21d1",
+	// }
+	// fmt.Printf("initiate validators as %+v\n", vers)
+	var vers []common.Address
+	if len(creator) == common.AddressLen {
+		vers = append(vers, creator)
+	} else {
+		return nil, errors.New("failed to initiate validator since creator address length is not right")
 	}
-	fmt.Printf("initiate validators as %+v\n", vers)
 	return vers, nil
 }
 
@@ -260,7 +300,8 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 		return errors.NewStackedErrorf(err, "failed to get genesis block by hash %v", storedGenesisHash)
 	}
 
-	data, err := getShardInfo(storedGenesis)
+	// data, err := getShardInfo(storedGenesis)
+	data, err := getGenesisExtraVerifyInfo(storedGenesis)
 	if err != nil {
 		return errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
@@ -290,7 +331,7 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 		return errors.NewStackedError(err, "failed to commit batch into database")
 	}
 
-	fmt.Printf("put genesis header.hash %s into bcstore", genesis.header.Hash())
+	fmt.Printf("put genesis header.hash %s into bcstore\n", genesis.header.Hash())
 
 	if err := bcStore.PutBlockHeader(genesis.header.Hash(), genesis.header, genesis.header.Difficulty, true); err != nil {
 		return errors.NewStackedError(err, "failed to put genesis block header into store")
@@ -349,6 +390,19 @@ func getShardInfo(genesisBlock *types.Block) (*shardInfo, error) {
 	}
 
 	data := &shardInfo{}
+	if err := common.Deserialize(genesisBlock.Header.Witness, data); err != nil {
+		return nil, errors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
+	}
+
+	return data, nil
+}
+
+func getGenesisExtraVerifyInfo(genesisBlock *types.Block) (*genesisExtraVerifyInfo, error) {
+	if genesisBlock.Header.Height != genesisBlockHeight {
+		return nil, fmt.Errorf("invalid genesis block height %v", genesisBlock.Header.Height)
+	}
+
+	data := &genesisExtraVerifyInfo{}
 	if err := common.Deserialize(genesisBlock.Header.Witness, data); err != nil {
 		return nil, errors.NewStackedError(err, "failed to deserialize the extra data of genesis block")
 	}
