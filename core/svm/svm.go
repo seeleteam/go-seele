@@ -93,7 +93,7 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 	}
 	receipt.UsedGas -= refund
 
-	return handleFee(ctx, receipt, snapshot, err)
+	return handleFee(ctx, receipt, snapshot)
 }
 
 func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, error) {
@@ -197,9 +197,8 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 	return receipt, err
 }
 
-func handleFee(ctx *Context, receipt *types.Receipt, snapshot int, e error) (*types.Receipt, error) {
-	if e != nil {return nil, e}
-  // Calculating the total fee
+func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
+    // Calculating the total fee
 	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
 	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)

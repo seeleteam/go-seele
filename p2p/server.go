@@ -16,6 +16,7 @@ import (
 	"math/big"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,7 +45,7 @@ const (
 	frameReadTimeout = 25 * time.Second
 
 	// interval to select new node to connect from the free node list.
-	checkConnsNumInterval = 15 * time.Second
+	checkConnsNumInterval = 7 * time.Second
 	inboundConn           = 1
 	outboundConn          = 2
 
@@ -228,14 +229,21 @@ func (srv *Server) addNode(node *discovery.Node) {
 	if node.Shard == discovery.UndefinedShardNumber {
 		return
 	}
-	srv.nodeSet.tryAdd(node)
-	if srv.PeerCount() > srv.maxActiveConnections {
-		srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
-		return
+	numPeersDelete := srv.PeerCount() - srv.maxActiveConnections
+	if numPeersDelete > 0 {
+		for i := 0; i < numPeersDelete; i++ {
+			if srv.PeerCount() > srv.maxActiveConnections {
+				srv.deletePeerRand()
+				//srv.log.Warn("got discovery a new node event. Reached connection limit, node:%v", node.String())
+				//return
+			}
+		}
 	}
 
-	srv.log.Debug("got discovery a new node event, node info:%s", node)
+	srv.nodeSet.tryAdd(node)
 	srv.connectNode(node)
+	srv.log.Debug("got discovery a new node event, node info:%s", node)
+
 }
 
 func (srv *Server) connectNode(node *discovery.Node) {
@@ -324,16 +332,42 @@ func (srv *Server) deletePeer(id common.Address) {
 	}
 }
 
+func (srv *Server) deletePeerRand() {
+	srv.peerLock.Lock()
+	defer srv.peerLock.Unlock()
+
+	p := srv.peerSet.getRandPeer()
+
+	if p != nil {
+		srv.nodeSet.setNodeStatus(p.Node, false)
+		srv.peerSet.delete(p)
+		p.notifyProtocolsDeletePeer()
+		srv.log.Debug("server.run delPeerChan received. peer match. remove peer. peers num=%d", srv.PeerCount())
+
+		metricsDeletePeerMeter.Mark(1)
+		metricsPeerCountGauge.Update(int64(srv.PeerCount()))
+	} else {
+		srv.log.Info("server.run delPeerChan received. peer not match")
+	}
+}
 func (srv *Server) run() {
 	defer srv.loopWG.Done()
 	srv.log.Info("p2p start running...")
 
 	checkTicker := time.NewTicker(checkConnsNumInterval)
+	checkTicker1 := time.NewTicker(12*checkConnsNumInterval + 3)
+
 running:
 	for {
 		select {
-		case <-checkTicker.C:
+		case <-checkTicker1.C:
 			go srv.doSelectNodeToConnect()
+		case <-checkTicker.C:
+			if srv.nodeSet.getSelfShardNodeNum() < 2 {
+				srv.log.Warn("local Node numer %d", srv.nodeSet.getSelfShardNodeNum())
+				go srv.doSelectLocalNodeToConnect()
+			}
+
 		case <-srv.quit:
 			srv.log.Warn("server got quit signal, run cleanup logic")
 			break running
@@ -352,6 +386,9 @@ running:
 // doSelectNodeToConnect selects one free node from nodeMap to connect
 func (srv *Server) doSelectNodeToConnect() {
 
+	if !srv.nodeSet.ifNeedAddNodes() {
+		return
+	}
 	for _, node := range srv.StaticNodes {
 		if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
 			continue
@@ -359,42 +396,44 @@ func (srv *Server) doSelectNodeToConnect() {
 			srv.connectNode(node)
 		}
 	}
+	selectNodeSet := srv.nodeSet.randSelect()
 
-	var node *discovery.Node
-	i := 0
-	for i < maxConnsPerShard {
-		node = srv.nodeSet.randSelect()
-		if node == nil {
-			return
-		}
+	if selectNodeSet == nil {
+		return
+	}
+	for i := 0; i < len(selectNodeSet); i++ {
 
-		// get the number of connected peers per shard
-		peers := srv.peerSet.getPeers()
-		srv.peerNumLock.Lock()
-		numOfPeerPerShard := make(map[uint]uint)
-		j := uint(1)
-		for j <= common.ShardCount {
-			numOfPeerPerShard[j] = uint(0)
-			j++
+		if selectNodeSet[i] != nil {
+			srv.log.Info("p2p.server doSelectNodeToConnect. Node=%s ,%d", selectNodeSet[i].IP.String(), selectNodeSet[i].UDPPort)
+			srv.connectNode(selectNodeSet[i])
 		}
-		for _, p := range peers {
-			if p != nil {
-				numOfPeerPerShard[p.Node.Shard]++
-			}
-		}
-
-		// select nodes in unconnected shards
-		if numOfPeerPerShard[node.Shard] < minNumOfPeerPerShard {
-			srv.peerNumLock.Unlock()
-			break
-		}
-		srv.peerNumLock.Unlock()
-
-		i++
 	}
 
-	srv.log.Debug("p2p.server doSelectNodeToConnect. Node=%s", node.String())
-	srv.connectNode(node)
+}
+
+func (srv *Server) doSelectLocalNodeToConnect() {
+	//for _, node := range srv.StaticNodes {
+	//	if node.ID.IsEmpty() || srv.checkPeerExist(node.ID) {
+	//		continue
+	//	} else {
+	//		srv.connectNode(node)
+	//	}
+	//}
+
+	selectNodeSet := srv.nodeSet.randSelect()
+
+	if selectNodeSet == nil {
+		return
+	}
+	for i := 0; i < len(selectNodeSet); i++ {
+		node := selectNodeSet[i]
+		if node != nil {
+			if node.Shard == common.LocalShardNumber {
+				srv.log.Info("p2p.server doSelectLocalNodeToConnect. Node=%s ,%d", selectNodeSet[i].IP.String(), selectNodeSet[i].UDPPort)
+				srv.connectNode(selectNodeSet[i])
+			}
+		}
+	}
 }
 
 func (srv *Server) startListening() error {
@@ -454,8 +493,12 @@ func (srv *Server) listenLoop() {
 			err := srv.setupConn(fd, inboundConn, nil)
 			if err != nil {
 				srv.log.Info("setupConn err, %s", err)
+
 			}
 
+			if err != nil && strings.Contains(err.Error(), "too many incomming") {
+				return
+			}
 			slots <- struct{}{}
 		}()
 	}

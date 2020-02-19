@@ -110,7 +110,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	// header.Creator = common.Address{}
 	header.Creator = s.Address()
 	header.Witness = make([]byte, bft.WitnessSize)
-	header.SecondWitness = make([]byte, bft.WitnessSize)
+	// header.SecondWitness = make([]byte, bft.WitnessSize)
 	header.Consensus = types.BftConsensus
 	header.Difficulty = defaultDifficulty // for bft consensus algorithm, we just set difficulty as the default value
 
@@ -122,7 +122,7 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 	// voting snapshot
 	snap, err := s.snapshot(chain, height-1, header.PreviousBlockHash, nil)
-	s.log.Info("get [height-1]= %d snap %+v", height-1, snap)
+	s.log.Info("get [height-1] = %d snap %+v", height-1, snap)
 	if err != nil {
 		s.log.Error("snapshot return err <-", err)
 		return err
@@ -140,21 +140,29 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 		}
 	}
 	s.candidatesLock.RUnlock()
-
 	// pick one candidate randomly
 	// the block creator will get the reward, here we randomly pickout peer
-	if len(addrs) > 0 {
+	// if err := s.GetVerifierFromSWExtra(header, addrs, auths); err != nil {
+	// 	return err
+	// }
+
+	if len(addrs) > 0 { // this will be used to gurantee the block prepared by non-ver can not passed
 		index := rand.Intn(len(addrs))
 		header.Creator = addrs[index]
-		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote or put nonceDropVote
+		if auths[index] { // if the address is authorized to vote, then put nonceAuthVote otherwise put nonceDropVote
 			copy(header.Witness[:], nonceAuthVote)
 		} else {
 			copy(header.Witness[:], nonceDropVote)
 		}
 	}
 
+	curVer := snap.verifiers()
+	newVer := s.GetCurrentVerifiers(curVer, addrs, auths)
+	curVer = append(curVer, newVer...)
 	// add verifiers in snapshot to extraData's verifiers section
 	s.log.Info("[bft] Prepare a block extra with snap.verifiers %+v", snap.verifiers())
+	s.log.Info("[bft] Prepare a block extra with verifiers %+v", curVer)
+	// extra, err := prepareExtra(header, curVer)
 	extra, err := prepareExtra(header, snap.verifiers())
 	if err != nil {
 		fmt.Println("failed to prepare extra data")

@@ -79,7 +79,7 @@ func (t *Table) findConnectedNodes(target common.Hash) []*Node {
 	return result.entries
 }
 
-func (t *Table) addNode(node *Node) {
+func (t *Table) addNode(node *Node) bool {
 	if isShardValid(node.Shard) {
 		if node.Shard != t.selfNode.Shard {
 			t.shardBuckets[node.Shard].addNode(node)
@@ -89,10 +89,12 @@ func (t *Table) addNode(node *Node) {
 
 			t.buckets[dis].addNode(node)
 		}
+		// the node is in the buckets
+		return true
 	} else {
 		t.log.Debug("get invalid shard, shard count is %d, getting shard number is %d", common.ShardCount, node.Shard)
 	}
-
+	return false
 }
 
 // getPeersCount obtain all peers count
@@ -129,11 +131,13 @@ func (t *Table) findNodeWithTarget(target common.Hash) []*Node {
 
 func (t *Table) deleteNode(n *Node) {
 	sha := n.getSha()
-	if n.Shard != t.selfNode.Shard {
-		t.shardBuckets[n.Shard].deleteNode(sha)
-	} else {
-		dis := logDist(t.selfNode.getSha(), sha)
-		t.buckets[dis].deleteNode(sha)
+	if isShardValid(n.Shard) {
+		if n.Shard != t.selfNode.Shard {
+			t.shardBuckets[n.Shard].deleteNode(sha)
+		} else {
+			dis := logDist(t.selfNode.getSha(), sha)
+			t.buckets[dis].deleteNode(sha)
+		}
 	}
 }
 
@@ -194,6 +198,7 @@ func (h *nodesByDistance) push(n *Node) {
 	ix := sort.Search(len(h.entries), func(i int) bool {
 		return distCmp(h.target, h.entries[i].getSha(), n.getSha()) > 0
 	})
+
 	if len(h.entries) < h.maxElems {
 		h.entries = append(h.entries, n)
 	}

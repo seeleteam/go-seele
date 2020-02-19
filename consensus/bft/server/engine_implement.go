@@ -83,11 +83,17 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	number := header.Height
 
 	// Bail out if we're unauthorized to sign a block
-	s.log.Info("SealResult take a snapshot")
+	// var headers []*types.BlockHeader
+	// headers = append(headers, header)
+
+	// step1. take a snapshot of n-1th block
 	snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, nil)
+	// snap, err := s.snapshot(chain, number-1, header.PreviousBlockHash, headers)
 	if err != nil {
 		return nil, err
 	}
+	s.log.Info("snapshot pervious block height %d, hash %s", number-1, header.PreviousBlockHash)
+
 	// check whether self is authoried or not
 	// Test Result return with VerSet:0xc000356640
 	// s.log.Info("check s.address %+v in verset or not?", s.address)
@@ -103,14 +109,14 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// 	s.log.Error("\n\n\n\ncheck snap verset first: %dth verifier %s\n\n\n", i, ver)
 	// }
 
+	// verify current server address is in the verset or not
 	_, v := snap.VerSet.GetVerByAddress(s.address)
 
 	if v == nil {
 		s.log.Error("server address is NOT in verifers set")
 		return nil, errUnauthorized
-	} else {
-		s.log.Info("server address %s is in verifiers set", s.address)
 	}
+	s.log.Info("server address %s is in verifiers set", s.address)
 
 	parent := chain.GetHeaderByHash(header.PreviousBlockHash)
 	if parent == nil {
@@ -119,6 +125,7 @@ func (s *server) SealResult(chain consensus.ChainReader, block *types.Block, sto
 	// s.log.Info("[4-2-3]newBlock SealResult parent %+v", parent)
 
 	// s.log.Info("[4-2-4]newBlock SealResult updateBlock before %+v", block)
+
 	//update block with signature and timestamp
 	block, err = s.updateBlock(parent, block) //
 
@@ -288,7 +295,7 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			s.log.Error("not a valid address")
 			return errInvalidSignature
 		}
-		if verifiers.RemoveVerifier(addr) { //TODO
+		if verifiers.RemoveVerifier(addr) {
 			validSealCount++
 		} else {
 			return errCommittedSealsInvalid
@@ -384,6 +391,14 @@ func sigHash(header *types.BlockHeader) (hash common.Hash) {
 // snapshot used to verfify the authentication.
 func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash common.Hash, parents []*types.BlockHeader) (*Snapshot, error) {
 	// Search for a snapshot in memory or on disk for checkpoints
+
+	if len(parents) > 0 {
+		ser.log.Info("get multply parentHeaders")
+		for i, parent := range parents {
+			ser.log.Info("%d/%d, %s, height %d\n", i/len(parents), parent.Hash, parent.Height)
+		}
+	}
+
 	var (
 		headers []*types.BlockHeader
 		snap    *Snapshot
@@ -396,37 +411,92 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
-		// If an on-disk checkpoint snapshot can be found, use that
-		if height%checkInterval == 0 {
-			if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
-				ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
-				snap = s
-				break
+		// FIXME If an on-disk checkpoint snapshot can be found, use that
+		/*
+			if height%checkInterval == 0 { // FIXME double check the Epoch & checkInterval
+				if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, hash); err == nil {
+					ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
+					snap = s
+					break
+				}
 			}
-		}
+		*/
 		// If we're at block zero, make a snapshot
-		// BUGS when run, FIXME
-		// if height == 0 {
-		// fmt.Println("we start from Height = 0")
-		genesis := chain.GetHeaderByHeight(0)
-		// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
-		// format of extra data is invalid !!!
-		if err := ser.VerifyHeader(chain, genesis); err != nil {
-			fmt.Println("failed to verify header when [snapshot] with err", err)
-			return nil, err
+		if height == 0 {
+			genesis := chain.GetHeaderByHeight(0)
+			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
+			if err := ser.VerifyHeader(chain, genesis); err != nil {
+				fmt.Println("failed to verify header when [snapshot] with err", err)
+				return nil, err
+			}
+			bftExtra, err := types.ExtractBftExtra(genesis)
+			if err != nil {
+				return nil, err
+			}
+			snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+			// FIXME need to save not so frequently and save to ser.recents
+			if err := snap.save(ser.db); err != nil {
+				return nil, err
+			}
+			ser.log.Info("Stored genesis voting snapshot to disk")
+			break
+		} else {
+			h := chain.GetHeaderByHeight(height)
+			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
+			if err := ser.VerifyHeader(chain, h); err != nil {
+				fmt.Println("failed to verify header when [snapshot] with err", err)
+				return nil, err
+			}
+			bftExtra, err := types.ExtractBftExtra(h)
+			if err != nil {
+				ser.log.Error("failed to extra secondwitness extra, err", err)
+
+				return nil, err
+			}
+			snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
+			// snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(curvers, ser.config.ProposerPolicy))
+			// FIXME need to save not so frequently
+
+			swExtra, err := types.ExtractSecondWitnessExtra(h)
+			if err != nil {
+				ser.log.Error("failed to extra secondwitness extra, err", err)
+				return nil, err
+			}
+			ser.log.Info("swExtra %+v", swExtra)
+			if len(swExtra.ChallengedTxs) != 0 {
+				ser.log.Warn("successfully challenge relay info on mainchain")
+				checkpoint := uint64(height / checkInterval)
+				reverthash := chain.GetHeaderByHeight(checkpoint).Hash()
+				if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, reverthash); err == nil {
+					ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
+					snap = s
+					break
+				}
+
+			}
+			for i, depver := range swExtra.DepositVers {
+				ser.log.Warn("%dth new verifier %+v from secondwitness", i, depver)
+				added := snap.VerSet.AddVerifier(depver)
+				if !added {
+					ser.log.Warn("verifier address already exists in verifier list")
+				}
+				ser.log.Debug("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
+			}
+			for k, exver := range swExtra.ExitVers {
+				ser.log.Warn("%dth verifier %+v removed from secondwitness", k, exver)
+				deleted := snap.VerSet.RemoveVerifier(exver)
+				if !deleted {
+					ser.log.Error("exit verifier NOT found in verifier list!")
+				}
+				ser.log.Debug("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
+			}
+
+			if err := snap.save(ser.db); err != nil {
+				return nil, err
+			}
+			ser.log.Info("Stored genesis voting snapshot to disk")
+			break
 		}
-		bftExtra, err := types.ExtractBftExtra(genesis)
-		if err != nil {
-			return nil, err
-		}
-		snap = newSnapshot(ser.config.Epoch, 0, genesis.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
-		// FIXME need to save not so frequently and save to ser.recents
-		if err := snap.save(ser.db); err != nil {
-			return nil, err
-		}
-		ser.log.Info("Stored genesis voting snapshot to disk")
-		break
-		// }
 		// No snapshot for this header, gather the header and move backward
 		var header *types.BlockHeader
 		if len(parents) > 0 {
@@ -450,7 +520,8 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers)
+	ser.log.Info("before applying len=%d headers, snapshot %+v", len(headers), snap)
+	snap, err := snap.applyHeaders(headers)
 	if err != nil {
 		return nil, err
 	}
@@ -461,10 +532,9 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		if err = snap.save(ser.db); err != nil {
 			return nil, err
 		}
-		ser.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
+		ser.log.Info("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
 	ser.log.Info("take a snapshot %+v with err %+v", snap, err)
-	// ser.log.Info("snap.VerSet.GetVerByIndex(0)", snap.VerSet.GetVerByIndex(0))
 	return snap, err
 }
 

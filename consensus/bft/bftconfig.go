@@ -23,5 +23,5 @@ var DefaultConfig = &BFTConfig{
 	RequestTimeout: 10000,      // milliseconds
 	BlockPeriod:    1,          //second
 	ProposerPolicy: RoundRobin, // we use RoundRobin policy (others are Random/RoundRobin/LesatBusy/StickySession/cookies/ByReqeust)
-	Epoch:          30000,      //blocks
+	Epoch:          3000,       //blocks 30000?
 }

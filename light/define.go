@@ -32,7 +32,7 @@ const (
 	// MinHashesCached minimum items cached in peer for client mode
 	MinHashesCached uint64 = 256
 
-	forceSyncInterval = time.Second * 5 // interval time of synchronising with remote peer
+	forceSyncInterval = time.Second * 13 // interval time of synchronising with remote peer
 )
 
 // statusData the structure for peers to exchange status

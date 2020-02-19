@@ -170,7 +170,7 @@ func (verSet *basicSet) AddVerifier(address common.Address) bool {
 	defer verSet.verifierMu.Unlock()
 	// check existence
 	for _, v := range verSet.verifiers {
-		if v.Address() == address {
+		if v.Address() == address { // verifier already in the list, just return false
 			return false
 		}
 	}

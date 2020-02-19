@@ -87,29 +87,6 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	return miner
 }
 
-// NewMiner constructs and returns a miner instance
-func NewMinerSubchain(addr common.Address, seele SeeleBackend, engine consensus.Engine) *Miner {
-	miner := &Miner{
-		coinbase:             addr,
-		canStart:             1,
-		stopped:              0,
-		stopper:              0,
-		seele:                seele,
-		wg:                   sync.WaitGroup{},
-		recv:                 make(chan *types.Block, 1),
-		log:                  log.GetLogger("miner"),
-		isFirstDownloader:    1,
-		isFirstBlockPrepared: 0,
-		engine:               engine,
-	}
-
-	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
-	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
-	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
-
-	return miner
-}
-
 func (miner *Miner) GetEngine() consensus.Engine {
 	return miner.engine
 }
@@ -150,16 +127,13 @@ func (miner *Miner) Start() error {
 
 	miner.stopChan = make(chan struct{})
 
-	// If the consensus engine is BFT
 	if bft, ok := miner.engine.(consensus.Bft); ok {
 		if err := bft.Start(miner.seele.BlockChain(), miner.seele.BlockChain().CurrentBlock, nil); err != nil {
 			panic(fmt.Sprintf("failed to start bft engine: %v", err))
-		} else {
-			fmt.Println("starting BFT engine")
 		}
 	}
 
-	// try to prepare and mine the first block, if fails, node should terminate
+	// try to prepare the first block
 	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
 		atomic.StoreInt32(&miner.mining, 0)
@@ -183,7 +157,6 @@ func (miner *Miner) Stop() {
 	miner.stopMining()
 
 	// if bft, ok := miner.engine.(consensus.Bft); ok {
-	// 	miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
 	// 	if err := bft.Stop(); err != nil {
 	// 		panic(fmt.Sprintf("failed to stop bft engine: %v", err))
 	// 	}
@@ -203,7 +176,7 @@ func (miner *Miner) stopMining() {
 	// wait for all threads to terminate
 	miner.wg.Wait()
 	if bft, ok := miner.engine.(consensus.Bft); ok {
-		miner.log.Info("\n\n\nminer engine is bft, will stop bft engine\n\n\n")
+		miner.log.Info("\n\n\n miner engine is bft, will stop bft engine \n\n\n")
 		if err := bft.Stop(); err != nil {
 			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
 		}
@@ -324,7 +297,8 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	}
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
-	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.log)
+	// here we add the verifierTx, challengeTx and exitTx
+	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}
@@ -340,8 +314,9 @@ func (miner *Miner) saveBlock(result *types.Block) error {
 	now := time.Now()
 	// entrance
 	memory.Print(miner.log, "miner saveBlock entrance", now, false)
+	txPool := miner.seele.TxPool().Pool
 
-	ret := miner.seele.BlockChain().WriteBlock(result)
+	ret := miner.seele.BlockChain().WriteBlock(result, txPool)
 
 	// entrance
 	memory.Print(miner.log, "miner saveBlock exit", now, true)
@@ -355,6 +330,4 @@ func (miner *Miner) commitTask(task *Task, recv chan *types.Block) {
 	block := task.generateBlock() //
 	miner.log.Info("[bft]-2 generate a block %+v", block)
 	miner.engine.Seal(miner.seele.BlockChain(), block, miner.stopChan, recv)
-	miner.log.Info("[bft]-3 seal result")
-
 }

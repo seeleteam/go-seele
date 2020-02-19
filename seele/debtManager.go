@@ -6,17 +6,17 @@
 package seele
 
 import (
+	"encoding/binary"
 	"runtime"
 	"sync"
 	"time"
-	"encoding/binary"
 
 	"github.com/Jeffail/tunny"
 	"github.com/seeleteam/go-seele/common"
 	"github.com/seeleteam/go-seele/core"
 	"github.com/seeleteam/go-seele/core/types"
-	"github.com/seeleteam/go-seele/log"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/log"
 )
 
 type propagateDebts interface {
@@ -43,12 +43,12 @@ type DebtManager struct {
 	debts map[common.Hash]*DebtInfo
 	lock  *sync.RWMutex
 
-	checker     types.DebtVerifier
-	propagation propagateDebts
-	log         *log.SeeleLog
-	chain       *core.Blockchain
-	blockHeights []uint64 
-	dmDB        database.Database
+	checker      types.DebtVerifier
+	propagation  propagateDebts
+	log          *log.SeeleLog
+	chain        *core.Blockchain
+	blockHeights []uint64
+	dmDB         database.Database
 }
 
 func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *core.Blockchain, debtManagerDB database.Database) *DebtManager {
@@ -59,7 +59,7 @@ func NewDebtManager(debtChecker types.DebtVerifier, p propagateDebts, chain *cor
 		propagation: p,
 		log:         log.GetLogger("debt_manager"),
 		chain:       chain,
-		dmDB:        debtManagerDB, 
+		dmDB:        debtManagerDB,
 	}
 }
 
@@ -92,8 +92,8 @@ func (m *DebtManager) AddDebtMap(debtMap [][]*types.Debt, height uint64) {
 				if len(ToBeStoredDebts) == 0 {
 					m.blockHeights = append(m.blockHeights, height)
 				}
-				     
-				ToBeStoredDebts = append(ToBeStoredDebts, d) 
+
+				ToBeStoredDebts = append(ToBeStoredDebts, d)
 			}
 
 		}
@@ -110,7 +110,7 @@ func (m *DebtManager) AddDebtMap(debtMap [][]*types.Debt, height uint64) {
 			m.log.Warn("failed to store extra debts in database, err %s", err)
 		}
 	}
-	
+
 }
 
 func (m *DebtManager) Remove(hash common.Hash) {
@@ -235,7 +235,7 @@ func (m *DebtManager) reinjectDebtFromDatabase() error {
 			}
 			m.log.Debug("Got debts from database. height: %d, hash of the first debt:%s", height, debts[0].Hash.Hex())
 
-			debtMap := make([][]*types.Debt, common.ShardCount + 1)
+			debtMap := make([][]*types.Debt, common.ShardCount+1)
 			for _, d := range debts {
 				if d != nil {
 					shard := d.Data.Account.Shard()
@@ -249,7 +249,7 @@ func (m *DebtManager) reinjectDebtFromDatabase() error {
 			}
 			m.blockHeights = m.blockHeights[1:]
 
-			// reinject debts to debt manager pool; if the debt manager 
+			// reinject debts to debt manager pool; if the debt manager
 			// pool is full, the debts will go back to the database
 			m.AddDebtMap(debtMap, height)
 
