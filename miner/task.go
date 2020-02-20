@@ -7,13 +7,11 @@ package miner
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -145,22 +143,24 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
 
-	//this code section for test the verifier is correctly added into secondwitness
+	/*
+		//this code section for test the verifier is correctly added into secondwitness
 
-	task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
-	task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+		task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+		task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
 
-	if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
-		fmt.Println("deposit verifiers", task.depositVers)
-		var err error
-		task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
-		if err != nil {
-			log.Error("failed to prepare deposit or exit tx into secondwitness")
+		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+			fmt.Println("deposit verifiers", task.depositVers)
+			var err error
+			task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+			if err != nil {
+				log.Error("failed to prepare deposit or exit tx into secondwitness")
+			}
+			log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+
 		}
-		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
-
-	}
-	// test code end here
+		// test code end here
+	*/
 
 	txIndex := 1 // the first tx is miner reward
 
