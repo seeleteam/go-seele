@@ -59,6 +59,8 @@ type GenesisInfo struct {
 	// Validators Bft consensus validators
 	Validators []common.Address `json:"validators"`
 
+	Rootaccounts []common.Address `json:"rootaccounts"`
+
 	// master account
 	Masteraccount common.Address `json:"master"`
 
@@ -137,9 +139,10 @@ type shardInfo struct {
 
 // genesisExtraVerifyInfo we use header hash to verify genesis block, all other fields not in header can be serialize in this field (e.g. shard)
 type genesisExtraVerifyInfo struct {
-	ShardNumber uint
-	Master      common.Address
-	Supply      *big.Int
+	ShardNumber  uint
+	Master       common.Address
+	Supply       *big.Int
+	RootAccounts []common.Address
 }
 
 // GetGenesis gets the genesis block according to accounts' balance
@@ -176,9 +179,10 @@ func GetGenesis(info *GenesisInfo) *Genesis {
 
 	if info.Consensus == types.BftConsensus {
 		genesisExtraVerifyInfo := common.SerializePanic(genesisExtraVerifyInfo{
-			ShardNumber: info.ShardNumber,
-			Master:      info.Masteraccount,
-			Supply:      info.Supply,
+			ShardNumber:  info.ShardNumber,
+			Master:       info.Masteraccount,
+			Supply:       info.Supply,
+			RootAccounts: info.Rootaccounts,
 		})
 		return &Genesis{
 			header: &types.BlockHeader{
@@ -310,9 +314,23 @@ func (genesis *Genesis) InitializeAndValidate(bcStore store.BlockchainStore, acc
 	if err != nil {
 		return errors.NewStackedError(err, "failed to get extra data in genesis block")
 	}
-
+	// check shard number
 	if data.ShardNumber != genesis.info.ShardNumber {
 		return fmt.Errorf("specific shard number %d does not match with the shard number in genesis info %d", data.ShardNumber, genesis.info.ShardNumber)
+	}
+
+	/* If change genesisExtraVerifyInfo structure, make sure change all called methods and verifiy the structure here
+	 */
+
+	if len(data.RootAccounts) != len(genesis.info.Rootaccounts) {
+		return fmt.Errorf("number of root accounts %d does not match with the root accounts in genesis info %d", len(data.RootAccounts), len(genesis.info.Rootaccounts))
+	}
+
+	for i := 0; i < len(data.RootAccounts); i++ {
+		if data.RootAccounts[i] != genesis.info.Rootaccounts[i] {
+			return fmt.Errorf("root account %+v does not match with the root accounts in genesis info %+v", data.RootAccounts[i], genesis.info.Rootaccounts[i])
+
+		}
 	}
 
 	if headerHash := genesis.header.Hash(); !headerHash.Equal(storedGenesisHash) {

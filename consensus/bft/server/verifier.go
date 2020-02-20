@@ -14,6 +14,7 @@ func ContainVer(addres []common.Address, ver common.Address) (int, bool) {
 	return -1, false
 }
 
+// GetVerifierFromSWExtra get the verifiers from the extradata with txs
 func (s *server) GetVerifierFromSWExtra(header *types.BlockHeader, addrs []common.Address, auths []bool) error {
 
 	// get the new verifiers from n-1th block secondwitness
@@ -26,7 +27,7 @@ func (s *server) GetVerifierFromSWExtra(header *types.BlockHeader, addrs []commo
 		return err
 	}
 	// in case one same verifier deposit and exit at the same block,
-	// make usre add before delect
+	// make usre add before delete
 	for _, depVer := range swExtra.DepositVers {
 		if _, contain := ContainVer(addrs, depVer); contain {
 			s.log.Warn("verifier from deposit tx already exit in verifier set")
@@ -43,11 +44,12 @@ func (s *server) GetVerifierFromSWExtra(header *types.BlockHeader, addrs []commo
 			continue
 		}
 		addrs = append(addrs, exitVer)
-		auths = append(auths, false)
+		auths = append(auths, true)
 	}
 	return nil
 }
 
+//GetCurrentVerifiers get current verifiers from
 func (s *server) GetCurrentVerifiers(verset []common.Address, addrs []common.Address, auths []bool) []common.Address {
 	for i, addr := range addrs {
 		if auths[i] {

@@ -301,6 +301,12 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			return errCommittedSealsInvalid
 		}
 	}
+	s.log.Error("got %d valid seals", validSealCount)
+	s.log.Error("%d verifiers", snap.VerSet.Size())
+	for i, ver := range snap.VerSet.List() {
+		s.log.Error("%d, verifier %+v", i, ver)
+	}
+	s.log.Error("%d verifiers", snap.VerSet.Size())
 	// 2. The length of validSeal should be larger than number of faulty node + 1
 	// if validSealCount <= 2*snap.VerSet.F() { // FIXME <= or <??
 	if validSealCount < 2*snap.VerSet.F() {
@@ -480,7 +486,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				if !added {
 					ser.log.Warn("verifier address already exists in verifier list")
 				}
-				ser.log.Debug("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
+				ser.log.Info("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
 			}
 			for k, exver := range swExtra.ExitVers {
 				ser.log.Warn("%dth verifier %+v removed from secondwitness", k, exver)
@@ -488,7 +494,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				if !deleted {
 					ser.log.Error("exit verifier NOT found in verifier list!")
 				}
-				ser.log.Debug("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
+				ser.log.Info("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
 			if err := snap.save(ser.db); err != nil {
