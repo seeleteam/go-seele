@@ -7,6 +7,7 @@ package miner
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -186,14 +187,16 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				continue
 			}
 			if task.header.Consensus == types.BftConsensus { // for bft, the secondwitness will be used as deposit&exit address holder.
-				if tx.IsVerifierTx() {
+				rootAccounts := seele.GenesisInfo().Rootaccounts
+				fmt.Printf("rootAccounts %+v", rootAccounts)
+				if tx.IsVerifierTx(rootAccounts) {
 					task.depositVers = append(task.depositVers, tx.ToAccount())
 					// task.depositVers = append(task.depositVers, tx.FromAccount())
 				}
-				if tx.IsChallengedTx() {
+				if tx.IsChallengedTx(rootAccounts) {
 					task.challengedTxs = append(task.challengedTxs, tx)
 				}
-				if tx.IsExitTx() {
+				if tx.IsExitTx(rootAccounts) {
 					task.exitVers = append(task.exitVers, tx.ToAccount())
 				}
 			}

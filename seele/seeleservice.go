@@ -52,6 +52,8 @@ type SeeleService struct {
 	chainHeaderChangeChannel chan common.Hash
 
 	debtVerifier types.DebtVerifier
+
+	genesisInfo core.GenesisInfo
 }
 
 // ServiceContext is a collection of service configuration inherited from node
@@ -88,6 +90,9 @@ func (s *SeeleService) Downloader() *downloader.Downloader {
 // P2PServer get p2pServer
 func (s *SeeleService) P2PServer() *p2p.Server { return s.p2pServer }
 
+// Genesis Genesis information
+func (s *SeeleService) GenesisInfo() core.GenesisInfo { return s.genesisInfo }
+
 // NewSeeleService create SeeleService
 func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, engine consensus.Engine, verifier types.DebtVerifier, startHeight int) (s *SeeleService, err error) {
 	s = &SeeleService{
@@ -95,6 +100,7 @@ func NewSeeleService(ctx context.Context, conf *node.Config, log *log.SeeleLog, 
 		networkID:    conf.P2PConfig.NetworkID,
 		netVersion:   conf.BasicConfig.Version,
 		debtVerifier: verifier,
+		genesisInfo:  conf.SeeleConfig.GenesisConfig,
 	}
 
 	serviceContext := ctx.Value("ServiceContext").(ServiceContext)

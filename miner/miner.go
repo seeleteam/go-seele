@@ -38,6 +38,7 @@ type SeeleBackend interface {
 	TxPool() *core.TransactionPool
 	BlockChain() *core.Blockchain
 	DebtPool() *core.DebtPool
+	GenesisInfo() core.GenesisInfo
 }
 
 // Miner defines base elements of miner

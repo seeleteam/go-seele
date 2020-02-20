@@ -5,7 +5,7 @@ import (
 )
 
 // IsVerifierTx return whether the tx Is operate tx or not?
-func (tx *Transaction) IsVerifierTx() bool {
+func (tx *Transaction) IsVerifierTx(rootAccounts []common.Address) bool {
 	/*
 		define Tx to verfier check condition here
 		// verifier tx
@@ -13,20 +13,20 @@ func (tx *Transaction) IsVerifierTx() bool {
 	return true
 }
 
-func (tx *Transaction) IsDepositTx() bool {
+func (tx *Transaction) IsDepositTx(rootAccounts []common.Address) bool {
 	/*
 		define Tx to verfier check condition here
 	*/
 	return false
 }
-func (tx *Transaction) IsChallengedTx() bool {
+func (tx *Transaction) IsChallengedTx(rootAccounts []common.Address) bool {
 	/*
 		define Tx to verfier check condition here
 	*/
 	return false
 }
 
-func (tx *Transaction) IsExitTx() bool {
+func (tx *Transaction) IsExitTx(rootAccounts []common.Address) bool {
 	/*
 		define Tx to verfier check condition here
 	*/

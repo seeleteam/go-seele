@@ -363,6 +363,11 @@ func (genesis *Genesis) store(bcStore store.BlockchainStore, accountStateDB data
 	return nil
 }
 
+// GetRootAccounts return root accounts
+func (genesis *Genesis) GetRootAccounts() []common.Address {
+	return genesis.info.Rootaccounts
+}
+
 func getStateDB(info *GenesisInfo) *state.Statedb {
 	statedb := state.NewEmptyStatedb(nil)
 
