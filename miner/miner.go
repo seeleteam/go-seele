@@ -84,6 +84,8 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
 	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
+	// event waiting for challengedTx coming
+	event.ChallengedTxEventManager.AddAsyncListener(miner.challengedTxCallback)
 
 	return miner
 }
@@ -222,6 +224,27 @@ func (miner *Miner) newTxOrDebtCallback(e event.Event) {
 	}
 }
 
+// challengedTxCallback once get challengedTx, the actions will be taken: stop miner / revert blockchain / prepare a new block / change miner status
+func (miner *Miner) challengedTxCallback(e event.Event) {
+	// stop miner / revert blockchain / prepare a new block / change miner status
+	// stop miner
+
+	miner.log.Error("challengedTxCallback is called successfully!")
+	panic("WELL DONE!")
+	// 	miner.revert(miner.current.header.Height)
+	// 	atomic.StoreInt32(&miner.canStart, 1)
+	// 	atomic.StoreInt32(&miner.isFirstDownloader, 0)
+	// 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
+	// 		miner.log.Info("got download end event, start miner")
+	// 		miner.Start() // start miner (should pack the challenged tx in the first new block)
+	// 	}
+}
+
+// revert revert blockchain to some specific point
+func (miner *Miner) revert(height uint64) {
+
+}
+
 // waitBlock waits for blocks to be mined continuously
 func (miner *Miner) waitBlock() {
 out:
@@ -299,6 +322,8 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
 	// here we add the verifierTx, challengeTx and exitTx
+	// before that, once we have detected any challenged tx, we need to revert the blockchain first
+
 	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)

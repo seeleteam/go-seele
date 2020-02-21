@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -20,6 +21,7 @@ import (
 	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
+	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -143,25 +145,26 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
+	// test the event listner and fire function!
+	event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
 
-	/*
-		//this code section for test the verifier is correctly added into secondwitness
+	//this code section for test the verifier is correctly added into secondwitness
 
-		task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
-		task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+	task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+	// task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
 
-		if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
-			fmt.Println("deposit verifiers", task.depositVers)
-			var err error
-			task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
-			if err != nil {
-				log.Error("failed to prepare deposit or exit tx into secondwitness")
-			}
-			log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
-
+	if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+		log.Warn("deposit verifiers", task.depositVers)
+		log.Warn("exit verifiers", task.exitVers)
+		var err error
+		task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+		if err != nil {
+			log.Error("failed to prepare deposit or exit tx into secondwitness")
 		}
-		// test code end here
-	*/
+		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+
+	}
+	// test code end here
 
 	txIndex := 1 // the first tx is miner reward
 
@@ -189,13 +192,19 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 			if task.header.Consensus == types.BftConsensus { // for bft, the secondwitness will be used as deposit&exit address holder.
 				rootAccounts := seele.GenesisInfo().Rootaccounts
 				fmt.Printf("rootAccounts %+v", rootAccounts)
+				// if there is any successful challenge tx, need to revert blockchain first to specific point!
+				if tx.IsChallengedTx(rootAccounts) {
+					// will revert the block and db here, so the
+					task.challengedTxs = append(task.challengedTxs, tx)
+					event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+					return
+				}
+
 				if tx.IsVerifierTx(rootAccounts) {
 					task.depositVers = append(task.depositVers, tx.ToAccount())
 					// task.depositVers = append(task.depositVers, tx.FromAccount())
 				}
-				if tx.IsChallengedTx(rootAccounts) {
-					task.challengedTxs = append(task.challengedTxs, tx)
-				}
+
 				if tx.IsExitTx(rootAccounts) {
 					task.exitVers = append(task.exitVers, tx.ToAccount())
 				}

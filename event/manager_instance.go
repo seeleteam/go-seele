@@ -13,6 +13,7 @@ const (
 	DownloaderStartEvent  = 0
 	DownloaderDoneEvent   = 1
 	DownloaderFailedEvent = 2
+	ChallengedTxEvent     = 3
 )
 
 // BlockMinedEventManager represents the event that a new block is mined
@@ -25,3 +26,6 @@ var TransactionInsertedEventManager = NewEventManager()
 var ChainHeaderChangedEventMananger = NewEventManager()
 
 var DebtsInsertedEventManager = NewEventManager()
+
+// ChallengedTxEventManager once challenged tx exit in txpool, need to revert and pack the tx into the first new block
+var ChallengedTxEventManager = NewEventManager()

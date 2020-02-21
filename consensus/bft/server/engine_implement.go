@@ -497,6 +497,8 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				ser.log.Info("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
+			ser.log.Error("\n\nsnap verset %+v", snap.verifiers())
+
 			if err := snap.save(ser.db); err != nil {
 				return nil, err
 			}
@@ -526,7 +528,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	ser.log.Info("before applying len=%d headers, snapshot %+v", len(headers), snap)
+	ser.log.Debug("before applying len=%d headers, snapshot %+v", len(headers), snap)
 	snap, err := snap.applyHeaders(headers)
 	if err != nil {
 		return nil, err
@@ -538,9 +540,9 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		if err = snap.save(ser.db); err != nil {
 			return nil, err
 		}
-		ser.log.Info("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
+		ser.log.Debug("Stored voting snapshot to disk. height %d. hash %s", snap.Height, snap.Hash)
 	}
-	ser.log.Info("take a snapshot %+v with err %+v", snap, err)
+	ser.log.Debug("take a snapshot %+v with err %+v", snap, err)
 	return snap, err
 }
 
