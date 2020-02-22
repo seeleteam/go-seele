@@ -80,6 +80,8 @@ Here are some guidelines before you start:
 * [Telegram Group](https://t.me/seeletech)
 * [White Paper](https://s3.ap-northeast-2.amazonaws.com/wp.s3.seele.pro/Seele_White_Paper_English_v3.1.pdf)
 * [Roadmap](https://seele.pro/)
+* [Seele Wiki](https://seeletech.gitbook.io/wiki/)
+* [seele-sdk-javascript](https://www.npmjs.com/package/seele-sdk-javascript)
 
 # License
 
