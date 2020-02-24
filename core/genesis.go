@@ -60,6 +60,9 @@ type GenesisInfo struct {
 	// Validators Bft consensus validators
 	Validators []common.Address `json:"validators"`
 
+	// rootaccounts
+	RootAccounts []common.Address `json:"rootaccounts"`
+
 	// master account
 	Masteraccount common.Address `json:"master"`
 

@@ -57,6 +57,9 @@ type Address [AddressLen]byte
 // SubChainAddress address used for subchain
 type SubChainAddress [AddressLen]byte
 
+// RootAccounts defines the subchain root accounts
+var RootAccounts []Address
+
 // NewAddress converts a byte slice to a Address
 func NewAddress(b []byte) (Address, error) {
 	// Validate length

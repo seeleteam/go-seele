@@ -53,6 +53,9 @@ var substartCmd = &cobra.Command{
 			fmt.Printf("subchain log folder: %s\n", filepath.Join(log.LogFolder, comm.LogConfiguration.DataDir))
 		}
 		fmt.Printf("subchain data folder: %s\n", subCfg.BasicConfig.DataDir)
+		// 1.1 set commons
+		fmt.Printf("Root Accounts %+v\n", subCfg.SeeleConfig.GenesisConfig.RootAccounts)
+		common.RootAccounts = subCfg.SeeleConfig.GenesisConfig.RootAccounts
 
 		// 2. new node
 		// New node with config/services/log + checkConfig setup(mainly shard)

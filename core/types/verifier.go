@@ -1,51 +1,72 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/seeleteam/go-seele/common"
 )
 
 // IsVerifierTx return whether the tx Is operate tx or not?
 func (tx *Transaction) IsVerifierTx() bool {
-	/*
-		define Tx to verfier check condition here
-	*/
-	// var accounts = GetRootAccounts()
-
-	fmt.Printf("_____transcation types_____\n\n")
-	fmt.Printf("From: %s \n", tx.Data.From)
-	fmt.Printf("Type: %d \n\n\n", tx.Data.Type)
-	fmt.Printf("Roots:", common.GetRootAccounts())
+	// fmt.Printf("_____transcation types_____\n\n")
+	// fmt.Printf("From: %s \n", tx.Data.From)
+	// fmt.Printf("Type: %d \n", tx.Data.Type)
+	// fmt.Printf("Roots: %+v\n\n", common.RootAccounts)
+	if tx.Data.Type == 1 && tx.Data.From == common.RootAccounts[0] {
+		return true
+	}
 
 	return false
 }
 
+// IsResignTx return
 func (tx *Transaction) IsResignTx() bool {
-	/*
-		define Tx to verfier check condition here
-	*/
+	// fmt.Printf("_____transcation types_____\n\n")
+	// fmt.Printf("From: %s \n", tx.Data.From)
+	// fmt.Printf("Type: %d \n", tx.Data.Type)
+	// fmt.Printf("Roots: %+v\n\n", common.RootAccounts)
+	if tx.Data.Type == 1 && tx.Data.From == common.RootAccounts[1] {
+		return true
+	}
+
 	return false
 }
 
+// IsDepositTx return
 func (tx *Transaction) IsDepositTx() bool {
-	/*
-		define Tx to verfier check condition here
-	*/
+	// fmt.Printf("_____transcation types_____\n\n")
+	// fmt.Printf("From: %s \n", tx.Data.From)
+	// fmt.Printf("Type: %d \n", tx.Data.Type)
+	// fmt.Printf("Roots: %+v\n\n", common.RootAccounts)
+	if tx.Data.Type == 0 && tx.Data.From == common.RootAccounts[0] {
+		return true
+	}
+
 	return false
 }
 
+// IsExitTx return
 func (tx *Transaction) IsExitTx() bool {
-	/*
-		define Tx to verfier check condition here
-	*/
+	// fmt.Printf("_____transcation types_____\n\n")
+	// fmt.Printf("From: %s \n", tx.Data.From)
+	// fmt.Printf("Type: %d \n", tx.Data.Type)
+	// fmt.Printf("Roots: %+v\n\n", common.RootAccounts)
+	if tx.Data.Type == 0 && tx.Data.From == common.RootAccounts[1] {
+		return true
+	}
+
 	return false
+
 }
 
+// IsChallengedTx return
 func (tx *Transaction) IsChallengedTx() bool {
-	/*
-		define Tx to verfier check condition here
-	*/
+	// fmt.Printf("_____transcation types_____\n\n")
+	// fmt.Printf("From: %s \n", tx.Data.From)
+	// fmt.Printf("Type: %d \n", tx.Data.Type)
+	// fmt.Printf("Roots: %+v\n\n", common.RootAccounts)
+	if tx.Data.Type == 0 && tx.Data.From == common.RootAccounts[2] {
+		return true
+	}
+
 	return false
 }
 
