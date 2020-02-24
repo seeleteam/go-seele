@@ -6,7 +6,6 @@
 package miner
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/errors"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -230,18 +230,62 @@ func (miner *Miner) challengedTxCallback(e event.Event) {
 	// stop miner
 
 	miner.log.Error("challengedTxCallback is called successfully!")
-	panic("WELL DONE!")
-	// 	miner.revert(miner.current.header.Height)
-	// 	atomic.StoreInt32(&miner.canStart, 1)
-	// 	atomic.StoreInt32(&miner.isFirstDownloader, 0)
-	// 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
-	// 		miner.log.Info("got download end event, start miner")
-	// 		miner.Start() // start miner (should pack the challenged tx in the first new block)
-	// 	}
+	// panic("WELL DONE!")
+	err := miner.revert(miner.current.header.Height - 20) // TODO test challenged tx packed after revert
+	if err != nil {
+		panic(err)
+	}
+	// for test. in product need to consider the sync condition
+	atomic.StoreInt32(&miner.canStart, 1)
+	atomic.StoreInt32(&miner.isFirstDownloader, 0)
+	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
+		miner.log.Info("got download end event, start miner")
+		miner.Start() // start miner (should pack the challenged tx in the first new block)
+	}
 }
 
 // revert revert blockchain to some specific point
-func (miner *Miner) revert(height uint64) {
+func (miner *Miner) revert(height uint64) error {
+	if height < 0 || height > miner.current.header.Height {
+		return errors.New("invalid revert height when handle reverse due to challenge tx")
+	}
+	bcStore := miner.seele.BlockChain().BCStore()
+	bc := miner.seele.BlockChain()
+	var curHeaderHash common.Hash
+	var err error
+
+	// get header hash
+	curHeaderHash, err = bcStore.GetBlockHash(height)
+	if err != nil {
+		return errors.NewStackedError(err, "failed to get block hash at the specified height")
+	}
+	// update header hash
+	err = bcStore.PutHeadBlockHash(curHeaderHash)
+	if err != nil {
+		return errors.NewStackedError(err, "failed to update HEAD block hash")
+	}
+
+	// get cur block
+	curBlock, err := bcStore.GetBlock(curHeaderHash)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to get HEAD block by hash %v", curHeaderHash)
+	}
+
+	// store current block !!! what this will do ????
+	bc.StoreCurBlock(curBlock)
+
+	td, err := bcStore.GetBlockTotalDifficulty(curHeaderHash)
+	if err != nil {
+		return errors.NewStackedErrorf(err, "failed to get HEAD block TD by hash %v", curHeaderHash)
+	}
+
+	blockIndex := core.NewBlockIndex(curHeaderHash, curBlock.Header.Height, td)
+
+	bc.AddBlockLeaves(blockIndex)
+	bc.UpdateCurrentBlock(curBlock)
+	miner.log.Info("after revert update current block: %d, hash: %v", curBlock.Header.Height, curBlock.HeaderHash)
+
+	return nil
 
 }
 

@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
-	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -145,12 +144,16 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
-	// test the event listner and fire function!
-	event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+
+	// TEST the event listner and fire function!
+	// curHeight := task.header.Height
+	// if curHeight%50 == 0 {
+	// 	event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+	// }
 
 	//this code section for test the verifier is correctly added into secondwitness
 
-	task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+	// task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
 	// task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
 
 	if len(task.depositVers) > 0 || len(task.exitVers) > 0 {

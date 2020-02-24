@@ -167,6 +167,21 @@ func NewBlockchain(bcStore store.BlockchainStore, accountStateDB database.Databa
 	return bc, nil
 }
 
+// BCStore returns the BCStore in storage.
+func (bc *Blockchain) BCStore() store.BlockchainStore {
+	return bc.bcStore
+}
+
+// GetCurrentBlockValue return currentBlock atomic value
+func (bc *Blockchain) GetCurrentBlockValue() atomic.Value {
+	return bc.currentBlock
+}
+
+// StoreCurBlock store current block
+func (bc *Blockchain) StoreCurBlock(block *types.Block) {
+	bc.currentBlock.Store(block)
+}
+
 // AccountDB returns the account state database in blockchain.
 func (bc *Blockchain) AccountDB() database.Database {
 	return bc.accountStateDB
