@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/seeleteam/go-seele/common"
 )
 
@@ -8,9 +10,22 @@ import (
 func (tx *Transaction) IsVerifierTx() bool {
 	/*
 		define Tx to verfier check condition here
-		// verifier tx
 	*/
-	return true
+	// var accounts = GetRootAccounts()
+
+	fmt.Printf("_____transcation types_____\n\n")
+	fmt.Printf("From: %s \n", tx.Data.From)
+	fmt.Printf("Type: %d \n\n\n", tx.Data.Type)
+	fmt.Printf("Roots:", common.GetRootAccounts())
+
+	return false
+}
+
+func (tx *Transaction) IsResignTx() bool {
+	/*
+		define Tx to verfier check condition here
+	*/
+	return false
 }
 
 func (tx *Transaction) IsDepositTx() bool {
@@ -19,14 +34,15 @@ func (tx *Transaction) IsDepositTx() bool {
 	*/
 	return false
 }
-func (tx *Transaction) IsChallengedTx() bool {
+
+func (tx *Transaction) IsExitTx() bool {
 	/*
 		define Tx to verfier check condition here
 	*/
 	return false
 }
 
-func (tx *Transaction) IsExitTx() bool {
+func (tx *Transaction) IsChallengedTx() bool {
 	/*
 		define Tx to verfier check condition here
 	*/

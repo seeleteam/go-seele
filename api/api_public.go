@@ -265,6 +265,12 @@ func PrintableOutputTx(tx *types.Transaction) map[string]interface{} {
 
 // AddTx add a tx to miner
 func (api *PublicSeeleAPI) AddTx(tx types.Transaction) (bool, error) {
+	fmt.Printf("TRANSACTION BABY!!!~~~ \n\n")
+	if tx.IsVerifierTx() {
+		fmt.Printf("true: isverifierTx\n\n")
+	} else {
+		fmt.Printf("false: isverifierTx\n\n")
+	}
 	shard := tx.Data.From.Shard()
 	var err error
 	if shard != common.LocalShardNumber {
