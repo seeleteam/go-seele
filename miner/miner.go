@@ -62,6 +62,8 @@ type Miner struct {
 	engine   consensus.Engine
 
 	debtVerifier types.DebtVerifier
+
+	isReverted int32
 }
 
 // NewMiner constructs and returns a miner instance
@@ -231,11 +233,15 @@ func (miner *Miner) challengedTxCallback(e event.Event) {
 
 	miner.log.Error("challengedTxCallback is called successfully!")
 	// panic("WELL DONE!")
-	err := miner.revert(miner.current.header.Height - 20) // TODO test challenged tx packed after revert
-	if err != nil {
-		panic(err)
+	if atomic.LoadInt32(&miner.isReverted) == 0 {
+		err := miner.revert(miner.current.header.Height - 500) // TODO test challenged tx packed after revert
+		if err != nil {
+			panic(err)
+		}
+		atomic.StoreInt32(&miner.isReverted, 1)
 	}
 	// for test. in product need to consider the sync condition
+	// time.Sleep(10 * time.Second)
 	atomic.StoreInt32(&miner.canStart, 1)
 	atomic.StoreInt32(&miner.isFirstDownloader, 0)
 	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
@@ -367,8 +373,12 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	miner.current = NewTask(header, miner.coinbase, miner.debtVerifier)
 	// here we add the verifierTx, challengeTx and exitTx
 	// before that, once we have detected any challenged tx, we need to revert the blockchain first
+	if miner.current.header.Consensus == types.BftConsensus {
+		err = miner.current.applyTransactionsSubchain(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log, &miner.isReverted)
+	} else {
+		err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 
-	err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to apply transaction %s", err)
 	}

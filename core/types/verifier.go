@@ -23,7 +23,7 @@ func (tx *Transaction) IsChallengedTx(rootAccounts []common.Address) bool {
 	/*
 		define Tx to verfier check condition here
 	*/
-	return false
+	return true
 }
 
 func (tx *Transaction) IsExitTx(rootAccounts []common.Address) bool {

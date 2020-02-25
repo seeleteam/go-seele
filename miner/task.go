@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -80,6 +81,40 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 
 	task.header.StateHash = root
 	// task.header.SecondWitness =
+
+	// exit
+	memory.Print(log, "task applyTransactionsAndDebts exit", now, true)
+
+	return nil
+}
+
+//applyTransactionsSubchain apply txs for subchain
+func (task *Task) applyTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, accountStateDB database.Database, log *log.SeeleLog, isReverted *int32) error {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
+
+	// choose transactions from the given txs
+
+	size := core.BlockByteLimit
+	// the reward tx will always be at the first of the block's transactions
+	reward, err := task.handleMinerRewardTx(statedb)
+	if err != nil {
+		return err
+	}
+
+	task.chooseTransactionsSubchain(seele, statedb, log, size, isReverted)
+
+	log.Info("mining block height:%d, reward:%s, transaction number:%d, debt number: %d",
+		task.header.Height, reward, len(task.txs), len(task.debts))
+
+	batch := accountStateDB.NewBatch()
+	root, err := statedb.Commit(batch)
+	if err != nil {
+		return err
+	}
+
+	task.header.StateHash = root
 
 	// exit
 	memory.Print(log, "task applyTransactionsAndDebts exit", now, true)
@@ -201,6 +236,101 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 					task.challengedTxs = append(task.challengedTxs, tx)
 					event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
 					return
+				}
+
+				if tx.IsVerifierTx(rootAccounts) {
+					task.depositVers = append(task.depositVers, tx.ToAccount())
+					// task.depositVers = append(task.depositVers, tx.FromAccount())
+				}
+
+				if tx.IsExitTx(rootAccounts) {
+					task.exitVers = append(task.exitVers, tx.ToAccount())
+				}
+			}
+
+			task.txs = append(task.txs, tx)
+			task.receipts = append(task.receipts, receipt)
+			txIndex++
+		}
+		size -= txsSize
+	}
+	if task.header.Consensus == types.BftConsensus {
+		log.Info("[%d]deposit verifiers, [%d]exit verifiers, [%d]challenge txs", len(task.depositVers), len(task.exitVers), len(task.challengedTxs))
+		var err error
+		task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+		if err != nil {
+			log.Error("failed to prepare deposit or exit tx into secondwitness")
+		}
+		log.Info("apply new verifiers into witness, %+v", task.header.SecondWitness)
+	}
+
+	// exit
+	memory.Print(log, "task chooseTransactions exit", now, true)
+}
+
+func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int, isReverted *int32) {
+	now := time.Now()
+	// entrance
+	memory.Print(log, "task chooseTransactions entrance", now, false)
+
+	// TEST the event listner and fire function!
+	// curHeight := task.header.Height
+	// if curHeight%50 == 0 {
+	// 	event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+	// }
+
+	//this code section for test the verifier is correctly added into secondwitness
+
+	// task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+	// task.exitVers = append(task.exitVers, common.BytesToAddress(hexutil.MustHexToBytes("0x1b9412d61a25f5f5decbf489fe5ed595d8b610a1")))
+
+	if len(task.depositVers) > 0 || len(task.exitVers) > 0 {
+		log.Warn("deposit verifiers", task.depositVers)
+		log.Warn("exit verifiers", task.exitVers)
+		var err error
+		task.header.SecondWitness, err = task.prepareWitness(task.header, task.challengedTxs, task.depositVers, task.exitVers)
+		if err != nil {
+			log.Error("failed to prepare deposit or exit tx into secondwitness")
+		}
+		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+
+	}
+	// test code end here
+
+	txIndex := 1 // the first tx is miner reward
+
+	for size > 0 {
+		txs, txsSize := seele.TxPool().GetProcessableTransactions(size)
+		if len(txs) == 0 {
+			break
+		}
+
+		for _, tx := range txs {
+			if err := tx.Validate(statedb, task.header.Height); err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("failed to validate tx %s, for %s", tx.Hash.Hex(), err)
+				txsSize = txsSize - tx.Size()
+				continue
+			}
+
+			receipt, err := seele.BlockChain().ApplyTransaction(tx, txIndex, task.coinbase, statedb, task.header)
+			if err != nil {
+				seele.TxPool().RemoveTransaction(tx.Hash)
+				log.Error("failed to apply tx %s, %s", tx.Hash.Hex(), err)
+				txsSize = txsSize - tx.Size()
+				continue
+			}
+			if task.header.Consensus == types.BftConsensus { // for bft, the secondwitness will be used as deposit&exit address holder.
+				rootAccounts := seele.GenesisInfo().Rootaccounts
+				fmt.Printf("rootAccounts %+v", rootAccounts)
+				// if there is any successful challenge tx, need to revert blockchain first to specific point!
+				if tx.IsChallengedTx(rootAccounts) {
+					// will revert the block and db here, so the
+					task.challengedTxs = append(task.challengedTxs, tx)
+					if atomic.LoadInt32(isReverted) == 0 { // TODO, this logic will make the revert work once
+						event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+						return
+					}
 				}
 
 				if tx.IsVerifierTx(rootAccounts) {
