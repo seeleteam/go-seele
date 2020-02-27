@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	pingInterval   = 15 * time.Second                 // ping interval for peer tcp connection. Should be 15
+	pingInterval   = 1 * time.Second                  // ping interval for peer tcp connection. Should be 15
 	discServerQuit = "disconnect because server quit" // p2p.server need quit, all peers should quit as it can
 )
 
@@ -128,8 +128,10 @@ func (p *Peer) pingLoop() {
 		select {
 		case <-ping.C:
 			p.sendCtlMsg(ctlMsgPingCode)
+
 			ping.Reset(pingInterval)
 		case <-p.closed:
+
 			return
 		}
 	}
@@ -149,6 +151,7 @@ func (p *Peer) readLoop(readErr chan<- error) {
 			readErr <- err
 			return
 		}
+
 	}
 }
 
@@ -190,20 +193,21 @@ func (p *Peer) notifyProtocolsDeletePeer() {
 	}
 }
 
-func (p *Peer) handle(msgRecv *Message) error {
+func (p *Peer) handle(msgRecv *Message) (err error) {
 	// control msg
+
 	if msgRecv.Code < baseProtoCode {
 		switch {
 		case msgRecv.Code == ctlMsgPingCode:
-			go p.sendCtlMsg(ctlMsgPongCode)
+			err = p.sendCtlMsg(ctlMsgPongCode)
 		case msgRecv.Code == ctlMsgPongCode:
-			//p.log.Debug("peer handle Ping msg.")
+			p.log.Debug("peer handle Ping msg.")
 			return nil
 		case msgRecv.Code == ctlMsgDiscCode:
 			return fmt.Errorf("error=%d", ctlMsgDiscCode)
 		}
 
-		return nil
+		return err
 	}
 
 	var protocolTarget protocolRW
@@ -232,9 +236,9 @@ func (p *Peer) sendCtlMsg(msgCode uint16) error {
 		Code: msgCode,
 	}
 
-	p.rw.WriteMsg(&hsMsg)
+	err := p.rw.WriteMsg(&hsMsg)
 
-	return nil
+	return err
 }
 
 // Disconnect terminates the peer connection with the given reason.

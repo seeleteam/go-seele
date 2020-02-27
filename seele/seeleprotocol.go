@@ -212,6 +212,7 @@ func (sp *SeeleProtocol) synchronise(peers []*peer) {
 		if err != nil {
 			if err == downloader.ErrIsSynchronising {
 				sp.log.Debug("exit synchronise as it is already running.")
+				return
 			} else {
 				sp.log.Debug("synchronise err. %s", err)
 			}
@@ -818,7 +819,8 @@ handler:
 			err := common.Deserialize(msg.Payload, &status)
 			if err != nil {
 				p.log.Error("failed to deserialize statusChainHeadMsgCode, quit! %s", err.Error())
-				break
+				//break
+				continue
 			}
 
 			p.log.Debug("Received statusChainHeadMsgCode. peer=%s, ip=%s, remoteTD=%d", peer.peerStrID, peer.Peer.RemoteAddr(), status.TD)

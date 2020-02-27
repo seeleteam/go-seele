@@ -31,6 +31,8 @@ var (
 
 	// ErrNodeIsSyncing is returned when the node is syncing
 	ErrNodeIsSyncing = errors.New("can not start miner when syncing")
+
+	minerCount = 0
 )
 
 // SeeleBackend wraps all methods required for minier.
@@ -140,17 +142,20 @@ func (miner *Miner) Start() error {
 
 		return err
 	}
-
+	atomic.StoreInt32(&miner.mining, 1)
 	atomic.StoreInt32(&miner.stopped, 0)
 	go miner.waitBlock()
-
-	miner.log.Info("Miner is started.")
+	minerCount++
+	miner.log.Info("Miner started")
 
 	return nil
 }
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
+	if minerCount == 0 {
+		return
+	}
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
 	atomic.StoreInt32(&miner.stopper, 1)
@@ -160,13 +165,20 @@ func (miner *Miner) Stop() {
 		if err := istanbul.Stop(); err != nil {
 			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
 		}
+
 	}
+
 }
 
 func (miner *Miner) stopMining() {
+	if minerCount == 0 {
+		return
+	}
 	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
 		return
 	}
+	minerCount--
+
 	// notify all threads to terminate
 	if miner.stopChan != nil {
 		close(miner.stopChan)
@@ -175,7 +187,7 @@ func (miner *Miner) stopMining() {
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
-	miner.log.Info("Miner is stopped.")
+	miner.log.Info("Miner stopped.")
 }
 
 // IsMining returns true if the miner is started, otherwise false
@@ -217,6 +229,7 @@ func (miner *Miner) newTxOrDebtCallback(e event.Event) {
 
 // waitBlock waits for blocks to be mined continuously
 func (miner *Miner) waitBlock() {
+
 out:
 	for {
 		select {
@@ -232,6 +245,7 @@ out:
 					miner.log.Error("failed to save the block, for %s", ret.Error())
 					break
 				}
+				//mining lock
 
 				if h, ok := miner.engine.(consensus.Handler); ok {
 					h.NewChainHead()
