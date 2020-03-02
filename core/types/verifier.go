@@ -6,30 +6,50 @@ import (
 
 // IsVerifierTx return whether the tx Is operate tx or not?
 func (tx *Transaction) IsVerifierTx(rootAccounts []common.Address) bool {
-	/*
-		define Tx to verfier check condition here
-		// verifier tx
-	*/
-	return true
-}
+	if tx.Data.Type == 1 && tx.Data.From == rootAccounts[0] {
+		return true
+	}
 
-func (tx *Transaction) IsDepositTx(rootAccounts []common.Address) bool {
-	/*
-		define Tx to verfier check condition here
-	*/
 	return false
 }
-func (tx *Transaction) IsChallengedTx(rootAccounts []common.Address) bool {
-	/*
-		define Tx to verfier check condition here
-	*/
-	return true
+
+// IsResignTx return
+func (tx *Transaction) IsResignTx(rootAccounts []common.Address) bool {
+	if tx.Data.Type == 1 && tx.Data.From == rootAccounts[1] {
+		return true
+	}
+
+	return false
 }
 
+// IsDepositTx return
+func (tx *Transaction) IsDepositTx(rootAccounts []common.Address) bool {
+
+	if tx.Data.Type == 0 && tx.Data.From == rootAccounts[0] {
+		return true
+	}
+
+	return false
+}
+
+// IsExitTx return
 func (tx *Transaction) IsExitTx(rootAccounts []common.Address) bool {
-	/*
-		define Tx to verfier check condition here
-	*/
+
+	if tx.Data.Type == 0 && tx.Data.From == rootAccounts[1] {
+		return true
+	}
+
+	return false
+
+}
+
+// IsChallengedTx return
+func (tx *Transaction) IsChallengedTx(rootAccounts []common.Address) bool {
+
+	if tx.Data.Type == 0 && tx.Data.From == rootAccounts[2] {
+		return true
+	}
+
 	return false
 }
 
