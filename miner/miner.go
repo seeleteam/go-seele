@@ -63,7 +63,7 @@ type Miner struct {
 
 	debtVerifier types.DebtVerifier
 
-	isReverted int32
+	revertedTx common.Hash
 }
 
 // NewMiner constructs and returns a miner instance
@@ -87,7 +87,7 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
 	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
 	// event waiting for challengedTx coming
-	event.ChallengedTxEventManager.AddAsyncListener(miner.challengedTxCallback)
+	event.ChallengedTxAfterEventManager.AddAsyncListener(miner.challengedTxCallback)
 
 	return miner
 }
@@ -230,24 +230,33 @@ func (miner *Miner) newTxOrDebtCallback(e event.Event) {
 func (miner *Miner) challengedTxCallback(e event.Event) {
 	// stop miner / revert blockchain / prepare a new block / change miner status
 	// stop miner
-
-	miner.log.Error("challengedTxCallback is called successfully!")
-	// panic("WELL DONE!")
-	if atomic.LoadInt32(&miner.isReverted) == 0 {
-		err := miner.revert(miner.current.header.Height - 500) // TODO test challenged tx packed after revert
+	if e == event.ChallengedTxAfterEvent {
+		miner.log.Error("challengedTxCallback is called successfully!")
+		// panic("WELL DONE!")
+		// if atomic.LoadInt32(&miner.isReverted) == 0 {
+		// revertHeight := miner.current.header.Height / 10
+		revertHeight := miner.current.header.Height / common.RelayRange
+		if revertHeight <= 0 {
+			revertHeight = 0
+		} else {
+			revertHeight = revertHeight - 1 // need to -1 , that is the last relay point
+		}
+		err := miner.revert(revertHeight) // TODO test challenged tx packed after revert
 		if err != nil {
 			panic(err)
 		}
-		atomic.StoreInt32(&miner.isReverted, 1)
+		// atomic.StoreInt32(&miner.isReverted, 1)
+		// }
+		// for test. in product need to consider the sync condition
+		time.Sleep(2 * time.Second)
+		atomic.StoreInt32(&miner.canStart, 1)
+		atomic.StoreInt32(&miner.isFirstDownloader, 0)
+		if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
+			miner.log.Info("got download end event, start miner")
+			miner.Start() // start miner (should pack the challenged tx in the first new block)
+		}
 	}
-	// for test. in product need to consider the sync condition
-	// time.Sleep(10 * time.Second)
-	atomic.StoreInt32(&miner.canStart, 1)
-	atomic.StoreInt32(&miner.isFirstDownloader, 0)
-	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
-		miner.log.Info("got download end event, start miner")
-		miner.Start() // start miner (should pack the challenged tx in the first new block)
-	}
+
 }
 
 // revert revert blockchain to some specific point
@@ -361,7 +370,17 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 		time.Sleep(wait)
 	}
 
-	miner.log.Info("newHeaderByParent with parent %v", parent)
+	// here we can require the block interval must larger than BFTBlockInterval constant value.
+	consensus := miner.seele.GenesisInfo().Consensus
+	now := time.Now().Unix()
+	if consensus == types.BftConsensus && now-parent.Header.CreateTimestamp.Int64() < common.BFTBlockInterval {
+		wait := time.Duration(now-parent.Header.CreateTimestamp.Int64()) * time.Second
+		miner.log.Info("block process speed is faster than %ds, wait for %s", common.BFTBlockInterval, wait)
+		time.Sleep(wait)
+		timestamp = time.Now().Unix()
+	}
+
+	miner.log.Debug("newHeaderByParent with parent %v", parent)
 	header := newHeaderByParent(parent, miner.coinbase, timestamp)
 	miner.log.Debug("mining a block with coinbase %s", miner.coinbase.Hex())
 
@@ -374,7 +393,7 @@ func (miner *Miner) prepareNewBlock(recv chan *types.Block) error {
 	// here we add the verifierTx, challengeTx and exitTx
 	// before that, once we have detected any challenged tx, we need to revert the blockchain first
 	if miner.current.header.Consensus == types.BftConsensus {
-		err = miner.current.applyTransactionsSubchain(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log, &miner.isReverted)
+		err = miner.current.applyTransactionsSubchain(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log, &miner.revertedTx)
 	} else {
 		err = miner.current.applyTransactionsAndDebts(miner.seele, stateDB, miner.seele.BlockChain().AccountDB(), miner.log)
 

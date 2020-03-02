@@ -68,6 +68,12 @@ const (
 	// BFT mineralgorithm
 	BFTEngine = "bft"
 
+	// subchain bft relay period
+	RelayRange = 1024
+	// RelayRange = 10
+	// BFTBlockInterval bft consensus block interval
+	BFTBlockInterval = 2
+
 	// BFT data folder
 	BFTDataFolder = "bftdata"
 
