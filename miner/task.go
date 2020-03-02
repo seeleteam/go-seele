@@ -9,11 +9,11 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
-	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/seeleteam/go-seele/common"
+	"github.com/seeleteam/go-seele/common/hexutil"
 	"github.com/seeleteam/go-seele/common/memory"
 	"github.com/seeleteam/go-seele/consensus"
 	"github.com/seeleteam/go-seele/core"
@@ -21,7 +21,6 @@ import (
 	"github.com/seeleteam/go-seele/core/txs"
 	"github.com/seeleteam/go-seele/core/types"
 	"github.com/seeleteam/go-seele/database"
-	"github.com/seeleteam/go-seele/event"
 	"github.com/seeleteam/go-seele/log"
 )
 
@@ -89,7 +88,7 @@ func (task *Task) applyTransactionsAndDebts(seele SeeleBackend, statedb *state.S
 }
 
 //applyTransactionsSubchain apply txs for subchain
-func (task *Task) applyTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, accountStateDB database.Database, log *log.SeeleLog, isReverted *int32) error {
+func (task *Task) applyTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, accountStateDB database.Database, log *log.SeeleLog, revertedTxHash *common.Hash) error {
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task applyTransactionsAndDebts entrance", now, false)
@@ -103,7 +102,7 @@ func (task *Task) applyTransactionsSubchain(seele SeeleBackend, statedb *state.S
 		return err
 	}
 
-	task.chooseTransactionsSubchain(seele, statedb, log, size, isReverted)
+	task.chooseTransactionsSubchain(seele, statedb, log, size, revertedTxHash)
 
 	log.Info("mining block height:%d, reward:%s, transaction number:%d, debt number: %d",
 		task.header.Height, reward, len(task.txs), len(task.debts))
@@ -234,7 +233,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 				if tx.IsChallengedTx(rootAccounts) {
 					// will revert the block and db here, so the
 					task.challengedTxs = append(task.challengedTxs, tx)
-					event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+					// event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
 					return
 				}
 
@@ -268,7 +267,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 	memory.Print(log, "task chooseTransactions exit", now, true)
 }
 
-func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int, isReverted *int32) {
+func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.Statedb, log *log.SeeleLog, size int, revertedTxHash *common.Hash) {
 	now := time.Now()
 	// entrance
 	memory.Print(log, "task chooseTransactions entrance", now, false)
@@ -327,8 +326,10 @@ func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.
 				if tx.IsChallengedTx(rootAccounts) {
 					// will revert the block and db here, so the
 					task.challengedTxs = append(task.challengedTxs, tx)
-					if atomic.LoadInt32(isReverted) == 0 { // TODO, this logic will make the revert work once
-						event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+					if !tx.Hash.Equal(*revertedTxHash) { // this tx challenge is not handled before, fire the event to handle it
+						*revertedTxHash = tx.Hash
+						// event.ChallengedTxEventManager.Fire(event.ChallengedTxEvent)
+						panic("Alert: subchain is challenged successfully, stop!")
 						return
 					}
 				}
@@ -337,7 +338,9 @@ func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.
 					task.depositVers = append(task.depositVers, tx.ToAccount())
 					// task.depositVers = append(task.depositVers, tx.FromAccount())
 				}
-
+				// test code
+				task.depositVers = append(task.depositVers, common.BytesToAddress(hexutil.MustHexToBytes("0x42cab76173e399824422ae12c63f6f8c84e6ca71")))
+				// end test code
 				if tx.IsExitTx(rootAccounts) {
 					task.exitVers = append(task.exitVers, tx.ToAccount())
 				}

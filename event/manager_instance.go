@@ -10,10 +10,11 @@ var BlockDownloaderEventManager = NewEventManager()
 
 // block downloader event
 const (
-	DownloaderStartEvent  = 0
-	DownloaderDoneEvent   = 1
-	DownloaderFailedEvent = 2
-	ChallengedTxEvent     = 3
+	DownloaderStartEvent   = 0
+	DownloaderDoneEvent    = 1
+	DownloaderFailedEvent  = 2
+	ChallengedTxEvent      = 3
+	ChallengedTxAfterEvent = 4
 )
 
 // BlockMinedEventManager represents the event that a new block is mined
@@ -29,3 +30,5 @@ var DebtsInsertedEventManager = NewEventManager()
 
 // ChallengedTxEventManager once challenged tx exit in txpool, need to revert and pack the tx into the first new block
 var ChallengedTxEventManager = NewEventManager()
+
+var ChallengedTxAfterEventManager = NewEventManager()

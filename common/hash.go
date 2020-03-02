@@ -64,6 +64,11 @@ func (a *Hash) Equal(b Hash) bool {
 	return bytes.Equal(a[:], b[:])
 }
 
+// Equal returns a boolean value indicating whether the hash a is equal to the input hash b.
+func (a *Hash) EEqual(b *Hash) bool {
+	return bytes.Equal(a[:], b[:])
+}
+
 // Hex returns the hex form of the hash
 func (a Hash) Hex() string {
 	return hexutil.BytesToHex(a[:])
