@@ -160,7 +160,8 @@ func writeStatedb(root common.Hash, genesisAccounts []common.Address, toAccounts
 	for j := 0; j < numTxs; j++ {
 		from := genesisAccounts[rand.Intn(numFrom)]
 		statedb.SubBalance(from, big.NewInt(1))
-		statedb.SetNonce(from, statedb.GetNonce(from)+1)
+		// statedb.SetNonce(from, statedb.GetNonce(from)+1)
+		statedb.SetNonce2(from, statedb.GetNonce(from)+1, statedb.GetTxCount(from))
 
 		var to common.Address
 		if numTo == 0 {
@@ -171,6 +172,7 @@ func writeStatedb(root common.Hash, genesisAccounts []common.Address, toAccounts
 
 		statedb.CreateAccount(to)
 		statedb.AddBalance(to, big.NewInt(1))
+		statedb.SetNonce2(to, statedb.GetNonce(to), statedb.GetTxCount(to))
 	}
 
 	if root, err = commitStatedb(statedb, db); err != nil {

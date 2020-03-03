@@ -33,6 +33,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 			Action: rpcAction("seele", "getAccountNonce"),
 		},
 		{
+			Name:   "gettxcount",
+			Usage:  "get account tx count",
+			Flags:  rpcFlags(accountFlag, hashFlag, heightFlag),
+			Action: rpcAction("seele", "getAccountTxCount"),
+		},
+		{
 			Name:   "getblockheight",
 			Usage:  "get block height",
 			Flags:  rpcFlags(),

@@ -52,7 +52,8 @@ var newCmd = &cobra.Command{
 		addr := *crypto.MustGenerateRandomAddress()
 		statedb.CreateAccount(addr)
 		statedb.SetBalance(addr, new(big.Int).SetUint64(balance))
-		statedb.SetNonce(addr, DefaultNonce)
+		// statedb.SetNonce(addr, DefaultNonce)
+		statedb.SetNonce2(addr, DefaultNonce, 0)
 
 		fmt.Println("The new account address is ", addr.Hex())
 	},

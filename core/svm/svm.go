@@ -76,7 +76,11 @@ func Process(ctx *Context, height uint64) (*types.Receipt, error) {
 				setNonce = ctx.Tx.Data.AccountNonce + 1
 			}
 			ctx.Statedb.RevertToSnapshot(snapshot)
-			ctx.Statedb.SetNonce(ctx.Tx.Data.From, setNonce)
+			// ctx.Statedb.SetNonce(ctx.Tx.Data.From, setNonce)
+			// set the from account nonce and tx count
+			ctx.Statedb.SetNonce2(ctx.Tx.Data.From, setNonce, ctx.Statedb.GetTxCount(ctx.Tx.Data.From)+1)
+			// set the tx count of to account
+			ctx.Statedb.SetNonce2(ctx.Tx.Data.To, ctx.Statedb.GetNonce(ctx.Tx.Data.To), ctx.Statedb.GetTxCount(ctx.Tx.Data.To)+1)
 			receipt.Failed = true
 			receipt.Result = []byte(err.Error())
 		}
@@ -103,7 +107,9 @@ func processCrossShardTransaction(ctx *Context, snapshot int) (*types.Receipt, e
 	}
 
 	// Add from nonce
-	ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+	// ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+	ctx.Statedb.SetNonce2(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1, ctx.Statedb.GetTxCount(ctx.Tx.Data.From)+1)
+	ctx.Statedb.SetNonce2(ctx.Tx.Data.To, ctx.Statedb.GetNonce(ctx.Tx.Data.To), ctx.Statedb.GetTxCount(ctx.Tx.Data.To)+1)
 
 	// Transfer amount
 	amount, sender := ctx.Tx.Data.Amount, ctx.Tx.Data.From
@@ -146,7 +152,11 @@ func processSystemContract(ctx *Context, contract system.Contract, snapshot int,
 	}
 
 	// Add from nonce
-	ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+	// ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+	// from account
+	ctx.Statedb.SetNonce2(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1, ctx.Statedb.GetTxCount(ctx.Tx.Data.From)+1)
+	// to account
+	ctx.Statedb.SetNonce2(ctx.Tx.Data.From, ctx.Statedb.GetNonce(ctx.Tx.Data.To), ctx.Statedb.GetTxCount(ctx.Tx.Data.To)+1)
 
 	// Transfer amount
 	amount, sender, recipient := ctx.Tx.Data.Amount, ctx.Tx.Data.From, ctx.Tx.Data.To
@@ -189,7 +199,10 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 		}
 		// fmt.Println("processEvmContract.go-173:after create accountNonce ", ctx.Tx.Data.AccountNonce)
 	} else {
-		ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)
+		// ctx.Statedb.SetNonce(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1)// from account
+		ctx.Statedb.SetNonce2(ctx.Tx.Data.From, ctx.Tx.Data.AccountNonce+1, ctx.Statedb.GetTxCount(ctx.Tx.Data.From)+1)
+		// to account
+		ctx.Statedb.SetNonce2(ctx.Tx.Data.From, ctx.Statedb.GetNonce(ctx.Tx.Data.To), ctx.Statedb.GetTxCount(ctx.Tx.Data.To)+1)
 		receipt.Result, leftOverGas, err = e.Call(caller, ctx.Tx.Data.To, ctx.Tx.Data.Payload, gas, ctx.Tx.Data.Amount)
 	}
 	receipt.UsedGas = gas - leftOverGas
@@ -198,7 +211,7 @@ func processEvmContract(ctx *Context, gas uint64) (*types.Receipt, error) {
 }
 
 func handleFee(ctx *Context, receipt *types.Receipt, snapshot int) (*types.Receipt, error) {
-    // Calculating the total fee
+	// Calculating the total fee
 	// For normal tx: fee = 20k * 1 Fan/gas = 0.0002 Seele
 	// For contract tx, average gas per tx is about 100k on ETH, fee = 100k * 1Fan/gas = 0.001 Seele
 	usedGas := new(big.Int).SetUint64(receipt.UsedGas)

@@ -69,7 +69,11 @@ const (
 	BFTEngine = "bft"
 
 	// subchain bft relay period
-	RelayRange = 1024
+	RelayRange = 160000
+
+	// TxLimitPerRelay tx limit during each relay period
+	TxLimitPerRelay = 160
+
 	// RelayRange = 10
 	// BFTBlockInterval bft consensus block interval
 	BFTBlockInterval = 2

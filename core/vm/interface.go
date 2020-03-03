@@ -32,7 +32,9 @@ type StateDB interface {
 	GetBalance(common.Address) *big.Int
 
 	GetNonce(common.Address) uint64
+	GetTxCount(common.Address) uint64
 	SetNonce(common.Address, uint64)
+	SetNonce2(common.Address, uint64, uint64)
 
 	GetCodeHash(common.Address) common.Hash
 	GetCode(common.Address) []byte

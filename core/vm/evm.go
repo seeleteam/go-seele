@@ -375,7 +375,8 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
 	nonce := evm.StateDB.GetNonce(caller.Address())
-	evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	// evm.StateDB.SetNonce(caller.Address(), nonce+1)
+	evm.StateDB.SetNonce2(caller.Address(), nonce+1, evm.StateDB.GetTxCount(caller.Address())+1)
 
 	// Ensure there's no existing contract already at the designated address
 	contractHash := evm.StateDB.GetCodeHash(address)
@@ -386,7 +387,8 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	snapshot := evm.StateDB.Snapshot()
 	evm.StateDB.CreateAccount(address)
 	if evm.ChainConfig().IsEIP158(evm.BlockNumber) {
-		evm.StateDB.SetNonce(address, 1)
+		// evm.StateDB.SetNonce(address, 1)
+		evm.StateDB.SetNonce2(address, 1, 1)
 	}
 	evm.Transfer(evm.StateDB, caller.Address(), address, value)
 

@@ -24,6 +24,7 @@ type account struct {
 	Nonce    uint64
 	Amount   *big.Int
 	CodeHash []byte // contract code hash
+	TxCount  uint64
 }
 
 func newAccount() account {
@@ -102,6 +103,17 @@ func (s *stateObject) setNonce(nonce uint64) {
 // getNonce gets the nonce of the account in the state object
 func (s *stateObject) getNonce() uint64 {
 	return s.account.Nonce
+}
+
+// setTxCount sets the tx count of the account in the state object
+func (s *stateObject) setTxCount(count uint64) {
+	s.account.TxCount = count
+	s.dirtyAccount = true
+}
+
+// getTxCount gets the tx count of the account in the state object
+func (s *stateObject) getTxCount() uint64 {
+	return s.account.TxCount
 }
 
 // getAmount gets the balance amount of the account in the state object

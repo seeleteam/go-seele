@@ -98,6 +98,23 @@ func (api *PublicSeeleAPI) GetAccountNonce(account common.Address, hexHash strin
 	return nonce, nil
 }
 
+// GetAccountTxCount get account tx count
+func (api *PublicSeeleAPI) GetAccountTxCount(account common.Address, hexHash string, height int64) (uint64, error) {
+	if account.Equal(common.EmptyAddress) {
+		return 0, ErrInvalidAccount
+	}
+
+	state, err := api.getStatedb(hexHash, height)
+	if err != nil {
+		return 0, err
+	}
+	count := state.GetTxCount(account)
+	if err = state.GetDbErr(); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // GetBlockHeight get the block height of the chain head
 func (api *PublicSeeleAPI) GetBlockHeight() (uint64, error) {
 	header := api.s.ChainBackend().CurrentHeader()

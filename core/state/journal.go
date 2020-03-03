@@ -87,6 +87,10 @@ type (
 	createObjectChange struct {
 		account *common.Address
 	}
+	txCountChange struct {
+		account *common.Address
+		prev    uint64
+	}
 )
 
 func (ch refundChange) revert(s *Statedb) {

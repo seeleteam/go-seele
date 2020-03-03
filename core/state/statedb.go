@@ -138,6 +138,25 @@ func (s *Statedb) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
+// SetNonce2 sets the nonce of the specified account if exists.
+func (s *Statedb) SetNonce2(addr common.Address, nonce uint64, count uint64) {
+	if object := s.getStateObject(addr); object != nil {
+		s.curJournal.append(nonceChange{&addr, object.getNonce()})
+		object.setNonce(nonce)
+		object.setTxCount(count)
+	}
+}
+
+// GetTxCount gets the tx count of the specified account if exists.
+// Otherwise, return 0.
+func (s *Statedb) GetTxCount(addr common.Address) uint64 {
+	if object := s.getStateObject(addr); object != nil {
+		return object.getTxCount()
+	}
+
+	return 0
+}
+
 // GetData returns the account data of the specified key if exists.
 // Otherwise, return nil.
 func (s *Statedb) GetData(addr common.Address, key common.Hash) []byte {
@@ -247,7 +266,7 @@ func (s *Statedb) getStateObject(addr common.Address) *stateObject {
 
 	// add in cache
 	s.stateObjects[addr] = object
-	
+
 	return object
 }
 

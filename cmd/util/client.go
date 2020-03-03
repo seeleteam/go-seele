@@ -25,6 +25,14 @@ func GetAccountNonce(client *rpc.Client, account common.Address, hexHash string,
 	return nonce, err
 }
 
+// GetAccountNonce get account nonce by account
+func GetAccountTxCount(client *rpc.Client, account common.Address, hexHash string, height int64) (uint64, error) {
+	var count uint64
+	err := client.Call(&count, "seele_getAccountTxCount", account, hexHash, height)
+
+	return count, err
+}
+
 func GetInfo(client *rpc.Client) (api.GetMinerInfo, error) {
 	var info api.GetMinerInfo
 	err := client.Call(&info, "seele_getInfo")
