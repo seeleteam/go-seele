@@ -355,6 +355,12 @@ func AddCommands(app *cli.App, isFullNode bool) {
 				Action: rpcAction("seele", "getInfo"),
 			},
 			{
+				Name:   "height",
+				Usage:  "get current block height",
+				Flags:  rpcFlags(),
+				Action: rpcAction("seele", "getHeight"),
+			},
+			{
 				Name:   "getdebts",
 				Usage:  "get pending debts",
 				Flags:  rpcFlags(),

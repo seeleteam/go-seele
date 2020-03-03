@@ -55,6 +55,10 @@ func sendSystemContractTx(client *rpc.Client, to common.Address, method byte, pa
 	}
 
 	txd.To = to
+	err = checkTxCount(client, txd)
+	if err != nil {
+		return nil, err
+	}
 	txd.Payload = append([]byte{method}, payload...)
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.GasPrice, txd.GasLimit, txd.AccountNonce, txd.Payload)
 	if err != nil {

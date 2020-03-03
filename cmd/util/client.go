@@ -40,6 +40,13 @@ func GetInfo(client *rpc.Client) (api.GetMinerInfo, error) {
 	return info, err
 }
 
+func Height(client *rpc.Client) (int64, error) {
+	var height int64
+	err := client.Call(&height, "seele_getHeight")
+
+	return height, err
+}
+
 // GenerateTx generate a transaction based on the address type of to
 func GenerateTx(from *ecdsa.PrivateKey, to common.Address, amount *big.Int, price *big.Int, gasLimit uint64, nonce uint64, payload []byte) (*types.Transaction, error) {
 	fromAddr := crypto.GetAddress(&from.PublicKey)

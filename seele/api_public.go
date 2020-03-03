@@ -61,6 +61,11 @@ func (api *PublicSeeleAPI) EstimateGas(tx *types.Transaction) (uint64, error) {
 	return receipt.UsedGas, nil
 }
 
+func (api *PublicSeeleAPI) GetHeight() (int64, error) {
+	block := api.s.chain.CurrentBlock()
+	return int64(block.Header.Height), nil
+}
+
 // GetInfo gets the account address that mining rewards will be send to.
 func (api *PublicSeeleAPI) GetInfo() (api2.GetMinerInfo, error) {
 	block := api.s.chain.CurrentBlock()
@@ -187,7 +192,7 @@ func (api *PublicSeeleAPI) GetLogs(height int64, contractAddress common.Address,
 				return nil, errors.NewStackedError(err, "failed to decode event arguments")
 			}
 
-			logs = append(logs, api2.GetLogsResponse{ log, receipt.TxHash, uint(logIndex), data})
+			logs = append(logs, api2.GetLogsResponse{log, receipt.TxHash, uint(logIndex), data})
 		}
 	}
 
@@ -213,10 +218,10 @@ func getBlock(chain *core.Blockchain, height int64) (*types.Block, error) {
 // GetShardNum gets the account shard number .
 // if the address is valid, return the corresponding shard number, otherwise return 0
 func (api *PublicSeeleAPI) GetShardNum(account common.Address) (uint, error) {
-	err:=account.Validate()
-	if err==nil {
-		return account.Shard(),nil
-	}else{
-		return 0,err
+	err := account.Validate()
+	if err == nil {
+		return account.Shard(), nil
+	} else {
+		return 0, err
 	}
 }

@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -164,12 +165,54 @@ func rpcActionSystemContract(namespace string, method string, resultHandler call
 	}
 }
 
+func checkTxCount(client *rpc.Client, txd *types.TransactionData) error {
+	curHeight, err := util.Height(client)
+	if err != nil {
+		return err
+	}
+	lastEpoch := curHeight / common.RelayRange
+	if lastEpoch <= 0 {
+		lastEpoch = 0
+	}
+	height := lastEpoch * common.RelayRange
+
+	lastCountFrom, err := util.GetAccountTxCount(client, txd.From, "", height)
+	if err != nil {
+		return err
+	}
+	curCountFrom, err := util.GetAccountTxCount(client, txd.From, "", curHeight)
+	if err != nil {
+		return err
+	}
+	if curCountFrom-lastCountFrom > common.TxLimitPerRelay {
+		return errors.New("FromAccount transaction count beyond limitation")
+	}
+
+	if txd.To != common.EmptyAddress {
+		lastCountTo, err := util.GetAccountTxCount(client, txd.To, "", height)
+		if err != nil {
+			return err
+		}
+		curCountTo, err := util.GetAccountTxCount(client, txd.To, "", curHeight)
+		if err != nil {
+			return err
+		}
+		if curCountTo-lastCountTo > common.TxLimitPerRelay {
+			return errors.New("ToAccount transaction count beyond limitation")
+		}
+	}
+	return nil
+}
+
 func makeTransaction(context *cli.Context, client *rpc.Client) ([]interface{}, error) {
 	key, txd, err := makeTransactionData(client)
 	if err != nil {
 		return nil, err
 	}
-
+	err = checkTxCount(client, txd)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := util.GenerateTx(key.PrivateKey, txd.To, txd.Amount, txd.GasPrice, txd.GasLimit, txd.AccountNonce, txd.Payload)
 	if err != nil {
 		return nil, err
