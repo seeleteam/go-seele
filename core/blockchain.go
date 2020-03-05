@@ -488,7 +488,6 @@ func ValidateBlockHeader(header *types.BlockHeader, engine consensus.Engine, bcS
 
 	// Now, the extra data in block header should be empty except the genesis block.
 	if (header.Consensus != types.IstanbulConsensus && header.Consensus != types.BftConsensus) && len(header.ExtraData) > 0 {
-		fmt.Println("ValidataBlockHeader[467] consensus is wrong!")
 		return ErrBlockExtraDataNotEmpty
 	}
 

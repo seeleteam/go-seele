@@ -122,7 +122,8 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	}
 	// voting snapshot
 	snap, err := s.snapshot(chain, height-1, header.PreviousBlockHash, nil)
-	s.log.Info("get [height-1] = %d snap %+v", height-1, snap)
+
+	s.log.Debug("get [height-1] = %d snap %+v", height-1, snap)
 	if err != nil {
 		s.log.Error("snapshot return err <-", err)
 		return err

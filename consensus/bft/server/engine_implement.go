@@ -301,16 +301,18 @@ func (s *server) verifyCommittedSeals(chain consensus.ChainReader, header *types
 			return errCommittedSealsInvalid
 		}
 	}
-	s.log.Error("got %d valid seals", validSealCount)
-	s.log.Error("%d verifiers", snap.VerSet.Size())
-	for i, ver := range snap.VerSet.List() {
-		s.log.Error("%d, verifier %+v", i, ver)
-	}
-	s.log.Error("%d verifiers", snap.VerSet.Size())
+	s.log.Debug("got %d valid seals", validSealCount)
+	s.log.Debug("%d verifiers", snap.VerSet.Size())
+	// for i, ver := range snap.VerSet.List() {
+	// 	s.log.Error("%d, verifier %+v", i, ver)
+	// }
+	s.log.Debug("%d verifiers", snap.VerSet.Size())
 	// 2. The length of validSeal should be larger than number of faulty node + 1
 	// if validSealCount <= 2*snap.VerSet.F() { // FIXME <= or <??
+	s.log.Info("Tally: validSealCount: %d require: %d", validSealCount, 2*snap.VerSet.F())
+
 	if validSealCount < 2*snap.VerSet.F() {
-		fmt.Println("validSealCount ", validSealCount, "require ", 2*snap.VerSet.F())
+		s.log.Debug("validSealCount ", validSealCount, "require ", 2*snap.VerSet.F())
 		return errCommittedSealsInvalid
 	}
 	return nil
@@ -413,7 +415,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		// scenario: If an in-memory snapshot was found, use that
 		if s, ok := ser.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			ser.log.Info("at height: %d, snap from the RAM %+v, verset %+v", height, snap, snap.VerSet.GetVerByIndex(0))
+			ser.log.Info("at height: %d, snap from the RAM %+v, verset %+v", height, snap, snap.VerSet.List())
 			// ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
@@ -449,10 +451,16 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		} else { // scenario 3 : use the extra data with the verifiers info
 			h := chain.GetHeaderByHeight(height)
 			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
-			if err := ser.VerifyHeader(chain, h); err != nil {
-				fmt.Println("failed to verify header when [snapshot] with err", err)
-				return nil, err
-			}
+
+			/* this code will trigger the recursive verification
+
+			// if err := ser.VerifyHeader(chain, h); err != nil {
+			// 	fmt.Println("failed to verify header when [snapshot] with err", err)
+			// 	return nil, err
+			// }
+
+			*/
+
 			bftExtra, err := types.ExtractBftExtra(h)
 			if err != nil {
 				ser.log.Error("failed to extra secondwitness extra, err", err)
