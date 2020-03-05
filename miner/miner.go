@@ -181,7 +181,7 @@ func (miner *Miner) stopMining() {
 	// wait for all threads to terminate
 	miner.wg.Wait()
 	if bft, ok := miner.engine.(consensus.Bft); ok {
-		miner.log.Info("\n\n\n miner engine is bft, will stop bft engine \n\n\n")
+		miner.log.Debug("\n\n\n miner engine is bft, will stop bft engine \n\n\n")
 		if err := bft.Stop(); err != nil {
 			panic(fmt.Sprintf("failed to stop bft engine: %v", err))
 		}

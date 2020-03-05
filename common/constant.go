@@ -68,8 +68,10 @@ const (
 	// BFT mineralgorithm
 	BFTEngine = "bft"
 
-	// subchain bft relay period
-	RelayRange = 160000
+	// subchain bft relay period, roughly 2 days with 2s block interval
+	RelayRange = 84 * 1024
+
+	CheckInterval = 1024
 
 	// TxLimitPerRelay tx limit during each relay period
 	TxLimitPerRelay = 160

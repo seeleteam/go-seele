@@ -305,6 +305,10 @@ func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.
 		}
 
 		for _, tx := range txs {
+			// expired := tx.largestPackHeight < task.header.Height
+			// if expired {
+			// 	fmt.Errorf("transaction must be packed at height %d but height %d, retreat!", tx.largestPackHeight, task.header.Height)
+			// }
 			if err := tx.Validate(statedb, task.header.Height); err != nil {
 				seele.TxPool().RemoveTransaction(tx.Hash)
 				log.Error("failed to validate tx %s, for %s", tx.Hash.Hex(), err)

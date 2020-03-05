@@ -5,6 +5,10 @@
 
 package bft
 
+import (
+	"github.com/seeleteam/go-seele/common"
+)
+
 type ProposerPolicy uint64
 
 const (
@@ -20,8 +24,10 @@ type BFTConfig struct {
 }
 
 var DefaultConfig = &BFTConfig{
-	RequestTimeout: 10000,      // milliseconds
-	BlockPeriod:    1,          //second
-	ProposerPolicy: RoundRobin, // we use RoundRobin policy (others are Random/RoundRobin/LesatBusy/StickySession/cookies/ByReqeust)
-	Epoch:          3000,       //blocks 30000?
+	RequestTimeout: 10000,                   // milliseconds
+	BlockPeriod:    common.BFTBlockInterval, //second
+	ProposerPolicy: RoundRobin,              // we use RoundRobin policy (others are Random/RoundRobin/LesatBusy/StickySession/cookies/ByReqeust)
+	Epoch:          common.CheckInterval,    //blocks 1024
+	// Epoch:          common.RelayRange,       //blocks 84*1024
+
 }

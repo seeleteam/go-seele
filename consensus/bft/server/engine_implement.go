@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	checkInterval     = 1024 // Height of blocks after which to save the vote snapshot to the database
-	inmemorySnapshots = 128  // Height of recent vote snapshots to keep in memory
-	inmemoryPeers     = 40   // peers of recent kept in memory
-	inmemoryMessages  = 1024 // messages of recent kept in memory
+	checkInterval     = common.CheckInterval // Height of blocks after which to save the vote snapshot to the database
+	inmemorySnapshots = 128                  // Height of recent vote snapshots to keep in memory
+	inmemoryPeers     = 40                   // peers of recent kept in memory
+	inmemoryMessages  = 1024                 // messages of recent kept in memory
 )
 
 var (
@@ -409,12 +409,12 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		headers []*types.BlockHeader
 		snap    *Snapshot
 	)
-	for snap == nil {
-		// If an in-memory snapshot was found, use that
+	for snap == nil { // there are 3 scenarios
+		// scenario: If an in-memory snapshot was found, use that
 		if s, ok := ser.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			ser.log.Info("at height: %d, got snap from the RAM %+v", height, snap)
-			ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
+			ser.log.Info("at height: %d, snap from the RAM %+v, verset %+v", height, snap, snap.VerSet.GetVerByIndex(0))
+			// ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
 		// FIXME If an on-disk checkpoint snapshot can be found, use that
@@ -427,12 +427,12 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				}
 			}
 		*/
-		// If we're at block zero, make a snapshot
+		// scenario 2: If we're at block zero, make a snapshot
 		if height == 0 {
 			genesis := chain.GetHeaderByHeight(0)
 			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
 			if err := ser.VerifyHeader(chain, genesis); err != nil {
-				fmt.Println("failed to verify header when [snapshot] with err", err)
+				ser.log.Info("failed to verify header when [snapshot] with err", err)
 				return nil, err
 			}
 			bftExtra, err := types.ExtractBftExtra(genesis)
@@ -444,9 +444,9 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			if err := snap.save(ser.db); err != nil {
 				return nil, err
 			}
-			ser.log.Info("Stored genesis voting snapshot to disk")
+			ser.log.Debug("Stored genesis voting snapshot to disk")
 			break
-		} else {
+		} else { // scenario 3 : use the extra data with the verifiers info
 			h := chain.GetHeaderByHeight(height)
 			// we do to initiate the genesis block right, otherwise verifyHeader can not pass.
 			if err := ser.VerifyHeader(chain, h); err != nil {
@@ -462,16 +462,21 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 			snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(bftExtra.Verifiers, ser.config.ProposerPolicy))
 			// snap = newSnapshot(ser.config.Epoch, height, h.Hash(), verifier.NewVerifierSet(curvers, ser.config.ProposerPolicy))
 			// FIXME need to save not so frequently
-
+			ser.log.Info("get snap from last height")
 			swExtra, err := types.ExtractSecondWitnessExtra(h)
 			if err != nil {
 				ser.log.Error("failed to extra secondwitness extra, err", err)
 				return nil, err
 			}
-			ser.log.Info("swExtra %+v", swExtra)
+			ser.log.Debug("swExtra %+v", swExtra)
 			if len(swExtra.ChallengedTxs) != 0 {
 				ser.log.Warn("successfully challenge relay info on mainchain")
+				// this should be the  consistent with common.RelayRange
+				// checkpoint should be -1, the last is challenged successfully
 				checkpoint := uint64(height / checkInterval)
+				if checkpoint > 0 {
+					checkpoint--
+				}
 				reverthash := chain.GetHeaderByHeight(checkpoint).Hash()
 				if s, err := retrieveSnapshot(ser.config.Epoch, ser.db, reverthash); err == nil {
 					ser.log.Info("Loaded voting snapshot form disk. height: %d. hash %s", height, hash)
@@ -486,7 +491,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				if !added {
 					ser.log.Warn("verifier address already exists in verifier list")
 				}
-				ser.log.Info("\n\n after added one new verifier, snap verset %+v", snap.verifiers())
+				ser.log.Info("after added one new verifier, snap verset %+v", snap.verifiers())
 			}
 			for k, exver := range swExtra.ExitVers {
 				ser.log.Warn("%dth verifier %+v removed from secondwitness", k, exver)
@@ -494,10 +499,10 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				if !deleted {
 					ser.log.Error("exit verifier NOT found in verifier list!")
 				}
-				ser.log.Info("\n\n after remove one verifier, snap verset %+v", snap.verifiers())
+				ser.log.Info("after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
-			ser.log.Error("\n\nsnap verset %+v", snap.verifiers())
+			ser.log.Info("snap verset %+v", snap.verifiers())
 
 			if err := snap.save(ser.db); err != nil {
 				return nil, err
