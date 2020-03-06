@@ -78,7 +78,7 @@ const (
 
 	// RelayRange = 10
 	// BFTBlockInterval bft consensus block interval
-	BFTBlockInterval = 2
+	BFTBlockInterval = 5
 
 	// BFT data folder
 	BFTDataFolder = "bftdata"

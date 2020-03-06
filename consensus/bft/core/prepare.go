@@ -25,7 +25,7 @@ func (c *core) sendPrepare() {
 
 // handlePrepare: Decode->checkMessage->verify->accept->change state & send commit
 func (c *core) handlePrepare(msg *message, src bft.Verifier) error {
-	c.log.Info("bft-1 handlePrepare msg")
+	// c.log.Info("bft-1 handlePrepare msg")
 	// Decode PREPARE message
 	var prepare *bft.Subject
 	if err := msg.Decode(&prepare); err != nil {

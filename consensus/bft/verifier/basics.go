@@ -208,5 +208,6 @@ func (verSet *basicSet) Copy() bft.VerifierSet {
 
 // failure tolerate
 func (verSet *basicSet) F() int {
+	// fmt.Println("verSet size: ", verSet.Size())
 	return int(math.Ceil(float64(verSet.Size())/3)) - 1
 }
