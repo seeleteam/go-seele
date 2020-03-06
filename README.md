@@ -60,7 +60,7 @@ buildall.bat
 # Run Seele
 A simple version Seele mining tutorial: English-[SeeleMiningTutorial](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-MiningTutorial_Eng), 中文-[Seele挖矿教程中文简版](https://github.com/seeleteam/go-seele/releases/tag/v1.0.1-%E4%B8%AD%E6%96%87%E7%AE%80%E7%89%88%E6%8C%96%E7%9F%BF%E6%95%99%E7%A8%8B).
 
-For running a node, please refer to [Get Started](https://seeletech.gitbook.io/wiki/developer/getting-started-with-seele)([Older version](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html)).
+For running a node, please refer to [Get Started](https://seeletech.gitbook.io/wiki/developer/go-seele/gettingstarted)([Older version](https://seeleteam.github.io/seele-doc/docs/Getting-Started-With-Seele.html)).
 For more usage details and deeper explanations, please consult the [Seele Wiki](https://seeletech.gitbook.io/wiki/)([Older version](https://seeleteam.github.io/seele-doc/index.html)).
 
 # Contribution
@@ -80,6 +80,8 @@ Here are some guidelines before you start:
 * [Telegram Group](https://t.me/seeletech)
 * [White Paper](https://s3.ap-northeast-2.amazonaws.com/wp.s3.seele.pro/Seele_White_Paper_English_v3.1.pdf)
 * [Roadmap](https://seele.pro/)
+* [Seele Wiki](https://seeletech.gitbook.io/wiki/)
+* [seele-sdk-javascript](https://www.npmjs.com/package/seele-sdk-javascript)
 
 # License
 

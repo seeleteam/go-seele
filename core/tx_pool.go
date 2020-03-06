@@ -50,6 +50,7 @@ func NewTransactionPool(config TransactionPoolConfig, chain blockchain) *Transac
 					return true, true
 				}
 			}
+			return true, false
 		}
 
 		return false, false
