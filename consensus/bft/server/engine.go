@@ -161,8 +161,8 @@ func (s *server) Prepare(chain consensus.ChainReader, header *types.BlockHeader)
 	newVer := s.GetCurrentVerifiers(curVer, addrs, auths)
 	curVer = append(curVer, newVer...)
 	// add verifiers in snapshot to extraData's verifiers section
-	s.log.Info("[bft] Prepare a block extra with snap.verifiers %+v", snap.verifiers())
-	s.log.Info("[bft] Prepare a block extra with verifiers %+v", curVer)
+	s.log.Debug("[bft] Prepare a block extra with snap.verifiers %+v", snap.verifiers())
+	s.log.Debug("[bft] Prepare a block extra with verifiers %+v", curVer)
 	// extra, err := prepareExtra(header, curVer)
 	extra, err := prepareExtra(header, snap.verifiers())
 	if err != nil {

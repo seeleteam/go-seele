@@ -198,7 +198,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		if err != nil {
 			log.Error("failed to prepare deposit or exit tx into secondwitness")
 		}
-		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+		log.Debug("apply new verifiers into witness, %s", task.header.SecondWitness)
 
 	}
 	// test code end here
@@ -260,7 +260,7 @@ func (task *Task) chooseTransactions(seele SeeleBackend, statedb *state.Statedb,
 		if err != nil {
 			log.Error("failed to prepare deposit or exit tx into secondwitness")
 		}
-		log.Info("apply new verifiers into witness, %+v", task.header.SecondWitness)
+		log.Debug("apply new verifiers into witness, %+v", task.header.SecondWitness)
 	}
 
 	// exit
@@ -291,7 +291,7 @@ func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.
 		if err != nil {
 			log.Error("failed to prepare deposit or exit tx into secondwitness")
 		}
-		log.Info("apply new verifiers into witness, %s", task.header.SecondWitness)
+		log.Debug("apply new verifiers into witness, %s", task.header.SecondWitness)
 
 	}
 	// test code end here
@@ -363,7 +363,7 @@ func (task *Task) chooseTransactionsSubchain(seele SeeleBackend, statedb *state.
 		if err != nil {
 			log.Error("failed to prepare deposit or exit tx into secondwitness")
 		}
-		log.Info("apply new verifiers into witness, %+v", task.header.SecondWitness)
+		log.Debug("apply new verifiers into witness, %+v", task.header.SecondWitness)
 	}
 
 	// exit

@@ -415,7 +415,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 		// scenario: If an in-memory snapshot was found, use that
 		if s, ok := ser.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
-			ser.log.Info("at height: %d, snap from the RAM %+v, verset %+v", height, snap, snap.VerSet.List())
+			ser.log.Debug("at height: %d, snap from the RAM %+v, verset %+v", height, snap, snap.VerSet.List())
 			// ser.log.Info("at height: %d, verset %+v", height, snap.VerSet.GetVerByIndex(0))
 			break
 		}
@@ -510,7 +510,7 @@ func (ser *server) snapshot(chain consensus.ChainReader, height uint64, hash com
 				ser.log.Info("after remove one verifier, snap verset %+v", snap.verifiers())
 			}
 
-			ser.log.Info("snap verset %+v", snap.verifiers())
+			ser.log.Debug("snap verset %+v", snap.verifiers())
 
 			if err := snap.save(ser.db); err != nil {
 				return nil, err
