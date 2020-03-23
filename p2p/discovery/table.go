@@ -152,7 +152,11 @@ func (t *Table) findMinDisNodes(target common.Hash, number int) []*Node {
 		maxElems: number,
 		entries:  make([]*Node, 0),
 	}
-
+	for _,sb := range t.shardBuckets {
+		for _, n := range sb.peers {
+			result.push(n)
+		}
+	}
 	for _, b := range t.buckets {
 		for _, n := range b.peers {
 			result.push(n)

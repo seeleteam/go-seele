@@ -63,6 +63,7 @@ type Miner struct {
 	engine   consensus.Engine
 
 	debtVerifier types.DebtVerifier
+	msgChan chan bool   // use msgChan to receive msg setting miner to start or stop, and miner will deal with these msgs sequentially
 }
 
 // NewMiner constructs and returns a miner instance
@@ -80,12 +81,13 @@ func NewMiner(addr common.Address, seele SeeleBackend, verifier types.DebtVerifi
 		isFirstBlockPrepared: 0,
 		debtVerifier:         verifier,
 		engine:               engine,
+		msgChan:			make(chan bool,100),
 	}
 
-	event.BlockDownloaderEventManager.AddAsyncListener(miner.downloaderEventCallback)
+	event.BlockDownloaderEventManager.AddListener(miner.downloaderEventCallback)
 	event.TransactionInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
 	event.DebtsInsertedEventManager.AddAsyncListener(miner.newTxOrDebtCallback)
-
+	go miner.handleMsg()
 	return miner
 }
 
@@ -109,24 +111,50 @@ func (miner *Miner) GetCoinbase() common.Address {
 	return miner.coinbase
 }
 
+func (miner *Miner) CanStart() (bool){
+	if atomic.LoadInt32(&miner.stopper)==0 &&
+		atomic.LoadInt32(&miner.stopped)==1 &&
+		atomic.LoadInt32(&miner.mining)==0 &&
+		atomic.LoadInt32(&miner.canStart)==1{
+		return true
+	}else{
+		return false
+	}
+}
+func (miner *Miner) handleMsg(){
+	for{
+		select {
+		case msg := <- miner.msgChan :
+			if msg == true {
+				if miner.CanStart(){
+					err := miner.Start()
+					if err != nil {
+						miner.log.Error("error start miner,%s", err.Error())
+					}
+				}else{
+					miner.log.Warn("cannot start miner,stopper:%d, stopped:%d,mining:%d,canStart:%d",
+						atomic.LoadInt32(&miner.stopper),
+						atomic.LoadInt32(&miner.stopped),
+						atomic.LoadInt32(&miner.mining),
+						atomic.LoadInt32(&miner.canStart))
+				}
+			}else {
+				if atomic.LoadInt32(&miner.stopped)==0 && atomic.LoadInt32(&miner.mining)==1 {
+					miner.Stop()
+
+				}else{
+					miner.log.Warn("miner is not working,stopper:%d, stopped:%d,mining:%d,canStart:%d",
+						atomic.LoadInt32(&miner.stopper),
+						atomic.LoadInt32(&miner.stopped),
+						atomic.LoadInt32(&miner.mining),
+						atomic.LoadInt32(&miner.canStart))
+				}
+			}
+		}
+	}
+}
 // Start is used to start the miner
 func (miner *Miner) Start() error {
-	if atomic.LoadInt32(&miner.mining) == 1 {
-		miner.log.Info("Miner is running")
-		return ErrMinerIsRunning
-	}
-
-	if atomic.LoadInt32(&miner.canStart) == 0 {
-		miner.log.Info("Can not start miner when syncing")
-		return ErrNodeIsSyncing
-	}
-
-	// CAS to ensure only 1 mining goroutine.
-	if !atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
-		miner.log.Info("Another goroutine has already started to mine")
-		return nil
-	}
-
 	miner.stopChan = make(chan struct{})
 
 	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
@@ -138,14 +166,13 @@ func (miner *Miner) Start() error {
 	// try to prepare the first block
 	if err := miner.prepareNewBlock(miner.recv); err != nil {
 		miner.log.Warn(err.Error())
-		atomic.StoreInt32(&miner.mining, 0)
-
 		return err
 	}
-	atomic.StoreInt32(&miner.mining, 1)
-	atomic.StoreInt32(&miner.stopped, 0)
+
 	go miner.waitBlock()
-	minerCount++
+	//minerCount++
+	atomic.StoreInt32(&miner.mining,1)
+	atomic.StoreInt32(&miner.stopped,0)
 	miner.log.Info("Miner started")
 
 	return nil
@@ -153,14 +180,10 @@ func (miner *Miner) Start() error {
 
 // Stop is used to stop the miner
 func (miner *Miner) Stop() {
-	if minerCount == 0 {
-		return
-	}
 	// set stopped to 1 to prevent restart
 	atomic.StoreInt32(&miner.stopped, 1)
-	atomic.StoreInt32(&miner.stopper, 1)
 	miner.stopMining()
-
+	atomic.StoreInt32(&miner.mining, 0)
 	if istanbul, ok := miner.engine.(consensus.Istanbul); ok {
 		if err := istanbul.Stop(); err != nil {
 			panic(fmt.Sprintf("failed to stop istanbul engine: %v", err))
@@ -171,19 +194,11 @@ func (miner *Miner) Stop() {
 }
 
 func (miner *Miner) stopMining() {
-	if minerCount == 0 {
-		return
-	}
-	if !atomic.CompareAndSwapInt32(&miner.mining, 1, 0) {
-		return
-	}
-	minerCount--
-
 	// notify all threads to terminate
 	if miner.stopChan != nil {
 		close(miner.stopChan)
-		miner.stopChan = nil
 	}
+	atomic.StoreInt32(&miner.mining,0)
 
 	// wait for all threads to terminate
 	miner.wg.Wait()
@@ -202,29 +217,18 @@ func (miner *Miner) downloaderEventCallback(e event.Event) {
 	case event.DownloaderStartEvent:
 		miner.log.Info("got download start event, stop miner")
 		atomic.StoreInt32(&miner.canStart, 0)
-		if miner.IsMining() {
-			miner.stopMining()
-		}
+		miner.msgChan <- false
+
 	case event.DownloaderDoneEvent, event.DownloaderFailedEvent:
 		atomic.StoreInt32(&miner.canStart, 1)
 		atomic.StoreInt32(&miner.isFirstDownloader, 0)
-
-		if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.stopper) == 0 {
-			miner.log.Info("got download end event, start miner")
-			miner.Start()
-		}
+		miner.msgChan <- true
 	}
 }
 
 // newTxOrDebtCallback handles the new tx event
 func (miner *Miner) newTxOrDebtCallback(e event.Event) {
-	// if not mining, start mining
-	if atomic.LoadInt32(&miner.stopped) == 0 && atomic.LoadInt32(&miner.canStart) == 1 && atomic.CompareAndSwapInt32(&miner.mining, 0, 1) {
-		if err := miner.prepareNewBlock(miner.recv); err != nil {
-			miner.log.Warn(err.Error())
-			atomic.StoreInt32(&miner.mining, 0)
-		}
-	}
+	miner.msgChan <- true
 }
 
 // waitBlock waits for blocks to be mined continuously
@@ -255,7 +259,7 @@ out:
 				event.BlockMinedEventManager.Fire(result) // notify p2p to broadcast the block
 				break
 			}
-
+			atomic.StoreInt32(&miner.stopped, 1)
 			atomic.StoreInt32(&miner.mining, 0)
 			// loop mining after mining completed
 			miner.newTxOrDebtCallback(event.EmptyEvent)
