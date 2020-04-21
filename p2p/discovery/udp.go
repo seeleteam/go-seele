@@ -312,7 +312,6 @@ func (u *udp) loopReply() {
 		case r := <-u.gotReply:
 			for el := pendingList.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
-
 				if p.code == r.code && p.from.GetUDPAddr().String() == r.fromAddr.String() {
 					if r.err {
 						p.errorCallBack()
@@ -329,7 +328,7 @@ func (u *udp) loopReply() {
 			p.deadline = time.Now().Add(responseTimeout)
 			pendingList.PushBack(p)
 		case <-timeout.C:
-			for el := pendingList.Front(); el != nil; el = el.Next() {
+			for el := pendingList.Front(); el != nil; {
 				p := el.Value.(*pending)
 				if p.deadline.Sub(time.Now()) <= 0 {
 					errorMsg := fmt.Sprintf("time out to wait for msg with msg type %s for node %s", codeToStr(p.code), p.from)
@@ -340,7 +339,9 @@ func (u *udp) loopReply() {
 					}
 
 					p.errorCallBack()
-					pendingList.Remove(el)
+					elToRemove := el
+					el = el.Next()
+					pendingList.Remove(elToRemove)
 				}
 			}
 
