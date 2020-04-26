@@ -1,5 +1,5 @@
 
-# ALERT: 23:59:59,30th April 2020 (PDT) will be the conclusion of Seele Team and Seele Foudation's cooperation. Due to funding issues, Seele Team will officially terminate its development and maintainance of Seele’s only official repository, `seeleteam/go-seele`. Future voluntary contributions are welcome, while Seele Team will no longer be held responsible for any risks involved with maintenance after said date.
+# ALERT:  Seele Team and Seele Foudation's cooperation will end at 24:00 (PDT), April 30, 2020. Unfortunately, due to funding issues, Seele Team will terminate the development and maintainance of Seele’s only official repository, `seeleteam/go-seele`. Future voluntary contributions are welcome. Seele Team will no longer be responsible for any risks involved with maintenance after said date.
 
 ---
 
