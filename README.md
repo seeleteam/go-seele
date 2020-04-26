@@ -1,11 +1,7 @@
 
-# Offical Announce
+# ALERT: 23:59:59,30th April 2020 (PDT) will be the conclusion of Seele Team and Seele Foudation's cooperation. Due to funding issues, Seele Team will officially terminate its development and maintainance of Seele’s only official repository, `seeleteam/go-seele`. Future voluntary contributions are welcome, while Seele Team will no longer be held responsible for any risks involved with maintenance after said date.
 
-# Since seeleteam is running out of funding and get no support from Seele foundation. Seele development team will officially stop maintaining Seele ONLY official seeleteam/go-seele code after 23:59:59,30th April 2020 (PDT). Any voluntary associations or individual is welcome to contribute to this soure base but Seele development team is on longer reponsible for any risks caused by the code maintenance after 23:59:59,30th April 2020 (PDT). 
-
-# Seele Team
-
-
+---
 
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
