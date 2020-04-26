@@ -1,3 +1,12 @@
+
+# Offical Announce
+
+# Since seeleteam is running out of funding and get no support from Seele foundation. Seele development team will officially stop maintaining Seele ONLY official seeleteam/go-seele code after 23:59:59,30th April 2020 (PDT). Any voluntary associations or individual is welcome to contribute to this soure base but Seele development team is on longer reponsible for any risks caused by the code maintenance after 23:59:59,30th April 2020 (PDT). 
+
+# Seele Team
+
+
+
 # go-seele
 [![Build Status](https://travis-ci.org/seeleteam/go-seele.svg?branch=master)](https://travis-ci.org/seeleteam/go-seele)
 
