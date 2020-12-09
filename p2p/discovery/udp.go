@@ -426,11 +426,13 @@ func (u *udp) pingPongService() {
 
 		u.log.Debug("loop ping pong nodes %d", len(loopPingPongNodes))
 		concurrentCount := 0
-		for _, n := range loopPingPongNodes {
+		nodesToPing := selectShardNodesToPing(loopPingPongNodes)
+		for _, n := range nodesToPing {
+
 			u.ping(n)
 
 			concurrentCount++
-			if concurrentCount == pingpongConcurrentNumber {
+			if concurrentCount == pingpongConcurrentNumber * common.ShardCount {
 				time.Sleep(pingpongInterval)
 				concurrentCount = 0
 			}
@@ -438,6 +440,18 @@ func (u *udp) pingPongService() {
 
 		time.Sleep(pingpongInterval)
 	}
+}
+
+func selectShardNodesToPing(loopPingPongNodes map[string]*Node)([]*Node){
+	shardNodeCount := make([]int,4)
+	nodesToPing := make([]*Node,0)
+	for _, n := range loopPingPongNodes {
+		if n.Shard != 0 && shardNodeCount[n.Shard-1] < pingpongConcurrentNumber{
+			nodesToPing = append(nodesToPing, n)
+			shardNodeCount[n.Shard-1] ++
+		}
+	}
+	return nodesToPing
 }
 
 func (u *udp) ping(value *Node) {

@@ -224,6 +224,9 @@ func (m *findNode) send(t *udp) {
 			for _, n := range r.Nodes {
 				t.log.Debug("received node: %s", n.SelfID.Hex())
 
+				if n.IP.String() == "127.0.0.1" {
+					continue
+				}
 				node := n.ToNode()
 				t.addNode(node, false)
 			}
@@ -287,6 +290,9 @@ func (m *findShardNode) send(t *udp) {
 			t.log.Debug("got response [shardNodeMsg] with nodes number %d in shard %d from:%s",
 				len(r.Nodes), r.RequestShard, addr)
 			for _, node := range r.Nodes {
+				if node.IP.String() == "127.0.0.1" {
+					continue
+				}
 				t.addNode(node.ToNode(), false)
 			}
 
